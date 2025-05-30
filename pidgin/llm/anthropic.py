@@ -11,9 +11,19 @@ class AnthropicLLM(LLM):
     """Anthropic Claude implementation."""
     
     MODELS = {
+        # Claude 4 models
+        "claude-opus-4-20250514": {"name": "Claude Opus 4", "max_tokens": 8192},
+        "claude-sonnet-4-20250514": {"name": "Claude Sonnet 4", "max_tokens": 8192},
+        
+        # Claude 3.5 models
+        "claude-3.5-sonnet-20241022": {"name": "Claude 3.5 Sonnet", "max_tokens": 8192},
+        
+        # Claude 3 models (legacy)
         "claude-3-opus-20240229": {"name": "Claude 3 Opus", "max_tokens": 4096},
         "claude-3-sonnet-20240229": {"name": "Claude 3 Sonnet", "max_tokens": 4096},
         "claude-3-haiku-20240307": {"name": "Claude 3 Haiku", "max_tokens": 4096},
+        
+        # Claude 2 models (legacy)
         "claude-2.1": {"name": "Claude 2.1", "max_tokens": 4096},
         "claude-2.0": {"name": "Claude 2.0", "max_tokens": 4096},
     }

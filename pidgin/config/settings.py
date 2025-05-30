@@ -19,7 +19,7 @@ class APIConfig(BaseModel):
 
 class DefaultConfig(BaseModel):
     """Default experiment configuration."""
-    model: str = Field(default="claude-3-opus-20240229", description="Default model")
+    model: str = Field(default="claude-opus-4-20250514", description="Default model")
     max_turns: int = Field(default=100, description="Default maximum turns")
     mediation_level: str = Field(default="observe", description="Default mediation level")
     archetype: str = Field(default="analytical", description="Default archetype")

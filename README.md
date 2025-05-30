@@ -54,8 +54,25 @@ pidgin create -n "First Experiment" -m claude:analytical -m gpt4:creative
 pidgin meditate --model claude:theoretical --style deep
 
 # Test compression protocols
-pidgin compress -m claude:pragmatic -m gpt4:collaborative --start 20
+pidgin compress -m claude:pragmatic -m gpt4o:collaborative --start 20
+
+# Try reasoning models for unique symbol emergence patterns
+pidgin compress -m o3:analytical -m o1:theoretical --start 15
+
+# List available models and shortcuts
+pidgin models list
 ```
+
+### Model Shortcuts
+
+Use convenient shortcuts instead of full model IDs:
+- `claude` → Latest Claude Opus 4
+- `gpt` → GPT-4o (multimodal, fast)
+- `o3` → O3 (advanced reasoning - fascinating for symbol emergence)
+- `o1` → O1 (reasoning model - interesting compression patterns)
+- `gemini` → Gemini Pro
+- `4o` → GPT-4o (shorthand)
+- And many more! Run `pidgin models list` to see all available shortcuts.
 
 ## 📖 Core Concepts
 
@@ -104,6 +121,7 @@ pidgin list                # List all experiments
 pidgin show <id>           # Show experiment details
 pidgin analyze <id>        # Analyze results
 pidgin export <id>         # Export transcripts
+pidgin models list         # Show available models and shortcuts
 ```
 
 ### Special Modes
@@ -166,7 +184,7 @@ from pidgin import Experiment, LLM, Archetype
 exp = Experiment(
     name="Symbol Emergence Study",
     llms=[
-        LLM("claude-3-opus", Archetype.ANALYTICAL),
+        LLM("claude", Archetype.ANALYTICAL),  # Uses latest Claude Opus 4
         LLM("gpt-4", Archetype.CREATIVE)
     ],
     compression_enabled=True,
@@ -199,7 +217,7 @@ api_keys:
   google: ...
 
 defaults:
-  model: claude-3-opus-20240229
+  model: claude-opus-4-20250514
   max_turns: 100
   mediation_level: observe
 

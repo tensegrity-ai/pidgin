@@ -7,7 +7,7 @@ from rich.panel import Panel
 from typing import Optional
 from pathlib import Path
 
-from pidgin.commands import create, run, meditate, compress, analyze, manage
+from pidgin.commands import create, run, meditate, compress, analyze, manage, models
 from pidgin.config.settings import Settings
 
 app = typer.Typer(
@@ -67,7 +67,7 @@ def init(
     
     # Default settings
     console.print("\n[bold]Default Settings[/bold]")
-    default_model = typer.prompt("Default model", default="claude-3-opus-20240229")
+    default_model = typer.prompt("Default model", default="claude-opus-4-20250514")
     max_turns = typer.prompt("Default max turns", default=100, type=int)
     
     # Save configuration
@@ -98,6 +98,7 @@ app.add_typer(create.app, name="create", help="Create experiments and templates"
 app.add_typer(run.app, name="run", help="Run experiments")
 app.add_typer(manage.app, name="manage", help="Manage experiments and resources")
 app.add_typer(analyze.app, name="analyze", help="Analyze experiment results")
+app.add_typer(models.app, name="models", help="Model information and shortcuts")
 
 # Register special mode commands
 app.command()(meditate.meditate)

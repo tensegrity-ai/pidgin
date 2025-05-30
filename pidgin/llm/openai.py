@@ -10,10 +10,23 @@ class OpenAILLM(LLM):
     """OpenAI GPT implementation."""
     
     MODELS = {
-        "gpt-4-turbo-preview": {"name": "GPT-4 Turbo", "max_tokens": 4096},
+        # GPT-4o (multimodal)
+        "gpt-4o": {"name": "GPT-4o", "max_tokens": 128000},
+        
+        # Reasoning models
+        "o3": {"name": "O3", "max_tokens": 100000},
+        "o3-mini": {"name": "O3 Mini", "max_tokens": 65536},
+        "o1": {"name": "O1", "max_tokens": 100000},
+        "o1-preview": {"name": "O1 Preview", "max_tokens": 32768},
+        "o1-mini": {"name": "O1 Mini", "max_tokens": 65536},
+        
+        # GPT-4 variants
+        "gpt-4-turbo": {"name": "GPT-4 Turbo", "max_tokens": 128000},
         "gpt-4": {"name": "GPT-4", "max_tokens": 8192},
         "gpt-4-32k": {"name": "GPT-4 32K", "max_tokens": 32768},
-        "gpt-3.5-turbo": {"name": "GPT-3.5 Turbo", "max_tokens": 4096},
+        
+        # GPT-3.5 (still useful for testing)
+        "gpt-3.5-turbo": {"name": "GPT-3.5 Turbo", "max_tokens": 16384},
         "gpt-3.5-turbo-16k": {"name": "GPT-3.5 Turbo 16K", "max_tokens": 16384},
     }
     

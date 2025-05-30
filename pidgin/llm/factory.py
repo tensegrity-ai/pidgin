@@ -4,6 +4,12 @@ from pidgin.llm.base import LLM, LLMConfig
 from pidgin.llm.anthropic import AnthropicLLM
 from pidgin.llm.openai import OpenAILLM
 from pidgin.llm.google import GoogleLLM
+from pidgin.llm.models import (
+    resolve_model_name, 
+    get_model_provider,
+    MODEL_PROVIDERS,
+    parse_model_spec as parse_model_spec_impl
+)
 from pidgin.config.archetypes import Archetype
 
 
@@ -12,40 +18,6 @@ PROVIDERS: Dict[str, Type[LLM]] = {
     "anthropic": AnthropicLLM,
     "openai": OpenAILLM,
     "google": GoogleLLM,
-}
-
-# Model to provider mapping
-MODEL_PROVIDERS = {
-    # Anthropic models
-    "claude-3-opus-20240229": "anthropic",
-    "claude-3-sonnet-20240229": "anthropic",
-    "claude-3-haiku-20240307": "anthropic",
-    "claude-2.1": "anthropic",
-    "claude-2.0": "anthropic",
-    
-    # OpenAI models
-    "gpt-4-turbo-preview": "openai",
-    "gpt-4": "openai",
-    "gpt-4-32k": "openai",
-    "gpt-3.5-turbo": "openai",
-    "gpt-3.5-turbo-16k": "openai",
-    
-    # Google models
-    "gemini-pro": "google",
-    "gemini-pro-vision": "google",
-}
-
-# Shorthand aliases
-MODEL_ALIASES = {
-    "claude": "claude-3-opus-20240229",
-    "claude-opus": "claude-3-opus-20240229",
-    "claude-sonnet": "claude-3-sonnet-20240229",
-    "claude-haiku": "claude-3-haiku-20240307",
-    "gpt4": "gpt-4",
-    "gpt-4": "gpt-4",
-    "gpt": "gpt-3.5-turbo",
-    "gpt3": "gpt-3.5-turbo",
-    "gemini": "gemini-pro",
 }
 
 
@@ -67,13 +39,13 @@ def create_llm(
     Returns:
         LLM instance
     """
-    # Resolve model alias
-    model = MODEL_ALIASES.get(model.lower(), model)
+    # Resolve model name using centralized logic
+    resolved_model = resolve_model_name(model)
     
     # Get provider
-    provider = MODEL_PROVIDERS.get(model)
+    provider = get_model_provider(resolved_model)
     if not provider:
-        raise ValueError(f"Unknown model: {model}")
+        raise ValueError(f"Unknown model: {model} (resolved to: {resolved_model})")
     
     # Get provider class
     provider_class = PROVIDERS.get(provider)
@@ -89,7 +61,7 @@ def create_llm(
     
     # Create config
     config = LLMConfig(
-        model=model,
+        model=resolved_model,
         archetype=archetype,
         **kwargs
     )
@@ -123,14 +95,7 @@ def parse_model_spec(spec: str) -> tuple[str, Union[str, Archetype]]:
     Format: "model:archetype" or just "model"
     
     Returns:
-        Tuple of (model, archetype)
+        Tuple of (resolved_model, archetype)
     """
-    parts = spec.split(":", 1)
-    model = parts[0]
-    
-    if len(parts) > 1:
-        archetype = parts[1]
-    else:
-        archetype = Archetype.ANALYTICAL
-    
-    return model, archetype
+    # Use centralized parsing logic
+    return parse_model_spec_impl(spec)
