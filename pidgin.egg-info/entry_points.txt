@@ -1,0 +1,2 @@
+[console_scripts]
+pidgin = pidgin.cli:app

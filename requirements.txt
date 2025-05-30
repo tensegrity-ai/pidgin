@@ -1,0 +1,39 @@
+# Core CLI framework
+typer>=0.9.0
+click>=8.1.0
+
+# Beautiful terminal UI
+rich>=13.0.0
+textual>=0.40.0
+
+# LLM integrations
+anthropic>=0.21.0
+openai>=1.12.0
+google-generativeai>=0.4.0
+
+# Data handling
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+pyyaml>=6.0
+
+# Storage
+aiosqlite>=0.19.0
+sqlalchemy>=2.0.0
+
+# Analysis
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+scipy>=1.10.0
+
+# Utilities
+python-dotenv>=1.0.0
+httpx>=0.24.0
+asyncio>=3.4.3
+
+# Development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.5.0
