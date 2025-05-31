@@ -26,7 +26,6 @@ console = Console()
 def main(
     ctx: typer.Context,
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
-    config: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config file"),
     version: bool = typer.Option(False, "--version", "-V", help="Show version and exit"),
 ):
     """
@@ -43,55 +42,8 @@ def main(
     
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
-    ctx.obj["config"] = config
-    ctx.obj["settings"] = Settings(config_path=config)
+    ctx.obj["settings"] = Settings()
 
-
-@app.command()
-def init(
-    ctx: typer.Context,
-    force: bool = typer.Option(False, "--force", "-f", help="Force overwrite existing config"),
-):
-    """Interactive setup and configuration."""
-    settings = ctx.obj["settings"]
-    
-    console.print(Panel.fit(
-        "[bold blue]Welcome to Pidgin![/bold blue]\n\n"
-        "Let's set up your AI communication research environment.",
-        title="🦜 Initialization",
-        border_style="blue"
-    ))
-    
-    # Interactive configuration setup
-    if settings.config_exists() and not force:
-        if not typer.confirm("Configuration already exists. Overwrite?"):
-            raise typer.Abort()
-    
-    # API Keys
-    console.print("\n[bold]API Configuration[/bold]")
-    anthropic_key = typer.prompt("Anthropic API Key", hide_input=True, default="")
-    openai_key = typer.prompt("OpenAI API Key", hide_input=True, default="")
-    google_key = typer.prompt("Google API Key", hide_input=True, default="")
-    
-    # Default settings
-    console.print("\n[bold]Default Settings[/bold]")
-    default_model = typer.prompt("Default model", default="claude-opus-4-20250514")
-    max_turns = typer.prompt("Default max turns", default=100, type=int)
-    
-    # Save configuration
-    settings.save_config({
-        "api_keys": {
-            "anthropic": anthropic_key,
-            "openai": openai_key,
-            "google": google_key,
-        },
-        "defaults": {
-            "model": default_model,
-            "max_turns": max_turns,
-        }
-    })
-    
-    console.print("\n[green]✓ Configuration saved successfully![/green]")
 
 
 

@@ -70,7 +70,7 @@ class LiveConversationView:
         header_text.append(f"  •  Turn {self.experiment.current_turn}/{self.experiment.config.max_turns}")
         header_text.append(f"  •  {elapsed_str}", style="dim")
         
-        return Panel(header_text, box_characters=" ", style="on dark_blue")
+        return Panel(header_text, box=None, style="on dark_blue")
     
     def _render_conversation(self) -> Panel:
         """Render the conversation section."""

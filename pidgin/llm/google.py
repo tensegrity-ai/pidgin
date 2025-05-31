@@ -161,3 +161,35 @@ class GoogleLLM(LLM):
         # Gemini uses different tokenization
         # Rough estimate for now
         return len(text) // 4
+    
+    def __getstate__(self):
+        """Prepare instance for pickling by excluding non-picklable model."""
+        state = self.__dict__.copy()
+        # Remove the unpicklable model
+        state.pop('model', None)
+        return state
+    
+    def __setstate__(self, state):
+        """Restore instance after unpickling by recreating model."""
+        self.__dict__.update(state)
+        # Recreate the model
+        genai.configure(api_key=self.api_key)
+        
+        generation_config = genai.GenerationConfig(
+            temperature=self.config.temperature or 0.7,
+            top_p=self.config.top_p or 0.95,
+            max_output_tokens=self.config.max_tokens or self.MODELS[self.config.model]["max_tokens"],
+        )
+        
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
+        
+        self.model = genai.GenerativeModel(
+            model_name=self.config.model,
+            generation_config=generation_config,
+            safety_settings=safety_settings,
+        )

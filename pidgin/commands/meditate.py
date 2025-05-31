@@ -92,7 +92,10 @@ def meditate(
     
     if style in style_prompts:
         original_prompt = llm.config.system_prompt
-        llm.config.system_prompt = f"{original_prompt}\n\nMeditation guidance: {style_prompts[style]}"
+        if original_prompt:
+            llm.config.system_prompt = f"{original_prompt}\n\nMeditation guidance: {style_prompts[style]}"
+        else:
+            llm.config.system_prompt = f"Meditation guidance: {style_prompts[style]}"
     
     # Create experiment config
     config = ExperimentConfig(

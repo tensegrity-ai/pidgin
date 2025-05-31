@@ -143,3 +143,16 @@ class OpenAILLM(LLM):
         # OpenAI uses tiktoken, but for simplicity we'll estimate
         # More accurate counting would require tiktoken library
         return super().count_tokens(text)
+    
+    def __getstate__(self):
+        """Prepare instance for pickling by excluding non-picklable client."""
+        state = self.__dict__.copy()
+        # Remove the unpicklable client
+        state.pop('client', None)
+        return state
+    
+    def __setstate__(self, state):
+        """Restore instance after unpickling by recreating client."""
+        self.__dict__.update(state)
+        # Recreate the client
+        self.client = AsyncOpenAI(api_key=self.api_key)

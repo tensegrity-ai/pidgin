@@ -146,3 +146,16 @@ class AnthropicLLM(LLM):
         # Anthropic uses a similar tokenization to GPT models
         # Rough estimate: ~4 characters per token
         return super().count_tokens(text)
+    
+    def __getstate__(self):
+        """Prepare instance for pickling by excluding non-picklable client."""
+        state = self.__dict__.copy()
+        # Remove the unpicklable client
+        state.pop('client', None)
+        return state
+    
+    def __setstate__(self, state):
+        """Restore instance after unpickling by recreating client."""
+        self.__dict__.update(state)
+        # Recreate the client
+        self.client = AsyncAnthropic(api_key=self.api_key)
