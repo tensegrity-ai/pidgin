@@ -10,11 +10,14 @@ from pidgin.storage.experiments import ExperimentStorage
 from pidgin.core.conversation import ConversationManager, ConversationEvent
 from pidgin.ui.live import LiveConversationView
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 console = Console()
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def experiment(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID to run"),

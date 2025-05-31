@@ -17,11 +17,11 @@ console = Console()
 def meditate(
     ctx: typer.Context,
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use (format: model:archetype)"),
-    style: Optional[str] = typer.Option(None, "--style", "-s", help="Meditation style"),
+    style: Optional[str] = typer.Option(None, "--style", "-s", help="Meditation style (wandering/focused/recursive/deep)"),
     max_turns: Optional[int] = typer.Option(None, "--max-turns", "-t", help="Maximum turns"),
     basin_detection: bool = typer.Option(False, "--basin-detection", "-b", help="Stop when attractor state reached"),
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Experiment name"),
-    run_immediately: bool = typer.Option(True, "--run/--no-run", help="Run immediately after creation"),
+    run_immediately: bool = typer.Option(True, "--run/--no-run", "-r/-R", help="Run immediately after creation"),
 ):
     """
     Start a meditation session - single LLM self-dialogue.

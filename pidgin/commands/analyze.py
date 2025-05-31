@@ -12,16 +12,19 @@ from pidgin.analysis.compression import CompressionAnalyzer
 from pidgin.analysis.symbols import SymbolDetector
 from pidgin.analysis.metrics import MetricsAnalyzer
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 console = Console()
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def experiment(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID to analyze"),
-    compression: bool = typer.Option(True, "--compression/--no-compression", help="Analyze compression"),
-    symbols: bool = typer.Option(True, "--symbols/--no-symbols", help="Analyze symbol emergence"),
+    compression: bool = typer.Option(True, "--compression/--no-compression", "-c/-C", help="Analyze compression"),
+    symbols: bool = typer.Option(True, "--symbols/--no-symbols", "-s/-S", help="Analyze symbol emergence"),
     export: Optional[Path] = typer.Option(None, "--export", "-e", help="Export analysis to file"),
 ):
     """Analyze an experiment's results."""

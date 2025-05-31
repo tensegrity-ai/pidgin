@@ -16,6 +16,7 @@ app = typer.Typer(
     no_args_is_help=True,
     rich_markup_mode="rich",
     add_completion=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 console = Console()
@@ -26,6 +27,7 @@ def main(
     ctx: typer.Context,
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     config: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config file"),
+    version: bool = typer.Option(False, "--version", "-V", help="Show version and exit"),
 ):
     """
     Pidgin: Study emergent symbolic communication between AI systems.
@@ -33,6 +35,12 @@ def main(
     A sophisticated research tool for exploring AI-to-AI communication patterns,
     compression protocols, and symbol emergence.
     """
+    # Handle version flag
+    if version:
+        from pidgin import __version__
+        console.print(f"Pidgin v{__version__}")
+        raise typer.Exit()
+    
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["config"] = config
@@ -86,11 +94,6 @@ def init(
     console.print("\n[green]✓ Configuration saved successfully![/green]")
 
 
-@app.command()
-def version():
-    """Show Pidgin version."""
-    from pidgin import __version__
-    console.print(f"Pidgin v{__version__}")
 
 
 # Register subcommands

@@ -11,14 +11,17 @@ from datetime import datetime
 from pidgin.storage.experiments import ExperimentStorage
 from pidgin.core.experiment import ExperimentStatus
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 console = Console()
 
 
 @app.command("list")
 def list_experiments(
     ctx: typer.Context,
-    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status (created/running/paused/completed/failed)"),
     limit: int = typer.Option(20, "--limit", "-l", help="Number of experiments to show"),
     all: bool = typer.Option(False, "--all", "-a", help="Show all experiments"),
 ):
@@ -99,7 +102,7 @@ def list_experiments(
     console.print(table)
 
 
-@app.command("show")
+@app.command("show", no_args_is_help=True)
 def show_experiment(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID"),
@@ -163,7 +166,7 @@ def show_experiment(
         console.print(f"\n[dim]Use --transcript to see conversation history ({len(experiment.conversation_history)} turns)[/dim]")
 
 
-@app.command("remove")
+@app.command("remove", no_args_is_help=True)
 def remove_experiment(
     ctx: typer.Context,
     experiment_id: str = typer.Argument(..., help="Experiment ID to remove"),

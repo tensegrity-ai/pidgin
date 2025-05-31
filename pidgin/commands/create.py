@@ -11,7 +11,10 @@ from pidgin.llm.factory import create_llm, parse_model_spec, get_available_model
 from pidgin.config.archetypes import Archetype
 from pidgin.storage.experiments import ExperimentStorage
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 console = Console()
 
 
@@ -22,8 +25,8 @@ def experiment(
     models: List[str] = typer.Option([], "--model", "-m", help="Models to use (format: model:archetype)"),
     max_turns: Optional[int] = typer.Option(None, "--max-turns", "-t", help="Maximum conversation turns"),
     compression: bool = typer.Option(False, "--compression", "-c", help="Enable compression testing"),
-    compression_start: Optional[int] = typer.Option(20, "--compression-start", help="Turn to start compression"),
-    mediation: Optional[str] = typer.Option(None, "--mediation", help="Mediation level"),
+    compression_start: Optional[int] = typer.Option(20, "--compression-start", "-s", help="Turn to start compression"),
+    mediation: Optional[str] = typer.Option(None, "--mediation", "-M", help="Mediation level (full/light/observe/auto)"),
     interactive: bool = typer.Option(True, "--interactive/--no-interactive", "-i/-I", help="Interactive mode"),
 ):
     """Create a new experiment."""

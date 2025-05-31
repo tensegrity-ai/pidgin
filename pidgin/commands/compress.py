@@ -22,8 +22,8 @@ def compress(
     rate: Optional[float] = typer.Option(None, "--rate", "-r", help="Compression rate increase per phase"),
     max_turns: Optional[int] = typer.Option(None, "--max-turns", "-t", help="Maximum turns"),
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Experiment name"),
-    validation_phases: bool = typer.Option(True, "--validation/--no-validation", help="Include validation phases"),
-    run_immediately: bool = typer.Option(True, "--run/--no-run", help="Run immediately after creation"),
+    validation_phases: bool = typer.Option(True, "--validation/--no-validation", "-v/-V", help="Include validation phases"),
+    run_immediately: bool = typer.Option(True, "--run/--no-run", "-R/-N", help="Run immediately after creation"),
 ):
     """
     Run compression protocol testing.
