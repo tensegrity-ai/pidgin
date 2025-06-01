@@ -6,11 +6,22 @@ from rich.markdown import Markdown
 from pidgin.config import MODEL_SHORTCUTS
 from .types import Agent
 from .providers.anthropic import AnthropicProvider
+from .providers.openai import OpenAIProvider
 from .router import DirectRouter
 from .dialogue import DialogueEngine
 from .transcripts import TranscriptManager
 
 console = Console()
+
+
+def get_provider_for_model(model: str):
+    """Determine which provider to use based on the model name"""
+    if model.startswith("claude"):
+        return AnthropicProvider(model)
+    elif model.startswith("gpt") or model.startswith("o3") or model == "o3-mini":
+        return OpenAIProvider(model)
+    else:
+        raise ValueError(f"Unknown model type: {model}. Model should start with 'claude' or 'gpt'/'o3'")
 
 
 @click.group()
@@ -38,11 +49,11 @@ def chat(agent_a, agent_b, turns, prompt, save_to):
         "agent_b": Agent(id="agent_b", model=model_b)
     }
     
-    # Create providers (Phase 1: Anthropic only)
+    # Create providers based on model type
     try:
         providers = {
-            "agent_a": AnthropicProvider(model_a),
-            "agent_b": AnthropicProvider(model_b)
+            "agent_a": get_provider_for_model(model_a),
+            "agent_b": get_provider_for_model(model_b)
         }
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")

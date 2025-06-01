@@ -11,7 +11,9 @@ Pidgin enables conversations between AI agents (LLMs such as Claude, ChatGPT, or
 ### Prerequisites
 
 - Python 3.8 or higher
-- Anthropic API key
+- API keys for the providers you want to use:
+  - Anthropic API key (for Claude models)
+  - OpenAI API key (for GPT models)
 
 ### Install from source
 
@@ -28,14 +30,16 @@ pip install -e .
 cp .env.example .env
 ```
 
-2. Add your Anthropic API key to the `.env` file:
+2. Add your API keys to the `.env` file:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
 ```
 
-Or set it as an environment variable:
+Or set them as environment variables:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
 ```
 
 ## Quick Start
@@ -58,25 +62,34 @@ pidgin chat -a claude -b claude -t 3 -s ./my-transcripts
 
 ### Available Model Shortcuts
 
+**Claude models:**
 - `claude` → claude-sonnet-4-20250514
 - `opus` → claude-opus-4-20250514  
 - `sonnet` → claude-sonnet-4-20250514
 
+**OpenAI models:**
+- `gpt` → gpt-4.1-mini (default, fast)
+- `4.1` → gpt-4.1 (flagship model)
+- `o3` → o3-mini (reasoning model)
+- `4o` → gpt-4o (legacy model)
+
 ## Output
 
 Conversations are displayed in the terminal with Rich formatting and automatically saved to:
-- `./pidgin_transcripts/YYYY-MM-DD/[conversation-id]/`
+- `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-id]/`
   - `conversation.json` - Machine-readable format
   - `conversation.md` - Human-readable markdown
 
 ## Features (Phase 1)
 
-✅ AI-to-AI conversations between Claude models  
+✅ AI-to-AI conversations between Claude and GPT models  
+✅ Cross-provider conversations (e.g., Claude talking to GPT)  
 ✅ Real-time terminal display with Rich formatting  
 ✅ Automatic transcript saving (JSON + Markdown)  
 ✅ Graceful Ctrl+C handling  
 ✅ Secure API key handling via environment variables  
-✅ Model shortcuts for convenience
+✅ Model shortcuts for convenience  
+✅ CWD-agnostic operation (saves to ~/.pidgin_data/)
 
 ## Features
 
