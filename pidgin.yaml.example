@@ -7,53 +7,31 @@ conversation:
     enabled: true
     auto_save_interval: 10  # Save checkpoint every N turns
     
-  # Basin detection settings  
-  basin_detection:
+  # Attractor detection settings (structural patterns ONLY)
+  attractor_detection:
     enabled: true
-    check_interval: 5  # Check for basins every N turns
-    
-    # Detection strategies
-    detectors:
-      # Structural pattern detection (most reliable)
-      structural:
-        enabled: true
-        window_size: 20  # Analyze last N messages
-        repetition_threshold: 3  # N identical structures = basin
-        
-      # Content pattern detection  
-      pattern:
-        enabled: true
-        gratitude_threshold: 5  # N gratitude expressions
-        compression_threshold: 20  # Less than N tokens average
-        emoji_loop_threshold: 5  # N emoji-only messages
-    
-    # Action when basin detected
-    on_basin_detected: "stop"  # Options: stop, pause, log
-    log_detection_reasoning: true
+    check_interval: 5     # Check every N turns
+    window_size: 10       # Look at last N messages
+    threshold: 3          # Trigger after N repetitions
+    on_detection: "stop"  # Options: stop, pause, log
 
 # Experiment profiles
 experiments:
   # Profile for unattended experiments
   unattended:
-    basin_detection:
-      on_basin_detected: "stop"
-      detectors:
-        structural:
-          repetition_threshold: 2  # More aggressive detection
-        pattern:
-          gratitude_threshold: 3
-          compression_threshold: 15
+    attractor_detection:
+      on_detection: "stop"
+      threshold: 2      # More aggressive detection
+      window_size: 8    # Smaller window for faster detection
   
   # Profile for baseline experiments (no intervention)
   baseline:
-    basin_detection:
+    attractor_detection:
       enabled: false
       
-  # Profile for research on specific basin types
-  gratitude_research:
-    basin_detection:
-      detectors:
-        structural:
-          enabled: false  # Focus only on content patterns
-        pattern:
-          gratitude_threshold: 3  # More sensitive
+  # Profile for sensitive detection
+  sensitive:
+    attractor_detection:
+      threshold: 2
+      window_size: 6
+      check_interval: 3  # Check more frequently

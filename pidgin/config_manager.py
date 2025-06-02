@@ -15,35 +15,25 @@ class Config:
                 'enabled': True,
                 'auto_save_interval': 10
             },
-            'basin_detection': {
+            'attractor_detection': {
                 'enabled': True,
                 'check_interval': 5,
-                'detectors': {
-                    'structural': {
-                        'enabled': True,
-                        'window_size': 20,
-                        'repetition_threshold': 3
-                    },
-                    'pattern': {
-                        'enabled': True,
-                        'gratitude_threshold': 5,
-                        'compression_threshold': 20,
-                        'emoji_loop_threshold': 5
-                    }
-                },
-                'on_basin_detected': 'stop',
-                'log_detection_reasoning': True
+                'window_size': 10,
+                'threshold': 3,
+                'on_detection': 'stop'
             }
         },
         'experiments': {
             'unattended': {
-                'basin_detection': {
-                    'on_basin_detected': 'stop',
-                    'detectors': {
-                        'structural': {
-                            'repetition_threshold': 2
-                        }
-                    }
+                'attractor_detection': {
+                    'on_detection': 'stop',
+                    'threshold': 2,  # More aggressive
+                    'window_size': 8
+                }
+            },
+            'baseline': {
+                'attractor_detection': {
+                    'enabled': False
                 }
             }
         }
@@ -142,9 +132,9 @@ class Config:
         """Get checkpoint-related configuration."""
         return self.get('conversation.checkpoint', {})
     
-    def get_basin_config(self) -> Dict[str, Any]:
-        """Get basin detection configuration."""
-        return self.get('conversation.basin_detection', {})
+    def get_attractor_config(self) -> Dict[str, Any]:
+        """Get attractor detection configuration."""
+        return self.get('conversation.attractor_detection', {})
     
     def apply_experiment_profile(self, profile: str):
         """Apply an experiment profile to current config."""

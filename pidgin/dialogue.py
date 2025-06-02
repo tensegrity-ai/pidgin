@@ -9,7 +9,7 @@ from .types import Message, Conversation, Agent
 from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
-from .basin_detection import BasinDetectionSystem, BasinEvent
+from .attractors import AttractorManager
 from .config_manager import get_config
 
 
@@ -23,9 +23,9 @@ class DialogueEngine:
         # Configuration
         self.config = config or get_config()
         
-        # Basin detection
-        basin_config = self.config.get_basin_config() if hasattr(self.config, 'get_basin_config') else {}
-        self.basin_detector = BasinDetectionSystem(basin_config)
+        # Attractor detection
+        attractor_config = self.config.get('conversation.attractor_detection', {}) if hasattr(self.config, 'get') else {}
+        self.attractor_manager = AttractorManager(attractor_config)
         
         # Checkpoint management
         self.state: Optional[ConversationState] = None
@@ -115,10 +115,11 @@ class DialogueEngine:
                 # Auto-save transcript after each turn
                 await self.transcript_manager.save(self.conversation)
                 
-                # Check for basin detection
-                if basin_event := self.basin_detector.check_for_basin(self.conversation.messages, turn + 1):
-                    await self._handle_basin_detection(basin_event)
-                    if self.basin_detector.get_action(basin_event) == 'stop':
+                # Check for attractor detection
+                message_contents = [msg.content for msg in self.conversation.messages if msg.role != "system"]
+                if attractor_result := self.attractor_manager.check(message_contents, turn + 1):
+                    await self._handle_attractor_detection(attractor_result)
+                    if attractor_result['action'] == 'stop':
                         break
                 
                 # Auto-checkpoint at intervals
@@ -164,17 +165,29 @@ class DialogueEngine:
         return response
     
     def _setup_signal_handler(self):
-        """Set up signal handler for graceful pause."""
-        def signal_handler(signum, frame):
+        """Set up signal handlers for pause and stop."""
+        # Ctrl+Z for pause (SIGTSTP)
+        def pause_handler(signum, frame):
             self._pause_requested = True
-            self.console.print("\n[yellow]Pause requested... Finishing current turn.[/yellow]")
+            self.console.print("\n[yellow]⏸️  Pause requested... Finishing current turn.[/yellow]")
         
-        self._original_sigint = signal.signal(signal.SIGINT, signal_handler)
+        # Ctrl+C for stop (SIGINT)
+        def stop_handler(signum, frame):
+            self.console.print("\n[red]🛑 Stop requested. Saving transcript...[/red]")
+            raise KeyboardInterrupt()
+        
+        self._original_sigtstp = signal.signal(signal.SIGTSTP, pause_handler)
+        self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
+        
+        # Show controls
+        self.console.print("[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop[/dim]\n")
     
     def _restore_signal_handler(self):
-        """Restore original signal handler."""
+        """Restore original signal handlers."""
         if self._original_sigint:
             signal.signal(signal.SIGINT, self._original_sigint)
+        if hasattr(self, '_original_sigtstp') and self._original_sigtstp:
+            signal.signal(signal.SIGTSTP, self._original_sigtstp)
     
     async def _handle_pause(self):
         """Handle pause request."""
@@ -183,24 +196,20 @@ class DialogueEngine:
         self.console.print(f"\n[green]Checkpoint saved: {checkpoint_path}[/green]")
         self.console.print(f"[green]Resume with: pidgin resume {checkpoint_path}[/green]\n")
     
-    async def _handle_basin_detection(self, event: BasinEvent):
-        """Handle basin detection event."""
-        self.console.print(f"\n[red]Basin Detected: {event.type.value} - Turn {event.turn}[/red]")
-        self.console.print(f"[red]Detector: {event.detector} (confidence: {event.confidence:.2f})[/red]")
+    async def _handle_attractor_detection(self, result: Dict[str, Any]):
+        """Handle attractor detection event."""
+        self.console.print(f"\n[red bold]🚨 ATTRACTOR DETECTED - Turn {result['turn_detected']}[/red bold]")
+        self.console.print(f"[red]Type: {result['type']}[/red]")
+        self.console.print(f"[red]Pattern: {result['description']}[/red]")
+        self.console.print(f"[red]Confidence: {result['confidence']:.2f}[/red]")
         
-        if self.basin_detector.should_log_reasoning():
-            # Save basin analysis
-            basin_path = Path(self.state.transcript_path).with_suffix('.basin')
-            with open(basin_path, 'w') as f:
-                f.write(f"Basin Detection Report\n")
-                f.write(f"====================\n\n")
-                f.write(f"Type: {event.type.value}\n")
-                f.write(f"Turn: {event.turn}\n")
-                f.write(f"Detector: {event.detector}\n")
-                f.write(f"Confidence: {event.confidence:.2f}\n")
-                f.write(f"Details: {event.details}\n")
-            self.console.print(f"[dim]Basin analysis saved to: {basin_path}[/dim]")
+        # Save attractor analysis
+        if self.state.transcript_path:
+            analysis_path = self.attractor_manager.save_analysis(Path(self.state.transcript_path))
+            if analysis_path:
+                self.console.print(f"[dim]Attractor analysis saved to: {analysis_path}[/dim]")
         
-        action = self.basin_detector.get_action(event)
-        if action == 'stop':
-            self.console.print("[red]Ending conversation early[/red]\n")
+        if result['action'] == 'stop':
+            self.console.print("[red bold]Ending conversation - Structural attractor reached[/red bold]\n")
+        elif result['action'] == 'pause':
+            self._pause_requested = True

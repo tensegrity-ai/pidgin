@@ -51,8 +51,8 @@ def cli():
 @click.option('-p', '--prompt', default="Hello! I'm looking forward to our conversation.", help='Initial prompt')
 @click.option('-s', '--save-to', help='Save transcript to specific location')
 @click.option('--config', type=click.Path(exists=True), help='Path to config file')
-@click.option('--no-basin-detection', is_flag=True, help='Disable basin detection')
-def chat(agent_a, agent_b, turns, prompt, save_to, config, no_basin_detection):
+@click.option('--no-attractor-detection', is_flag=True, help='Disable attractor detection')
+def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detection):
     """Run a conversation between two AI agents"""
     
     # Resolve model shortcuts using the new system
@@ -84,9 +84,9 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_basin_detection):
     else:
         cfg = Config()
     
-    # Override basin detection if requested
-    if no_basin_detection:
-        cfg.set('conversation.basin_detection.enabled', False)
+    # Override attractor detection if requested
+    if no_attractor_detection:
+        cfg.set('conversation.attractor_detection.enabled', False)
     
     # Setup components
     router = DirectRouter(providers)

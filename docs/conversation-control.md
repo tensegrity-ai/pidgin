@@ -1,4 +1,4 @@
-# Conversation Control & Basin Detection
+# Conversation Control & Attractor Detection
 
 ## Overview
 
@@ -26,29 +26,38 @@ pidgin resume --latest
 pidgin resume
 ```
 
-### 2. Basin Detection System
+### 2. Attractor Detection System
 
-The system automatically detects when conversations fall into repetitive patterns or "basins":
+The system uses **structural pattern analysis** to detect when conversations fall into attractors. This is the KEY INSIGHT: conversations ossify into structural templates long before content becomes repetitive.
 
-#### Detected Basin Types
-- **Gratitude Spirals** - Endless mutual appreciation loops
-- **Compression** - Progressive reduction to minimal symbols/tokens
-- **Emoji Loops** - Conversations devolving to emoji-only exchanges
-- **Structural Repetition** - Same conversational patterns with different words
-- **Philosophical Loops** - Consciousness/spirituality discussion cycles
-- **Single Token** - Extreme compression to single words/symbols
+#### How It Works
 
-#### Detection Strategies
+The system analyzes the **structure** of messages, not their content:
+- Opening types (excited, statement, question)
+- Message components (lists, announcements, postscripts)
+- Conversational flow patterns
+- Structural repetition across turns
 
-1. **Pattern-Based Detection** (PatternBasinDetector)
-   - Analyzes message content for specific patterns
-   - Detects gratitude expressions, emoji usage, token counts
-   - Fast and reliable for obvious patterns
+#### Common Attractor Patterns
 
-2. **Structural Detection** (StructuralBasinDetector)
-   - Analyzes message structure independent of content
-   - Detects repetitive conversational moves
-   - Most reliable for subtle pattern detection
+1. **Party Attractor**
+   ```
+   Structure: Excitement → Announcement → Metrics List → Question → Silly PS
+   Example: "Hey! → I analyzed X → List of improvements → What next? → P.S. joke"
+   ```
+
+2. **Alternating Patterns**
+   ```
+   A: [Structure X]
+   B: [Structure Y]
+   A: [Structure X]  ← Same structure, different words
+   B: [Structure Y]  ← Pattern repeats
+   ```
+
+3. **Compression Attractors**
+   - Messages become structurally minimal
+   - Short responses, single elements
+   - Structure degrades before content
 
 ### 3. Configuration System
 
@@ -61,20 +70,12 @@ conversation:
     enabled: true
     auto_save_interval: 10  # Checkpoint every N turns
     
-  basin_detection:
+  attractor_detection:
     enabled: true
-    check_interval: 5  # Check every N turns
-    on_basin_detected: "stop"  # stop, pause, or log
-    
-    detectors:
-      structural:
-        enabled: true
-        window_size: 20
-        repetition_threshold: 3
-      pattern:
-        enabled: true
-        gratitude_threshold: 5
-        compression_threshold: 20
+    check_interval: 5     # Check every N turns
+    window_size: 10       # Analyze last N messages
+    threshold: 3          # Trigger after N repetitions
+    on_detection: "stop"  # stop, pause, or log
 ```
 
 #### Loading Configuration
