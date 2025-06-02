@@ -183,20 +183,39 @@ class ConversationTokenPredictor:
         stats_a = self.token_manager.get_usage_stats(model_a)
         stats_b = self.token_manager.get_usage_stats(model_b)
         
+        # If we're under 70% usage, we have plenty of room
+        usage_a = stats_a['percentage']
+        usage_b = stats_b['percentage']
+        max_usage = max(usage_a, usage_b)
+        
+        if max_usage < 70:
+            return 50  # Conservative but not too low
+        
         # Find the most constrained model
         remaining_a = stats_a['tokens_limit'] - stats_a['tokens_used']
         remaining_b = stats_b['tokens_limit'] - stats_b['tokens_used']
         remaining_tokens = min(remaining_a, remaining_b)
         
+        # For early conversations, be more conservative about growth
+        if len(self.history) <= 5:
+            # Early conversation - growth is less predictable
+            next_call_tokens = current_tokens_per_call + growth_rate
+            if next_call_tokens * 2 < remaining_tokens:
+                return 20  # Still early, give benefit of doubt
+        
         # Each exchange requires 2 API calls (one per agent)
-        # Each API call sends the full conversation history
-        tokens_per_exchange = current_tokens_per_call * 2 + growth_rate * 2
+        # Each API call sends the full conversation history PLUS new message
+        tokens_per_exchange = (current_tokens_per_call + growth_rate) * 2
         
         # Predict exchanges until limit
         if tokens_per_exchange <= 0:
             return 100  # No growth or shrinking - we're fine
         
         exchanges_remaining = int(remaining_tokens / tokens_per_exchange)
+        
+        # Don't be overly pessimistic for normal conversations
+        if exchanges_remaining > 2 and max_usage < 80:
+            exchanges_remaining = max(exchanges_remaining, 10)
         
         # Account for compression attractors (messages getting shorter)
         if len(self.history) >= 5:

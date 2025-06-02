@@ -25,8 +25,8 @@ class Config:
         },
         'token_management': {
             'enabled': True,
-            'warning_threshold': 10,  # Warn when X exchanges remaining
-            'auto_pause_threshold': 3,  # Auto-pause when X exchanges remaining
+            'warning_threshold': 5,  # Warn when X exchanges remaining
+            'auto_pause_threshold': 2,  # Auto-pause when X exchanges remaining
             'show_metrics': True  # Display token counts in conversation
         },
         'context_management': {
