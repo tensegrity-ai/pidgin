@@ -15,6 +15,13 @@ conversation:
     threshold: 3          # Trigger after N repetitions
     on_detection: "stop"  # Options: stop, pause, log
 
+# Token management settings
+token_management:
+  enabled: true
+  warning_threshold: 10    # Warn when X exchanges remaining
+  auto_pause_threshold: 3  # Auto-pause when X exchanges remaining
+  show_metrics: true       # Display token counts in conversation
+
 # Experiment profiles
 experiments:
   # Profile for unattended experiments

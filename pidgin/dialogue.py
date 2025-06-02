@@ -1,16 +1,19 @@
 import asyncio
 import signal
-from typing import Optional, Dict, Any
+import time
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from .types import Message, Conversation, Agent
 from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
 from .attractors import AttractorManager
 from .config_manager import get_config
+from .token_management import TokenManager, ConversationTokenPredictor
 
 
 class DialogueEngine:
@@ -33,6 +36,20 @@ class DialogueEngine:
         self.checkpoint_enabled = self.config.get('conversation.checkpoint.enabled', True) if hasattr(self.config, 'get') else True
         self.checkpoint_interval = self.config.get('conversation.checkpoint.auto_save_interval', 10) if hasattr(self.config, 'get') else 10
         
+        # Token management
+        token_config = self.config.get('token_management', {}) if hasattr(self.config, 'get') else {}
+        self.token_management_enabled = token_config.get('enabled', True)
+        self.token_warning_threshold = token_config.get('warning_threshold', 10)
+        self.token_auto_pause_threshold = token_config.get('auto_pause_threshold', 3)
+        self.show_token_metrics = token_config.get('show_metrics', True)
+        
+        if self.token_management_enabled:
+            self.token_manager = TokenManager()
+            self.token_predictor = ConversationTokenPredictor(self.token_manager)
+        else:
+            self.token_manager = None
+            self.token_predictor = None
+        
         # Signal handling for graceful pause
         self._original_sigint = None
         self._pause_requested = False
@@ -43,7 +60,8 @@ class DialogueEngine:
         agent_b: Agent, 
         initial_prompt: str,
         max_turns: int,
-        resume_from_state: Optional[ConversationState] = None
+        resume_from_state: Optional[ConversationState] = None,
+        show_token_warnings: bool = True
     ):
         # Set up signal handler for graceful pause
         self._setup_signal_handler()
@@ -57,6 +75,18 @@ class DialogueEngine:
                 messages=self.state.messages.copy()
             )
             start_turn = self.state.turn_count
+            
+            # Restore token state if available
+            if self.token_management_enabled and self.token_predictor:
+                if 'token_history' in self.state.metadata:
+                    self.token_predictor.history = self.state.metadata['token_history']
+                    self.console.print(f"[dim]Restored token history: {len(self.token_predictor.history)} exchanges[/dim]")
+                if 'token_stats' in self.state.metadata:
+                    token_stats = self.state.metadata['token_stats']
+                    self.console.print(f"[dim]Token usage at pause: "
+                                     f"Agent A: {token_stats['agent_a']['percentage']:.1f}%, "
+                                     f"Agent B: {token_stats['agent_b']['percentage']:.1f}%[/dim]")
+            
             self.console.print(f"[green]Resuming conversation from turn {start_turn}[/green]\n")
         else:
             self.conversation = Conversation(
@@ -91,6 +121,16 @@ class DialogueEngine:
                 border_style="blue"
             ))
             self.console.print()
+            
+            # Display initial token budget if enabled
+            if self.token_management_enabled and self.token_manager:
+                self.console.print("[bold cyan]Token Budget:[/bold cyan]")
+                for agent in [agent_a, agent_b]:
+                    if agent.model in self.token_manager.limits:
+                        limits = self.token_manager.limits[agent.model]
+                        self.console.print(f"  • {agent.id} ({agent.model}): "
+                                         f"{limits['tpm']:,} tokens/min, {limits['rpm']} requests/min")
+                self.console.print()
         
         # Run conversation loop
         try:
@@ -100,14 +140,38 @@ class DialogueEngine:
                     await self._handle_pause()
                     break
                 
+                # Check token predictions before proceeding
+                if self.token_management_enabled and self.token_predictor and len(self.conversation.messages) > 2:
+                    remaining_exchanges = self.token_predictor.predict_remaining_exchanges(
+                        agent_a.model, agent_b.model
+                    )
+                    
+                    if remaining_exchanges <= self.token_warning_threshold:
+                        growth_pattern = self.token_predictor.get_growth_pattern()
+                        self.console.print(
+                            f"\n[yellow bold]⚠️  Token Warning: Estimated {remaining_exchanges} exchanges remaining "
+                            f"(growth pattern: {growth_pattern})[/yellow bold]\n"
+                        )
+                        
+                        if remaining_exchanges <= self.token_auto_pause_threshold:
+                            self.console.print(
+                                f"[red bold]🛑 Auto-pausing: Only {remaining_exchanges} exchanges remaining[/red bold]"
+                            )
+                            self._pause_requested = True
+                            continue
+                
                 # Agent A responds
                 response_a = await self._get_agent_response(agent_a.id)
+                if response_a is None:  # Rate limit pause requested
+                    continue
                 self.conversation.messages.append(response_a)
                 self.state.add_message(response_a)
                 self._display_message(response_a, agent_a.model)
                 
                 # Agent B responds  
                 response_b = await self._get_agent_response(agent_b.id)
+                if response_b is None:  # Rate limit pause requested
+                    continue
                 self.conversation.messages.append(response_b)
                 self.state.add_message(response_b)
                 self._display_message(response_b, agent_b.model)
@@ -132,10 +196,17 @@ class DialogueEngine:
                 
                 # Auto-checkpoint at intervals
                 if self.checkpoint_enabled and (turn + 1) % self.checkpoint_interval == 0:
+                    # Save token state in metadata if enabled
+                    if self.token_management_enabled and self.token_predictor:
+                        self.state.metadata['token_history'] = self.token_predictor.history
+                        self.state.metadata['token_stats'] = {
+                            'agent_a': self.token_manager.get_usage_stats(agent_a.model),
+                            'agent_b': self.token_manager.get_usage_stats(agent_b.model)
+                        }
                     checkpoint_path = self.state.save_checkpoint()
                     self.console.print(f"[dim]Checkpoint saved: {checkpoint_path}[/dim]")
                 
-                # Show turn counter with detection status
+                # Show turn counter with detection status and token metrics
                 detection_status = ""
                 if self.attractor_manager.enabled:
                     detection_status = " [🔍 Detection Active]"
@@ -143,7 +214,26 @@ class DialogueEngine:
                     if (turn + 1) % self.attractor_manager.check_interval == 0:
                         detection_status += " - Pattern check performed"
                 
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}[/dim]\n")
+                # Add token metrics if enabled
+                token_status = ""
+                if self.token_management_enabled and self.token_manager:
+                    stats_a = self.token_manager.get_usage_stats(agent_a.model)
+                    stats_b = self.token_manager.get_usage_stats(agent_b.model)
+                    
+                    # Show the most constrained model
+                    if stats_a['percentage'] > stats_b['percentage']:
+                        token_status = f" | Tokens: {stats_a['percentage']:.1f}% used"
+                    else:
+                        token_status = f" | Tokens: {stats_b['percentage']:.1f}% used"
+                    
+                    # Add remaining exchanges prediction
+                    if self.token_predictor and len(self.conversation.messages) > 2:
+                        remaining = self.token_predictor.predict_remaining_exchanges(
+                            agent_a.model, agent_b.model
+                        )
+                        token_status += f" (~{remaining} exchanges left)"
+                
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}{token_status}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
@@ -155,13 +245,19 @@ class DialogueEngine:
             await self.transcript_manager.save(self.conversation)
     
     def _display_message(self, message: Message, model_name: str):
-        """Display a message in the terminal with Rich formatting"""
+        """Display a message in the terminal with Rich formatting and token metrics."""
         if message.agent_id == "agent_a":
             title = f"[bold green]Agent A ({model_name})[/bold green]"
             border_style = "green"
         else:
             title = f"[bold magenta]Agent B ({model_name})[/bold magenta]"
             border_style = "magenta"
+        
+        # Add token metrics to title if enabled
+        if self.token_management_enabled and self.show_token_metrics and self.token_manager:
+            stats = self.token_manager.get_usage_stats(model_name)
+            if stats['tokens_limit'] > 0:
+                title += f" [dim]({stats['tokens_used']:,}/{stats['tokens_limit']:,} tokens)[/dim]"
         
         self.console.print(Panel(
             message.content,
@@ -171,11 +267,80 @@ class DialogueEngine:
         self.console.print()
             
     async def _get_agent_response(self, agent_id: str) -> Message:
+        """Get agent response with token management."""
+        # Get the target agent
+        target_agent = next(a for a in self.conversation.agents if a.id == agent_id)
+        
+        # Token management checks if enabled
+        if self.token_management_enabled and self.token_manager:
+            # Count tokens in conversation history
+            conversation_tokens = sum(
+                self.token_manager.count_tokens(msg.content, target_agent.model)
+                for msg in self.conversation.messages
+            )
+            
+            # Estimate tokens for new response (based on recent messages or default)
+            if len(self.conversation.messages) >= 2:
+                recent_avg = sum(
+                    self.token_manager.count_tokens(msg.content, target_agent.model)
+                    for msg in self.conversation.messages[-2:]
+                ) // 2
+                estimated_response_tokens = int(recent_avg * 1.2)  # 20% buffer
+            else:
+                estimated_response_tokens = 200  # Default estimate
+            
+            total_estimated = conversation_tokens + estimated_response_tokens
+            
+            # Check availability
+            can_proceed, wait_time = self.token_manager.check_availability(
+                target_agent.model, total_estimated
+            )
+            
+            if not can_proceed:
+                # Show warning and potentially pause
+                self.console.print(f"\n[red bold]⚠️  Rate limit approaching for {target_agent.model}![/red bold]")
+                self.console.print(f"[yellow]Need to wait {wait_time} seconds before continuing.[/yellow]")
+                
+                if wait_time <= self.token_auto_pause_threshold * 60:  # Auto-pause threshold in minutes
+                    # Wait with progress indicator
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                        console=self.console
+                    ) as progress:
+                        task = progress.add_task(f"Waiting {wait_time}s for rate limit...", total=wait_time)
+                        for i in range(wait_time):
+                            await asyncio.sleep(1)
+                            progress.update(task, advance=1, description=f"Waiting {wait_time-i-1}s for rate limit...")
+                else:
+                    # Too long to wait - pause conversation
+                    self.console.print(f"\n[red]Rate limit wait time too long ({wait_time}s). Pausing conversation.[/red]")
+                    self._pause_requested = True
+                    return None
+        
         # Create a message from this agent
         last_message = self.conversation.messages[-1]
         
         # Route through the router
+        start_time = time.time()
         response = await self.router.route_message(last_message, self.conversation)
+        response_time = time.time() - start_time
+        
+        # Track token usage if enabled
+        if self.token_management_enabled and self.token_manager:
+            # Count actual tokens used
+            prompt_tokens = sum(
+                self.token_manager.count_tokens(msg.content, target_agent.model)
+                for msg in self.conversation.messages
+            )
+            response_tokens = self.token_manager.count_tokens(response.content, target_agent.model)
+            
+            # Track usage
+            self.token_manager.track_usage(target_agent.model, prompt_tokens + response_tokens)
+            
+            # Update predictor
+            if self.token_predictor:
+                self.token_predictor.add_exchange(prompt_tokens, response_tokens)
         
         return response
     
@@ -194,8 +359,12 @@ class DialogueEngine:
         self._original_sigtstp = signal.signal(signal.SIGTSTP, pause_handler)
         self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
         
-        # Show controls
-        self.console.print("[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop[/dim]\n")
+        # Show controls with token management info
+        controls_text = "[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop"
+        if self.token_management_enabled:
+            controls_text += " | Token management: ON"
+        controls_text += "[/dim]\n"
+        self.console.print(controls_text)
     
     def _restore_signal_handler(self):
         """Restore original signal handlers."""
@@ -207,6 +376,19 @@ class DialogueEngine:
     async def _handle_pause(self):
         """Handle pause request."""
         self.console.print("\n[yellow]Pausing conversation...[/yellow]")
+        
+        # Save token state in metadata if enabled
+        if self.token_management_enabled and self.token_predictor:
+            # Get both agents from the conversation
+            agent_a = next(a for a in self.conversation.agents if a.id == "agent_a")
+            agent_b = next(a for a in self.conversation.agents if a.id == "agent_b")
+            
+            self.state.metadata['token_history'] = self.token_predictor.history
+            self.state.metadata['token_stats'] = {
+                'agent_a': self.token_manager.get_usage_stats(agent_a.model),
+                'agent_b': self.token_manager.get_usage_stats(agent_b.model)
+            }
+        
         checkpoint_path = self.state.save_checkpoint()
         self.console.print(f"\n[green]Checkpoint saved: {checkpoint_path}[/green]")
         self.console.print(f"[green]Resume with: pidgin resume {checkpoint_path}[/green]\n")

@@ -54,7 +54,8 @@ def cli():
 @click.option('-s', '--save-to', help='Save transcript to specific location')
 @click.option('-c', '--config', type=click.Path(exists=True), help='Path to config file')
 @click.option('-n', '--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
-def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detection):
+@click.option('-w', '--no-token-warnings', is_flag=True, help='Disable token usage warnings')
+def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detection, no_token_warnings):
     """Run a conversation between two AI agents"""
     
     # Resolve model shortcuts using the new system
@@ -100,6 +101,13 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
     console.print(f"[dim]📝 Initial prompt: {prompt[:50]}{'...' if len(prompt) > 50 else ''}[/dim]")
     console.print(f"[dim]🔄 Max turns: {turns}[/dim]")
     
+    # Show token management status
+    token_enabled = cfg.get('token_management.enabled', True) if hasattr(cfg, 'get') else True
+    if token_enabled and not no_token_warnings:
+        console.print(f"[dim]💰 Token warnings: [green]ON[/green][/dim]")
+    else:
+        console.print(f"[dim]💰 Token warnings: [red]OFF[/red][/dim]")
+    
     # Show attractor detection status
     detection_enabled = cfg.get('conversation.attractor_detection.enabled', True) if hasattr(cfg, 'get') else True
     if detection_enabled:
@@ -117,7 +125,8 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
             agents["agent_a"],
             agents["agent_b"],
             prompt,
-            turns
+            turns,
+            show_token_warnings=not no_token_warnings
         ))
         
         # Success exit message

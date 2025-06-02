@@ -56,6 +56,9 @@ pidgin chat -a opus -b gpt-4.1 -t 20 -p "Let's discuss compression algorithms"
 # With attractor detection disabled (for baseline experiments)
 pidgin chat -a haiku -b nano -t 100 --no-detection
 
+# Disable token warnings (for cleaner transcripts)
+pidgin chat -a claude -b gpt -t 50 --no-token-warnings
+
 # Using custom configuration
 pidgin chat -a claude -b claude -t 50 --config unattended.yaml
 ```
@@ -149,6 +152,12 @@ Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-
 - **Configurable Actions**: Stop, pause, or log when attractors are detected
 - **Research Metrics**: Detailed analysis of pattern formation with early detection
 
+### Token Management
+- **Predictive Warnings**: Shows remaining exchanges before hitting limits
+- **Auto-Pause**: Automatically saves checkpoint when limits are imminent
+- **Token Metrics**: Displays usage in conversation (can be disabled)
+- **Growth Detection**: Identifies compression/expansion patterns
+
 ### Model Support
 - **15+ Models**: Full support for latest Claude and OpenAI models
 - **Cross-Provider**: Mix models from different providers (Claude ↔ GPT)
@@ -161,6 +170,7 @@ Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-
 - **Runtime Overrides**: CLI flags for quick adjustments
 
 ### Research Features
+- **Token Management**: Prevents rate limit crashes with predictive warnings
 - **Unattended Operation**: Run thousands of experiments automatically
 - **Basin Analysis**: Understand how and when conversations degrade
 - **Transcript Management**: Organized storage with JSON and Markdown formats
