@@ -39,19 +39,21 @@ def get_provider_for_model(model: str):
 
 
 @click.group()
+@click.help_option('-h', '--help')
 def cli():
     """Pidgin - AI conversation research tool"""
     pass
 
 
 @cli.command()
+@click.help_option('-h', '--help')
 @click.option('-a', '--agent-a', required=True, help='First agent model')
 @click.option('-b', '--agent-b', required=True, help='Second agent model')
 @click.option('-t', '--turns', default=10, help='Number of conversation turns')
 @click.option('-p', '--prompt', default="Hello! I'm looking forward to our conversation.", help='Initial prompt')
 @click.option('-s', '--save-to', help='Save transcript to specific location')
-@click.option('--config', type=click.Path(exists=True), help='Path to config file')
-@click.option('--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
+@click.option('-c', '--config', type=click.Path(exists=True), help='Path to config file')
+@click.option('-n', '--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
 def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detection):
     """Run a conversation between two AI agents"""
     
@@ -116,16 +118,38 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
             prompt,
             turns
         ))
-        console.print("\n[green]Conversation complete! Transcript saved.[/green]")
+        
+        # Success exit message
+        console.print("\n[green]" + "="*60 + "[/green]")
+        console.print("[green bold]✅ CONVERSATION COMPLETE[/green bold]")
+        console.print("[green]" + "="*60 + "[/green]")
+        console.print("[green]📁 Transcript saved successfully[/green]")
+        console.print("[green]🎯 All turns completed normally[/green]")
+        console.print("[green]" + "="*60 + "[/green]\n")
+        
     except KeyboardInterrupt:
-        console.print("\n[yellow]Conversation interrupted but transcript saved.[/yellow]")
+        # Interrupted exit message
+        console.print("\n[yellow]" + "="*60 + "[/yellow]")
+        console.print("[yellow bold]⏹️  CONVERSATION STOPPED[/yellow bold]")
+        console.print("[yellow]" + "="*60 + "[/yellow]")
+        console.print("[yellow]📁 Transcript saved (partial conversation)[/yellow]")
+        console.print("[yellow]🛑 Stopped by user (Ctrl+C)[/yellow]")
+        console.print("[yellow]" + "="*60 + "[/yellow]\n")
+        
     except Exception as e:
-        console.print(f"\n[red]Error: {e}[/red]")
+        # Error exit message
+        console.print("\n[red]" + "="*60 + "[/red]")
+        console.print("[red bold]❌ CONVERSATION ERROR[/red bold]")
+        console.print("[red]" + "="*60 + "[/red]")
+        console.print(f"[red]💥 Error: {e}[/red]")
+        console.print("[red]📁 Transcript may be incomplete[/red]")
+        console.print("[red]" + "="*60 + "[/red]\n")
 
 
 @cli.command()
-@click.option('--provider', help='Filter by provider (anthropic/openai)')
-@click.option('--detailed', is_flag=True, help='Show detailed information')
+@click.help_option('-h', '--help')
+@click.option('-p', '--provider', help='Filter by provider (anthropic/openai)')
+@click.option('-d', '--detailed', is_flag=True, help='Show detailed information')
 def models(provider, detailed):
     """List all available models and their shortcuts"""
     
@@ -212,8 +236,9 @@ def _display_models(models, detailed):
 
 
 @cli.command()
+@click.help_option('-h', '--help')
 @click.argument('checkpoint_file', required=False, type=click.Path(exists=True))
-@click.option('--latest', is_flag=True, help='Resume from the latest checkpoint')
+@click.option('-l', '--latest', is_flag=True, help='Resume from the latest checkpoint')
 def resume(checkpoint_file, latest):
     """Resume a paused conversation from checkpoint"""
     
@@ -287,12 +312,31 @@ def resume(checkpoint_file, latest):
             resume_from_state=state
         ))
         
-        console.print("\n[green]Conversation complete! Transcript saved.[/green]")
+        # Resume success message
+        console.print("\n[green]" + "="*60 + "[/green]")
+        console.print("[green bold]✅ RESUMED CONVERSATION COMPLETE[/green bold]")
+        console.print("[green]" + "="*60 + "[/green]")
+        console.print("[green]📁 Transcript updated successfully[/green]")
+        console.print("[green]🔄 Conversation resumed and finished[/green]")
+        console.print("[green]" + "="*60 + "[/green]\n")
         
     except FileNotFoundError:
-        console.print(f"[red]Checkpoint not found: {checkpoint_path}[/red]")
+        # File not found error
+        console.print(f"\n[red]" + "="*60 + "[/red]")
+        console.print("[red bold]❌ CHECKPOINT NOT FOUND[/red bold]")
+        console.print("[red]" + "="*60 + "[/red]")
+        console.print(f"[red]📂 File: {checkpoint_path}[/red]")
+        console.print("[red]💡 Use 'pidgin resume' to list available checkpoints[/red]")
+        console.print("[red]" + "="*60 + "[/red]\n")
+        
     except Exception as e:
-        console.print(f"[red]Error resuming conversation: {e}[/red]")
+        # General resume error
+        console.print(f"\n[red]" + "="*60 + "[/red]")
+        console.print("[red bold]❌ RESUME ERROR[/red bold]")
+        console.print("[red]" + "="*60 + "[/red]")
+        console.print(f"[red]💥 Error: {e}[/red]")
+        console.print("[red]🔧 Try checking the checkpoint file format[/red]")
+        console.print("[red]" + "="*60 + "[/red]\n")
 
 
 if __name__ == "__main__":
