@@ -25,9 +25,12 @@ class Config:
         },
         'token_management': {
             'enabled': True,
-            'warning_threshold': 5,  # Warn when X exchanges remaining
-            'auto_pause_threshold': 2,  # Auto-pause when X exchanges remaining
-            'show_metrics': True  # Display token counts in conversation
+            'warning_threshold': 5,  # Warn when X exchanges remaining (rate limits)
+            'auto_pause_threshold': 2,  # Auto-pause when X exchanges remaining (rate limits)
+            'show_metrics': True,  # Display rate limit usage
+            'rate_warning_threshold': 90,  # Only warn about rate limits at 90%+
+            'rate_pause_threshold': 95,   # Only pause for rate limits at 95%+
+            'show_rate_usage': False      # De-emphasize rate tracking in display
         },
         'context_management': {
             'enabled': True,
@@ -66,16 +69,19 @@ class Config:
     def _load_from_standard_locations(self):
         """Load config from standard locations in order of precedence."""
         config_locations = [
-            Path.cwd() / 'pidgin.yaml',
-            Path.cwd() / '.pidgin.yaml',
-            Path.home() / '.config' / 'pidgin' / 'config.yaml',
-            Path.home() / '.pidgin.yaml'
+            Path.home() / '.config' / 'pidgin.yaml',  # XDG config location
+            Path.home() / '.pidgin.yaml',              # Home directory
+            Path.cwd() / 'pidgin.yaml',                # Current directory
+            Path.cwd() / '.pidgin.yaml',               # Hidden in current dir
         ]
         
         for location in config_locations:
             if location.exists():
+                print(f"Loading config from: {location}")
                 self.load_from_file(location)
                 break
+        else:
+            print("No config file found, using defaults")
     
     def load_from_file(self, path: Path):
         """Load configuration from YAML file."""

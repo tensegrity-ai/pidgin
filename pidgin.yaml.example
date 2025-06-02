@@ -18,9 +18,12 @@ conversation:
 # Token management settings
 token_management:
   enabled: true
-  warning_threshold: 10    # Warn when X exchanges remaining
-  auto_pause_threshold: 3  # Auto-pause when X exchanges remaining
-  show_metrics: true       # Display token counts in conversation
+  warning_threshold: 5         # Warn when X exchanges remaining (rate limits)
+  auto_pause_threshold: 2      # Auto-pause when X exchanges remaining (rate limits) 
+  show_metrics: true           # Display rate limit usage in conversation
+  rate_warning_threshold: 90   # Only warn about rate limits at 90%+ usage
+  rate_pause_threshold: 95     # Only pause for rate limits at 95%+ usage
+  show_rate_usage: false       # De-emphasize rate limit tracking in display
 
 # Context window management settings
 context_management:

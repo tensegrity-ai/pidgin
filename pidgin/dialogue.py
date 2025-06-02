@@ -172,25 +172,61 @@ class DialogueEngine:
                     await self._handle_pause()
                     break
                 
-                # Check token predictions before proceeding
-                if self.token_management_enabled and self.token_predictor and len(self.conversation.messages) > 2:
-                    remaining_exchanges = self.token_predictor.predict_remaining_exchanges(
-                        agent_a.model, agent_b.model
-                    )
+                # PRIORITY 1: Check context window limits (what actually matters)
+                context_should_pause = False
+                if self.context_management_enabled and self.context_manager and len(self.conversation.messages) > 2:
+                    # Check both models for context usage
+                    messages_dict = [{'content': msg.content} for msg in self.conversation.messages]
                     
-                    if remaining_exchanges <= self.token_warning_threshold:
-                        growth_pattern = self.token_predictor.get_growth_pattern()
+                    capacity_a = self.context_manager.get_remaining_capacity(messages_dict, agent_a.model)
+                    capacity_b = self.context_manager.get_remaining_capacity(messages_dict, agent_b.model)
+                    
+                    # Use the most constrained model
+                    max_usage = max(capacity_a['percentage'], capacity_b['percentage'])
+                    most_constrained = agent_a.model if capacity_a['percentage'] >= capacity_b['percentage'] else agent_b.model
+                    
+                    if max_usage >= self.context_warning_threshold:
+                        turns_remaining = self.context_manager.predict_turns_remaining(messages_dict, most_constrained)
                         self.console.print(
-                            f"\n[yellow bold]⚠️  Token Warning: Estimated {remaining_exchanges} exchanges remaining "
-                            f"(growth pattern: {growth_pattern})[/yellow bold]\n"
+                            f"\n[yellow bold]⚠️  Context Warning: {max_usage:.1f}% of context window used "
+                            f"(~{turns_remaining} turns remaining)[/yellow bold]\n"
                         )
                         
-                        if remaining_exchanges <= self.token_auto_pause_threshold:
+                        if max_usage >= self.context_auto_pause_threshold:
                             self.console.print(
-                                f"[red bold]🛑 Auto-pausing: Only {remaining_exchanges} exchanges remaining[/red bold]"
+                                f"[red bold]🛑 Auto-pausing: Context window {max_usage:.1f}% full[/red bold]"
                             )
-                            self._pause_requested = True
-                            continue
+                            context_should_pause = True
+                
+                # PRIORITY 2: Check rate limits (only if context is OK and rates are very high)
+                if not context_should_pause and self.token_management_enabled and self.token_predictor and len(self.conversation.messages) > 2:
+                    stats_a = self.token_manager.get_usage_stats(agent_a.model)
+                    stats_b = self.token_manager.get_usage_stats(agent_b.model)
+                    max_rate_usage = max(stats_a['percentage'], stats_b['percentage'])
+                    
+                    # Only warn about rate limits at very high usage (90%+)
+                    if max_rate_usage >= 90:
+                        remaining_exchanges = self.token_predictor.predict_remaining_exchanges(
+                            agent_a.model, agent_b.model
+                        )
+                        
+                        if remaining_exchanges <= self.token_warning_threshold:
+                            growth_pattern = self.token_predictor.get_growth_pattern()
+                            self.console.print(
+                                f"\n[yellow bold]⚠️  Rate Limit Warning: {max_rate_usage:.1f}% usage, ~{remaining_exchanges} exchanges remaining "
+                                f"(growth pattern: {growth_pattern})[/yellow bold]\n"
+                            )
+                            
+                            # Only auto-pause for rate limits at 95%+ usage
+                            if remaining_exchanges <= self.token_auto_pause_threshold and max_rate_usage >= 95:
+                                self.console.print(
+                                    f"[red bold]🛑 Auto-pausing: Rate limit nearly reached ({max_rate_usage:.1f}% usage)[/red bold]"
+                                )
+                                context_should_pause = True
+                
+                if context_should_pause:
+                    self._pause_requested = True
+                    continue
                 
                 # Agent A responds
                 response_a = await self._get_agent_response(agent_a.id)
@@ -322,45 +358,36 @@ class DialogueEngine:
                     if (turn + 1) % self.attractor_manager.check_interval == 0:
                         detection_status += " - Pattern check performed"
                 
-                # Add token metrics if enabled
-                token_status = ""
-                if self.token_management_enabled and self.token_manager:
+                # Add rate limit metrics if enabled (but don't emphasize them)
+                rate_status = ""
+                if self.token_management_enabled and self.token_manager and self.show_token_metrics:
                     stats_a = self.token_manager.get_usage_stats(agent_a.model)
                     stats_b = self.token_manager.get_usage_stats(agent_b.model)
+                    max_rate_usage = max(stats_a['percentage'], stats_b['percentage'])
                     
-                    # Show the most constrained model
-                    if stats_a['percentage'] > stats_b['percentage']:
-                        token_status = f" | Tokens: {stats_a['percentage']:.1f}% used"
-                    else:
-                        token_status = f" | Tokens: {stats_b['percentage']:.1f}% used"
-                    
-                    # Add remaining exchanges prediction
-                    if self.token_predictor and len(self.conversation.messages) > 2:
-                        remaining = self.token_predictor.predict_remaining_exchanges(
-                            agent_a.model, agent_b.model
-                        )
-                        token_status += f" (~{remaining} exchanges left)"
+                    # Only show rate limits if they're getting high (>50%)
+                    if max_rate_usage > 50:
+                        rate_status = f" | Rate: {max_rate_usage:.1f}%/min"
                 
-                # Add context window status if enabled
+                # Add context window status (primary metric)
                 context_status = ""
                 if self.context_management_enabled and self.context_manager:
                     # Get context usage for both models
-                    capacity_a = self.context_manager.get_remaining_capacity(
-                        self.conversation.messages, agent_a.model
-                    )
-                    capacity_b = self.context_manager.get_remaining_capacity(
-                        self.conversation.messages, agent_b.model
-                    )
+                    messages_dict = [{'content': msg.content} for msg in self.conversation.messages]
+                    capacity_a = self.context_manager.get_remaining_capacity(messages_dict, agent_a.model)
+                    capacity_b = self.context_manager.get_remaining_capacity(messages_dict, agent_b.model)
                     
                     # Show the most constrained model's context usage
                     if capacity_a['percentage'] > capacity_b['percentage']:
-                        context_status = f" | Context: {capacity_a['percentage']:.1f}% full"
-                        # Add turns remaining prediction
-                        turns_left = self.context_manager.predict_turns_remaining(
-                            self.conversation.messages, agent_a.model
-                        )
-                        if turns_left < 20:  # Only show if getting low
-                            context_status += f" (~{turns_left} turns left)"
+                        context_status = f" | Context: {capacity_a['used']:,}/{capacity_a['limit']:,} tokens ({capacity_a['percentage']:.1f}%)"
+                        turns_left = self.context_manager.predict_turns_remaining(messages_dict, agent_a.model)
+                    else:
+                        context_status = f" | Context: {capacity_b['used']:,}/{capacity_b['limit']:,} tokens ({capacity_b['percentage']:.1f}%)"
+                        turns_left = self.context_manager.predict_turns_remaining(messages_dict, agent_b.model)
+                    
+                    # Add turns remaining if getting low
+                    if turns_left < 50:
+                        context_status += f" (~{turns_left} turns left)"
                     else:
                         context_status = f" | Context: {capacity_b['percentage']:.1f}% full"
                         # Add turns remaining prediction
@@ -370,7 +397,7 @@ class DialogueEngine:
                         if turns_left < 20:  # Only show if getting low
                             context_status += f" (~{turns_left} turns left)"
                 
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}{token_status}{context_status}[/dim]\n")
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}{context_status}{rate_status}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
