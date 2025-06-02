@@ -1,0 +1,59 @@
+# Pidgin Configuration Example
+# Copy to pidgin.yaml and customize as needed
+
+conversation:
+  # Checkpoint settings
+  checkpoint:
+    enabled: true
+    auto_save_interval: 10  # Save checkpoint every N turns
+    
+  # Basin detection settings  
+  basin_detection:
+    enabled: true
+    check_interval: 5  # Check for basins every N turns
+    
+    # Detection strategies
+    detectors:
+      # Structural pattern detection (most reliable)
+      structural:
+        enabled: true
+        window_size: 20  # Analyze last N messages
+        repetition_threshold: 3  # N identical structures = basin
+        
+      # Content pattern detection  
+      pattern:
+        enabled: true
+        gratitude_threshold: 5  # N gratitude expressions
+        compression_threshold: 20  # Less than N tokens average
+        emoji_loop_threshold: 5  # N emoji-only messages
+    
+    # Action when basin detected
+    on_basin_detected: "stop"  # Options: stop, pause, log
+    log_detection_reasoning: true
+
+# Experiment profiles
+experiments:
+  # Profile for unattended experiments
+  unattended:
+    basin_detection:
+      on_basin_detected: "stop"
+      detectors:
+        structural:
+          repetition_threshold: 2  # More aggressive detection
+        pattern:
+          gratitude_threshold: 3
+          compression_threshold: 15
+  
+  # Profile for baseline experiments (no intervention)
+  baseline:
+    basin_detection:
+      enabled: false
+      
+  # Profile for research on specific basin types
+  gratitude_research:
+    basin_detection:
+      detectors:
+        structural:
+          enabled: false  # Focus only on content patterns
+        pattern:
+          gratitude_threshold: 3  # More sensitive
