@@ -9,6 +9,7 @@ from .types import Conversation
 class TranscriptManager:
     def __init__(self, save_path: Optional[str] = None):
         self.save_path = save_path
+        self._transcript_path: Optional[Path] = None
         
     async def save(self, conversation: Conversation):
         # Determine save location
@@ -32,6 +33,9 @@ class TranscriptManager:
         md_path = base_dir / "conversation.md"
         with open(md_path, 'w') as f:
             f.write(self._to_markdown(conversation))
+        
+        # Store the path for later use
+        self._transcript_path = md_path
     
     def _to_markdown(self, conversation: Conversation) -> str:
         lines = [
@@ -56,3 +60,20 @@ class TranscriptManager:
                 lines.append(f"**Agent B**: {msg.content}\n")
         
         return "\n".join(lines)
+    
+    def get_transcript_path(self) -> Path:
+        """Get the path where the transcript will be saved."""
+        if self._transcript_path:
+            return self._transcript_path
+        
+        # Calculate the path without saving
+        if self.save_path:
+            base_dir = Path(self.save_path)
+        else:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            home_dir = Path.home()
+            # Use a temporary conversation ID
+            conv_id = datetime.now().strftime("%H%M%S")
+            base_dir = home_dir / ".pidgin_data" / "transcripts" / date_str / f"conversation_{conv_id}"
+        
+        return base_dir / "conversation.md"

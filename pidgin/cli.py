@@ -14,7 +14,7 @@ from .router import DirectRouter
 from .dialogue import DialogueEngine
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
-from .configuration import Config, load_config
+from .config_manager import Config, load_config
 
 console = Console()
 

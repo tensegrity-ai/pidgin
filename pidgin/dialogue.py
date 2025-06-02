@@ -10,7 +10,7 @@ from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
 from .basin_detection import BasinDetectionSystem, BasinEvent
-from .configuration import get_config
+from .config_manager import get_config
 
 
 class DialogueEngine:
