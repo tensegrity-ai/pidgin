@@ -4,7 +4,7 @@ AI conversation research tool for studying emergent communication between langua
 
 ## Overview
 
-Pidgin enables conversations between AI agents (LLMs such as Claude, ChatGPT, or Gemini) to study how they develop compressed communication protocols and emergent symbols. This Phase 1 release focuses on basic AI-to-AI conversations with automatic transcript saving.
+Pidgin enables conversations between AI agents to study how they develop compressed communication protocols and emergent symbols. It features automatic detection of conversation "basins" (repetitive patterns), pause/resume functionality, and comprehensive model support for both Anthropic and OpenAI.
 
 ## Installation
 
@@ -44,78 +44,169 @@ export OPENAI_API_KEY="sk-..."
 
 ## Quick Start
 
-Run a conversation between two Claude agents:
+### Basic Conversations
 
 ```bash
-# Basic conversation (3 turns)
-pidgin chat -a claude -b claude -t 3
+# Basic conversation (10 turns)
+pidgin chat -a claude -b gpt -t 10
 
 # Custom initial prompt
-pidgin chat -a claude -b claude -t 5 -p "Let's discuss compression algorithms"
+pidgin chat -a opus -b gpt-4.1 -t 20 -p "Let's discuss compression algorithms"
 
-# Using specific models
-pidgin chat -a opus -b sonnet -t 10
+# With basin detection disabled (for baseline experiments)
+pidgin chat -a haiku -b nano -t 100 --no-basin-detection
 
-# Save to specific location
-pidgin chat -a claude -b claude -t 3 -s ./my-transcripts
+# Using custom configuration
+pidgin chat -a claude -b claude -t 50 --config unattended.yaml
 ```
 
-### Available Model Shortcuts
+### List Available Models
+
+```bash
+# List all models and their shortcuts
+pidgin models
+
+# Show detailed model information
+pidgin models --detailed
+
+# Filter by provider
+pidgin models --provider anthropic
+```
+
+### Pause and Resume Conversations
+
+```bash
+# Start a long conversation
+pidgin chat -a opus -b gpt-4.1 -t 500
+
+# Press Ctrl+C to pause gracefully
+# The system will save a checkpoint and show resume instructions
+
+# Resume from the latest checkpoint
+pidgin resume --latest
+
+# Resume from specific checkpoint
+pidgin resume path/to/conversation.checkpoint
+
+# List available checkpoints
+pidgin resume
+```
+
+### Available Models
+
+Use `pidgin models` to see all available models. Key shortcuts include:
 
 **Claude models:**
-- `claude` → claude-sonnet-4-20250514
-- `opus` → claude-opus-4-20250514  
-- `sonnet` → claude-sonnet-4-20250514
+- `claude` → claude-4-sonnet-20250514 (default)
+- `opus` → claude-4-opus-20250514 (most capable)
+- `sonnet` → claude-4-sonnet-20250514 (balanced)
+- `haiku` → claude-3-5-haiku-20241022 (fastest)
 
 **OpenAI models:**
-- `gpt` → gpt-4.1-mini (default, fast)
-- `4.1` → gpt-4.1 (flagship model)
-- `o3` → o3-mini (reasoning model)
-- `4o` → gpt-4o (legacy model)
+- `gpt` → gpt-4.1-mini (default)
+- `4.1` → gpt-4.1 (flagship)
+- `nano` → gpt-4.1-nano (fastest)
+- `o3` → o3-mini (reasoning)
+- `o4` → o4-mini (latest reasoning)
+
+## Configuration
+
+### Basin Detection Settings
+
+Create a `pidgin.yaml` file to customize behavior:
+
+```yaml
+conversation:
+  basin_detection:
+    enabled: true
+    check_interval: 5
+    on_basin_detected: "stop"  # or "pause" or "log"
+    detectors:
+      pattern:
+        gratitude_threshold: 5
+        compression_threshold: 20
+```
+
+See `pidgin.yaml.example` for a complete configuration reference.
 
 ## Output
 
-Conversations are displayed in the terminal with Rich formatting and automatically saved to:
-- `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-id]/`
-  - `conversation.json` - Machine-readable format
-  - `conversation.md` - Human-readable markdown
+Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-id]/`:
+- `conversation.json` - Machine-readable format with full message history
+- `conversation.md` - Human-readable markdown transcript
+- `conversation.checkpoint` - Resumable state (if paused)
+- `conversation.basin` - Basin detection analysis (if triggered)
 
-## Features (Phase 1)
+## Key Features
 
-✅ AI-to-AI conversations between Claude and GPT models  
-✅ Cross-provider conversations (e.g., Claude talking to GPT)  
-✅ Real-time terminal display with Rich formatting  
-✅ Automatic transcript saving (JSON + Markdown)  
-✅ Graceful Ctrl+C handling  
-✅ Secure API key handling via environment variables  
-✅ Model shortcuts for convenience  
-✅ CWD-agnostic operation (saves to ~/.pidgin_data/)
+### Conversation Control
+- **Pause/Resume**: Press Ctrl+C to pause any conversation and resume later
+- **Checkpointing**: Automatic state saving for long-running experiments
+- **Graceful Interruption**: Never lose conversation progress
 
-## Features
+### Basin Detection
+- **Automatic Pattern Detection**: Identifies when conversations fall into repetitive patterns
+- **6 Basin Types**: Gratitude spirals, compression, emoji loops, structural repetition, philosophical loops, single tokens
+- **Configurable Actions**: Stop, pause, or log when basins are detected
+- **Research Metrics**: Detailed analysis of attractor formation
 
-- **Multi-Provider Support**: Works with Anthropic, OpenAI, and Google AI models
-- **Flexible Experiments**: Design custom communication scenarios and constraints
-- **Rich Analysis**: Built-in metrics for compression, symbol usage, and linguistic patterns
-- **Interactive UI**: Real-time visualization of conversations and metrics
-- **Extensible Architecture**: Easy to add new providers, analyzers, and experiment types
+### Model Support
+- **15+ Models**: Full support for latest Claude and OpenAI models
+- **Cross-Provider**: Mix models from different providers (Claude ↔ GPT)
+- **Model Discovery**: `pidgin models` command to explore available options
+- **Smart Shortcuts**: Convenient aliases like `haiku`, `gpt`, `opus`
+
+### Configuration
+- **YAML Config Files**: Customize behavior for different experiments
+- **Experiment Profiles**: Pre-configured settings for common research scenarios
+- **Runtime Overrides**: CLI flags for quick adjustments
+
+### Research Features
+- **Unattended Operation**: Run thousands of experiments automatically
+- **Basin Analysis**: Understand how and when conversations degrade
+- **Transcript Management**: Organized storage with JSON and Markdown formats
+- **Extensible Detection**: Easy to add new pattern detectors
+
+## Research Examples
+
+### Large-Scale Basin Mapping
+```bash
+# Run 100 conversations with aggressive basin detection
+for i in {1..100}; do
+  pidgin chat -a claude -b claude -t 1000 --config unattended.yaml
+done
+```
+
+### Cross-Model Dynamics Study
+```bash
+# Test different model combinations
+pidgin chat -a haiku -b gpt-nano -t 100  # Fast models
+pidgin chat -a opus -b gpt-4.1 -t 100    # Capable models
+pidgin chat -a claude -b o4-mini -t 100  # Mixed reasoning
+```
+
+### Baseline Experiments
+```bash
+# Run without basin detection to see natural progression
+pidgin chat -a claude -b claude -t 500 --no-basin-detection
+```
 
 ## Project Structure
 
 ```
 pidgin/
 ├── pidgin/
-│   ├── providers/      # LLM provider implementations
-│   ├── core/          # Core experiment and conversation logic
-│   ├── analysis/      # Analysis tools and metrics
-│   ├── storage/       # Data persistence layer
-│   ├── ui/           # User interface components
-│   ├── commands/     # CLI command implementations
-│   ├── config/       # Configuration management
-│   └── llm/          # LLM abstraction layer
-├── tests/            # Test suite
-├── docs/             # Documentation
-├── pyproject.toml    # Project configuration
-└── README.md         # This file
+│   ├── providers/          # LLM provider implementations
+│   ├── basin_detection.py  # Pattern detection system
+│   ├── checkpoint.py       # Pause/resume functionality
+│   ├── configuration.py    # YAML config management
+│   ├── dialogue.py         # Core conversation engine
+│   ├── models.py           # Model definitions and metadata
+│   └── cli.py              # Command-line interface
+├── tests/                  # Test suite
+├── docs/                   # Documentation
+├── pidgin.yaml.example     # Example configuration
+└── README.md               # This file
 ```
 
 ## Development
