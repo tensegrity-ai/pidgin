@@ -51,7 +51,7 @@ def cli():
 @click.option('-p', '--prompt', default="Hello! I'm looking forward to our conversation.", help='Initial prompt')
 @click.option('-s', '--save-to', help='Save transcript to specific location')
 @click.option('--config', type=click.Path(exists=True), help='Path to config file')
-@click.option('--no-attractor-detection', is_flag=True, help='Disable attractor detection')
+@click.option('--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
 def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detection):
     """Run a conversation between two AI agents"""
     
@@ -93,8 +93,21 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
     transcript_manager = TranscriptManager(save_to)
     engine = DialogueEngine(router, transcript_manager, cfg)
     
-    # Run conversation
-    console.print(f"[bold]Starting conversation between {agent_a} and {agent_b}[/bold]\n")
+    # Display configuration
+    console.print(f"[bold]🤖 Starting conversation: {model_a} ↔ {model_b}[/bold]")
+    console.print(f"[dim]📝 Initial prompt: {prompt[:50]}{'...' if len(prompt) > 50 else ''}[/dim]")
+    console.print(f"[dim]🔄 Max turns: {turns}[/dim]")
+    
+    # Show attractor detection status
+    detection_enabled = cfg.get('conversation.attractor_detection.enabled', True) if hasattr(cfg, 'get') else True
+    if detection_enabled:
+        threshold = cfg.get('conversation.attractor_detection.threshold', 3) if hasattr(cfg, 'get') else 3
+        window = cfg.get('conversation.attractor_detection.window_size', 10) if hasattr(cfg, 'get') else 10
+        console.print(f"[dim]🔍 Attractor detection: [green]ON[/green] (threshold: {threshold}, window: {window})[/dim]")
+    else:
+        console.print(f"[dim]🔍 Attractor detection: [red]OFF[/red][/dim]")
+    
+    console.print(f"[dim]{'='*60}[/dim]\n")
     
     try:
         asyncio.run(engine.run_conversation(

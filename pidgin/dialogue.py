@@ -117,18 +117,33 @@ class DialogueEngine:
                 
                 # Check for attractor detection
                 message_contents = [msg.content for msg in self.conversation.messages if msg.role != "system"]
-                if attractor_result := self.attractor_manager.check(message_contents, turn + 1):
+                
+                # Show indicator when checking
+                if self.attractor_manager.enabled and (turn + 1) % self.attractor_manager.check_interval == 0:
+                    self.console.print("[dim]🔍 Checking for patterns...[/dim]", end='')
+                    
+                if attractor_result := self.attractor_manager.check(message_contents, turn + 1, show_progress=False):
+                    self.console.print(" [red bold]ATTRACTOR FOUND![/red bold]")
                     await self._handle_attractor_detection(attractor_result)
                     if attractor_result['action'] == 'stop':
                         break
+                elif self.attractor_manager.enabled and (turn + 1) % self.attractor_manager.check_interval == 0:
+                    self.console.print(" [green]continuing normally.[/green]")
                 
                 # Auto-checkpoint at intervals
                 if self.checkpoint_enabled and (turn + 1) % self.checkpoint_interval == 0:
                     checkpoint_path = self.state.save_checkpoint()
                     self.console.print(f"[dim]Checkpoint saved: {checkpoint_path}[/dim]")
                 
-                # Show turn counter
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed[/dim]\n")
+                # Show turn counter with detection status
+                detection_status = ""
+                if self.attractor_manager.enabled:
+                    detection_status = " [🔍 Detection Active]"
+                    # Show when we're checking
+                    if (turn + 1) % self.attractor_manager.check_interval == 0:
+                        detection_status += " - Pattern check performed"
+                
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
@@ -198,18 +213,37 @@ class DialogueEngine:
     
     async def _handle_attractor_detection(self, result: Dict[str, Any]):
         """Handle attractor detection event."""
-        self.console.print(f"\n[red bold]🚨 ATTRACTOR DETECTED - Turn {result['turn_detected']}[/red bold]")
-        self.console.print(f"[red]Type: {result['type']}[/red]")
-        self.console.print(f"[red]Pattern: {result['description']}[/red]")
-        self.console.print(f"[red]Confidence: {result['confidence']:.2f}[/red]")
+        # Clear visual separator
+        self.console.print(f"\n[red]{'='*60}[/red]")
+        self.console.print(f"[red bold]🚨 ATTRACTOR DETECTED - Turn {result['turn_detected']}/{self.state.max_turns}[/red bold]")
+        self.console.print(f"[red]{'='*60}[/red]")
+        
+        # Display detection details in a clear format
+        self.console.print(f"[yellow]Type:[/yellow]       {result['type']}")
+        self.console.print(f"[yellow]Pattern:[/yellow]    {result['description']}")
+        self.console.print(f"[yellow]Confidence:[/yellow] {result['confidence']:.0%}")
+        
+        # Show pattern details if available
+        if 'pattern' in result:
+            pattern_str = result['pattern']
+            if len(pattern_str) > 50:
+                pattern_str = pattern_str[:50] + "..."
+            self.console.print(f"[yellow]Structure:[/yellow]  {pattern_str}")
+        
+        self.console.print(f"[red]{'='*60}[/red]\n")
         
         # Save attractor analysis
+        self.console.print("[dim]💾 Saving transcript with detection data...[/dim]")
         if self.state.transcript_path:
             analysis_path = self.attractor_manager.save_analysis(Path(self.state.transcript_path))
             if analysis_path:
-                self.console.print(f"[dim]Attractor analysis saved to: {analysis_path}[/dim]")
+                self.console.print(f"[green]✅ Analysis saved to: {analysis_path}[/green]")
+        
+        # Save the transcript with metadata
+        await self.transcript_manager.save(self.conversation)
+        self.console.print(f"[green]✅ Transcript saved to: {self.state.transcript_path}[/green]")
         
         if result['action'] == 'stop':
-            self.console.print("[red bold]Ending conversation - Structural attractor reached[/red bold]\n")
+            self.console.print("\n[red bold]Ending conversation - Structural attractor reached[/red bold]\n")
         elif result['action'] == 'pause':
             self._pause_requested = True

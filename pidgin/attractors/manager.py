@@ -32,7 +32,7 @@ class AttractorManager:
         self.check_interval = config.get('check_interval', 5)
         self.detection_history = []
         
-    def check(self, messages: List[str], turn_count: int) -> Optional[Dict]:
+    def check(self, messages: List[str], turn_count: int, show_progress: bool = True) -> Optional[Dict]:
         """
         Check if conversation has entered an attractor.
         Returns detection details if found, None otherwise.
@@ -44,8 +44,19 @@ class AttractorManager:
         if turn_count % self.check_interval != 0:
             return None
             
+        # Show checking indicator if enabled
+        if show_progress:
+            print("🔍 Checking for patterns...", end='', flush=True)
+            
         # ONLY check structural patterns - everything else is noise
         result = self.structural_detector.detect_attractor(messages)
+        
+        # Complete the checking indicator
+        if show_progress:
+            if result:
+                print(" ATTRACTOR FOUND!")
+            else:
+                print(" continuing normally.")
         
         if result:
             # Enhance result with metadata

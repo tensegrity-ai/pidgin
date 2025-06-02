@@ -53,8 +53,8 @@ pidgin chat -a claude -b gpt -t 10
 # Custom initial prompt
 pidgin chat -a opus -b gpt-4.1 -t 20 -p "Let's discuss compression algorithms"
 
-# With basin detection disabled (for baseline experiments)
-pidgin chat -a haiku -b nano -t 100 --no-basin-detection
+# With attractor detection disabled (for baseline experiments)
+pidgin chat -a haiku -b nano -t 100 --no-detection
 
 # Using custom configuration
 pidgin chat -a claude -b claude -t 50 --config unattended.yaml
@@ -111,20 +111,18 @@ Use `pidgin models` to see all available models. Key shortcuts include:
 
 ## Configuration
 
-### Basin Detection Settings
+### Attractor Detection Settings
 
 Create a `pidgin.yaml` file to customize behavior:
 
 ```yaml
 conversation:
-  basin_detection:
+  attractor_detection:
     enabled: true
-    check_interval: 5
-    on_basin_detected: "stop"  # or "pause" or "log"
-    detectors:
-      pattern:
-        gratitude_threshold: 5
-        compression_threshold: 20
+    check_interval: 5     # Check every N turns
+    window_size: 10       # Analyze last N messages  
+    threshold: 3          # Trigger after N repetitions
+    on_detection: "stop"  # or "pause" or "log"
 ```
 
 See `pidgin.yaml.example` for a complete configuration reference.
@@ -144,11 +142,12 @@ Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-
 - **Checkpointing**: Automatic state saving for long-running experiments
 - **Graceful Interruption**: Never lose conversation progress
 
-### Basin Detection
-- **Automatic Pattern Detection**: Identifies when conversations fall into repetitive patterns
-- **6 Basin Types**: Gratitude spirals, compression, emoji loops, structural repetition, philosophical loops, single tokens
-- **Configurable Actions**: Stop, pause, or log when basins are detected
-- **Research Metrics**: Detailed analysis of attractor formation
+### Attractor Detection
+- **Structural Analysis**: Identifies when conversations fall into repetitive structural patterns
+- **Real-time Detection**: Shows checking indicators and status during conversations
+- **Multiple Pattern Types**: Party attractors, alternating patterns, compression attractors
+- **Configurable Actions**: Stop, pause, or log when attractors are detected
+- **Research Metrics**: Detailed analysis of pattern formation with early detection
 
 ### Model Support
 - **15+ Models**: Full support for latest Claude and OpenAI models
