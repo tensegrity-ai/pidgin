@@ -29,6 +29,12 @@ class Config:
             'auto_pause_threshold': 3,  # Auto-pause when X exchanges remaining
             'show_metrics': True  # Display token counts in conversation
         },
+        'context_management': {
+            'enabled': True,
+            'warning_threshold': 80,  # Warn at 80% capacity
+            'auto_pause_threshold': 95,  # Auto-pause at 95% capacity
+            'show_usage': True  # Display context usage in UI
+        },
         'experiments': {
             'unattended': {
                 'attractor_detection': {

@@ -14,6 +14,7 @@ from .checkpoint import ConversationState, CheckpointManager
 from .attractors import AttractorManager
 from .config_manager import get_config
 from .token_management import TokenManager, ConversationTokenPredictor
+from .context_manager import ContextWindowManager
 
 
 class DialogueEngine:
@@ -49,6 +50,18 @@ class DialogueEngine:
         else:
             self.token_manager = None
             self.token_predictor = None
+        
+        # Context window management
+        context_config = self.config.get('context_management', {}) if hasattr(self.config, 'get') else {}
+        self.context_management_enabled = context_config.get('enabled', True)
+        self.context_warning_threshold = context_config.get('warning_threshold', 80)
+        self.context_auto_pause_threshold = context_config.get('auto_pause_threshold', 95)
+        self.show_context_usage = context_config.get('show_usage', True)
+        
+        if self.context_management_enabled:
+            self.context_manager = ContextWindowManager()
+        else:
+            self.context_manager = None
         
         # Signal handling for graceful pause
         self._original_sigint = None
@@ -86,6 +99,14 @@ class DialogueEngine:
                     self.console.print(f"[dim]Token usage at pause: "
                                      f"Agent A: {token_stats['agent_a']['percentage']:.1f}%, "
                                      f"Agent B: {token_stats['agent_b']['percentage']:.1f}%[/dim]")
+            
+            # Restore context state if available
+            if self.context_management_enabled and self.context_manager:
+                if 'context_stats' in self.state.metadata:
+                    context_stats = self.state.metadata['context_stats']
+                    self.console.print(f"[dim]Context usage at pause: "
+                                     f"Agent A: {context_stats['agent_a']['percentage']:.1f}%, "
+                                     f"Agent B: {context_stats['agent_b']['percentage']:.1f}%[/dim]")
             
             self.console.print(f"[green]Resuming conversation from turn {start_turn}[/green]\n")
         else:
@@ -131,6 +152,17 @@ class DialogueEngine:
                         self.console.print(f"  • {agent.id} ({agent.model}): "
                                          f"{limits['tpm']:,} tokens/min, {limits['rpm']} requests/min")
                 self.console.print()
+            
+            # Display context window limits if enabled
+            if self.context_management_enabled and self.context_manager:
+                self.console.print("[bold cyan]Context Windows:[/bold cyan]")
+                for agent in [agent_a, agent_b]:
+                    if agent.model in self.context_manager.context_limits:
+                        limit = self.context_manager.context_limits[agent.model]
+                        effective_limit = limit - self.context_manager.reserved_tokens
+                        self.console.print(f"  • {agent.id} ({agent.model}): "
+                                         f"{effective_limit:,} tokens (total: {limit:,})")
+                self.console.print()
         
         # Run conversation loop
         try:
@@ -166,7 +198,40 @@ class DialogueEngine:
                     continue
                 self.conversation.messages.append(response_a)
                 self.state.add_message(response_a)
-                self._display_message(response_a, agent_a.model)
+                
+                # Check context usage for Agent A after adding message
+                context_info_a = None
+                if self.context_management_enabled and self.context_manager:
+                    capacity_a = self.context_manager.get_remaining_capacity(
+                        self.conversation.messages, agent_a.model
+                    )
+                    context_info_a = capacity_a
+                    
+                    # Check if we should warn about context usage
+                    if self.context_manager.should_warn(
+                        self.conversation.messages, agent_a.model, self.context_warning_threshold
+                    ):
+                        turns_remaining = self.context_manager.predict_turns_remaining(
+                            self.conversation.messages, agent_a.model
+                        )
+                        self.console.print(
+                            f"\n[yellow bold]⚠️  Context Warning ({agent_a.model}): "
+                            f"{capacity_a['percentage']:.1f}% used, ~{turns_remaining} turns remaining[/yellow bold]\n"
+                        )
+                
+                self._display_message(response_a, agent_a.model, context_info=context_info_a)
+                
+                # Check for auto-pause due to context limits before Agent B
+                if self.context_management_enabled and self.context_manager:
+                    if self.context_manager.should_pause(
+                        self.conversation.messages, agent_a.model, self.context_auto_pause_threshold
+                    ):
+                        self.console.print(
+                            f"[red bold]🛑 Auto-pausing: Context window {capacity_a['percentage']:.1f}% full "
+                            f"for {agent_a.model}[/red bold]"
+                        )
+                        self._pause_requested = True
+                        continue
                 
                 # Agent B responds  
                 response_b = await self._get_agent_response(agent_b.id)
@@ -174,7 +239,38 @@ class DialogueEngine:
                     continue
                 self.conversation.messages.append(response_b)
                 self.state.add_message(response_b)
-                self._display_message(response_b, agent_b.model)
+                
+                # Check context usage for Agent B after adding message
+                context_info_b = None
+                if self.context_management_enabled and self.context_manager:
+                    capacity_b = self.context_manager.get_remaining_capacity(
+                        self.conversation.messages, agent_b.model
+                    )
+                    context_info_b = capacity_b
+                    
+                    # Check if we should warn about context usage
+                    if self.context_manager.should_warn(
+                        self.conversation.messages, agent_b.model, self.context_warning_threshold
+                    ):
+                        turns_remaining = self.context_manager.predict_turns_remaining(
+                            self.conversation.messages, agent_b.model
+                        )
+                        self.console.print(
+                            f"\n[yellow bold]⚠️  Context Warning ({agent_b.model}): "
+                            f"{capacity_b['percentage']:.1f}% used, ~{turns_remaining} turns remaining[/yellow bold]\n"
+                        )
+                        
+                    # Check for auto-pause due to context limits
+                    if self.context_manager.should_pause(
+                        self.conversation.messages, agent_b.model, self.context_auto_pause_threshold
+                    ):
+                        self.console.print(
+                            f"[red bold]🛑 Auto-pausing: Context window {capacity_b['percentage']:.1f}% full "
+                            f"for {agent_b.model}[/red bold]"
+                        )
+                        self._pause_requested = True
+                
+                self._display_message(response_b, agent_b.model, context_info=context_info_b)
                 
                 # Auto-save transcript after each turn
                 await self.transcript_manager.save(self.conversation)
@@ -203,10 +299,22 @@ class DialogueEngine:
                             'agent_a': self.token_manager.get_usage_stats(agent_a.model),
                             'agent_b': self.token_manager.get_usage_stats(agent_b.model)
                         }
+                    
+                    # Save context state in metadata if enabled
+                    if self.context_management_enabled and self.context_manager:
+                        self.state.metadata['context_stats'] = {
+                            'agent_a': self.context_manager.get_remaining_capacity(
+                                self.conversation.messages, agent_a.model
+                            ),
+                            'agent_b': self.context_manager.get_remaining_capacity(
+                                self.conversation.messages, agent_b.model
+                            )
+                        }
+                    
                     checkpoint_path = self.state.save_checkpoint()
                     self.console.print(f"[dim]Checkpoint saved: {checkpoint_path}[/dim]")
                 
-                # Show turn counter with detection status and token metrics
+                # Show turn counter with detection status, token metrics, and context usage
                 detection_status = ""
                 if self.attractor_manager.enabled:
                     detection_status = " [🔍 Detection Active]"
@@ -233,7 +341,36 @@ class DialogueEngine:
                         )
                         token_status += f" (~{remaining} exchanges left)"
                 
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}{token_status}[/dim]\n")
+                # Add context window status if enabled
+                context_status = ""
+                if self.context_management_enabled and self.context_manager:
+                    # Get context usage for both models
+                    capacity_a = self.context_manager.get_remaining_capacity(
+                        self.conversation.messages, agent_a.model
+                    )
+                    capacity_b = self.context_manager.get_remaining_capacity(
+                        self.conversation.messages, agent_b.model
+                    )
+                    
+                    # Show the most constrained model's context usage
+                    if capacity_a['percentage'] > capacity_b['percentage']:
+                        context_status = f" | Context: {capacity_a['percentage']:.1f}% full"
+                        # Add turns remaining prediction
+                        turns_left = self.context_manager.predict_turns_remaining(
+                            self.conversation.messages, agent_a.model
+                        )
+                        if turns_left < 20:  # Only show if getting low
+                            context_status += f" (~{turns_left} turns left)"
+                    else:
+                        context_status = f" | Context: {capacity_b['percentage']:.1f}% full"
+                        # Add turns remaining prediction
+                        turns_left = self.context_manager.predict_turns_remaining(
+                            self.conversation.messages, agent_b.model
+                        )
+                        if turns_left < 20:  # Only show if getting low
+                            context_status += f" (~{turns_left} turns left)"
+                
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns} completed{detection_status}{token_status}{context_status}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
@@ -244,8 +381,8 @@ class DialogueEngine:
             # Save final transcript
             await self.transcript_manager.save(self.conversation)
     
-    def _display_message(self, message: Message, model_name: str):
-        """Display a message in the terminal with Rich formatting and token metrics."""
+    def _display_message(self, message: Message, model_name: str, context_info: Optional[Dict[str, Any]] = None):
+        """Display a message in the terminal with Rich formatting, token metrics, and context usage."""
         if message.agent_id == "agent_a":
             title = f"[bold green]Agent A ({model_name})[/bold green]"
             border_style = "green"
@@ -258,6 +395,11 @@ class DialogueEngine:
             stats = self.token_manager.get_usage_stats(model_name)
             if stats['tokens_limit'] > 0:
                 title += f" [dim]({stats['tokens_used']:,}/{stats['tokens_limit']:,} tokens)[/dim]"
+        
+        # Add context usage to title if enabled and available
+        if self.context_management_enabled and self.show_context_usage and context_info:
+            usage_str = self.context_manager.format_usage(context_info)
+            title += f" [dim]| Context: {usage_str}[/dim]"
         
         self.console.print(Panel(
             message.content,
@@ -359,10 +501,12 @@ class DialogueEngine:
         self._original_sigtstp = signal.signal(signal.SIGTSTP, pause_handler)
         self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
         
-        # Show controls with token management info
+        # Show controls with token and context management info
         controls_text = "[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop"
         if self.token_management_enabled:
             controls_text += " | Token management: ON"
+        if self.context_management_enabled:
+            controls_text += " | Context tracking: ON"
         controls_text += "[/dim]\n"
         self.console.print(controls_text)
     
@@ -387,6 +531,21 @@ class DialogueEngine:
             self.state.metadata['token_stats'] = {
                 'agent_a': self.token_manager.get_usage_stats(agent_a.model),
                 'agent_b': self.token_manager.get_usage_stats(agent_b.model)
+            }
+        
+        # Save context window state in metadata if enabled
+        if self.context_management_enabled and self.context_manager:
+            # Get both agents from the conversation
+            agent_a = next(a for a in self.conversation.agents if a.id == "agent_a")
+            agent_b = next(a for a in self.conversation.agents if a.id == "agent_b")
+            
+            self.state.metadata['context_stats'] = {
+                'agent_a': self.context_manager.get_remaining_capacity(
+                    self.conversation.messages, agent_a.model
+                ),
+                'agent_b': self.context_manager.get_remaining_capacity(
+                    self.conversation.messages, agent_b.model
+                )
             }
         
         checkpoint_path = self.state.save_checkpoint()

@@ -158,6 +158,13 @@ Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-
 - **Token Metrics**: Displays usage in conversation (can be disabled)
 - **Growth Detection**: Identifies compression/expansion patterns
 
+### Context Window Management
+- **Context Tracking**: Monitors total conversation size vs model limits
+- **Progressive Warnings**: Shows when approaching context window capacity
+- **Auto-Pause on Limits**: Prevents crashes when context is nearly full
+- **Model-Specific Limits**: Tracks different limits for Claude (200k) vs GPT (128k)
+- **Usage Display**: Shows context usage alongside token metrics
+
 ### Model Support
 - **15+ Models**: Full support for latest Claude and OpenAI models
 - **Cross-Provider**: Mix models from different providers (Claude ↔ GPT)

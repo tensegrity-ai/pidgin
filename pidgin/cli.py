@@ -108,6 +108,13 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
     else:
         console.print(f"[dim]💰 Token warnings: [red]OFF[/red][/dim]")
     
+    # Show context management status
+    context_enabled = cfg.get('context_management.enabled', True) if hasattr(cfg, 'get') else True
+    if context_enabled:
+        console.print(f"[dim]📏 Context tracking: [green]ON[/green][/dim]")
+    else:
+        console.print(f"[dim]📏 Context tracking: [red]OFF[/red][/dim]")
+    
     # Show attractor detection status
     detection_enabled = cfg.get('conversation.attractor_detection.enabled', True) if hasattr(cfg, 'get') else True
     if detection_enabled:

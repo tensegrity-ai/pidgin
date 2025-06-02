@@ -22,6 +22,13 @@ token_management:
   auto_pause_threshold: 3  # Auto-pause when X exchanges remaining
   show_metrics: true       # Display token counts in conversation
 
+# Context window management settings
+context_management:
+  enabled: true
+  warning_threshold: 80    # Warn at 80% context capacity
+  auto_pause_threshold: 95 # Auto-pause at 95% context capacity
+  show_usage: true         # Display context usage in conversation
+
 # Experiment profiles
 experiments:
   # Profile for unattended experiments
