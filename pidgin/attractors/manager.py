@@ -80,6 +80,9 @@ class AttractorManager:
             
         analysis_path = transcript_path.with_suffix('.attractor')
         
+        # Ensure parent directory exists
+        analysis_path.parent.mkdir(parents=True, exist_ok=True)
+        
         analysis = {
             'detection_count': len(self.detection_history),
             'first_detection': self.detection_history[0] if self.detection_history else None,

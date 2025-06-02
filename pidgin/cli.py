@@ -109,7 +109,8 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
     else:
         console.print(f"[dim]🔍 Attractor detection: [red]OFF[/red][/dim]")
     
-    console.print(f"[dim]{'='*60}[/dim]\n")
+    console.rule(style="dim")
+    console.print()
     
     try:
         asyncio.run(engine.run_conversation(
@@ -120,30 +121,30 @@ def chat(agent_a, agent_b, turns, prompt, save_to, config, no_attractor_detectio
         ))
         
         # Success exit message
-        console.print("\n[green]" + "="*60 + "[/green]")
-        console.print("[green bold]✅ CONVERSATION COMPLETE[/green bold]")
-        console.print("[green]" + "="*60 + "[/green]")
+        console.print()
+        console.rule("[green]✅ CONVERSATION COMPLETE[/green]", style="green")
         console.print("[green]📁 Transcript saved successfully[/green]")
         console.print("[green]🎯 All turns completed normally[/green]")
-        console.print("[green]" + "="*60 + "[/green]\n")
+        console.rule(style="green")
+        console.print()
         
     except KeyboardInterrupt:
         # Interrupted exit message
-        console.print("\n[yellow]" + "="*60 + "[/yellow]")
-        console.print("[yellow bold]⏹️  CONVERSATION STOPPED[/yellow bold]")
-        console.print("[yellow]" + "="*60 + "[/yellow]")
+        console.print()
+        console.rule("[yellow]⏹️  CONVERSATION STOPPED[/yellow]", style="yellow")
         console.print("[yellow]📁 Transcript saved (partial conversation)[/yellow]")
         console.print("[yellow]🛑 Stopped by user (Ctrl+C)[/yellow]")
-        console.print("[yellow]" + "="*60 + "[/yellow]\n")
+        console.rule(style="yellow")
+        console.print()
         
     except Exception as e:
         # Error exit message
-        console.print("\n[red]" + "="*60 + "[/red]")
-        console.print("[red bold]❌ CONVERSATION ERROR[/red bold]")
-        console.print("[red]" + "="*60 + "[/red]")
+        console.print()
+        console.rule("[red]❌ CONVERSATION ERROR[/red]", style="red")
         console.print(f"[red]💥 Error: {e}[/red]")
         console.print("[red]📁 Transcript may be incomplete[/red]")
-        console.print("[red]" + "="*60 + "[/red]\n")
+        console.rule(style="red")
+        console.print()
 
 
 @cli.command()
@@ -313,30 +314,30 @@ def resume(checkpoint_file, latest):
         ))
         
         # Resume success message
-        console.print("\n[green]" + "="*60 + "[/green]")
-        console.print("[green bold]✅ RESUMED CONVERSATION COMPLETE[/green bold]")
-        console.print("[green]" + "="*60 + "[/green]")
+        console.print()
+        console.rule("[green]✅ RESUMED CONVERSATION COMPLETE[/green]", style="green")
         console.print("[green]📁 Transcript updated successfully[/green]")
         console.print("[green]🔄 Conversation resumed and finished[/green]")
-        console.print("[green]" + "="*60 + "[/green]\n")
+        console.rule(style="green")
+        console.print()
         
     except FileNotFoundError:
         # File not found error
-        console.print(f"\n[red]" + "="*60 + "[/red]")
-        console.print("[red bold]❌ CHECKPOINT NOT FOUND[/red bold]")
-        console.print("[red]" + "="*60 + "[/red]")
+        console.print()
+        console.rule("[red]❌ CHECKPOINT NOT FOUND[/red]", style="red")
         console.print(f"[red]📂 File: {checkpoint_path}[/red]")
         console.print("[red]💡 Use 'pidgin resume' to list available checkpoints[/red]")
-        console.print("[red]" + "="*60 + "[/red]\n")
+        console.rule(style="red")
+        console.print()
         
     except Exception as e:
         # General resume error
-        console.print(f"\n[red]" + "="*60 + "[/red]")
-        console.print("[red bold]❌ RESUME ERROR[/red bold]")
-        console.print("[red]" + "="*60 + "[/red]")
+        console.print()
+        console.rule("[red]❌ RESUME ERROR[/red]", style="red")
         console.print(f"[red]💥 Error: {e}[/red]")
         console.print("[red]🔧 Try checking the checkpoint file format[/red]")
-        console.print("[red]" + "="*60 + "[/red]\n")
+        console.rule(style="red")
+        console.print()
 
 
 if __name__ == "__main__":

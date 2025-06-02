@@ -68,6 +68,9 @@ class ConversationState:
         # Update pause time
         self.pause_time = datetime.now()
         
+        # Ensure parent directory exists
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        
         # Atomic write using temp file
         with tempfile.NamedTemporaryFile(mode='w', delete=False, 
                                         dir=checkpoint_path.parent, 

@@ -158,12 +158,18 @@ class StructuralPatternDetector:
                     'positions': [i]
                 }
                 
-        # Find patterns that exceed threshold
+        # Find patterns that exceed threshold AND have high confidence
         for pattern_data in pattern_counts.values():
             if pattern_data['count'] >= self.threshold:
-                logger.warning(f"🎯 STRUCTURAL ATTRACTOR: {pattern_data['signature']}")
-                logger.warning(f"📊 Repeated {pattern_data['count']} times in last {len(signatures)} messages")
-                return pattern_data
+                # Calculate confidence
+                confidence = pattern_data['count'] / len(signatures)
+                
+                # Only trigger detection if confidence is >= 80%
+                if confidence >= 0.8:
+                    logger.warning(f"🎯 STRUCTURAL ATTRACTOR: {pattern_data['signature']}")
+                    logger.warning(f"📊 Repeated {pattern_data['count']} times in last {len(signatures)} messages")
+                    logger.warning(f"🎮 Confidence: {confidence:.2%}")
+                    return pattern_data
                 
         return None
         
@@ -190,12 +196,18 @@ class StructuralPatternDetector:
                         'positions': [i, i + 1, i + 2, i + 3]
                     }
                     
-        # Check if any alternating pattern exceeds threshold
+        # Check if any alternating pattern exceeds threshold AND has high confidence
         for pattern_data in pair_counts.values():
             if pattern_data['count'] >= self.threshold - 1:  # Slightly lower threshold for alternating
-                logger.warning(f"🔄 ALTERNATING ATTRACTOR: {pattern_data['pair']}")
-                logger.warning(f"📊 Pattern repeated {pattern_data['count']} times")
-                return pattern_data
+                # Calculate confidence for alternating patterns
+                confidence = pattern_data['count'] / (len(signatures) // 2)
+                
+                # Only trigger detection if confidence is >= 80%
+                if confidence >= 0.8:
+                    logger.warning(f"🔄 ALTERNATING ATTRACTOR: {pattern_data['pair']}")
+                    logger.warning(f"📊 Pattern repeated {pattern_data['count']} times")
+                    logger.warning(f"🎮 Confidence: {confidence:.2%}")
+                    return pattern_data
                 
         return None
         
