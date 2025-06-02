@@ -153,23 +153,31 @@ class ConversationTokenPredictor:
             # Not enough data - assume we have plenty of room
             return 100
         
-        # Calculate average growth rate
-        total_tokens = []
-        for i, (prompt, response) in enumerate(self.history):
-            # Each exchange adds to the conversation history
-            cumulative = sum(p + r for p, r in self.history[:i+1])
-            total_tokens.append(cumulative)
+        # In conversations, each API call includes the ENTIRE history
+        # So tokens per API call = sum of all messages so far
+        tokens_per_call = []
+        for i in range(len(self.history)):
+            # Calculate total tokens that would be sent at turn i
+            total_at_turn = sum(p + r for p, r in self.history[:i+1])
+            tokens_per_call.append(total_at_turn)
         
-        # Estimate growth rate (tokens per exchange)
-        if len(total_tokens) >= 2:
-            recent_growth = total_tokens[-1] - total_tokens[-2]
-            avg_growth = sum(total_tokens[i] - total_tokens[i-1] 
-                           for i in range(1, len(total_tokens))) / (len(total_tokens) - 1)
+        # Calculate growth rate of tokens per API call
+        if len(tokens_per_call) >= 2:
+            # Recent growth in tokens per call
+            recent_growth = tokens_per_call[-1] - tokens_per_call[-2] if len(tokens_per_call) > 1 else tokens_per_call[-1]
+            
+            # Average growth over all turns
+            growth_rates = [tokens_per_call[i] - tokens_per_call[i-1] 
+                          for i in range(1, len(tokens_per_call))]
+            avg_growth = sum(growth_rates) / len(growth_rates) if growth_rates else recent_growth
             
             # Use weighted average favoring recent growth
             growth_rate = (recent_growth * 0.7 + avg_growth * 0.3)
         else:
-            growth_rate = total_tokens[-1]
+            growth_rate = tokens_per_call[-1]
+        
+        # Current tokens per API call
+        current_tokens_per_call = tokens_per_call[-1] if tokens_per_call else 0
         
         # Get current usage for both models
         stats_a = self.token_manager.get_usage_stats(model_a)
@@ -180,11 +188,15 @@ class ConversationTokenPredictor:
         remaining_b = stats_b['tokens_limit'] - stats_b['tokens_used']
         remaining_tokens = min(remaining_a, remaining_b)
         
+        # Each exchange requires 2 API calls (one per agent)
+        # Each API call sends the full conversation history
+        tokens_per_exchange = current_tokens_per_call * 2 + growth_rate * 2
+        
         # Predict exchanges until limit
-        if growth_rate <= 0:
+        if tokens_per_exchange <= 0:
             return 100  # No growth or shrinking - we're fine
         
-        exchanges_remaining = int(remaining_tokens / (growth_rate * 2))  # *2 for both agents
+        exchanges_remaining = int(remaining_tokens / tokens_per_exchange)
         
         # Account for compression attractors (messages getting shorter)
         if len(self.history) >= 5:

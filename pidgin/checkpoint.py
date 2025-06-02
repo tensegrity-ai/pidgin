@@ -35,8 +35,12 @@ class ConversationState:
         data['start_time'] = self.start_time.isoformat()
         if self.pause_time:
             data['pause_time'] = self.pause_time.isoformat()
-        # Convert Message objects to dicts
-        data['messages'] = [{'role': m.role, 'content': m.content} for m in self.messages]
+        # Convert Message objects to dicts (preserving all fields)
+        data['messages'] = [{
+            'role': m.role, 
+            'content': m.content,
+            'agent_id': getattr(m, 'agent_id', 'system')  # Default to 'system' if missing
+        } for m in self.messages]
         return data
     
     @classmethod
