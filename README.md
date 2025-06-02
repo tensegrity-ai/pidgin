@@ -114,21 +114,35 @@ Use `pidgin models` to see all available models. Key shortcuts include:
 
 ## Configuration
 
-### Attractor Detection Settings
+### Quick Start Configuration
 
-Create a `pidgin.yaml` file to customize behavior:
+For long research conversations, create `~/.config/pidgin.yaml`:
 
 ```yaml
+# Allow very long conversations
+context_management:
+  warning_threshold: 85    # Warn at 85% context full
+  auto_pause_threshold: 95 # Pause at 95% context full
+
+token_management:
+  rate_warning_threshold: 95  # Ignore rate limits until 95%
+  show_rate_usage: false      # Hide rate limit display
+
 conversation:
   attractor_detection:
-    enabled: true
-    check_interval: 5     # Check every N turns
-    window_size: 10       # Analyze last N messages  
-    threshold: 3          # Trigger after N repetitions
-    on_detection: "stop"  # or "pause" or "log"
+    on_detection: "log"    # Don't stop on patterns
 ```
 
-See `pidgin.yaml.example` for a complete configuration reference.
+### Configuration Files
+
+- `pidgin.yaml.default` - Full configuration with all options documented
+- `pidgin.yaml.example` - Example with experiment profiles
+- `.config.example` - Minimal config for long conversations
+
+Configuration is loaded from (first found):
+1. `~/.config/pidgin.yaml` (recommended)
+2. `~/.pidgin.yaml`
+3. `./pidgin.yaml` (current directory)
 
 ## Output
 
@@ -137,6 +151,29 @@ Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-
 - `conversation.md` - Human-readable markdown transcript
 - `conversation.checkpoint` - Resumable state (if paused)
 - `conversation.basin` - Basin detection analysis (if triggered)
+
+## Understanding Limits
+
+### Two Types of Limits
+
+1. **Context Window Limits** (Primary concern)
+   - Total conversation size vs model's context window
+   - Claude: 200,000 tokens, GPT-4: 128,000 tokens
+   - This is what usually stops long conversations
+   - Displayed as: `Context: 45,231/200,000 tokens (22.6%)`
+
+2. **Rate Limits** (Secondary concern)
+   - Tokens per minute (e.g., 40,000/min for Claude)
+   - Only matters for rapid exchanges
+   - Displayed as: `Rate: 85%/min` (only when high)
+   - Usually not a problem for research conversations
+
+### Default Behavior
+
+- **Warnings** appear at 80% context usage
+- **Auto-pause** at 90% context usage
+- Rate limits only trigger warnings at 90%+ usage
+- Conversations prioritize context limits over rate limits
 
 ## Key Features
 
