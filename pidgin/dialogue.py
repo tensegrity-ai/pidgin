@@ -14,6 +14,7 @@ from .checkpoint import ConversationState, CheckpointManager
 from .attractors import AttractorManager
 from .config_manager import get_config
 from .context_manager import ContextWindowManager
+from .conductor import ConductorMiddleware
 
 
 class DialogueEngine:
@@ -62,10 +63,18 @@ class DialogueEngine:
         initial_prompt: str,
         max_turns: int,
         resume_from_state: Optional[ConversationState] = None,
-        show_token_warnings: bool = True
+        show_token_warnings: bool = True,
+        conductor_mode: bool = False
     ):
         # Set up signal handler for graceful pause
         self._setup_signal_handler()
+        
+        # Initialize conductor if requested
+        self.conductor = None
+        if conductor_mode:
+            self.conductor = ConductorMiddleware(self.console)
+            self.console.print("[bold cyan]🎼 Conductor Mode Active[/bold cyan]")
+            self.console.print("[dim]You will approve each message before it's sent.[/dim]\n")
         
         # Initialize or resume conversation
         if resume_from_state:
@@ -173,6 +182,18 @@ class DialogueEngine:
                 response_a = await self._get_agent_response(agent_a.id)
                 if response_a is None:  # Rate limit pause requested
                     continue
+                
+                # Conductor intervention if enabled
+                if self.conductor:
+                    response_a = await self.conductor.process_message(
+                        response_a, 
+                        f"Agent A ({agent_a.model})",
+                        agent_b.id,
+                        turn + 1
+                    )
+                    if response_a is None:  # Message was skipped
+                        continue
+                
                 self.conversation.messages.append(response_a)
                 self.state.add_message(response_a)
                 
@@ -214,6 +235,18 @@ class DialogueEngine:
                 response_b = await self._get_agent_response(agent_b.id)
                 if response_b is None:  # Rate limit pause requested
                     continue
+                
+                # Conductor intervention if enabled
+                if self.conductor:
+                    response_b = await self.conductor.process_message(
+                        response_b,
+                        f"Agent B ({agent_b.model})",
+                        agent_a.id,
+                        turn + 1
+                    )
+                    if response_b is None:  # Message was skipped
+                        continue
+                
                 self.conversation.messages.append(response_b)
                 self.state.add_message(response_b)
                 
@@ -305,6 +338,17 @@ class DialogueEngine:
         finally:
             # Restore original signal handler
             self._restore_signal_handler()
+            
+            # Save conductor intervention data if available
+            if self.conductor:
+                intervention_summary = self.conductor.get_intervention_summary()
+                if intervention_summary['total_interventions'] > 0:
+                    self.state.metadata['conductor_interventions'] = intervention_summary
+                    self.console.print(f"\n[dim]Conductor interventions: "
+                                     f"{intervention_summary['edits']} edits, "
+                                     f"{intervention_summary['injections']} injections, "
+                                     f"{intervention_summary['skips']} skips[/dim]")
+            
             # Save final transcript
             await self.transcript_manager.save(self.conversation)
     
@@ -402,6 +446,12 @@ class DialogueEngine:
                     self.conversation.messages, agent_b.model
                 )
             }
+        
+        # Save conductor intervention data if available
+        if hasattr(self, 'conductor') and self.conductor:
+            intervention_summary = self.conductor.get_intervention_summary()
+            if intervention_summary['total_interventions'] > 0:
+                self.state.metadata['conductor_interventions'] = intervention_summary
         
         checkpoint_path = self.state.save_checkpoint()
         self.console.print(f"\n[green]Checkpoint saved: {checkpoint_path}[/green]")
