@@ -10,6 +10,8 @@ from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass
 import logging
 
+from .patterns import PatternRegistry
+
 logger = logging.getLogger(__name__)
 
 
@@ -117,25 +119,29 @@ class StructuralPatternDetector:
         # Look for repeating patterns
         pattern = self._find_repeating_pattern(structures)
         if pattern:
+            pattern_info = PatternRegistry.get_pattern_info(pattern['signature'])
             return {
-                'type': 'structural_attractor',
+                'type': pattern_info['name'],
                 'pattern': pattern['signature'],
                 'frequency': pattern['count'],
                 'confidence': pattern['count'] / len(structures),
                 'sample_positions': pattern['positions'],
-                'description': self._describe_pattern(pattern['signature'])
+                'description': pattern_info['description'],
+                'typical_turns': pattern_info.get('typical_turns', 'varies')
             }
             
         # Also check for alternating patterns (A-B-A-B)
         alt_pattern = self._find_alternating_pattern(structures)
         if alt_pattern:
+            pattern_info = PatternRegistry.describe_alternating_pattern(alt_pattern['pair'])
             return {
-                'type': 'alternating_attractor',
+                'type': pattern_info['name'],
                 'pattern': alt_pattern['pair'],
                 'frequency': alt_pattern['count'],
                 'confidence': alt_pattern['count'] / (len(structures) // 2),
                 'sample_positions': alt_pattern['positions'],
-                'description': self._describe_alternating_pattern(alt_pattern['pair'])
+                'description': pattern_info['description'],
+                'typical_turns': pattern_info.get('typical_turns', 'varies')
             }
             
         return None
@@ -166,9 +172,6 @@ class StructuralPatternDetector:
                 
                 # Only trigger detection if confidence is >= 80%
                 if confidence >= 0.8:
-                    logger.warning(f"🎯 STRUCTURAL ATTRACTOR: {pattern_data['signature']}")
-                    logger.warning(f"📊 Repeated {pattern_data['count']} times in last {len(signatures)} messages")
-                    logger.warning(f"🎮 Confidence: {confidence:.2%}")
                     return pattern_data
                 
         return None
@@ -204,9 +207,6 @@ class StructuralPatternDetector:
                 
                 # Only trigger detection if confidence is >= 80%
                 if confidence >= 0.8:
-                    logger.warning(f"🔄 ALTERNATING ATTRACTOR: {pattern_data['pair']}")
-                    logger.warning(f"📊 Pattern repeated {pattern_data['count']} times")
-                    logger.warning(f"🎮 Confidence: {confidence:.2%}")
                     return pattern_data
                 
         return None

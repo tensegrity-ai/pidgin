@@ -44,19 +44,8 @@ class AttractorManager:
         if turn_count % self.check_interval != 0:
             return None
             
-        # Show checking indicator if enabled
-        if show_progress:
-            print("🔍 Checking for patterns...", end='', flush=True)
-            
         # ONLY check structural patterns - everything else is noise
         result = self.structural_detector.detect_attractor(messages)
-        
-        # Complete the checking indicator
-        if show_progress:
-            if result:
-                print(" ATTRACTOR FOUND!")
-            else:
-                print(" continuing normally.")
         
         if result:
             # Enhance result with metadata
@@ -65,11 +54,6 @@ class AttractorManager:
             result['action'] = self.action
             
             self.detection_history.append(result)
-            
-            logger.warning(f"🚨 ATTRACTOR DETECTED at turn {turn_count}")
-            logger.warning(f"🔄 Type: {result['type']}")
-            logger.warning(f"📊 Confidence: {result['confidence']:.2f}")
-            logger.warning(f"📝 {result['description']}")
             
         return result
         

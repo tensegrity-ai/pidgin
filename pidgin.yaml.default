@@ -18,16 +18,6 @@ conversation:
     on_detection: "log"    # Options: stop, pause, log
                           # "log" just notes it without stopping
 
-# Token management - prevents API rate limit errors
-token_management:
-  enabled: true
-  # Rate limit thresholds (de-emphasized)
-  warning_threshold: 3          # Warn when ~3 exchanges left (rate)
-  auto_pause_threshold: 1       # Pause when ~1 exchange left (rate)
-  rate_warning_threshold: 92    # Only warn at 92%+ rate usage
-  rate_pause_threshold: 97      # Only pause at 97%+ rate usage
-  show_metrics: true            # Show metrics in conversation
-  show_rate_usage: false        # Don't emphasize rate limits in display
 
 # Context window management - prevents context overflow (PRIMARY)
 context_management:

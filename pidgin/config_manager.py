@@ -23,15 +23,6 @@ class Config:
                 'on_detection': 'stop'
             }
         },
-        'token_management': {
-            'enabled': True,
-            'warning_threshold': 5,  # Warn when X exchanges remaining (rate limits)
-            'auto_pause_threshold': 2,  # Auto-pause when X exchanges remaining (rate limits)
-            'show_metrics': True,  # Display rate limit usage
-            'rate_warning_threshold': 90,  # Only warn about rate limits at 90%+
-            'rate_pause_threshold': 95,   # Only pause for rate limits at 95%+
-            'show_rate_usage': False      # De-emphasize rate tracking in display
-        },
         'context_management': {
             'enabled': True,
             'warning_threshold': 80,  # Warn at 80% capacity
@@ -69,10 +60,11 @@ class Config:
     def _load_from_standard_locations(self):
         """Load config from standard locations in order of precedence."""
         config_locations = [
-            Path.home() / '.config' / 'pidgin.yaml',  # XDG config location
-            Path.home() / '.pidgin.yaml',              # Home directory
-            Path.cwd() / 'pidgin.yaml',                # Current directory
-            Path.cwd() / '.pidgin.yaml',               # Hidden in current dir
+            Path.home() / '.config' / 'pidgin' / 'pidgin.yaml',  # XDG standard
+            Path.home() / '.config' / 'pidgin.yaml',             # XDG config location
+            Path.home() / '.pidgin.yaml',                        # Home directory
+            Path.cwd() / 'pidgin.yaml',                          # Current directory
+            Path.cwd() / '.pidgin.yaml',                         # Hidden in current dir
         ]
         
         for location in config_locations:

@@ -124,10 +124,6 @@ context_management:
   warning_threshold: 85    # Warn at 85% context full
   auto_pause_threshold: 95 # Pause at 95% context full
 
-token_management:
-  rate_warning_threshold: 95  # Ignore rate limits until 95%
-  show_rate_usage: false      # Hide rate limit display
-
 conversation:
   attractor_detection:
     on_detection: "log"    # Don't stop on patterns
