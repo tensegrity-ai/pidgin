@@ -27,6 +27,7 @@ class ConductorMiddleware:
         self.intervention_history: List[Dict[str, Any]] = []
         self.turn_count = 0
         self.conversation_history = []  # For back functionality
+        self.resume_requested = False  # Communication with dialogue engine
         
     def display_pending_message(self, message: Message, agent_name: str, turn: int):
         """Display the pending message in a nice panel.
@@ -315,6 +316,10 @@ class ConductorMiddleware:
             'history': self.intervention_history
         }
     
+    def request_resume(self):
+        """Request dialogue engine to clear pause state and continue flowing."""
+        self.resume_requested = True
+    
     def cleanup(self):
         """Clean up resources when conversation ends."""
         # No special cleanup needed for manual mode
@@ -340,6 +345,7 @@ class FlowingConductorMiddleware:
         self.pending_target_agent_id = None
         self.conversation_history = []  # For back functionality
         self.convergence_calculator = None  # Will be set by dialogue engine
+        self.resume_requested = False  # Communication with dialogue engine
         
     def display_pending_message(self, message: Message, agent_name: str, turn: int):
         """Display the pending message in a nice panel.
@@ -617,6 +623,10 @@ class FlowingConductorMiddleware:
         """Check if a message is an external/system message."""
         return message.agent_id in ["external", "system", "human", "mediator"]
     
+    def request_resume(self):
+        """Request dialogue engine to clear pause state and continue flowing."""
+        self.resume_requested = True
+    
     async def _handle_paused_mode(self, message: Message, agent_name: str, 
                                 target_agent_id: str, turn: int) -> Optional[Message]:
         """Handle interactions when paused."""
@@ -657,10 +667,15 @@ class FlowingConductorMiddleware:
                 injected = self.inject_message(message.agent_id, target_agent_id)
                 if injected:
                     if self._is_external_message(injected):
-                        # For external messages, show it but stay paused
-                        self.console.print("\n[cyan]ℹ️  External message will be shown to both agents.[/cyan]")
-                        self.console.print("[cyan]The conversation remains paused. Press Enter to continue...[/cyan]\n")
-                    # Return the injected message
+                        # For external messages, auto-resume after injection
+                        self.console.print("\n[cyan]ℹ️  External message sent to both agents, resuming conversation...[/cyan]")
+                        self.is_paused = False
+                        self.is_flowing = True
+                        self.request_resume()  # Signal dialogue engine to clear pause
+                        return injected
+                    else:
+                        # For agent messages, keep existing paused behavior
+                        self.console.print("\n[cyan]Message injected. Press Enter to continue...[/cyan]")
                     return injected
                 # Otherwise loop back
                 

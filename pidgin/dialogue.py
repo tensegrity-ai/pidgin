@@ -206,6 +206,12 @@ class DialogueEngine:
                         agent_b.id,
                         turn + 1
                     )
+                    
+                    # Check if conductor requested resume (for auto-resume after external injection)
+                    if hasattr(self.conductor, 'resume_requested') and self.conductor.resume_requested:
+                        self._pause_requested = False
+                        self.conductor.resume_requested = False
+                    
                     if response_a is None:  # Message was skipped
                         continue
                 
@@ -269,6 +275,12 @@ class DialogueEngine:
                         agent_a.id,
                         turn + 1
                     )
+                    
+                    # Check if conductor requested resume (for auto-resume after external injection)
+                    if hasattr(self.conductor, 'resume_requested') and self.conductor.resume_requested:
+                        self._pause_requested = False
+                        self.conductor.resume_requested = False
+                    
                     if response_b is None:  # Message was skipped
                         continue
                 
