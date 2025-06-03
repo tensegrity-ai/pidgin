@@ -1,12 +1,6 @@
 """Conductor mode for manual control of AI conversations."""
 
 import asyncio
-import select
-import sys
-import termios
-import tty
-import threading
-import time
 from datetime import datetime
 from typing import Optional, Dict, List, Any
 from rich.console import Console
@@ -357,9 +351,6 @@ class FlowingConductorMiddleware:
         self.pending_agent_name = None
         self.pending_target_agent_id = None
         self.conversation_history = []  # For back functionality
-        self._original_termios = None
-        self._space_pressed = False
-        self._keyboard_thread = None
         
     def display_pending_message(self, message: Message, agent_name: str, turn: int):
         """Display the pending message in a nice panel.
@@ -415,8 +406,8 @@ class FlowingConductorMiddleware:
         help_table.add_column("Description")
         
         help_table.add_row(
-            "Space", 
-            "Pause/Resume", 
+            "Ctrl+Z", 
+            "Pause", 
             "Pause the flowing conversation (while flowing)"
         )
         help_table.add_row(
@@ -610,51 +601,6 @@ class FlowingConductorMiddleware:
         self.console.print(f"\n[green]✓ Message injected as {source.value}[/green]\n")
         return injected_message
         
-    def _setup_keyboard_monitoring(self):
-        """Set up keyboard monitoring for space key."""
-        try:
-            import threading
-            
-            def monitor_keyboard():
-                # Save original terminal settings
-                if sys.stdin.isatty():
-                    self._original_termios = termios.tcgetattr(sys.stdin)
-                    # Set terminal to raw mode for immediate key detection
-                    tty.setraw(sys.stdin.fileno())
-                
-                try:
-                    while self.is_flowing:
-                        # Use non-blocking select with timeout for responsiveness
-                        if select.select([sys.stdin], [], [], 0.1)[0]:
-                            char = sys.stdin.read(1)
-                            if char == ' ':  # Space key
-                                self._space_pressed = True
-                                self.console.print("\n[yellow]⏸️  Pause requested...[/yellow]")
-                                break
-                except (KeyboardInterrupt, OSError):
-                    # Handle interrupts gracefully
-                    pass
-                finally:
-                    # Restore terminal settings
-                    if self._original_termios and sys.stdin.isatty():
-                        try:
-                            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._original_termios)
-                        except:
-                            pass
-            
-            self._keyboard_thread = threading.Thread(target=monitor_keyboard, daemon=True)
-            self._keyboard_thread.start()
-        except ImportError:
-            self.console.print("[yellow]Warning: Keyboard monitoring not available on this platform[/yellow]")
-    
-    def _cleanup_keyboard_monitoring(self):
-        """Clean up keyboard monitoring."""
-        self.is_flowing = False
-        if self._original_termios and sys.stdin.isatty():
-            try:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._original_termios)
-            except:
-                pass
 
     async def process_message(self, message: Message, agent_name: str, 
                             target_agent_id: str, turn: int) -> Optional[Message]:
@@ -676,22 +622,19 @@ class FlowingConductorMiddleware:
         self.pending_agent_name = agent_name
         self.pending_target_agent_id = target_agent_id
         
-        # Check if space was pressed (pause requested)
-        if self._space_pressed or self.is_paused:
-            self._space_pressed = False
-            self.is_paused = True
-            self.is_flowing = False
-            self._cleanup_keyboard_monitoring()
-            
+        # Check if paused (either manually paused or pause was requested)
+        if self.is_paused:
             return await self._handle_paused_mode(message, agent_name, target_agent_id, turn)
         
-        # In flowing mode - start keyboard monitoring if not already started
-        if self.is_flowing and not self._keyboard_thread:
-            self._setup_keyboard_monitoring()
-        
-        # In flowing mode, don't interfere with normal message display
-        # The status is shown in the dialogue engine's turn counter
+        # In flowing mode, just return the message - clean and simple
         return message
+    
+    def pause(self):
+        """Pause the flowing conductor (called by dialogue engine on Ctrl+Z)."""
+        if self.is_flowing:
+            self.is_paused = True
+            self.is_flowing = False
+            self.console.print("\n[yellow]🎼 Conductor paused - will enter control mode at next message[/yellow]")
     
     async def _handle_paused_mode(self, message: Message, agent_name: str, 
                                 target_agent_id: str, turn: int) -> Optional[Message]:
@@ -711,7 +654,6 @@ class FlowingConductorMiddleware:
                 self.console.print("[green]→ Resuming flowing mode...[/green]\n")
                 self.is_paused = False
                 self.is_flowing = True
-                self._setup_keyboard_monitoring()
                 return message
                 
             elif command == "n":
@@ -741,7 +683,6 @@ class FlowingConductorMiddleware:
             elif command == "q":
                 # Quit
                 self.console.print("[red]🛑 Quitting conductor mode...[/red]")
-                self._cleanup_keyboard_monitoring()
                 raise KeyboardInterrupt("User quit from conductor mode")
                 
             elif command in ["?", "h"]:
@@ -772,4 +713,5 @@ class FlowingConductorMiddleware:
     
     def cleanup(self):
         """Clean up resources when conversation ends."""
-        self._cleanup_keyboard_monitoring()
+        # No cleanup needed for simplified flowing conductor
+        pass

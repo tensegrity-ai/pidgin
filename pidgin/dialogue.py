@@ -78,7 +78,7 @@ class DialogueEngine:
         elif conductor_mode == "flowing":
             self.conductor = FlowingConductorMiddleware(self.console)
             self.console.print("[bold cyan]🎼 Flowing Conductor Mode Active[/bold cyan]")
-            self.console.print("[dim]Conversation flows automatically. Press Space to pause.[/dim]\n")
+            self.console.print("[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n")
         
         # Initialize or resume conversation
         if resume_from_state:
@@ -358,7 +358,7 @@ class DialogueEngine:
                 conductor_info = ""
                 if hasattr(self, 'conductor') and self.conductor:
                     if isinstance(self.conductor, FlowingConductorMiddleware) and self.conductor.is_flowing:
-                        conductor_info = " | [green]Press Space to pause[/green]"
+                        conductor_info = " | [green]Flowing (Ctrl+Z to pause)[/green]"
                 
                 self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{conductor_info}[/dim]\n")
                 
@@ -456,7 +456,11 @@ class DialogueEngine:
         # Ctrl+Z for pause (SIGTSTP)
         def pause_handler(signum, frame):
             self._pause_requested = True
-            self.console.print("\n[yellow]⏸️  Pause requested... Finishing current turn.[/yellow]")
+            # If we have a flowing conductor, pause it
+            if hasattr(self, 'conductor') and self.conductor and isinstance(self.conductor, FlowingConductorMiddleware):
+                self.conductor.pause()
+            else:
+                self.console.print("\n[yellow]⏸️  Pause requested... Finishing current turn.[/yellow]")
         
         # Ctrl+C for stop (SIGINT)
         def stop_handler(signum, frame):

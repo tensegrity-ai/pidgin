@@ -97,7 +97,7 @@ def cli():
 @click.option('-c', '--config', type=click.Path(exists=True), help='Path to config file')
 @click.option('-n', '--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
 @click.option('-m', '--manual', '--conductor', is_flag=True, help='Enable manual conductor mode for message-by-message control')
-@click.option('-f', '--flowing', is_flag=True, help='Enable flowing conductor mode (auto-flows until Space is pressed)')
+@click.option('-f', '--flowing', is_flag=True, help='Enable flowing conductor mode (auto-flows until Ctrl+Z pause)')
 def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_content, save_to, config, no_attractor_detection, manual, flowing):
     """Run a conversation between two AI agents"""
     
@@ -176,7 +176,7 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
         console.print(f"[dim]🎼 Conductor mode: [green]MANUAL[/green] (message-by-message control)[/dim]")
     elif flowing:
         conductor_mode = "flowing"
-        console.print(f"[dim]🎼 Conductor mode: [green]FLOWING[/green] (auto-flows, Space to pause)[/dim]")
+        console.print(f"[dim]🎼 Conductor mode: [green]FLOWING[/green] (auto-flows, Ctrl+Z to pause)[/dim]")
     
     console.rule(style="dim")
     console.print()
