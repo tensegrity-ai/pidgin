@@ -52,12 +52,25 @@ class TranscriptManager:
         
         # Add messages
         for msg in conversation.messages:
-            if msg.agent_id == "system":
-                lines.append(f"**System**: {msg.content}\n")
-            elif msg.agent_id == "agent_a":
-                lines.append(f"**Agent A**: {msg.content}\n")
+            # Use display_source if available, otherwise fallback to agent_id mapping
+            if hasattr(msg, 'display_source'):
+                source_name = msg.display_source
             else:
-                lines.append(f"**Agent B**: {msg.content}\n")
+                # Fallback for backward compatibility
+                if msg.agent_id == "system":
+                    source_name = "System"
+                elif msg.agent_id == "human":
+                    source_name = "Human"
+                elif msg.agent_id == "mediator":
+                    source_name = "Mediator"
+                elif msg.agent_id == "agent_a":
+                    source_name = "Agent A"
+                elif msg.agent_id == "agent_b":
+                    source_name = "Agent B"
+                else:
+                    source_name = msg.agent_id.title()
+            
+            lines.append(f"**{source_name}**: {msg.content}\n")
         
         return "\n".join(lines)
     

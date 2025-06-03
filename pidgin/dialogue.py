@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from .types import Message, Conversation, Agent
+from .types import Message, Conversation, Agent, MessageSource
 from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
@@ -194,8 +194,18 @@ class DialogueEngine:
                     if response_a is None:  # Message was skipped
                         continue
                 
-                self.conversation.messages.append(response_a)
-                self.state.add_message(response_a)
+                # Handle system/mediator messages differently
+                if self._is_system_message(response_a):
+                    # System messages are added to conversation for both agents to see
+                    self.conversation.messages.append(response_a)
+                    self.state.add_message(response_a)
+                    # Display the system message
+                    self._display_message(response_a, "", context_info=None)
+                    # Continue to next iteration - don't proceed with normal agent flow
+                    continue
+                else:
+                    self.conversation.messages.append(response_a)
+                    self.state.add_message(response_a)
                 
                 # Check context usage for Agent A after adding message
                 context_info_a = None
@@ -247,8 +257,18 @@ class DialogueEngine:
                     if response_b is None:  # Message was skipped
                         continue
                 
-                self.conversation.messages.append(response_b)
-                self.state.add_message(response_b)
+                # Handle system/mediator messages differently
+                if self._is_system_message(response_b):
+                    # System messages are added to conversation for both agents to see
+                    self.conversation.messages.append(response_b)
+                    self.state.add_message(response_b)
+                    # Display the system message
+                    self._display_message(response_b, "", context_info=None)
+                    # Continue to next iteration - don't proceed with normal agent flow
+                    continue
+                else:
+                    self.conversation.messages.append(response_b)
+                    self.state.add_message(response_b)
                 
                 # Check context usage for Agent B after adding message
                 context_info_b = None
@@ -354,15 +374,33 @@ class DialogueEngine:
     
     def _display_message(self, message: Message, model_name: str, context_info: Optional[Dict[str, Any]] = None):
         """Display a message in the terminal with Rich formatting, token metrics, and context usage."""
-        if message.agent_id == "agent_a":
-            title = f"[bold green]Agent A ({model_name})[/bold green]"
-            border_style = "green"
+        # Determine title and border style based on message source
+        if self._is_system_message(message):
+            # System/Human/Mediator messages
+            display_source = message.display_source
+            if message.agent_id == "system":
+                title = f"[bold yellow]{display_source}[/bold yellow]"
+                border_style = "yellow"
+            elif message.agent_id == "human":
+                title = f"[bold blue]{display_source}[/bold blue]"
+                border_style = "blue"
+            elif message.agent_id == "mediator":
+                title = f"[bold cyan]{display_source}[/bold cyan]"
+                border_style = "cyan"
+            else:
+                title = f"[bold white]{display_source}[/bold white]"
+                border_style = "white"
         else:
-            title = f"[bold magenta]Agent B ({model_name})[/bold magenta]"
-            border_style = "magenta"
+            # Agent messages
+            if message.agent_id == "agent_a":
+                title = f"[bold green]Agent A ({model_name})[/bold green]"
+                border_style = "green"
+            else:
+                title = f"[bold magenta]Agent B ({model_name})[/bold magenta]"
+                border_style = "magenta"
         
-        # Add context usage to title if enabled and available
-        if self.context_management_enabled and self.show_context_usage and context_info:
+        # Add context usage to title if enabled and available (only for agent messages)
+        if not self._is_system_message(message) and self.context_management_enabled and self.show_context_usage and context_info:
             usage_str = self.context_manager.format_usage(context_info)
             title += f" [dim]| Context: {usage_str}[/dim]"
         
@@ -456,6 +494,13 @@ class DialogueEngine:
         checkpoint_path = self.state.save_checkpoint()
         self.console.print(f"\n[green]Checkpoint saved: {checkpoint_path}[/green]")
         self.console.print(f"[green]Resume with: pidgin resume {checkpoint_path}[/green]\n")
+    
+    def _is_system_message(self, message: Message) -> bool:
+        """Check if a message is from system, human, or mediator (non-agent sources)."""
+        if hasattr(message, 'source') and message.source:
+            return message.source in [MessageSource.SYSTEM, MessageSource.HUMAN, MessageSource.MEDIATOR]
+        # Fallback to agent_id check for backward compatibility
+        return message.agent_id in ["system", "human", "mediator"]
     
     async def _handle_attractor_detection(self, result: Dict[str, Any]):
         """Handle attractor detection event."""

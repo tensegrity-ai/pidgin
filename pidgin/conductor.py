@@ -10,7 +10,7 @@ from rich.text import Text
 from rich.table import Table
 import click
 
-from .types import Message
+from .types import Message, MessageSource
 
 
 class ConductorMiddleware:
@@ -162,20 +162,64 @@ class ConductorMiddleware:
         self.console.print("\n[green]✓ Message edited[/green]\n")
         return modified_message
         
-    def inject_message(self, agent_id: str, target_agent_id: str) -> Optional[Message]:
+    def inject_message(self, current_agent_id: str, target_agent_id: str) -> Optional[Message]:
         """Allow user to inject a custom message.
         
         Args:
-            agent_id: ID of the agent that would be "sending" the message
+            current_agent_id: ID of the agent currently speaking
             target_agent_id: ID of the agent that will receive the message
             
         Returns:
             Injected message or None if cancelled
         """
-        self.console.print(f"\n[cyan]Inject message as {agent_id} to {target_agent_id}:[/cyan]")
-        self.console.print("[dim]Enter message (Ctrl+D when done, empty to cancel):[/dim]")
+        self.console.print(f"\n[cyan]Inject message:[/cyan]")
+        
+        # Ask for source
+        source_options = Table(show_header=False, box=None, padding=(0, 1))
+        source_options.add_column("Num", style="bold cyan")
+        source_options.add_column("Source")
+        source_options.add_column("Description", style="dim")
+        
+        source_options.add_row("1", "System", "System/environment message (visible to both agents)")
+        source_options.add_row("2", "Human", "Human researcher intervention")
+        source_options.add_row("3", "Mediator", "Neutral mediator/facilitator")
+        source_options.add_row("4", "Agent A", "Message as Agent A")
+        source_options.add_row("5", "Agent B", "Message as Agent B")
+        
+        self.console.print(source_options)
+        self.console.print()
+        
+        while True:
+            source_choice = Prompt.ask("From", choices=["1", "2", "3", "4", "5"], default="1")
+            
+            if source_choice == "1":
+                source = MessageSource.SYSTEM
+                agent_id = "system"
+                role = "user"  # System messages are typically "user" role in LLM context
+                break
+            elif source_choice == "2":
+                source = MessageSource.HUMAN
+                agent_id = "human"
+                role = "user"
+                break
+            elif source_choice == "3":
+                source = MessageSource.MEDIATOR
+                agent_id = "mediator"
+                role = "user"
+                break
+            elif source_choice == "4":
+                source = MessageSource.AGENT_A
+                agent_id = "agent_a"
+                role = "assistant"
+                break
+            elif source_choice == "5":
+                source = MessageSource.AGENT_B
+                agent_id = "agent_b"
+                role = "assistant"
+                break
         
         # Get content
+        self.console.print(f"\n[cyan]Message content (Ctrl+D when done, empty to cancel):[/cyan]")
         lines = []
         try:
             while True:
@@ -192,9 +236,10 @@ class ConductorMiddleware:
             
         # Create injected message
         injected_message = Message(
-            role="assistant",
+            role=role,
             content=content,
-            agent_id=agent_id
+            agent_id=agent_id,
+            source=source
         )
         
         # Record the injection
@@ -204,10 +249,12 @@ class ConductorMiddleware:
             'timestamp': datetime.now().isoformat(),
             'content': content,
             'agent_id': agent_id,
-            'target_agent_id': target_agent_id
+            'source': source.value,
+            'current_agent': current_agent_id,
+            'target_agent': target_agent_id
         })
         
-        self.console.print("\n[green]✓ Message injected[/green]\n")
+        self.console.print(f"\n[green]✓ Message injected as {source.value}[/green]\n")
         return injected_message
         
     async def process_message(self, message: Message, agent_name: str, 
