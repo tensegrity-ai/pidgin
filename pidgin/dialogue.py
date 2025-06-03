@@ -14,7 +14,7 @@ from .checkpoint import ConversationState, CheckpointManager
 from .attractors import AttractorManager
 from .config_manager import get_config
 from .context_manager import ContextWindowManager
-from .conductor import ConductorMiddleware
+from .conductor import ConductorMiddleware, FlowingConductorMiddleware
 
 
 class DialogueEngine:
@@ -64,17 +64,21 @@ class DialogueEngine:
         max_turns: int,
         resume_from_state: Optional[ConversationState] = None,
         show_token_warnings: bool = True,
-        conductor_mode: bool = False
+        conductor_mode: Optional[str] = None
     ):
         # Set up signal handler for graceful pause
         self._setup_signal_handler()
         
         # Initialize conductor if requested
         self.conductor = None
-        if conductor_mode:
+        if conductor_mode == "manual":
             self.conductor = ConductorMiddleware(self.console)
-            self.console.print("[bold cyan]🎼 Conductor Mode Active[/bold cyan]")
+            self.console.print("[bold cyan]🎼 Manual Conductor Mode Active[/bold cyan]")
             self.console.print("[dim]You will approve each message before it's sent.[/dim]\n")
+        elif conductor_mode == "flowing":
+            self.conductor = FlowingConductorMiddleware(self.console)
+            self.console.print("[bold cyan]🎼 Flowing Conductor Mode Active[/bold cyan]")
+            self.console.print("[dim]Conversation flows automatically. Press Space to pause.[/dim]\n")
         
         # Initialize or resume conversation
         if resume_from_state:
@@ -350,7 +354,13 @@ class DialogueEngine:
                     
                     context_info = f" | Context: {max_usage:.1f}% ({max_tokens:,} tokens)"
                 
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}[/dim]\n")
+                # Add conductor status to turn counter
+                conductor_info = ""
+                if hasattr(self, 'conductor') and self.conductor:
+                    if isinstance(self.conductor, FlowingConductorMiddleware) and self.conductor.is_flowing:
+                        conductor_info = " | [green]Press Space to pause[/green]"
+                
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{conductor_info}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
@@ -368,6 +378,10 @@ class DialogueEngine:
                                      f"{intervention_summary['edits']} edits, "
                                      f"{intervention_summary['injections']} injections, "
                                      f"{intervention_summary['skips']} skips[/dim]")
+                
+                # Clean up conductor resources
+                if hasattr(self.conductor, 'cleanup'):
+                    self.conductor.cleanup()
             
             # Save final transcript
             await self.transcript_manager.save(self.conversation)

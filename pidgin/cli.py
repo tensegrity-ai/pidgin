@@ -96,9 +96,15 @@ def cli():
 @click.option('-s', '--save-to', help='Save transcript to specific location')
 @click.option('-c', '--config', type=click.Path(exists=True), help='Path to config file')
 @click.option('-n', '--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
-@click.option('-m', '--manual', '--conductor', is_flag=True, help='Enable conductor mode for manual message control')
-def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_content, save_to, config, no_attractor_detection, manual):
+@click.option('-m', '--manual', '--conductor', is_flag=True, help='Enable manual conductor mode for message-by-message control')
+@click.option('-f', '--flowing', is_flag=True, help='Enable flowing conductor mode (auto-flows until Space is pressed)')
+def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_content, save_to, config, no_attractor_detection, manual, flowing):
     """Run a conversation between two AI agents"""
+    
+    # Validate conductor mode flags
+    if manual and flowing:
+        console.print("[red]Error: Cannot use both --manual and --flowing flags at the same time[/red]")
+        raise click.Abort()
     
     # Resolve model shortcuts using the new system
     config_a = get_model_config(model_a)
@@ -163,9 +169,14 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
     else:
         console.print(f"[dim]🔍 Attractor detection: [red]OFF[/red][/dim]")
     
-    # Show conductor mode status
+    # Determine conductor mode
+    conductor_mode = None
     if manual:
-        console.print(f"[dim]🎼 Conductor mode: [green]ON[/green] (manual message control)[/dim]")
+        conductor_mode = "manual"
+        console.print(f"[dim]🎼 Conductor mode: [green]MANUAL[/green] (message-by-message control)[/dim]")
+    elif flowing:
+        conductor_mode = "flowing"
+        console.print(f"[dim]🎼 Conductor mode: [green]FLOWING[/green] (auto-flows, Space to pause)[/dim]")
     
     console.rule(style="dim")
     console.print()
@@ -176,7 +187,7 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
             agents["agent_b"],
             initial_prompt,
             turns,
-            conductor_mode=manual
+            conductor_mode=conductor_mode
         ))
         
         # Success exit message
