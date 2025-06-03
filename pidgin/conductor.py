@@ -613,6 +613,10 @@ class FlowingConductorMiddleware:
             self.is_flowing = False
             self.console.print("\n[yellow]🎼 Conductor paused - will enter control mode at next message[/yellow]")
     
+    def _is_external_message(self, message: Message) -> bool:
+        """Check if a message is an external/system message."""
+        return message.agent_id in ["external", "system", "human", "mediator"]
+    
     async def _handle_paused_mode(self, message: Message, agent_name: str, 
                                 target_agent_id: str, turn: int) -> Optional[Message]:
         """Handle interactions when paused."""
@@ -652,7 +656,11 @@ class FlowingConductorMiddleware:
                 # Inject a message
                 injected = self.inject_message(message.agent_id, target_agent_id)
                 if injected:
-                    # Return the injected message instead
+                    if self._is_external_message(injected):
+                        # For external messages, show it but stay paused
+                        self.console.print("\n[cyan]ℹ️  External message will be shown to both agents.[/cyan]")
+                        self.console.print("[cyan]The conversation remains paused. Press Enter to continue...[/cyan]\n")
+                    # Return the injected message
                     return injected
                 # Otherwise loop back
                 
