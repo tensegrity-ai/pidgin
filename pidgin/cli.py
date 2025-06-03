@@ -97,7 +97,8 @@ def cli():
 @click.option('-c', '--config', type=click.Path(exists=True), help='Path to config file')
 @click.option('-n', '--no-attractor-detection', '--no-detection', is_flag=True, help='Disable attractor detection')
 @click.option('-m', '--manual', is_flag=True, help='Enable manual mode (approve each message step-by-step)')
-def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_content, save_to, config, no_attractor_detection, manual):
+@click.option('--convergence-threshold', type=click.FloatRange(0.0, 1.0), default=0.75, help='Convergence warning threshold (default: 0.75)')
+def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_content, save_to, config, no_attractor_detection, manual, convergence_threshold):
     """Run a conversation between two AI agents"""
     
     # Resolve model shortcuts using the new system
@@ -169,6 +170,9 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
     else:
         console.print(f"[dim]🎼 Mode: [green]FLOWING[/green] (default - press Ctrl+Z to pause)[/dim]")
     
+    # Show convergence tracking
+    console.print(f"[dim]📊 Convergence tracking: [green]ON[/green] (warning at {convergence_threshold:.2f})[/dim]")
+    
     console.rule(style="dim")
     console.print()
     
@@ -178,7 +182,8 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
             agents["agent_b"],
             initial_prompt,
             turns,
-            manual_mode=manual
+            manual_mode=manual,
+            convergence_threshold=convergence_threshold
         ))
         
         # Success exit message

@@ -339,6 +339,7 @@ class FlowingConductorMiddleware:
         self.pending_agent_name = None
         self.pending_target_agent_id = None
         self.conversation_history = []  # For back functionality
+        self.convergence_calculator = None  # Will be set by dialogue engine
         
     def display_pending_message(self, message: Message, agent_name: str, turn: int):
         """Display the pending message in a nice panel.
@@ -619,6 +620,9 @@ class FlowingConductorMiddleware:
             # Display the pending message
             self.display_pending_message(message, agent_name, turn)
             
+            # Display convergence trend if available
+            self.display_convergence_trend()
+            
             # Display controls
             self.display_controls()
             
@@ -691,3 +695,52 @@ class FlowingConductorMiddleware:
         """Clean up resources when conversation ends."""
         # No cleanup needed for simplified flowing conductor
         pass
+    
+    def display_convergence_trend(self):
+        """Display convergence trend when paused."""
+        if not self.convergence_calculator:
+            return
+            
+        recent_history = self.convergence_calculator.get_recent_history(5)
+        if not recent_history:
+            return
+            
+        # Create the trend panel
+        from rich.table import Table
+        from rich.panel import Panel
+        
+        trend_table = Table(show_header=False, box=None)
+        trend_table.add_column("Turn", style="dim")
+        trend_table.add_column("Score")
+        trend_table.add_column("Visual")
+        
+        for turn, score in recent_history:
+            # Create visual bar
+            bar_length = int(score * 20)
+            bar = "█" * bar_length + "░" * (20 - bar_length)
+            
+            # Add warning emoji if above threshold
+            warning = " ⚠️" if score >= 0.75 else ""
+            
+            trend_table.add_row(
+                f"Turn {turn}:",
+                f"{score:.2f}{warning}",
+                f"[cyan]{bar}[/cyan]"
+            )
+        
+        # Add trend summary
+        trend = self.convergence_calculator.get_trend()
+        trend_color = {
+            "increasing": "red",
+            "decreasing": "green", 
+            "stable": "yellow",
+            "fluctuating": "blue",
+            "insufficient data": "dim"
+        }.get(trend, "white")
+        
+        self.console.print(Panel(
+            trend_table,
+            title="[bold]Convergence Trend[/bold]",
+            subtitle=f"[{trend_color}]Trend: {trend}[/{trend_color}]",
+            border_style="cyan"
+        ))

@@ -15,6 +15,7 @@ from .attractors import AttractorManager
 from .config_manager import get_config
 from .context_manager import ContextWindowManager
 from .conductor import ConductorMiddleware, FlowingConductorMiddleware
+from .convergence import ConvergenceCalculator
 
 
 class DialogueEngine:
@@ -55,6 +56,11 @@ class DialogueEngine:
         
         # Store attractor detection result for final summary
         self.attractor_detected = None
+        
+        # Convergence tracking
+        self.convergence_calculator = ConvergenceCalculator()
+        self.convergence_threshold = 0.75  # Default threshold
+        self.current_convergence = 0.0
     
     async def run_conversation(
         self,
@@ -64,10 +70,14 @@ class DialogueEngine:
         max_turns: int,
         resume_from_state: Optional[ConversationState] = None,
         show_token_warnings: bool = True,
-        manual_mode: bool = False
+        manual_mode: bool = False,
+        convergence_threshold: float = 0.75
     ):
         # Set up signal handler for graceful pause
         self._setup_signal_handler()
+        
+        # Set convergence threshold
+        self.convergence_threshold = convergence_threshold
         
         # Initialize conductor (default is flowing, manual is optional)
         if manual_mode:
@@ -77,6 +87,7 @@ class DialogueEngine:
         else:
             # Default: flowing conductor mode
             self.conductor = FlowingConductorMiddleware(self.console)
+            self.conductor.convergence_calculator = self.convergence_calculator  # Share reference
             self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print("[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n")
         
@@ -309,6 +320,9 @@ class DialogueEngine:
                 # Auto-save transcript after each turn
                 await self.transcript_manager.save(self.conversation)
                 
+                # Calculate convergence after both agents have responded
+                self.current_convergence = self.convergence_calculator.calculate(self.conversation.messages)
+                
                 # Check for attractor detection
                 message_contents = [msg.content for msg in self.conversation.messages if msg.role != "system"]
                 
@@ -354,6 +368,12 @@ class DialogueEngine:
                     
                     context_info = f" | Context: {max_usage:.1f}% ({max_tokens:,} tokens)"
                 
+                # Add convergence score to turn counter
+                convergence_info = ""
+                if self.current_convergence > 0:
+                    emoji = " ⚠️" if self.current_convergence >= self.convergence_threshold else ""
+                    convergence_info = f" | Conv: {self.current_convergence:.2f}{emoji}"
+                
                 # Add conductor status to turn counter
                 conductor_info = ""
                 if hasattr(self, 'conductor') and self.conductor:
@@ -363,7 +383,7 @@ class DialogueEngine:
                         else:
                             conductor_info = " | [yellow]PAUSED - Enter: continue | i: inject | e: edit | ?: help[/yellow]"
                 
-                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{conductor_info}[/dim]\n")
+                self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{convergence_info}{conductor_info}[/dim]\n")
                 
         except KeyboardInterrupt:
             # Handled by signal handler
