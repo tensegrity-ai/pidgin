@@ -64,20 +64,20 @@ class DialogueEngine:
         max_turns: int,
         resume_from_state: Optional[ConversationState] = None,
         show_token_warnings: bool = True,
-        conductor_mode: Optional[str] = None
+        manual_mode: bool = False
     ):
         # Set up signal handler for graceful pause
         self._setup_signal_handler()
         
-        # Initialize conductor if requested
-        self.conductor = None
-        if conductor_mode == "manual":
+        # Initialize conductor (default is flowing, manual is optional)
+        if manual_mode:
             self.conductor = ConductorMiddleware(self.console)
-            self.console.print("[bold cyan]🎼 Manual Conductor Mode Active[/bold cyan]")
+            self.console.print("[bold cyan]🎼 Manual Mode Active[/bold cyan]")
             self.console.print("[dim]You will approve each message before it's sent.[/dim]\n")
-        elif conductor_mode == "flowing":
+        else:
+            # Default: flowing conductor mode
             self.conductor = FlowingConductorMiddleware(self.console)
-            self.console.print("[bold cyan]🎼 Flowing Conductor Mode Active[/bold cyan]")
+            self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print("[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n")
         
         # Initialize or resume conversation
@@ -357,8 +357,11 @@ class DialogueEngine:
                 # Add conductor status to turn counter
                 conductor_info = ""
                 if hasattr(self, 'conductor') and self.conductor:
-                    if isinstance(self.conductor, FlowingConductorMiddleware) and self.conductor.is_flowing:
-                        conductor_info = " | [green]Flowing (Ctrl+Z to pause)[/green]"
+                    if isinstance(self.conductor, FlowingConductorMiddleware):
+                        if self.conductor.is_flowing:
+                            conductor_info = " | [green]Press Ctrl+Z to pause[/green]"
+                        else:
+                            conductor_info = " | [yellow]PAUSED - Enter: continue | i: inject | e: edit | ?: help[/yellow]"
                 
                 self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{conductor_info}[/dim]\n")
                 
@@ -397,6 +400,9 @@ class DialogueEngine:
                 border_style = "yellow"
             elif message.agent_id == "human":
                 title = f"[bold blue]{display_source}[/bold blue]"
+                border_style = "blue"
+            elif message.agent_id == "external":
+                title = f"[bold blue]External[/bold blue]"
                 border_style = "blue"
             elif message.agent_id == "mediator":
                 title = f"[bold cyan]{display_source}[/bold cyan]"
@@ -518,7 +524,7 @@ class DialogueEngine:
         if hasattr(message, 'source') and message.source:
             return message.source in [MessageSource.SYSTEM, MessageSource.HUMAN, MessageSource.MEDIATOR]
         # Fallback to agent_id check for backward compatibility
-        return message.agent_id in ["system", "human", "mediator"]
+        return message.agent_id in ["system", "human", "mediator", "external"]
     
     async def _handle_attractor_detection(self, result: Dict[str, Any]):
         """Handle attractor detection event."""

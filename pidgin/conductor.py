@@ -73,7 +73,7 @@ class ConductorMiddleware:
         help_table.add_column("Description")
         
         help_table.add_row(
-            "Enter/n", 
+            "Enter", 
             "Continue", 
             "Send the message as-is to the next agent"
         )
@@ -170,45 +170,33 @@ class ConductorMiddleware:
         """
         self.console.print(f"\n[cyan]Inject message:[/cyan]")
         
-        # Ask for source
+        # Simplified injection sources
         source_options = Table(show_header=False, box=None, padding=(0, 1))
         source_options.add_column("Num", style="bold cyan")
         source_options.add_column("Source")
         source_options.add_column("Description", style="dim")
         
-        source_options.add_row("1", "System", "System/environment message (visible to both agents)")
-        source_options.add_row("2", "Human", "Human researcher intervention")
-        source_options.add_row("3", "Mediator", "Neutral mediator/facilitator")
-        source_options.add_row("4", "Agent A", "Message as Agent A")
-        source_options.add_row("5", "Agent B", "Message as Agent B")
+        source_options.add_row("1", "External", "Intervention message (visible to both agents)")
+        source_options.add_row("2", "Agent A", "Message as Agent A")
+        source_options.add_row("3", "Agent B", "Message as Agent B")
         
         self.console.print(source_options)
         self.console.print()
         
         while True:
-            source_choice = Prompt.ask("From", choices=["1", "2", "3", "4", "5"], default="1")
+            source_choice = Prompt.ask("From", choices=["1", "2", "3"], default="1")
             
             if source_choice == "1":
-                source = MessageSource.SYSTEM
-                agent_id = "system"
-                role = "user"  # System messages are typically "user" role in LLM context
+                source = MessageSource.HUMAN  # Use HUMAN for external interventions
+                agent_id = "external"
+                role = "user"
                 break
             elif source_choice == "2":
-                source = MessageSource.HUMAN
-                agent_id = "human"
-                role = "user"
-                break
-            elif source_choice == "3":
-                source = MessageSource.MEDIATOR
-                agent_id = "mediator"
-                role = "user"
-                break
-            elif source_choice == "4":
                 source = MessageSource.AGENT_A
                 agent_id = "agent_a"
                 role = "assistant"
                 break
-            elif source_choice == "5":
+            elif source_choice == "3":
                 source = MessageSource.AGENT_B
                 agent_id = "agent_b"
                 role = "assistant"
@@ -278,7 +266,7 @@ class ConductorMiddleware:
             # Get user input
             command = Prompt.ask(">", default="").strip().lower()
             
-            if command in ["", "n", "enter"]:
+            if command in ["", "enter"]:
                 # Continue with message as-is
                 self.console.print("[green]→ Continuing...[/green]\n")
                 return message
@@ -380,7 +368,7 @@ class FlowingConductorMiddleware:
             # Paused mode controls
             controls = Text()
             controls.append("[", style="dim")
-            controls.append("c/Enter", style="bold green")
+            controls.append("Enter", style="bold green")
             controls.append(": continue | ", style="dim")
             controls.append("n", style="bold cyan")
             controls.append(": step | ", style="dim")
@@ -411,7 +399,7 @@ class FlowingConductorMiddleware:
             "Pause the flowing conversation (while flowing)"
         )
         help_table.add_row(
-            "c/Enter", 
+            "Enter", 
             "Continue", 
             "Resume flowing mode (while paused)"
         )
@@ -518,45 +506,33 @@ class FlowingConductorMiddleware:
         """
         self.console.print(f"\n[cyan]Inject message:[/cyan]")
         
-        # Ask for source
+        # Simplified injection sources
         source_options = Table(show_header=False, box=None, padding=(0, 1))
         source_options.add_column("Num", style="bold cyan")
         source_options.add_column("Source")
         source_options.add_column("Description", style="dim")
         
-        source_options.add_row("1", "System", "System/environment message (visible to both agents)")
-        source_options.add_row("2", "Human", "Human researcher intervention")
-        source_options.add_row("3", "Mediator", "Neutral mediator/facilitator")
-        source_options.add_row("4", "Agent A", "Message as Agent A")
-        source_options.add_row("5", "Agent B", "Message as Agent B")
+        source_options.add_row("1", "External", "Intervention message (visible to both agents)")
+        source_options.add_row("2", "Agent A", "Message as Agent A")
+        source_options.add_row("3", "Agent B", "Message as Agent B")
         
         self.console.print(source_options)
         self.console.print()
         
         while True:
-            source_choice = Prompt.ask("From", choices=["1", "2", "3", "4", "5"], default="1")
+            source_choice = Prompt.ask("From", choices=["1", "2", "3"], default="1")
             
             if source_choice == "1":
-                source = MessageSource.SYSTEM
-                agent_id = "system"
-                role = "user"  # System messages are typically "user" role in LLM context
+                source = MessageSource.HUMAN  # Use HUMAN for external interventions
+                agent_id = "external"
+                role = "user"
                 break
             elif source_choice == "2":
-                source = MessageSource.HUMAN
-                agent_id = "human"
-                role = "user"
-                break
-            elif source_choice == "3":
-                source = MessageSource.MEDIATOR
-                agent_id = "mediator"
-                role = "user"
-                break
-            elif source_choice == "4":
                 source = MessageSource.AGENT_A
                 agent_id = "agent_a"
                 role = "assistant"
                 break
-            elif source_choice == "5":
+            elif source_choice == "3":
                 source = MessageSource.AGENT_B
                 agent_id = "agent_b"
                 role = "assistant"
@@ -649,7 +625,7 @@ class FlowingConductorMiddleware:
             # Get user input
             command = Prompt.ask(">", default="").strip().lower()
             
-            if command in ["c", "", "enter"]:
+            if command in ["", "enter"]:
                 # Continue - resume flowing mode
                 self.console.print("[green]→ Resuming flowing mode...[/green]\n")
                 self.is_paused = False
