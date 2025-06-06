@@ -1,0 +1,18 @@
+# Minimal Pidgin Configuration for ~/.config/pidgin.yaml
+# This configuration allows very long conversations
+
+# Let conversations run until context is nearly full
+context_management:
+  warning_threshold: 85    # Warn at 85% full
+  auto_pause_threshold: 95 # Pause at 95% full
+
+# De-emphasize rate limits (tokens per minute)
+token_management:
+  rate_warning_threshold: 95  # Only warn at extreme usage
+  rate_pause_threshold: 98    # Almost never pause for rate limits
+  show_rate_usage: false      # Hide rate metrics
+
+# Log attractors but don't stop
+conversation:
+  attractor_detection:
+    on_detection: "log"  # Note patterns without stopping
