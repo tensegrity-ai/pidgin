@@ -1,7 +1,5 @@
+# Import model shortcuts from the new models module
+from .models import get_model_shortcuts
+
 # Model shortcuts for researcher convenience
-MODEL_SHORTCUTS = {
-    # Claude models
-    "claude": "claude-sonnet-4-20250514",
-    "opus": "claude-opus-4-20250514", 
-    "sonnet": "claude-sonnet-4-20250514",
-}
+MODEL_SHORTCUTS = get_model_shortcuts()
