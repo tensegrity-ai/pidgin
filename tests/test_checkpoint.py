@@ -33,17 +33,17 @@ class TestConversationState:
         state = ConversationState()
         
         # Add system message (shouldn't count as turn)
-        state.add_message(Message(role="system", content="Start"))
+        state.add_message(Message(role="system", content="Start", agent_id="system"))
         assert state.turn_count == 0
         
         # Add user and assistant messages
-        state.add_message(Message(role="user", content="Hello"))
-        state.add_message(Message(role="assistant", content="Hi there"))
+        state.add_message(Message(role="user", content="Hello", agent_id="agent_a"))
+        state.add_message(Message(role="assistant", content="Hi there", agent_id="agent_b"))
         assert state.turn_count == 1
         
         # Add another pair
-        state.add_message(Message(role="user", content="How are you?"))
-        state.add_message(Message(role="assistant", content="I'm well"))
+        state.add_message(Message(role="user", content="How are you?", agent_id="agent_a"))
+        state.add_message(Message(role="assistant", content="I'm well", agent_id="agent_b"))
         assert state.turn_count == 2
     
     def test_serialization(self):
@@ -53,7 +53,7 @@ class TestConversationState:
             model_b="gpt-4",
             max_turns=5
         )
-        state.add_message(Message(role="user", content="Test"))
+        state.add_message(Message(role="user", content="Test", agent_id="agent_a"))
         
         # Convert to dict
         data = state.to_dict()
@@ -80,8 +80,8 @@ class TestConversationState:
                 model_b="gpt-4",
                 transcript_path=str(transcript_path)
             )
-            state.add_message(Message(role="user", content="Hello"))
-            state.add_message(Message(role="assistant", content="Hi"))
+            state.add_message(Message(role="user", content="Hello", agent_id="agent_a"))
+            state.add_message(Message(role="assistant", content="Hi", agent_id="agent_b"))
             
             # Save checkpoint
             checkpoint_path = state.save_checkpoint()
