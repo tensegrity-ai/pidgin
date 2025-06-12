@@ -583,6 +583,10 @@ class DialogueEngine:
             # Handled by signal handler
             pass
         finally:
+            # Clean up keyboard listener
+            from .utils.terminal import cleanup_keyboard_listener
+            cleanup_keyboard_listener()
+            
             # Restore original signal handler
             self._restore_signal_handler()
 
@@ -871,14 +875,14 @@ class DialogueEngine:
         chunks = []
         interrupted = False
         
-        # Use raw terminal mode for instant key detection
-        from .utils.terminal import raw_terminal_mode, check_for_spacebar
+        # Use Rich-compatible keyboard detection  
+        from .utils.terminal import check_for_spacebar
+        from rich.live import Live
+        from rich.text import Text
         
         try:
-            with raw_terminal_mode():
-                # Clear line for status display
-                self.console.print("", end="\r")
-                
+            # Rich Live display with clean status updates
+            with Live(console=self.console, refresh_per_second=10, transient=False) as live:
                 last_check = time.time()
                 
                 async for chunk, _ in self.router.get_next_response_stream(
@@ -886,29 +890,38 @@ class DialogueEngine:
                 ):
                     chunks.append(chunk)
                     
-                    # Update status line
+                    # Update Rich Live display
                     char_count = len(''.join(chunks))
-                    self.console.print(
-                        f"\r[dim]Streaming... {char_count} chars | "
-                        f"[yellow]Press SPACE to interrupt[/yellow]",
-                        end="",
-                        highlight=False
-                    )
+                    status = Text()
+                    status.append("Streaming ", style="dim")
+                    status.append(f"{char_count} chars", style="cyan bold") 
+                    status.append(" | ", style="dim")
+                    status.append("Press SPACE to interrupt", style="yellow")
+                    live.update(status)
                     
                     # Check for interrupt every 100ms
                     if time.time() - last_check > 0.1:
                         if check_for_spacebar():
                             interrupted = True
-                            print('\a', end='', flush=True)  # System bell
+                            self.console.bell()
+                            # Final status showing interruption
+                            final_status = Text()
+                            final_status.append("⚡ Interrupted ", style="yellow bold")
+                            final_status.append(f"({char_count} chars)", style="dim")
+                            live.update(final_status)
                             break
                         last_check = time.time()
         except Exception as e:
-            # Clear the status line on error
-            self.console.print("\r" + " " * 60 + "\r", end="")
-            raise e
-        
-        # Clear the status line
-        self.console.print("\r" + " " * 60 + "\r", end="")
+            # Check if it's a rate limit error
+            if "rate limit" in str(e).lower():
+                self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
+                self.console.print("[yellow]Saving checkpoint and pausing...[/yellow]")
+                await self._handle_pause()
+                return None, False  # Return None to signal pause needed
+            else:
+                # Other API errors
+                self.console.print(f"\n[red]❌ API Error: {e}[/red]")
+                raise
         
         content = ''.join(chunks)
         if not content:
