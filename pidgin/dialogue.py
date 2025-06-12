@@ -270,12 +270,34 @@ class DialogueEngine:
                 
                 if interrupted_a:
                     self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
-                    # Force conductor intervention
+                    # Save transcript after interruption
+                    await self.transcript_manager.save(
+                        self.conversation, metrics=self._get_current_metrics()
+                    )
+                    # Force conductor intervention immediately
                     if hasattr(self, 'conductor') and self.conductor:
                         self.conductor.is_paused = True
-                        self.console.print("[yellow]Conductor paused for intervention[/yellow]")
-
-                # No mid-stream conductor intervention - we'll do end-of-turn instead
+                        self.console.print("[yellow]🎼 Conductor paused for intervention[/yellow]\n")
+                        
+                        # Create partial turn for intervention (Agent A only)
+                        partial_turn = ConversationTurn(
+                            agent_a_message=response_a,
+                            agent_b_message=None,  # Agent B didn't respond yet
+                            turn_number=turn + 1
+                        )
+                        
+                        # Get intervention if needed
+                        intervention = self.conductor.get_intervention(partial_turn)
+                        if intervention:
+                            # Add intervention to conversation
+                            self.conversation.messages.append(intervention)
+                            self.state.add_message(intervention)
+                            # Display the intervention
+                            self._display_message(intervention, "", context_info=None)
+                            # Save transcript with intervention
+                            await self.transcript_manager.save(
+                                self.conversation, metrics=self._get_current_metrics()
+                            )
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_a):
@@ -332,6 +354,10 @@ class DialogueEngine:
                         self._pause_requested = True
                         continue
 
+                # Skip Agent B if Agent A was interrupted (intervention already handled)
+                if interrupted_a:
+                    continue
+
                 # Agent B responds with streaming
                 response_b, interrupted_b = await self._get_agent_response_streaming(agent_b.id)
                 if response_b is None:  # Rate limit pause requested
@@ -339,12 +365,34 @@ class DialogueEngine:
                 
                 if interrupted_b:
                     self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
-                    # Force conductor intervention
+                    # Save transcript after interruption
+                    await self.transcript_manager.save(
+                        self.conversation, metrics=self._get_current_metrics()
+                    )
+                    # Force conductor intervention immediately
                     if hasattr(self, 'conductor') and self.conductor:
                         self.conductor.is_paused = True
-                        self.console.print("[yellow]Conductor paused for intervention[/yellow]")
-
-                # No mid-stream conductor intervention - we'll do end-of-turn instead
+                        self.console.print("[yellow]🎼 Conductor paused for intervention[/yellow]\n")
+                        
+                        # Create partial turn for intervention (both agents responded, B interrupted)
+                        partial_turn = ConversationTurn(
+                            agent_a_message=response_a,
+                            agent_b_message=response_b,  # Agent B responded but was interrupted
+                            turn_number=turn + 1
+                        )
+                        
+                        # Get intervention if needed
+                        intervention = self.conductor.get_intervention(partial_turn)
+                        if intervention:
+                            # Add intervention to conversation
+                            self.conversation.messages.append(intervention)
+                            self.state.add_message(intervention)
+                            # Display the intervention
+                            self._display_message(intervention, "", context_info=None)
+                            # Save transcript with intervention
+                            await self.transcript_manager.save(
+                                self.conversation, metrics=self._get_current_metrics()
+                            )
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_b):
