@@ -278,76 +278,71 @@ class EventDialogueEngine:
         interrupted = False
         start_time = time.time()
         
-        # Use Rich's Live display for clean status updates
-        with Live(
-            console=self.console,
-            refresh_per_second=5,  # Lower rate to reduce conflicts
-            transient=True  # Makes it disappear cleanly when done!
-        ) as live:
-            try:
-                last_check = time.time()
-                chunk_count = 0
+        try:
+            last_check = time.time()
+            chunk_count = 0
+            
+            async for chunk, _ in self.router.get_next_response_stream(self.messages, agent.id):
+                chunks.append(chunk)
+                chunk_count += 1
                 
-                async for chunk, _ in self.router.get_next_response_stream(self.messages, agent.id):
-                    chunks.append(chunk)
-                    chunk_count += 1
-                    
-                    # Build status text with Rich styling
-                    char_count = len(''.join(chunks))
-                    status = Text(f"Streaming... {char_count} chars | ", style="dim")
-                    status.append("Press SPACE to interrupt", style="yellow")
-                    
-                    # Update live display
-                    live.update(status)
-                    
-                    # Emit streaming progress periodically
-                    if chunk_count % 10 == 0:
-                        self.events.append(create_event(
-                            EventType.STREAM_CHUNK_RECEIVED,
-                            self.experiment_id,
-                            turn_number=turn,
-                            agent_id=agent.id,
-                            data={
-                                'chunk_count': chunk_count,
-                                'total_chars': char_count
-                            }
-                        ))
-                    
-                    # Check for interrupt every 100ms
-                    if time.time() - last_check > 0.1:
-                        if check_for_spacebar():
-                            interrupted = True
-                            print('\a', end='', flush=True)  # System bell
-                            break
-                        last_check = time.time()
-                        
-            except Exception as e:
-                # Emit API failure and re-raise
-                self.events.append(create_event(
-                    EventType.API_CALL_FAILED,
-                    self.experiment_id,
-                    turn_number=turn,
-                    agent_id=agent.id,
-                    data={
-                        'error': str(e),
-                        'provider': agent.model.split('-')[0]
-                    }
-                ))
+                # Clear previous status line completely using ANSI escape codes
+                print('\r\033[K', end='', flush=True)  # \r moves to start, \033[K clears to end
                 
-                # Check for rate limit
-                if "rate limit" in str(e).lower():
-                    self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
+                # Build and display new status
+                char_count = len(''.join(chunks))
+                status = f"Streaming... {char_count} chars | Press SPACE to interrupt"
+                print(status, end='', flush=True)
+                
+                # Emit streaming progress periodically
+                if chunk_count % 10 == 0:
                     self.events.append(create_event(
-                        EventType.RATE_LIMIT_WARNING,
+                        EventType.STREAM_CHUNK_RECEIVED,
                         self.experiment_id,
                         turn_number=turn,
                         agent_id=agent.id,
-                        data={'message': str(e)}
+                        data={
+                            'chunk_count': chunk_count,
+                            'total_chars': char_count
+                        }
                     ))
                 
-                raise
-        
-        # Live display automatically clears when the context exits!
+                # Check for interrupt every 100ms
+                if time.time() - last_check > 0.1:
+                    if check_for_spacebar():
+                        interrupted = True
+                        print('\a', end='', flush=True)  # System bell
+                        break
+                    last_check = time.time()
+                    
+        except Exception as e:
+            # Emit API failure and re-raise
+            self.events.append(create_event(
+                EventType.API_CALL_FAILED,
+                self.experiment_id,
+                turn_number=turn,
+                agent_id=agent.id,
+                data={
+                    'error': str(e),
+                    'provider': agent.model.split('-')[0]
+                }
+            ))
+            
+            # Check for rate limit
+            if "rate limit" in str(e).lower():
+                self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
+                self.events.append(create_event(
+                    EventType.RATE_LIMIT_WARNING,
+                    self.experiment_id,
+                    turn_number=turn,
+                    agent_id=agent.id,
+                    data={'message': str(e)}
+                ))
+            
+            raise
+        finally:
+            # CRITICAL: Always clear the status line completely when done
+            print('\r\033[K', end='', flush=True)  # Clear the line
         
         content = ''.join(chunks)
         if not content:
