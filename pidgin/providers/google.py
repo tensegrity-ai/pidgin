@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, AsyncIterator
 from ..types import Message
 from .base import Provider
 
@@ -28,7 +28,7 @@ class GoogleProvider(Provider):
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)
     
-    async def get_response(self, messages: List[Message]) -> str:
+    async def stream_response(self, messages: List[Message]) -> AsyncIterator[str]:
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
         google_messages = []
@@ -42,9 +42,12 @@ class GoogleProvider(Provider):
         try:
             # Create chat session
             chat = self.model.start_chat(history=google_messages[:-1])
-            # Send the last message
-            response = chat.send_message(google_messages[-1]['parts'][0])
-            return response.text
+            # Stream the response
+            response = chat.send_message(google_messages[-1]['parts'][0], stream=True)
+            
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
         except Exception as e:
             # Basic error handling - just don't crash
             raise Exception(f"Google API error: {str(e)}")

@@ -1,6 +1,7 @@
 import signal
+import time
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
@@ -128,7 +129,7 @@ class DialogueEngine:
             self.conductor = Conductor(self.console, mode="flowing")
             self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print(
-                "[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n"
+                "[dim]Conversation flows automatically. Press Spacebar to interrupt.[/dim]\n"
             )
 
         # Initialize or resume conversation
@@ -256,10 +257,17 @@ class DialogueEngine:
                     self._pause_requested = True
                     continue
 
-                # Agent A responds
-                response_a = await self._get_agent_response(agent_a.id)
+                # Agent A responds with streaming
+                response_a, interrupted_a = await self._get_agent_response_streaming(agent_a.id)
                 if response_a is None:  # Rate limit pause requested
                     continue
+                
+                if interrupted_a:
+                    self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
+                    # Force conductor intervention
+                    if hasattr(self, 'conductor') and self.conductor:
+                        self.conductor.is_paused = True
+                        self.console.print("[yellow]Conductor paused for intervention[/yellow]")
 
                 # No mid-stream conductor intervention - we'll do end-of-turn instead
 
@@ -298,9 +306,11 @@ class DialogueEngine:
                             f"{capacity_a['percentage']:.1f}% used, ~{turns_remaining} turns remaining[/yellow bold]\n"
                         )
 
-                self._display_message(
-                    response_a, agent_a.model, context_info=context_info_a
-                )
+                # Only display if not interrupted (already displayed during streaming)
+                if not interrupted_a:
+                    self._display_message(
+                        response_a, agent_a.model, context_info=context_info_a
+                    )
 
                 # Check for auto-pause due to context limits before Agent B
                 if self.context_management_enabled and self.context_manager:
@@ -316,10 +326,17 @@ class DialogueEngine:
                         self._pause_requested = True
                         continue
 
-                # Agent B responds
-                response_b = await self._get_agent_response(agent_b.id)
+                # Agent B responds with streaming
+                response_b, interrupted_b = await self._get_agent_response_streaming(agent_b.id)
                 if response_b is None:  # Rate limit pause requested
                     continue
+                
+                if interrupted_b:
+                    self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
+                    # Force conductor intervention
+                    if hasattr(self, 'conductor') and self.conductor:
+                        self.conductor.is_paused = True
+                        self.console.print("[yellow]Conductor paused for intervention[/yellow]")
 
                 # No mid-stream conductor intervention - we'll do end-of-turn instead
 
@@ -370,9 +387,29 @@ class DialogueEngine:
                         )
                         self._pause_requested = True
 
-                self._display_message(
-                    response_b, agent_b.model, context_info=context_info_b
-                )
+                # Only display if not interrupted (already displayed during streaming)
+                if not interrupted_b:
+                    self._display_message(
+                        response_b, agent_b.model, context_info=context_info_b
+                    )
+
+                # Check for end-of-turn conductor intervention
+                if hasattr(self, 'conductor') and self.conductor:
+                    # Create a turn object for conductor
+                    current_turn = ConversationTurn(
+                        agent_a_message=response_a,
+                        agent_b_message=response_b,
+                        turn_number=turn + 1
+                    )
+                    
+                    # Get intervention if needed
+                    intervention = self.conductor.get_intervention(current_turn)
+                    if intervention:
+                        # Add intervention to conversation
+                        self.conversation.messages.append(intervention)
+                        self.state.add_message(intervention)
+                        # Display the intervention
+                        self._display_message(intervention, "", context_info=None)
 
                 # Auto-save transcript after each turn with metrics
                 await self.transcript_manager.save(
@@ -534,7 +571,7 @@ class DialogueEngine:
                 if hasattr(self, "conductor") and self.conductor:
                     if self.conductor.mode == "flowing":
                         if not self.conductor.is_paused:
-                            conductor_info = " | [green]Press Ctrl+Z to pause[/green]"
+                            conductor_info = " | [green]Press Spacebar to interrupt[/green]"
                         else:
                             conductor_info = " | [yellow]PAUSED - interventions at end of turn[/yellow]"
 
@@ -667,7 +704,7 @@ class DialogueEngine:
         self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
 
         # Show controls with context management info
-        controls_text = "[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop"
+        controls_text = "[dim]Controls: [Spacebar] Interrupt | [Ctrl+C] Stop"
         if self.context_management_enabled:
             controls_text += " | Context tracking: ON"
         controls_text += "[/dim]\n"
@@ -826,3 +863,67 @@ class DialogueEngine:
             "phase_detection": self.phase_detection,
             "conductor_data": conductor_data,
         }
+
+    async def _get_agent_response_streaming(self, agent_id: str) -> Tuple[Optional[Message], bool]:
+        """Get agent response with streaming and interrupt capability.
+        Returns (message, was_interrupted)"""
+        
+        chunks = []
+        interrupted = False
+        
+        # Use raw terminal mode for instant key detection
+        from .utils.terminal import raw_terminal_mode, check_for_spacebar
+        
+        try:
+            with raw_terminal_mode():
+                # Clear line for status display
+                self.console.print("", end="\r")
+                
+                last_check = time.time()
+                
+                async for chunk, _ in self.router.get_next_response_stream(
+                    self.conversation.messages, agent_id
+                ):
+                    chunks.append(chunk)
+                    
+                    # Update status line
+                    char_count = len(''.join(chunks))
+                    self.console.print(
+                        f"\r[dim]Streaming... {char_count} chars | "
+                        f"[yellow]Press SPACE to interrupt[/yellow]",
+                        end="",
+                        highlight=False
+                    )
+                    
+                    # Check for interrupt every 100ms
+                    if time.time() - last_check > 0.1:
+                        if check_for_spacebar():
+                            interrupted = True
+                            print('\a', end='', flush=True)  # System bell
+                            break
+                        last_check = time.time()
+        except Exception as e:
+            # Clear the status line on error
+            self.console.print("\r" + " " * 60 + "\r", end="")
+            raise e
+        
+        # Clear the status line
+        self.console.print("\r" + " " * 60 + "\r", end="")
+        
+        content = ''.join(chunks)
+        if not content:
+            return None, interrupted
+            
+        message = Message(
+            role="assistant",
+            content=content,
+            agent_id=agent_id
+        )
+        
+        # If interrupted, display the partial message immediately
+        if interrupted:
+            # Get the target agent model name
+            target_agent = next(a for a in self.conversation.agents if a.id == agent_id)
+            self._display_message(message, target_agent.model, context_info=None)
+        
+        return message, interrupted

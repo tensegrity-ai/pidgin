@@ -265,3 +265,11 @@ class Conductor:
             "interventions": intervention_count,
             "history": self.intervention_history,
         }
+
+    def handle_interrupt(self):
+        """Handle state after a streaming interrupt"""
+        if self.mode == "flowing":
+            self.is_paused = True
+            self.console.print(
+                "\n[yellow]🎼 Conductor intervention mode activated[/yellow]"
+            )

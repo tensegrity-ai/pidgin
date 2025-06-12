@@ -9,6 +9,23 @@ class Config:
     """Configuration manager for Pidgin."""
     
     DEFAULT_CONFIG = {
+        'events': {
+            'compression': {
+                'enabled': True,
+                'compress_on_completion': True,
+                'compression_level': 9
+            },
+            'privacy': {
+                'enabled': False,
+                'remove_content': False,
+                'hash_models': False,
+                'redact_patterns': []
+            },
+            'storage': {
+                'version': 1,
+                'data_dir': '~/.pidgin_data/events'
+            }
+        },
         'conversation': {
             'checkpoint': {
                 'enabled': True,
@@ -27,6 +44,12 @@ class Config:
             'warning_threshold': 80,  # Warn at 80% capacity
             'auto_pause_threshold': 95,  # Auto-pause at 95% capacity
             'show_usage': True  # Display context usage in UI
+        },
+        'defaults': {
+            'max_turns': 20,
+            'manual_mode': False,
+            'convergence_threshold': 0.75,
+            'streaming_interrupts': True
         },
         'experiments': {
             'unattended': {
@@ -145,10 +168,26 @@ class Config:
         """Get attractor detection configuration."""
         return self.get('conversation.attractor_detection', {})
     
+    def get_events_config(self) -> Dict[str, Any]:
+        """Get event system configuration."""
+        return self.get('events', {})
+    
+    def get_privacy_config(self) -> Dict[str, Any]:
+        """Get privacy filtering configuration."""
+        return self.get('events.privacy', {})
+    
+    def get_storage_config(self) -> Dict[str, Any]:
+        """Get storage configuration."""
+        return self.get('events.storage', {})
+    
     def apply_experiment_profile(self, profile: str):
         """Apply an experiment profile to current config."""
         if profile_config := self.get(f'experiments.{profile}'):
             self.config = self._deep_merge(self.config, {'conversation': profile_config})
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the full configuration as a dictionary."""
+        return self.config.copy()
 
 
 # Global config instance

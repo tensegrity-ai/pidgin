@@ -1,13 +1,13 @@
-from typing import Protocol, List
+from typing import Protocol, List, AsyncIterator
 from .types import Message, Conversation, ConversationRole
 
 
 class Router(Protocol):
     """Router interface for future extensibility"""
 
-    async def get_next_response(
-        self, conversation_history: List[Message], target_agent: str
-    ) -> Message:
+    async def stream_response(
+        self, messages: List[Message]
+    ) -> AsyncIterator[str]:
         ...
 
 
@@ -26,11 +26,28 @@ class DirectRouter:
         # Build message history for target agent (A↔B messages only)
         agent_messages = self._build_agent_history(conversation_history, target_agent)
 
-        # Get provider response
+        # Get provider response - use streaming and collect all chunks
         provider = self.providers[target_agent]
-        response_text = await provider.get_response(agent_messages)
+        chunks = []
+        async for chunk in provider.stream_response(agent_messages):
+            chunks.append(chunk)
+        response_text = ''.join(chunks)
 
         return Message(role="assistant", content=response_text, agent_id=target_agent)
+
+    async def get_next_response_stream(
+        self, conversation_history: List[Message], target_agent: str
+    ) -> AsyncIterator[tuple[str, str]]:
+        """Stream response chunks from target agent. Yields (chunk, agent_id) tuples."""
+        
+        # Build message history for target agent (A↔B messages only)
+        agent_messages = self._build_agent_history(conversation_history, target_agent)
+        
+        # Get provider response
+        provider = self.providers[target_agent]
+        
+        async for chunk in provider.stream_response(agent_messages):
+            yield chunk, target_agent
 
     def _build_agent_history(
         self, messages: List[Message], target_agent: str

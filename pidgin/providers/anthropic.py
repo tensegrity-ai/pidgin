@@ -1,6 +1,6 @@
 import os
 from anthropic import Anthropic
-from typing import List
+from typing import List, AsyncIterator
 from ..types import Message
 from .base import Provider
 
@@ -16,7 +16,7 @@ class AnthropicProvider(Provider):
         self.client = Anthropic(api_key=api_key)
         self.model = model
     
-    async def get_response(self, messages: List[Message]) -> str:
+    async def stream_response(self, messages: List[Message]) -> AsyncIterator[str]:
         # Convert to Anthropic format
         anthropic_messages = [
             {"role": m.role, "content": m.content}
@@ -24,20 +24,14 @@ class AnthropicProvider(Provider):
         ]
         
         try:
-            response = self.client.messages.create(
+            # Anthropic's streaming uses a synchronous context manager
+            with self.client.messages.stream(
                 model=self.model,
                 messages=anthropic_messages,
                 max_tokens=1000
-            )
-            # Handle both text and tool use responses
-            if response.content:
-                if hasattr(response.content[0], 'text'):
-                    return response.content[0].text
-                else:
-                    # If it's not a text response, return a string representation
-                    return str(response.content[0])
-            else:
-                return ""
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
         except Exception as e:
             # Basic error handling - just don't crash
             raise Exception(f"Anthropic API error: {str(e)}")
