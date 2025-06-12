@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
-from .types import Message, Conversation, Agent, MessageSource
+from .types import Message, Conversation, Agent, MessageSource, ConversationTurn, ConversationRole
 from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
@@ -264,22 +264,7 @@ class DialogueEngine:
                 if response_a is None:  # Rate limit pause requested
                     continue
 
-                # Conductor intervention if enabled
-                if self.conductor:
-                    response_a = await self.conductor.process_message(
-                        response_a, f"Agent A ({agent_a.model})", agent_b.id, turn + 1
-                    )
-
-                    # Check if conductor requested resume (for auto-resume after external injection)
-                    if (
-                        hasattr(self.conductor, "resume_requested")
-                        and self.conductor.resume_requested
-                    ):
-                        self._pause_requested = False
-                        self.conductor.resume_requested = False
-
-                    if response_a is None:  # Message was skipped
-                        continue
+                # No mid-stream conductor intervention - we'll do end-of-turn instead
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_a):
@@ -339,22 +324,7 @@ class DialogueEngine:
                 if response_b is None:  # Rate limit pause requested
                     continue
 
-                # Conductor intervention if enabled
-                if self.conductor:
-                    response_b = await self.conductor.process_message(
-                        response_b, f"Agent B ({agent_b.model})", agent_a.id, turn + 1
-                    )
-
-                    # Check if conductor requested resume (for auto-resume after external injection)
-                    if (
-                        hasattr(self.conductor, "resume_requested")
-                        and self.conductor.resume_requested
-                    ):
-                        self._pause_requested = False
-                        self.conductor.resume_requested = False
-
-                    if response_b is None:  # Message was skipped
-                        continue
+                # No mid-stream conductor intervention - we'll do end-of-turn instead
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_b):
