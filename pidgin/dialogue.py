@@ -558,14 +558,10 @@ class DialogueEngine:
                     ] = intervention_summary
                     self.console.print(
                         f"\n[dim]Conductor interventions: "
-                        f"{intervention_summary['edits']} edits, "
-                        f"{intervention_summary['injections']} injections, "
-                        f"{intervention_summary['skips']} skips[/dim]"
+                        f"{intervention_summary['interventions']} interventions[/dim]"
                     )
 
-                # Clean up conductor resources
-                if hasattr(self.conductor, "cleanup"):
-                    self.conductor.cleanup()
+                # No cleanup needed for new conductor
 
             # Save final transcript with complete metrics
             await self.transcript_manager.save(
