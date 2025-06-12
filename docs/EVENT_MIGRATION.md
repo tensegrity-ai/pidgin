@@ -83,7 +83,7 @@ Since this is alpha software, there is **no migration path** for old data. The d
 ### Running Conversations
 
 ```python
-from pidgin.event_factory import create_event_store, create_event_dialogue_engine
+from pidgin.event_setup import create_event_store, create_event_dialogue_engine
 from pidgin.config_manager import get_config
 
 # Set up event system
@@ -105,7 +105,7 @@ json_data = transcript_gen.generate_json(experiment_id)
 ### Real-time Monitoring
 
 ```python
-from pidgin.event_factory import setup_console_subscriber
+from pidgin.event_setup import setup_console_subscriber
 
 # Subscribe to live events
 event_store = create_event_store(config)

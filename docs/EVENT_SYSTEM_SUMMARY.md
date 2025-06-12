@@ -63,7 +63,7 @@ pidgin/
 ├── events.py              # Core event system
 ├── event_transcripts.py   # Transcript generation
 ├── event_dialogue.py      # Event-based dialogue engine
-├── event_factory.py       # Configuration helpers
+├── event_setup.py         # Configuration helpers
 ├── config_manager.py      # Updated configuration
 ├── utils/
 │   └── terminal.py        # Streaming interrupt utilities
