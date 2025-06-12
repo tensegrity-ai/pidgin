@@ -35,28 +35,33 @@ class Conductor:
         return False
 
     def _display_turn_summary(self, turn: ConversationTurn):
-        """Display completed turn summary."""
-        title = f"Turn {turn.turn_number} Complete"
+        """Display turn summary (may be partial if interrupted)."""
+        if turn.agent_b_message:
+            title = f"Turn {turn.turn_number} Complete"
+        else:
+            title = f"Turn {turn.turn_number} (Interrupted - Agent A only)"
 
         # Agent A message
-        self.console.print(
-            Panel(
-                turn.agent_a_message.content,
-                title=f"[bold blue]Agent A[/bold blue]",
-                border_style="blue",
-                padding=(1, 2),
+        if turn.agent_a_message:
+            self.console.print(
+                Panel(
+                    turn.agent_a_message.content,
+                    title=f"[bold blue]Agent A[/bold blue]",
+                    border_style="blue",
+                    padding=(1, 2),
+                )
             )
-        )
 
-        # Agent B message
-        self.console.print(
-            Panel(
-                turn.agent_b_message.content,
-                title=f"[bold green]Agent B[/bold green]",
-                border_style="green",
-                padding=(1, 2),
+        # Agent B message (only if exists)
+        if turn.agent_b_message:
+            self.console.print(
+                Panel(
+                    turn.agent_b_message.content,
+                    title=f"[bold green]Agent B[/bold green]",
+                    border_style="green",
+                    padding=(1, 2),
+                )
             )
-        )
 
         if turn.post_turn_interventions:
             for intervention in turn.post_turn_interventions:
