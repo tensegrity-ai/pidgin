@@ -7,6 +7,8 @@ from typing import Optional, List, Tuple
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.live import Live
+from rich.text import Text
 
 from .types import Agent, Message, ConversationTurn
 from .router import Router
@@ -279,41 +281,47 @@ class EventDialogueEngine:
         start_time = time.time()
         
         try:
-            last_check = time.time()
-            chunk_count = 0
-            
-            async for chunk, _ in self.router.get_next_response_stream(self.messages, agent.id):
-                chunks.append(chunk)
-                chunk_count += 1
+            # Pure Rich Live display - no mixed output methods
+            with Live(console=self.console, refresh_per_second=4) as live:
+                last_check = time.time()
+                chunk_count = 0
                 
-                # Clear previous status line completely using ANSI escape codes
-                print('\r\033[K', end='', flush=True)  # \r moves to start, \033[K clears to end
-                
-                # Build and display new status
-                char_count = len(''.join(chunks))
-                status = f"Streaming... {char_count} chars | Press SPACE to interrupt"
-                print(status, end='', flush=True)
-                
-                # Emit streaming progress periodically
-                if chunk_count % 10 == 0:
-                    self.events.append(create_event(
-                        EventType.STREAM_CHUNK_RECEIVED,
-                        self.experiment_id,
-                        turn_number=turn,
-                        agent_id=agent.id,
-                        data={
-                            'chunk_count': chunk_count,
-                            'total_chars': char_count
-                        }
-                    ))
-                
-                # Check for interrupt every 100ms
-                if time.time() - last_check > 0.1:
-                    if check_for_spacebar():
-                        interrupted = True
-                        print('\a', end='', flush=True)  # System bell
-                        break
-                    last_check = time.time()
+                async for chunk, _ in self.router.get_next_response_stream(self.messages, agent.id):
+                    chunks.append(chunk)
+                    chunk_count += 1
+                    
+                    # Build Rich Text object with proper styling
+                    char_count = len(''.join(chunks))
+                    status = Text("Streaming... ", style="dim")
+                    status.append(f"{char_count} chars", style="cyan")
+                    status.append(" | ", style="dim")
+                    status.append("Press SPACE to interrupt", style="yellow bold")
+                    
+                    # Update live display - Rich handles all the terminal complexity
+                    live.update(status)
+                    
+                    # Emit streaming progress periodically
+                    if chunk_count % 10 == 0:
+                        self.events.append(create_event(
+                            EventType.STREAM_CHUNK_RECEIVED,
+                            self.experiment_id,
+                            turn_number=turn,
+                            agent_id=agent.id,
+                            data={
+                                'chunk_count': chunk_count,
+                                'total_chars': char_count
+                            }
+                        ))
+                    
+                    # Check for interrupt every 100ms
+                    if time.time() - last_check > 0.1:
+                        if check_for_spacebar():
+                            interrupted = True
+                            self.console.bell()  # Rich method for system bell
+                            break
+                        last_check = time.time()
+                        
+                # Live display automatically cleans up when context exits
                     
         except Exception as e:
             # Emit API failure and re-raise
@@ -340,9 +348,8 @@ class EventDialogueEngine:
                 ))
             
             raise
-        finally:
-            # CRITICAL: Always clear the status line completely when done
-            print('\r\033[K', end='', flush=True)  # Clear the line
+        
+        # Live display automatically cleans up when context exits
         
         content = ''.join(chunks)
         if not content:
