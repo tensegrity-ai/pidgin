@@ -3,6 +3,8 @@
 import time
 import uuid
 import traceback
+import threading
+import queue
 from typing import Optional, List, Tuple
 
 from rich.console import Console
@@ -17,7 +19,7 @@ from .conductor import Conductor
 from .convergence import ConvergenceCalculator
 from .attractors import AttractorManager
 from .context_manager import ContextWindowManager
-from .utils.terminal import check_for_spacebar
+from .utils.terminal import check_for_spacebar, cleanup_keyboard_listener
 
 
 class EventDialogueEngine:
@@ -141,6 +143,9 @@ class EventDialogueEngine:
                 }
             ))
             raise
+        finally:
+            # Clean up keyboard listener
+            cleanup_keyboard_listener()
     
     async def _run_turn(self, turn: int, agent_a: Agent, agent_b: Agent, max_turns: int) -> bool:
         """Run a single conversation turn. Returns True if should break loop."""
@@ -281,8 +286,8 @@ class EventDialogueEngine:
         start_time = time.time()
         
         try:
-            # Pure Rich Live display - no mixed output methods
-            with Live(console=self.console, refresh_per_second=4) as live:
+            # Rich Live display with clean status updates
+            with Live(console=self.console, refresh_per_second=10, transient=False) as live:
                 last_check = time.time()
                 chunk_count = 0
                 
@@ -290,15 +295,17 @@ class EventDialogueEngine:
                     chunks.append(chunk)
                     chunk_count += 1
                     
-                    # Build Rich Text object with proper styling
-                    char_count = len(''.join(chunks))
-                    status = Text("Streaming... ", style="dim")
-                    status.append(f"{char_count} chars", style="cyan")
-                    status.append(" | ", style="dim")
-                    status.append("Press SPACE to interrupt", style="yellow bold")
-                    
-                    # Update live display - Rich handles all the terminal complexity
-                    live.update(status)
+                    # Build status display - only update every few chunks for performance
+                    if chunk_count % 3 == 0 or interrupted:
+                        char_count = len(''.join(chunks))
+                        status = Text()
+                        status.append("Streaming ", style="dim")
+                        status.append(f"{char_count} chars", style="cyan bold")
+                        status.append(" | ", style="dim")
+                        status.append("Press SPACE to interrupt", style="yellow")
+                        
+                        # Rich Live handles the display update cleanly
+                        live.update(status)
                     
                     # Emit streaming progress periodically
                     if chunk_count % 10 == 0:
@@ -309,19 +316,22 @@ class EventDialogueEngine:
                             agent_id=agent.id,
                             data={
                                 'chunk_count': chunk_count,
-                                'total_chars': char_count
+                                'total_chars': len(''.join(chunks))
                             }
                         ))
                     
-                    # Check for interrupt every 100ms
+                    # Check for interrupt every 100ms using Rich-compatible method
                     if time.time() - last_check > 0.1:
                         if check_for_spacebar():
                             interrupted = True
-                            self.console.bell()  # Rich method for system bell
+                            self.console.bell()
+                            # Final status update showing interruption
+                            final_status = Text()
+                            final_status.append("⚡ Interrupted ", style="yellow bold")
+                            final_status.append(f"({len(''.join(chunks))} chars)", style="dim")
+                            live.update(final_status)
                             break
                         last_check = time.time()
-                        
-                # Live display automatically cleans up when context exits
                     
         except Exception as e:
             # Emit API failure and re-raise
