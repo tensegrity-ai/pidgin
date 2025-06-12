@@ -122,7 +122,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4.1-mini": ModelConfig(
         model_id="gpt-4.1-mini",
-        aliases=["gpt4.1-mini", "coding-mini", "gpt-mini", "gpt"],
+        aliases=["gpt4.1-mini", "coding-mini", "gpt-mini"],
         provider="openai",
         context_window=1000000,
         pricing_tier="standard",
@@ -227,7 +227,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4o": ModelConfig(
         model_id="gpt-4o",
-        aliases=["gpt4o", "4o", "multimodal"],
+        aliases=["gpt4o", "4o", "multimodal", "gpt"],
         provider="openai",
         context_window=128000,
         pricing_tier="standard",
@@ -269,6 +269,145 @@ MODELS: Dict[str, ModelConfig] = {
             conversation_style="creative"
         ),
         notes="Latest image generation model - not for conversations"
+    ),
+    
+    # Google Models
+    "gemini-2.0-flash-exp": ModelConfig(
+        model_id="gemini-2.0-flash-exp",
+        aliases=["gemini-flash", "flash", "gemini"],
+        provider="google",
+        context_window=1048576,  # 1M tokens
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=5,
+            avg_response_length="medium",
+            attractor_tendency="balanced",
+            recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
+            conversation_style="concise"
+        ),
+        notes="Fast experimental model with 1M context"
+    ),
+    "gemini-2.0-flash-thinking-exp": ModelConfig(
+        model_id="gemini-2.0-flash-thinking-exp",
+        aliases=["gemini-thinking", "thinking", "flash-thinking"],
+        provider="google",
+        context_window=32767,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=8,
+            avg_response_length="long",
+            attractor_tendency="expansion",
+            recommended_pairings=["o4-mini", "claude-4-sonnet-20250514"],
+            conversation_style="analytical"
+        ),
+        notes="Reasoning model with visible thinking process"
+    ),
+    "gemini-exp-1206": ModelConfig(
+        model_id="gemini-exp-1206",
+        aliases=["gemini-exp", "exp-1206"],
+        provider="google",
+        context_window=2097152,  # 2M tokens
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            attractor_tendency="expansion",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="analytical"
+        ),
+        notes="Experimental model with 2M context window"
+    ),
+    "gemini-1.5-pro": ModelConfig(
+        model_id="gemini-1.5-pro",
+        aliases=["gemini-pro", "1.5-pro"],
+        provider="google",
+        context_window=2097152,  # 2M tokens
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            attractor_tendency="balanced",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="analytical"
+        ),
+        notes="Production model with 2M context"
+    ),
+    "gemini-1.5-flash": ModelConfig(
+        model_id="gemini-1.5-flash",
+        aliases=["flash-1.5"],
+        provider="google",
+        context_window=1048576,  # 1M tokens
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=4,
+            avg_response_length="medium",
+            attractor_tendency="compression",
+            recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
+            conversation_style="concise"
+        ),
+        notes="Fast production model"
+    ),
+    "gemini-1.5-flash-8b": ModelConfig(
+        model_id="gemini-1.5-flash-8b",
+        aliases=["flash-8b", "gemini-8b"],
+        provider="google",
+        context_window=1048576,  # 1M tokens
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=3,
+            avg_response_length="short",
+            attractor_tendency="compression",
+            recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
+            conversation_style="concise"
+        ),
+        notes="Smallest and fastest Gemini model"
+    ),
+    
+    # xAI Models
+    "grok-beta": ModelConfig(
+        model_id="grok-beta",
+        aliases=["grok", "xai"],
+        provider="xai",
+        context_window=131072,  # 128K tokens
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=8,
+            avg_response_length="long",
+            attractor_tendency="expansion",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="analytical"
+        ),
+        notes="xAI's flagship reasoning model"
+    ),
+    "grok-2-1212": ModelConfig(
+        model_id="grok-2-1212",
+        aliases=["grok-2", "grok2"],
+        provider="xai",
+        context_window=131072,  # 128K tokens
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            attractor_tendency="balanced",
+            recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1"],
+            conversation_style="analytical"
+        ),
+        notes="Latest Grok model with improved capabilities"
+    ),
+    "grok-2-vision-1212": ModelConfig(
+        model_id="grok-2-vision-1212",
+        aliases=["grok-vision", "grok-2-vision"],
+        provider="xai",
+        context_window=131072,  # 128K tokens
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            attractor_tendency="balanced",
+            recommended_pairings=["gpt-4o", "claude-4-sonnet-20250514"],
+            conversation_style="analytical"
+        ),
+        notes="Grok with vision capabilities for multimodal tasks"
     ),
 }
 

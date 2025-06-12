@@ -1,8 +1,7 @@
 """Convergence metrics for tracking when AI agents start sounding alike."""
 
 import re
-from typing import List, Tuple
-from .types import Message
+from typing import List, Tuple, Any
 
 
 class ConvergenceCalculator:
@@ -17,7 +16,7 @@ class ConvergenceCalculator:
         self.window_size = window_size
         self.history: List[float] = []
         
-    def calculate(self, messages: List[Message]) -> float:
+    def calculate(self, messages: List[Any]) -> float:
         """Calculate structural similarity between recent A and B messages.
         
         Returns 0.0 (completely different) to 1.0 (identical).
@@ -28,8 +27,10 @@ class ConvergenceCalculator:
         Returns:
             Convergence score between 0.0 and 1.0
         """
-        # Get recent messages from each agent
-        recent_messages = messages[-self.window_size:] if len(messages) > self.window_size else messages
+        # Get recent messages from each agent, ensuring balance
+        # Only use messages from agent turns (not system/external)
+        agent_messages = [m for m in messages if m.agent_id in ['agent_a', 'agent_b']]
+        recent_messages = agent_messages[-self.window_size:] if len(agent_messages) > self.window_size else agent_messages
         
         recent_a = [m for m in recent_messages if m.agent_id == 'agent_a']
         recent_b = [m for m in recent_messages if m.agent_id == 'agent_b']
@@ -37,33 +38,112 @@ class ConvergenceCalculator:
         if not recent_a or not recent_b:
             return 0.0
             
-        # Calculate multiple structural similarity metrics
-        length_sim = self._length_similarity(recent_a, recent_b)
-        sentence_sim = self._sentence_pattern_similarity(recent_a, recent_b)
-        structure_sim = self._structure_similarity(recent_a, recent_b)
-        punctuation_sim = self._punctuation_similarity(recent_a, recent_b)
+        # Balance the comparison by taking equal numbers of recent messages
+        min_count = min(len(recent_a), len(recent_b))
+        recent_a = recent_a[-min_count:] if min_count > 0 else recent_a
+        recent_b = recent_b[-min_count:] if min_count > 0 else recent_b
+            
+        # Clean the message content before analysis
+        recent_a = [self._clean_message_content(m) for m in recent_a]
+        recent_b = [self._clean_message_content(m) for m in recent_b]
+            
+        # First check for exact content matches
+        content_sim = self._content_similarity(recent_a, recent_b)
         
-        # Weighted average (can be tuned based on what matters most)
-        weights = {
-            'length': 0.2,
-            'sentences': 0.3,
-            'structure': 0.3,
-            'punctuation': 0.2
-        }
-        
-        similarity = (
-            length_sim * weights['length'] +
-            sentence_sim * weights['sentences'] +
-            structure_sim * weights['structure'] +
-            punctuation_sim * weights['punctuation']
-        )
+        # If content is very similar, weight it heavily
+        if content_sim > 0.9:
+            similarity = content_sim * 0.7 + content_sim * 0.3  # Heavily weight exact matches
+        else:
+            # Calculate multiple structural similarity metrics
+            length_sim = self._length_similarity(recent_a, recent_b)
+            sentence_sim = self._sentence_pattern_similarity(recent_a, recent_b)
+            structure_sim = self._structure_similarity(recent_a, recent_b)
+            punctuation_sim = self._punctuation_similarity(recent_a, recent_b)
+            
+            # Weighted average including content similarity
+            weights = {
+                'content': 0.4,
+                'length': 0.15,
+                'sentences': 0.2,
+                'structure': 0.15,
+                'punctuation': 0.1
+            }
+            
+            similarity = (
+                content_sim * weights['content'] +
+                length_sim * weights['length'] +
+                sentence_sim * weights['sentences'] +
+                structure_sim * weights['structure'] +
+                punctuation_sim * weights['punctuation']
+            )
         
         # Track history
         self.history.append(similarity)
         
         return round(similarity, 2)
     
-    def _length_similarity(self, messages_a: List[Message], messages_b: List[Message]) -> float:
+    def _clean_message_content(self, message: Any) -> Any:
+        """Clean message content by removing embedded agent labels and formatting."""
+        import re
+        
+        content = message.content
+        
+        # Remove embedded agent labels like "**Agent A**:" and "**Agent B**:"
+        content = re.sub(r'\*\*Agent [AB]\*\*:\s*', '', content)
+        
+        # Remove markdown formatting artifacts from collaborative responses
+        content = re.sub(r'\*\*Agent [AB]\*\*', '', content)
+        
+        # Remove excessive newlines and clean up spacing
+        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
+        content = content.strip()
+        
+        # Create a new message object with cleaned content
+        from types import SimpleNamespace
+        cleaned_message = SimpleNamespace()
+        cleaned_message.content = content
+        cleaned_message.agent_id = message.agent_id
+        cleaned_message.role = message.role
+        cleaned_message.timestamp = getattr(message, 'timestamp', None)
+        
+        return cleaned_message
+    
+    def _content_similarity(self, messages_a: List, messages_b: List) -> float:
+        """Calculate direct content similarity between messages."""
+        if not messages_a or not messages_b:
+            return 0.0
+        
+        # Get the most recent message from each agent for comparison
+        content_a = messages_a[-1].content.strip().lower()
+        content_b = messages_b[-1].content.strip().lower()
+        
+        # Handle exact matches
+        if content_a == content_b:
+            return 1.0
+        
+        # Handle cases where one message contains the other
+        if content_a in content_b or content_b in content_a:
+            shorter = min(len(content_a), len(content_b))
+            longer = max(len(content_a), len(content_b))
+            return shorter / longer if longer > 0 else 0.0
+        
+        # Basic character-level similarity for very short messages
+        if len(content_a) < 50 and len(content_b) < 50:
+            # Simple character overlap for short messages
+            chars_a = set(content_a)
+            chars_b = set(content_b)
+            intersection = len(chars_a.intersection(chars_b))
+            union = len(chars_a.union(chars_b))
+            return intersection / union if union > 0 else 0.0
+        
+        # For longer messages, use word-level comparison
+        words_a = set(content_a.split())
+        words_b = set(content_b.split())
+        intersection = len(words_a.intersection(words_b))
+        union = len(words_a.union(words_b))
+        return intersection / union if union > 0 else 0.0
+    
+    def _length_similarity(self, messages_a: List, messages_b: List) -> float:
         """Calculate similarity based on message lengths."""
         if not messages_a or not messages_b:
             return 0.0
@@ -79,7 +159,7 @@ class ConvergenceCalculator:
         ratio = min(avg_len_a, avg_len_b) / max(avg_len_a, avg_len_b)
         return ratio
     
-    def _sentence_pattern_similarity(self, messages_a: List[Message], messages_b: List[Message]) -> float:
+    def _sentence_pattern_similarity(self, messages_a: List, messages_b: List) -> float:
         """Calculate similarity based on sentence patterns."""
         # Extract sentences using simple regex
         sentence_pattern = r'[.!?]+[\s]'
@@ -103,7 +183,7 @@ class ConvergenceCalculator:
         ratio = min(avg_sent_a, avg_sent_b) / max(avg_sent_a, avg_sent_b)
         return ratio
     
-    def _structure_similarity(self, messages_a: List[Message], messages_b: List[Message]) -> float:
+    def _structure_similarity(self, messages_a: List, messages_b: List) -> float:
         """Calculate similarity based on structural patterns (paragraphs, lists, questions)."""
         def extract_features(messages):
             features = {
@@ -146,7 +226,7 @@ class ConvergenceCalculator:
                 
         return sum(similarities) / len(similarities) if similarities else 0.0
     
-    def _punctuation_similarity(self, messages_a: List[Message], messages_b: List[Message]) -> float:
+    def _punctuation_similarity(self, messages_a: List, messages_b: List) -> float:
         """Calculate similarity based on punctuation patterns."""
         def punctuation_profile(messages):
             profile = {

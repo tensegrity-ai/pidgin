@@ -109,7 +109,7 @@ class ConductorMiddleware:
         Returns:
             Modified message
         """
-        self.console.print("\n[yellow]Enter edited message (Ctrl+D when done):[/yellow]")
+        self.console.print("\n[yellow]Enter edited message (Enter to send, empty line + Enter for multiline, Ctrl+D to cancel):[/yellow]")
         
         # Show current content
         self.console.print(Panel(
@@ -124,9 +124,13 @@ class ConductorMiddleware:
         try:
             while True:
                 line = input()
+                if line == "" and len(lines) > 0:
+                    # Empty line after content = finish input
+                    break
                 lines.append(line)
         except EOFError:
-            pass
+            # Ctrl+D pressed - use original message
+            return original_message
         
         new_content = "\n".join(lines).strip()
         
@@ -201,14 +205,19 @@ class ConductorMiddleware:
                 break
         
         # Get content
-        self.console.print(f"\n[cyan]Message content (Ctrl+D when done, empty to cancel):[/cyan]")
+        self.console.print(f"\n[cyan]Message content (Enter to send, empty line + Enter for multiline, Ctrl+D to cancel):[/cyan]")
         lines = []
         try:
             while True:
                 line = input()
+                if line == "" and len(lines) > 0:
+                    # Empty line after content = finish input
+                    break
                 lines.append(line)
         except EOFError:
-            pass
+            # Ctrl+D pressed - cancel
+            self.console.print("[dim]Injection cancelled.[/dim]")
+            return None
         
         content = "\n".join(lines).strip()
         

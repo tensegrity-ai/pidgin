@@ -1,0 +1,66 @@
+# Pidgin Default Configuration
+# Copy this to ~/.config/pidgin.yaml and customize as needed
+# This configuration prioritizes long research conversations
+
+# Conversation settings
+conversation:
+  # Checkpoint settings - save progress regularly
+  checkpoint:
+    enabled: true
+    auto_save_interval: 10  # Save checkpoint every 10 turns
+    
+  # Attractor detection - identify repetitive patterns
+  attractor_detection:
+    enabled: true
+    check_interval: 5      # Check every 5 turns
+    window_size: 10        # Look at last 10 messages
+    threshold: 3           # Trigger after 3 repetitions
+    on_detection: "stop"   # Options: stop, pause, log
+                          # Default is to stop on detection
+
+
+# Context window management - prevents context overflow (PRIMARY)
+context_management:
+  enabled: true
+  warning_threshold: 80         # Warn at 80% context capacity
+  auto_pause_threshold: 95      # Auto-pause at 95% context capacity
+  show_usage: true              # Always show context usage
+
+# Experiment profiles for different research scenarios
+experiments:
+  # For long-running unattended experiments
+  unattended:
+    attractor_detection:
+      enabled: true
+      on_detection: "stop"      # Stop on attractors in unattended mode
+      threshold: 2              # More sensitive detection
+      window_size: 8
+    context_management:
+      auto_pause_threshold: 85  # Pause earlier to ensure data saved
+  
+  # For baseline experiments without intervention
+  baseline:
+    attractor_detection:
+      enabled: false            # No pattern detection
+    context_management:
+      warning_threshold: 90     # Only warn very late
+      auto_pause_threshold: 98  # Almost never pause
+      
+  # For compression studies
+  compression:
+    attractor_detection:
+      enabled: true
+      check_interval: 3         # Check more frequently
+      window_size: 6            # Smaller window for faster detection
+      on_detection: "log"       # Don't stop, just observe
+    context_management:
+      warning_threshold: 70     # Earlier warnings for compression
+      
+  # For debugging or testing
+  debug:
+    attractor_detection:
+      enabled: true
+      check_interval: 1         # Check every turn
+      on_detection: "log"
+    context_management:
+      warning_threshold: 50     # Early warnings for testing
