@@ -206,10 +206,16 @@ class DialogueEngine:
         # Run conversation loop
         try:
             for turn in range(start_turn, max_turns):
-                # Check for pause request
+                # Check for pause request - but don't break if conductor is handling it
                 if self._pause_requested:
-                    await self._handle_pause()
-                    break
+                    if hasattr(self, 'conductor') and self.conductor and self.conductor.is_paused:
+                        # Conductor is handling the pause - continue loop for interventions
+                        self._pause_requested = False  # Reset flag
+                        self.console.print("[yellow]🎼 Conductor paused - ready for interventions[/yellow]\n")
+                    else:
+                        # Regular pause - save and exit
+                        await self._handle_pause()
+                        break
 
                 # PRIORITY 1: Check context window limits (what actually matters)
                 context_should_pause = False
@@ -874,29 +880,28 @@ class DialogueEngine:
         # Simple streaming display without keyboard detection
         
         try:
-            # Simple status display
-            self.console.print("", end="\r")
+            # Use Rich Live for clean display updates
+            from rich.live import Live
+            from rich.text import Text
             
-            async for chunk, _ in self.router.get_next_response_stream(
-                self.conversation.messages, agent_id
-            ):
-                chunks.append(chunk)
-                
-                # Update status line
-                char_count = len(''.join(chunks))
-                self.console.print(
-                    f"\r[dim]Streaming... {char_count} chars[/dim]",
-                    end="",
-                    highlight=False
-                )
-                
-                # Check if conductor paused (via Ctrl+Z signal)
-                if hasattr(self, 'conductor') and self.conductor and self.conductor.is_paused:
-                    interrupted = True
-                    break
+            with Live(console=self.console, refresh_per_second=4) as live:
+                async for chunk, _ in self.router.get_next_response_stream(
+                    self.conversation.messages, agent_id
+                ):
+                    chunks.append(chunk)
+                    
+                    # Update live display
+                    char_count = len(''.join(chunks))
+                    text = Text(f"Streaming... {char_count} chars", style="dim")
+                    live.update(text)
+                    
+                    # Check if conductor paused (via Ctrl+Z signal)
+                    if hasattr(self, 'conductor') and self.conductor and self.conductor.is_paused:
+                        interrupted = True
+                        final_text = Text("⚡ Interrupted by Ctrl+Z", style="yellow bold")
+                        live.update(final_text)
+                        break
         except Exception as e:
-            # Clear the status line on error
-            self.console.print("\r" + " " * 60 + "\r", end="")
             # Check if it's a rate limit error
             if "rate limit" in str(e).lower():
                 self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
@@ -907,9 +912,6 @@ class DialogueEngine:
                 # Other API errors
                 self.console.print(f"\n[red]❌ API Error: {e}[/red]")
                 raise
-        
-        # Clear the status line
-        self.console.print("\r" + " " * 60 + "\r", end="")
         
         content = ''.join(chunks)
         if not content:
