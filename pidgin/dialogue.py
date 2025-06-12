@@ -129,7 +129,7 @@ class DialogueEngine:
             self.conductor = Conductor(self.console, mode="flowing")
             self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print(
-                "[dim]Conversation flows automatically. Press Spacebar to interrupt.[/dim]\n"
+                "[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n"
             )
 
         # Initialize or resume conversation
@@ -571,7 +571,7 @@ class DialogueEngine:
                 if hasattr(self, "conductor") and self.conductor:
                     if self.conductor.mode == "flowing":
                         if not self.conductor.is_paused:
-                            conductor_info = " | [green]Press Spacebar to interrupt[/green]"
+                            conductor_info = " | [green]Press Ctrl+Z to pause[/green]"
                         else:
                             conductor_info = " | [yellow]PAUSED - interventions at end of turn[/yellow]"
 
@@ -583,10 +583,6 @@ class DialogueEngine:
             # Handled by signal handler
             pass
         finally:
-            # Clean up keyboard listener
-            from .utils.terminal import cleanup_keyboard_listener
-            cleanup_keyboard_listener()
-            
             # Restore original signal handler
             self._restore_signal_handler()
 
@@ -708,7 +704,7 @@ class DialogueEngine:
         self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
 
         # Show controls with context management info
-        controls_text = "[dim]Controls: [Spacebar] Interrupt | [Ctrl+C] Stop"
+        controls_text = "[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop"
         if self.context_management_enabled:
             controls_text += " | Context tracking: ON"
         controls_text += "[/dim]\n"
@@ -875,43 +871,32 @@ class DialogueEngine:
         chunks = []
         interrupted = False
         
-        # Use Rich-compatible keyboard detection  
-        from .utils.terminal import check_for_spacebar
-        from rich.live import Live
-        from rich.text import Text
+        # Simple streaming display without keyboard detection
         
         try:
-            # Rich Live display with clean status updates
-            with Live(console=self.console, refresh_per_second=10, transient=False) as live:
-                last_check = time.time()
+            # Simple status display
+            self.console.print("", end="\r")
+            
+            async for chunk, _ in self.router.get_next_response_stream(
+                self.conversation.messages, agent_id
+            ):
+                chunks.append(chunk)
                 
-                async for chunk, _ in self.router.get_next_response_stream(
-                    self.conversation.messages, agent_id
-                ):
-                    chunks.append(chunk)
-                    
-                    # Update Rich Live display
-                    char_count = len(''.join(chunks))
-                    status = Text()
-                    status.append("Streaming ", style="dim")
-                    status.append(f"{char_count} chars", style="cyan bold") 
-                    status.append(" | ", style="dim")
-                    status.append("Press SPACE to interrupt", style="yellow")
-                    live.update(status)
-                    
-                    # Check for interrupt every 100ms
-                    if time.time() - last_check > 0.1:
-                        if check_for_spacebar():
-                            interrupted = True
-                            self.console.bell()
-                            # Final status showing interruption
-                            final_status = Text()
-                            final_status.append("⚡ Interrupted ", style="yellow bold")
-                            final_status.append(f"({char_count} chars)", style="dim")
-                            live.update(final_status)
-                            break
-                        last_check = time.time()
+                # Update status line
+                char_count = len(''.join(chunks))
+                self.console.print(
+                    f"\r[dim]Streaming... {char_count} chars[/dim]",
+                    end="",
+                    highlight=False
+                )
+                
+                # Check if conductor paused (via Ctrl+Z signal)
+                if hasattr(self, 'conductor') and self.conductor and self.conductor.is_paused:
+                    interrupted = True
+                    break
         except Exception as e:
+            # Clear the status line on error
+            self.console.print("\r" + " " * 60 + "\r", end="")
             # Check if it's a rate limit error
             if "rate limit" in str(e).lower():
                 self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
@@ -922,6 +907,9 @@ class DialogueEngine:
                 # Other API errors
                 self.console.print(f"\n[red]❌ API Error: {e}[/red]")
                 raise
+        
+        # Clear the status line
+        self.console.print("\r" + " " * 60 + "\r", end="")
         
         content = ''.join(chunks)
         if not content:

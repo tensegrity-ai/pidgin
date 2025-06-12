@@ -9,23 +9,6 @@ class Config:
     """Configuration manager for Pidgin."""
     
     DEFAULT_CONFIG = {
-        'events': {
-            'compression': {
-                'enabled': True,
-                'compress_on_completion': True,
-                'compression_level': 9
-            },
-            'privacy': {
-                'enabled': False,
-                'remove_content': False,
-                'hash_models': False,
-                'redact_patterns': []
-            },
-            'storage': {
-                'version': 1,
-                'data_dir': '~/.pidgin_data/events'
-            }
-        },
         'conversation': {
             'checkpoint': {
                 'enabled': True,
@@ -49,7 +32,7 @@ class Config:
             'max_turns': 20,
             'manual_mode': False,
             'convergence_threshold': 0.75,
-            'streaming_interrupts': True
+            'streaming_interrupts': False  # Removed - using Ctrl+Z signals instead
         },
         'experiments': {
             'unattended': {
@@ -168,17 +151,9 @@ class Config:
         """Get attractor detection configuration."""
         return self.get('conversation.attractor_detection', {})
     
-    def get_events_config(self) -> Dict[str, Any]:
-        """Get event system configuration."""
-        return self.get('events', {})
-    
-    def get_privacy_config(self) -> Dict[str, Any]:
-        """Get privacy filtering configuration."""
-        return self.get('events.privacy', {})
-    
-    def get_storage_config(self) -> Dict[str, Any]:
-        """Get storage configuration."""
-        return self.get('events.storage', {})
+    def get_context_config(self) -> Dict[str, Any]:
+        """Get context management configuration."""
+        return self.get('context_management', {})
     
     def apply_experiment_profile(self, profile: str):
         """Apply an experiment profile to current config."""
