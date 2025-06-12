@@ -126,9 +126,6 @@ class DialogueEngine:
         else:
             # Default: flowing conductor mode
             self.conductor = Conductor(self.console, mode="flowing")
-            self.conductor.convergence_calculator = (
-                self.convergence_calculator
-            )  # Share reference
             self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print(
                 "[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n"
@@ -536,10 +533,10 @@ class DialogueEngine:
                 conductor_info = ""
                 if hasattr(self, "conductor") and self.conductor:
                     if self.conductor.mode == "flowing":
-                        if self.conductor.is_flowing:
+                        if not self.conductor.is_paused:
                             conductor_info = " | [green]Press Ctrl+Z to pause[/green]"
                         else:
-                            conductor_info = " | [yellow]PAUSED - Enter: continue | i: inject | e: edit | ?: help[/yellow]"
+                            conductor_info = " | [yellow]PAUSED - interventions at end of turn[/yellow]"
 
                 self.console.print(
                     f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{convergence_info}{conductor_info}[/dim]\n"
