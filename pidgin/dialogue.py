@@ -268,36 +268,7 @@ class DialogueEngine:
                 if response_a is None:  # Rate limit pause requested
                     continue
                 
-                if interrupted_a:
-                    self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
-                    # Save transcript after interruption
-                    await self.transcript_manager.save(
-                        self.conversation, metrics=self._get_current_metrics()
-                    )
-                    # Force conductor intervention immediately
-                    if hasattr(self, 'conductor') and self.conductor:
-                        self.conductor.is_paused = True
-                        self.console.print("[yellow]🎼 Conductor paused for intervention[/yellow]\n")
-                        
-                        # Create partial turn for intervention (Agent A only)
-                        partial_turn = ConversationTurn(
-                            agent_a_message=response_a,
-                            agent_b_message=None,  # Agent B didn't respond yet
-                            turn_number=turn + 1
-                        )
-                        
-                        # Get intervention if needed
-                        intervention = self.conductor.get_intervention(partial_turn)
-                        if intervention:
-                            # Add intervention to conversation
-                            self.conversation.messages.append(intervention)
-                            self.state.add_message(intervention)
-                            # Display the intervention
-                            self._display_message(intervention, "", context_info=None)
-                            # Save transcript with intervention
-                            await self.transcript_manager.save(
-                                self.conversation, metrics=self._get_current_metrics()
-                            )
+                # No more complex interrupt handling - keep it simple
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_a):
@@ -334,11 +305,10 @@ class DialogueEngine:
                             f"{capacity_a['percentage']:.1f}% used, ~{turns_remaining} turns remaining[/yellow bold]\n"
                         )
 
-                # Only display if not interrupted (already displayed during streaming)
-                if not interrupted_a:
-                    self._display_message(
-                        response_a, agent_a.model, context_info=context_info_a
-                    )
+                # Display Agent A response
+                self._display_message(
+                    response_a, agent_a.model, context_info=context_info_a
+                )
 
                 # Check for auto-pause due to context limits before Agent B
                 if self.context_management_enabled and self.context_manager:
@@ -354,45 +324,12 @@ class DialogueEngine:
                         self._pause_requested = True
                         continue
 
-                # Skip Agent B if Agent A was interrupted (intervention already handled)
-                if interrupted_a:
-                    continue
-
                 # Agent B responds with streaming
                 response_b, interrupted_b = await self._get_agent_response_streaming(agent_b.id)
                 if response_b is None:  # Rate limit pause requested
                     continue
                 
-                if interrupted_b:
-                    self.console.print("\n[yellow]⚡ Response interrupted![/yellow]")
-                    # Save transcript after interruption
-                    await self.transcript_manager.save(
-                        self.conversation, metrics=self._get_current_metrics()
-                    )
-                    # Force conductor intervention immediately
-                    if hasattr(self, 'conductor') and self.conductor:
-                        self.conductor.is_paused = True
-                        self.console.print("[yellow]🎼 Conductor paused for intervention[/yellow]\n")
-                        
-                        # Create partial turn for intervention (both agents responded, B interrupted)
-                        partial_turn = ConversationTurn(
-                            agent_a_message=response_a,
-                            agent_b_message=response_b,  # Agent B responded but was interrupted
-                            turn_number=turn + 1
-                        )
-                        
-                        # Get intervention if needed
-                        intervention = self.conductor.get_intervention(partial_turn)
-                        if intervention:
-                            # Add intervention to conversation
-                            self.conversation.messages.append(intervention)
-                            self.state.add_message(intervention)
-                            # Display the intervention
-                            self._display_message(intervention, "", context_info=None)
-                            # Save transcript with intervention
-                            await self.transcript_manager.save(
-                                self.conversation, metrics=self._get_current_metrics()
-                            )
+                # No more complex interrupt handling - keep it simple
 
                 # Handle system/mediator messages differently
                 if self._is_system_message(response_b):
@@ -441,11 +378,10 @@ class DialogueEngine:
                         )
                         self._pause_requested = True
 
-                # Only display if not interrupted (already displayed during streaming)
-                if not interrupted_b:
-                    self._display_message(
-                        response_b, agent_b.model, context_info=context_info_b
-                    )
+                # Display Agent B response
+                self._display_message(
+                    response_b, agent_b.model, context_info=context_info_b
+                )
 
                 # Check for end-of-turn conductor intervention
                 if hasattr(self, 'conductor') and self.conductor:
@@ -584,54 +520,28 @@ class DialogueEngine:
                         f"[dim]Checkpoint saved: {checkpoint_path}[/dim]"
                     )
 
-                # Show simplified turn counter
-                context_info = ""
-                if self.context_management_enabled and self.context_manager:
-                    # Get context usage for both models
-                    messages_dict = [
-                        {"content": msg.content} for msg in self.conversation.messages
-                    ]
-                    capacity_a = self.context_manager.get_remaining_capacity(
-                        messages_dict, agent_a.model
-                    )
-                    capacity_b = self.context_manager.get_remaining_capacity(
-                        messages_dict, agent_b.model
-                    )
-
-                    # Show the most constrained model's context usage
-                    max_usage = max(capacity_a["percentage"], capacity_b["percentage"])
-                    max_tokens = (
-                        capacity_a["used"]
-                        if capacity_a["percentage"] > capacity_b["percentage"]
-                        else capacity_b["used"]
-                    )
-
-                    context_info = (
-                        f" | Context: {max_usage:.1f}% ({max_tokens:,} tokens)"
-                    )
-
-                # Add convergence score to turn counter
-                convergence_info = ""
-                if self.current_convergence > 0:
-                    emoji = (
-                        " ⚠️"
-                        if self.current_convergence >= self.convergence_threshold
-                        else ""
-                    )
-                    convergence_info = f" | Conv: {self.current_convergence:.2f}{emoji}"
-
-                # Add conductor status to turn counter
-                conductor_info = ""
-                if hasattr(self, "conductor") and self.conductor:
-                    if self.conductor.mode == "flowing":
-                        if not self.conductor.is_paused:
-                            conductor_info = " | [green]Press Ctrl+Z to pause[/green]"
-                        else:
-                            conductor_info = " | [yellow]PAUSED - interventions at end of turn[/yellow]"
-
-                self.console.print(
-                    f"\n[dim]Turn {turn + 1}/{max_turns}{context_info}{convergence_info}{conductor_info}[/dim]\n"
-                )
+                # Show simple turn counter with key info
+                if (turn + 1) % 5 == 0:  # Every 5 turns
+                    status_parts = [f"Turn {turn + 1}/{max_turns}"]
+                    
+                    # Add convergence if available
+                    if self.current_convergence > 0:
+                        emoji = " ⚠️" if self.current_convergence >= 0.75 else ""
+                        status_parts.append(f"Conv: {self.current_convergence:.2f}{emoji}")
+                    
+                    # Add context usage if enabled
+                    if self.context_management_enabled and self.context_manager:
+                        messages_dict = [{"content": msg.content} for msg in self.conversation.messages]
+                        capacity_a = self.context_manager.get_remaining_capacity(messages_dict, agent_a.model)
+                        capacity_b = self.context_manager.get_remaining_capacity(messages_dict, agent_b.model)
+                        max_usage = max(capacity_a["percentage"], capacity_b["percentage"])
+                        if max_usage > 50:  # Only show when it matters
+                            status_parts.append(f"Context: {max_usage:.0f}%")
+                    
+                    self.console.print(f"\n[dim]{' | '.join(status_parts)} | Ctrl+C to pause[/dim]\n")
+                else:
+                    # Minimal turn counter every turn
+                    self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}[/dim]\n")
 
         except KeyboardInterrupt:
             # Handled by signal handler
@@ -732,44 +642,28 @@ class DialogueEngine:
                 raise
 
     def _setup_signal_handler(self):
-        """Set up signal handlers for pause and stop."""
-
-        # Ctrl+Z for pause (SIGTSTP)
-        def pause_handler(signum, frame):
-            self._pause_requested = True
-            # If we have a flowing conductor, pause it
-            if (
-                hasattr(self, "conductor")
-                and self.conductor
-                and self.conductor.mode == "flowing"
-            ):
-                self.conductor.pause()
+        """Set up minimal signal handler for Ctrl+C."""
+        
+        def interrupt_handler(signum, frame):
+            # If we have a conductor, pause it
+            if hasattr(self, 'conductor') and self.conductor:
+                self.conductor.is_paused = True
+                self.console.print("\n[yellow]⏸️  Paused. Intervention available at next turn.[/yellow]")
             else:
-                self.console.print(
-                    "\n[yellow]⏸️  Pause requested... Finishing current turn.[/yellow]"
-                )
-
-        # Ctrl+C for stop (SIGINT)
-        def stop_handler(signum, frame):
-            self.console.print("\n[red]🛑 Stop requested. Saving transcript...[/red]")
-            raise KeyboardInterrupt()
-
-        self._original_sigtstp = signal.signal(signal.SIGTSTP, pause_handler)
-        self._original_sigint = signal.signal(signal.SIGINT, stop_handler)
-
-        # Show controls with context management info
-        controls_text = "[dim]Controls: [Ctrl+Z] Pause | [Ctrl+C] Stop"
-        if self.context_management_enabled:
-            controls_text += " | Context tracking: ON"
-        controls_text += "[/dim]\n"
-        self.console.print(controls_text)
+                # No conductor, just exit normally
+                self.console.print("\n[red]Stopped by user[/red]")
+                raise KeyboardInterrupt()
+        
+        # Only handle SIGINT (Ctrl+C), remove SIGTSTP handling
+        self._original_sigint = signal.signal(signal.SIGINT, interrupt_handler)
+        
+        # Simple controls message
+        self.console.print("[dim]Press Ctrl+C anytime to pause[/dim]\n")
 
     def _restore_signal_handler(self):
-        """Restore original signal handlers."""
-        if self._original_sigint:
+        """Restore original signal handler."""
+        if hasattr(self, '_original_sigint') and self._original_sigint:
             signal.signal(signal.SIGINT, self._original_sigint)
-        if hasattr(self, "_original_sigtstp") and self._original_sigtstp:
-            signal.signal(signal.SIGTSTP, self._original_sigtstp)
 
     async def _save_turn_based_transcript(self, turns):
         """Save transcript with clear turn boundaries."""
@@ -919,51 +813,42 @@ class DialogueEngine:
         }
 
     async def _get_agent_response_streaming(self, agent_id: str) -> Tuple[Optional[Message], bool]:
-        """Get agent response with streaming and interrupt capability.
-        Returns (message, was_interrupted)"""
+        """Stream response with simple status display."""
         
         chunks = []
         interrupted = False
         
-        # Simple streaming display without keyboard detection
+        # Get agent info for display
+        target_agent = next(a for a in self.conversation.agents if a.id == agent_id)
+        model_name = target_agent.model
+        agent_name = "Agent A" if agent_id == "agent_a" else "Agent B"
+        status_color = "green" if agent_id == "agent_a" else "magenta"
         
-        try:
-            # Use Rich Live for clean display updates
-            from rich.live import Live
-            from rich.text import Text
-            
-            with Live(console=self.console, refresh_per_second=4) as live:
+        # Simple streaming with status
+        with self.console.status(
+            f"[bold {status_color}]{agent_name} is responding...[/bold {status_color}]", 
+            spinner="dots"
+        ) as status:
+            try:
                 async for chunk, _ in self.router.get_next_response_stream(
                     self.conversation.messages, agent_id
                 ):
                     chunks.append(chunk)
+                    # That's it! No complex interrupt checking
                     
-                    # Update live display
-                    char_count = len(''.join(chunks))
-                    text = Text(f"Streaming... {char_count} chars", style="dim")
-                    live.update(text)
-                    
-                    # Check if conductor paused (via Ctrl+Z signal)
-                    if hasattr(self, 'conductor') and self.conductor and self.conductor.is_paused:
-                        interrupted = True
-                        final_text = Text("⚡ Interrupted by Ctrl+Z", style="yellow bold")
-                        live.update(final_text)
-                        break
-        except Exception as e:
-            # Check if it's a rate limit error
-            if "rate limit" in str(e).lower():
-                self.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
-                self.console.print("[yellow]Saving checkpoint and pausing...[/yellow]")
-                await self._handle_pause()
-                return None, False  # Return None to signal pause needed
-            else:
-                # Other API errors
-                self.console.print(f"\n[red]❌ API Error: {e}[/red]")
-                raise
+            except Exception as e:
+                status.stop()
+                if "rate limit" in str(e).lower():
+                    self.console.print(f"\n[red]Rate limit hit: {e}[/red]")
+                    await self._handle_pause()
+                    return None, False
+                else:
+                    raise
         
+        # Create message
         content = ''.join(chunks)
         if not content:
-            return None, interrupted
+            return None, False
             
         message = Message(
             role="assistant",
@@ -971,10 +856,4 @@ class DialogueEngine:
             agent_id=agent_id
         )
         
-        # If interrupted, display the partial message immediately
-        if interrupted:
-            # Get the target agent model name
-            target_agent = next(a for a in self.conversation.agents if a.id == agent_id)
-            self._display_message(message, target_agent.model, context_info=None)
-        
-        return message, interrupted
+        return message, False  # Never interrupted for now
