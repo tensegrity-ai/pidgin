@@ -1,14 +1,15 @@
 """Conductor mode for manual control of AI conversations."""
 
 from datetime import datetime
-from typing import Optional, Dict, List, Any
+from typing import Any, Dict, List, Optional
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from rich.text import Text
 from rich.table import Table
+from rich.text import Text
 
-from .types import Message, MessageSource, ConversationTurn, InterventionSource
+from .types import ConversationTurn, Message
 
 
 class Conductor:
@@ -19,7 +20,7 @@ class Conductor:
 
         Args:
             console: Rich console for terminal display
-            mode: "manual" (pause after each turn) or "flowing" (auto-run until paused)
+            mode: "manual" (pause after each turn) or "flowing"
         """
         self.console = console
         self.mode = mode
@@ -36,17 +37,12 @@ class Conductor:
 
     def _display_turn_summary(self, turn: ConversationTurn):
         """Display turn summary (may be partial if interrupted)."""
-        if turn.agent_b_message:
-            title = f"Turn {turn.turn_number} Complete"
-        else:
-            title = f"Turn {turn.turn_number} (Interrupted - Agent A only)"
-
         # Agent A message
         if turn.agent_a_message:
             self.console.print(
                 Panel(
                     turn.agent_a_message.content,
-                    title=f"[bold blue]Agent A[/bold blue]",
+                    title="[bold blue]Agent A[/bold blue]",
                     border_style="blue",
                     padding=(1, 2),
                 )
@@ -57,7 +53,7 @@ class Conductor:
             self.console.print(
                 Panel(
                     turn.agent_b_message.content,
-                    title=f"[bold green]Agent B[/bold green]",
+                    title="[bold green]Agent B[/bold green]",
                     border_style="green",
                     padding=(1, 2),
                 )
@@ -68,7 +64,10 @@ class Conductor:
                 self.console.print(
                     Panel(
                         intervention.content,
-                        title=f"[bold yellow]{intervention.display_source}[/bold yellow]",
+                        title=(
+                            f"[bold yellow]{intervention.display_source}"
+                            "[/bold yellow]"
+                        ),
                         border_style="yellow",
                         padding=(1, 2),
                     )
@@ -92,15 +91,21 @@ class Conductor:
 
     def _display_help(self):
         """Display simplified help information."""
-        help_table = Table(title="End-of-Turn Intervention Commands", show_header=True)
+        help_table = Table(
+            title="End-of-Turn Intervention Commands", show_header=True
+        )
         help_table.add_column("Command", style="bold")
         help_table.add_column("Action")
         help_table.add_column("Description")
 
         help_table.add_row(
-            "Enter", "Continue", "Continue conversation without intervention"
+            "Enter",
+            "Continue",
+            "Continue conversation without intervention"
         )
-        help_table.add_row("i", "Inject", "Add intervention message after this turn")
+        help_table.add_row(
+            "i", "Inject", "Add intervention message after this turn"
+        )
         help_table.add_row("q", "Quit", "Save conversation state and exit")
         help_table.add_row("?/h", "Help", "Show this help message")
 
@@ -128,54 +133,35 @@ class Conductor:
             return self._get_intervention_choice()  # Recursive call for retry
 
     def _create_intervention(self) -> Optional[Message]:
-        """Create intervention message (human/system/mediator)."""
-        # Simplified options - no agent impersonation
-        source_options = {
-            "1": InterventionSource.HUMAN,
-            "2": InterventionSource.SYSTEM,
-            "3": InterventionSource.MEDIATOR,
-        }
+        """Create researcher intervention message."""
 
-        source_table = Table(show_header=False, box=None, padding=(0, 1))
-        source_table.add_column("Num", style="bold cyan")
-        source_table.add_column("Source")
-        source_table.add_column("Description", style="dim")
-
-        source_table.add_row("1", "Human", "Researcher intervention")
-        source_table.add_row("2", "System", "Technical/infrastructure message")
-        source_table.add_row("3", "Mediator", "Neutral facilitation")
-
-        self.console.print(source_table)
-        self.console.print()
-
-        source_choice = Prompt.ask(
-            "Intervention source", choices=["1", "2", "3"], default="1"
+        # Simple, clear UI
+        self.console.print("\n[bold cyan]Add Researcher Note[/bold cyan]")
+        self.console.print(
+            "[dim]This will be shown to both agents as "
+            "[RESEARCHER NOTE][/dim]\n"
         )
-        source = source_options[source_choice]
 
-        # Get content with improved UX
-        content = self._get_multiline_input("Intervention content")
+        # Get content
+        content = self._get_multiline_input("Your message")
 
         if not content:
-            self.console.print("[dim]Intervention cancelled (empty content)[/dim]")
+            self.console.print("[dim]Cancelled (empty message)[/dim]")
             return None
 
+        # Always use 'researcher' as agent_id - no confusing options
         intervention = Message(
-            role="user",  # All interventions are "user" role to agents
+            role="user",
             content=content,
-            agent_id=source.value,
-            source=source,
+            agent_id="researcher"
         )
 
-        # Track intervention
-        self.intervention_history.append(
-            {
-                "type": "intervention",
-                "source": source.value,
-                "content": content,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        # Track it
+        self.intervention_history.append({
+            "type": "researcher_note",
+            "content": content,
+            "timestamp": datetime.now().isoformat()
+        })
 
         return intervention
 
@@ -195,7 +181,9 @@ class Conductor:
         elif action == "continue":
             if self.mode == "flowing" and self.is_paused:
                 self.is_paused = False  # Resume flowing
-                self.console.print("[green]→ Resuming flowing mode...[/green]\n")
+                self.console.print(
+                    "[green]→ Resuming flowing mode...[/green]\n"
+                )
             return None
         elif action == "quit":
             raise KeyboardInterrupt("User quit from conductor")
@@ -208,7 +196,10 @@ class Conductor:
         # Display input prompt with clear instructions
         self.console.print(
             Panel(
-                f"{prompt}\n\n[dim]• Type your message\n• Press Enter twice when done\n• Ctrl+D also works[/dim]",
+                (
+                    f"{prompt}\n\n[dim]• Type your message\n"
+                    "• Press Enter twice when done\n• Ctrl+D also works[/dim]"
+                ),
                 title="[bold cyan]Input Required[/bold cyan]",
                 border_style="cyan",
             )
@@ -256,7 +247,8 @@ class Conductor:
         if self.mode == "flowing":
             self.is_paused = True
             self.console.print(
-                "\n[yellow]🎼 Conductor paused - will pause at next turn[/yellow]"
+                "\n[yellow]🎼 Conductor paused - will pause at next turn"
+                "[/yellow]"
             )
 
     def get_intervention_summary(self) -> Dict[str, Any]:
