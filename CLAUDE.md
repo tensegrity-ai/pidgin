@@ -81,11 +81,11 @@ pre-commit install
 
 **Manager Pattern**: Specialized managers handle distinct responsibilities (checkpoint, context, attractors). Each manager is optional and the system gracefully continues if one fails.
 
-**Provider Abstraction**: All AI providers (Anthropic, OpenAI) implement a simple interface with `get_response()`. This allows easy addition of new providers without changing core logic.
+**Provider Abstraction**: All AI providers (Anthropic, OpenAI, Google, xAI) implement streaming interfaces with `get_next_response_stream()`. This allows real-time response display with clean Rich status spinners and easy addition of new providers without changing core logic.
 
 **Middleware Pattern**: Conductor modes act as message interceptors, allowing human intervention in AI conversations. Two modes exist:
-- Manual: Pauses before each message
-- Flowing: Runs automatically until paused
+- Manual: Pauses before each message for approval
+- Flowing: Runs automatically until paused with Ctrl+C
 
 **Configuration Hierarchy**: Settings flow from defaults → config files → runtime flags. Config files are loaded from standard locations (~/.config/pidgin/pidgin.yaml, ~/.config/pidgin.yaml, ~/.pidgin.yaml, ./pidgin.yaml) using dot notation access.
 
@@ -99,7 +99,9 @@ pre-commit install
 
 **Attractor Detection**: Only structural pattern detection is implemented (not semantic). Checks occur every 5 turns by default and can trigger pause or stop actions.
 
-**External Message Injection**: In conductor mode, users can inject messages as different personas (External, Agent A, Agent B). External messages auto-resume the conversation flow.
+**Streaming Display**: All AI responses use Rich status spinners (e.g., "Agent A is responding...") for clean, non-conflicting terminal output. No complex keyboard detection during streaming - interrupts happen at turn boundaries.
+
+**Pause and Control**: Press Ctrl+C anytime to pause conversation. The conductor activates at the next turn boundary, allowing message injection as different personas (Human, System, Mediator). The conversation resumes after intervention.
 
 ### Working with Transcripts
 
@@ -121,6 +123,29 @@ Tests use pytest with async support. Key test files:
 - `test_context_management.py`: Context limit handling
 
 When adding features, write tests that verify both the happy path and edge cases, especially around pause/resume functionality.
+
+## Current Control System
+
+### Streaming and Interrupts
+- **Clean Display**: Uses Rich `console.status()` with spinners for non-conflicting output
+- **Simple Interrupts**: Ctrl+C sets conductor pause state, triggers at turn boundaries
+- **No Terminal Mode Conflicts**: No raw terminal mode or complex keyboard detection
+- **Cross-Platform**: Works consistently on Windows, macOS, and Linux
+
+### Turn Display
+- **Every Turn**: Simple "Turn X/Y" counter
+- **Every 5 Turns**: Detailed status with convergence, context usage, and controls
+- **Smart Context Display**: Only shows context % when >50% to reduce noise
+
+### Pause and Resume Flow
+1. User presses **Ctrl+C** anytime during conversation
+2. System shows "Paused. Intervention available at next turn."
+3. Current agent response completes cleanly
+4. Conductor intervention UI appears at turn boundary
+5. User can inject messages or continue conversation
+6. Normal flow resumes after intervention
+
+This approach prioritizes simplicity and reliability over complex real-time interruption.
 
 ## Commit Message Style
 
