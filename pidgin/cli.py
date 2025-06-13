@@ -332,7 +332,7 @@ def chat(model_a, model_b, turns, prompt, dimensions, puzzle, experiment, topic_
     if manual:
         console.print(f"[dim]🎼 Mode: [green]MANUAL[/green] (message-by-message approval)[/dim]")
     else:
-        console.print(f"[dim]🎼 Mode: [green]FLOWING[/green] (default - press Ctrl+Z to pause)[/dim]")
+        console.print(f"[dim]🎼 Mode: [green]FLOWING[/green] (default - press Ctrl+C to pause)[/dim]")
     
     # Show convergence tracking
     console.print(f"[dim]📊 Convergence tracking: [green]ON[/green] (warning at {convergence_threshold:.2f})[/dim]")

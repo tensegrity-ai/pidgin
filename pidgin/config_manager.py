@@ -32,7 +32,7 @@ class Config:
             'max_turns': 20,
             'manual_mode': False,
             'convergence_threshold': 0.75,
-            'streaming_interrupts': False  # Removed - using Ctrl+Z signals instead
+            'streaming_interrupts': False  # Removed - using Ctrl+C signals instead
         },
         'experiments': {
             'unattended': {

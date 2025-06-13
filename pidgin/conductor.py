@@ -252,7 +252,7 @@ class Conductor:
         return result
 
     def pause(self):
-        """Pause the flowing conductor (called on Ctrl+Z)."""
+        """Pause the flowing conductor (called on Ctrl+C)."""
         if self.mode == "flowing":
             self.is_paused = True
             self.console.print(

@@ -129,7 +129,7 @@ class DialogueEngine:
             self.conductor = Conductor(self.console, mode="flowing")
             self.console.print("[bold cyan]🎼 Flowing Mode (Default)[/bold cyan]")
             self.console.print(
-                "[dim]Conversation flows automatically. Press Ctrl+Z to pause.[/dim]\n"
+                "[dim]Conversation flows automatically. Press Ctrl+C to pause.[/dim]\n"
             )
 
         # Initialize or resume conversation
