@@ -7,54 +7,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 ```bash
 # Run all tests with coverage
-pytest
+poetry run pytest
 
 # Run specific test file
-pytest tests/test_dialogue.py
+poetry run pytest tests/test_dialogue.py
 
 # Run tests with verbose output and coverage report
-pytest -v --cov=pidgin --cov-report=html --cov-report=term
+poetry run pytest -v --cov=pidgin --cov-report=html --cov-report=term
 
 # Run tests matching a pattern
-pytest -k "test_conductor"
+poetry run pytest -k "test_conductor"
 ```
 
 ### Code Quality
 ```bash
 # Format code (automatically fixes formatting)
-black pidgin tests
+poetry run black pidgin tests
 
 # Sort imports
-isort pidgin tests
+poetry run isort pidgin tests
 
 # Lint code (checks for style issues)
-flake8 pidgin tests
+poetry run flake8 pidgin tests
 
 # Type checking
-mypy pidgin
+poetry run mypy pidgin
 ```
 
 ### Development Setup
 
-#### Virtual Environment Setup (Recommended)
-```bash
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+#### Poetry Setup (Recommended)
+This project uses Poetry for dependency management. Install Poetry first if you don't have it:
 
-# Install in development mode with all dependencies
-pip install -e ".[dev]"
+```bash
+# Install Poetry (if not already installed)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Install all dependencies and create virtual environment automatically
+poetry install
+
+# Run commands in the Poetry environment
+poetry run pytest
+poetry run pidgin --help
 ```
 
 #### Alternative Installation Methods
 ```bash
-# Using Poetry (if you have poetry installed)
-poetry install
-
 # Using pipx for global installation
 pipx install -e .
 
-# Direct pip install (requires --break-system-packages on some systems)
+# Direct pip install (requires manual venv and --break-system-packages on some systems)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e ".[dev]" --break-system-packages
 ```
 
