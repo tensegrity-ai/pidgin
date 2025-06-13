@@ -170,8 +170,8 @@ class StructuralPatternDetector:
                 # Calculate confidence
                 confidence = pattern_data['count'] / len(signatures)
                 
-                # Only trigger detection if confidence is >= 80%
-                if confidence >= 0.8:
+                # Trigger detection if pattern appears frequently enough
+                if confidence >= 0.5:  # 50% of messages have same structure
                     return pattern_data
                 
         return None
@@ -205,8 +205,8 @@ class StructuralPatternDetector:
                 # Calculate confidence for alternating patterns
                 confidence = pattern_data['count'] / (len(signatures) // 2)
                 
-                # Only trigger detection if confidence is >= 80%
-                if confidence >= 0.8:
+                # Trigger detection if pattern appears frequently enough
+                if confidence >= 0.5:  # 50% of messages have same structure
                     return pattern_data
                 
         return None

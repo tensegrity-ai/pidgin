@@ -136,10 +136,10 @@ class Conductor:
         """Create researcher intervention message."""
 
         # Simple, clear UI
-        self.console.print("\n[bold cyan]Add Researcher Note[/bold cyan]")
+        self.console.print("\n[bold cyan]Add Human Note[/bold cyan]")
         self.console.print(
             "[dim]This will be shown to both agents as "
-            "[RESEARCHER NOTE][/dim]\n"
+            "[HUMAN NOTE][/dim]\n"
         )
 
         # Get content
@@ -217,9 +217,7 @@ class Conductor:
                     if empty_line_count >= 2:
                         # Two consecutive empty lines = submit
                         break
-                    else:
-                        # First empty line, add it and continue
-                        lines.append(line)
+                    # Don't add the first empty line to content
                 else:
                     # Non-empty line, reset counter and add line
                     empty_line_count = 0

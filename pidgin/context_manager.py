@@ -1,7 +1,8 @@
 """Context window management for preventing conversation size limit crashes."""
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
+from .types import Message
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class ContextWindowManager:
             logger.warning(f"Error counting tokens: {e}, using approximation")
             return len(text) // 4
     
-    def get_conversation_size(self, messages: List[Dict[str, Any]], model: str) -> int:
+    def get_conversation_size(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str) -> int:
         """Calculate total tokens in conversation history"""
         total = 0
         for msg in messages:
@@ -74,7 +75,7 @@ class ContextWindowManager:
             total += 10  # Approximate tokens for role, etc.
         return total
         
-    def get_remaining_capacity(self, messages: List[Dict[str, Any]], model: str) -> Dict[str, Any]:
+    def get_remaining_capacity(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str) -> Dict[str, Any]:
         """Calculate how much context window remains"""
         limit = self.context_limits.get(model, 100000)  # Conservative default
         effective_limit = limit - self.reserved_tokens
@@ -88,7 +89,7 @@ class ContextWindowManager:
             'percentage': min(100, (used / effective_limit) * 100) if effective_limit > 0 else 100
         }
         
-    def predict_turns_remaining(self, messages: List[Dict[str, Any]], model: str) -> int:
+    def predict_turns_remaining(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str) -> int:
         """Estimate how many more turns before hitting limit"""
         if len(messages) < 4:  # Need history to predict
             return 999
@@ -97,12 +98,19 @@ class ContextWindowManager:
         recent_sizes = []
         for i in range(max(0, len(messages)-10), len(messages), 2):
             if i+1 < len(messages):
-                if isinstance(messages[i], dict):
-                    content1 = messages[i].get('content', '')
-                    content2 = messages[i+1].get('content', '')
+                # Handle first message
+                msg1 = messages[i]
+                if isinstance(msg1, dict):
+                    content1 = msg1.get('content', '')
                 else:
-                    content1 = getattr(messages[i], 'content', '')
-                    content2 = getattr(messages[i+1], 'content', '')
+                    content1 = getattr(msg1, 'content', '')
+                
+                # Handle second message
+                msg2 = messages[i+1]
+                if isinstance(msg2, dict):
+                    content2 = msg2.get('content', '')
+                else:
+                    content2 = getattr(msg2, 'content', '')
                     
                 exchange_size = (self.count_tokens(str(content1), model) + 
                                self.count_tokens(str(content2), model))
@@ -140,24 +148,24 @@ class ContextWindowManager:
             
         return max(1, turns)
     
-    def should_warn(self, messages: List[Dict[str, Any]], model: str, 
+    def should_warn(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str, 
                     warning_threshold: int = 80) -> bool:
         """Check if we should warn about context usage"""
         capacity = self.get_remaining_capacity(messages, model)
-        return capacity['percentage'] >= warning_threshold
+        return bool(capacity['percentage'] >= warning_threshold)
     
-    def should_pause(self, messages: List[Dict[str, Any]], model: str,
+    def should_pause(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str,
                     pause_threshold: int = 95) -> bool:
         """Check if we should auto-pause due to context limits"""
         capacity = self.get_remaining_capacity(messages, model)
-        return capacity['percentage'] >= pause_threshold
+        return bool(capacity['percentage'] >= pause_threshold)
     
     def format_usage(self, capacity: Dict[str, Any]) -> str:
         """Format context usage for display"""
         return (f"{capacity['used']:,}/{capacity['limit']:,} tokens "
                 f"({capacity['percentage']:.1f}%)")
     
-    def get_truncation_point(self, messages: List[Dict[str, Any]], model: str,
+    def get_truncation_point(self, messages: Union[List[Message], List[Dict[str, Any]]], model: str,
                            target_percentage: float = 50) -> int:
         """Find where to truncate messages to reach target capacity"""
         target_size = int(self.context_limits.get(model, 100000) * target_percentage / 100)
@@ -165,10 +173,11 @@ class ContextWindowManager:
         # Keep recent messages and work backwards
         total = 0
         for i in range(len(messages) - 1, -1, -1):
-            if isinstance(messages[i], dict):
-                content = messages[i].get('content', '')
+            msg = messages[i]
+            if isinstance(msg, dict):
+                content = msg.get('content', '')
             else:
-                content = getattr(messages[i], 'content', '')
+                content = getattr(msg, 'content', '')
             total += self.count_tokens(str(content), model) + 10
             
             if total > target_size:

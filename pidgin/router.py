@@ -74,17 +74,38 @@ class DirectRouter:
     ) -> List[Message]:
         """Build conversation history from target agent's perspective.
 
-        Two types of messages:
-        1. Agent messages (agent_a, agent_b) - normal conversation flow
-        2. Everything else - researcher interventions clearly marked
+        Three types of messages:
+        1. System messages - role clarification
+        2. Agent messages (agent_a, agent_b) - normal conversation flow
+        3. Everything else - human interventions clearly marked
         """
         agent_history = []
 
         for msg in messages:
-            # Researcher interventions (anything not from agents)
-            if msg.agent_id not in ["agent_a", "agent_b"]:
-                # Mark ALL non-agent messages as researcher guidance
-                marked_content = f"[RESEARCHER NOTE]: {msg.content}"
+            # System messages get special handling
+            if msg.agent_id == "system":
+                # Adjust the content for Agent B
+                if target_agent == "agent_b":
+                    adjusted_content = msg.content.replace("You are Agent A", "You are Agent B").replace("Your conversation partner (Agent B)", "Your conversation partner (Agent A)")
+                    agent_history.append(
+                        Message(
+                            role="system",
+                            content=adjusted_content,
+                            agent_id=msg.agent_id
+                        )
+                    )
+                else:
+                    agent_history.append(
+                        Message(
+                            role="system",
+                            content=msg.content,
+                            agent_id=msg.agent_id
+                        )
+                    )
+            # Human interventions (anything not from agents or system)
+            elif msg.agent_id not in ["agent_a", "agent_b"]:
+                # Mark ALL non-agent messages as human guidance
+                marked_content = f"[HUMAN NOTE]: {msg.content}"
                 agent_history.append(
                     Message(
                         role="user",

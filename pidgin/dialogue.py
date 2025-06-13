@@ -201,6 +201,22 @@ class DialogueEngine:
 
         # Initial message (only if not resuming)
         if not resume_from_state:
+            # Add system context to clarify roles
+            system_context = """You are Agent A in this conversation.
+You are speaking with Agent B.
+Any message marked [HUMAN NOTE] comes from a human observer who is monitoring this conversation.
+Your conversation partner (Agent B) is NOT the human observer - they are another participant like you.
+Please engage naturally with Agent B."""
+            
+            context_message = Message(
+                role="system",
+                content=system_context,
+                agent_id="system"
+            )
+            self.conversation.messages.append(context_message)
+            self.state.add_message(context_message)
+            
+            # Then add the actual initial prompt
             first_message = Message(
                 role="user",
                 content=initial_prompt,
@@ -213,7 +229,7 @@ class DialogueEngine:
             self.console.print(
                 Panel(
                     initial_prompt,
-                    title="[bold cyan]Researcher Note (Initial Prompt)[/bold cyan]",
+                    title="[bold cyan]Human Note (Initial Prompt)[/bold cyan]",
                     border_style="cyan",
                 )
             )
@@ -273,19 +289,14 @@ class DialogueEngine:
                     and len(self.conversation.messages) > 2
                 ):
                     # Check both models for context usage
-                    messages_dict = [
-                        {"content": msg.content}
-                        for msg in self.conversation.messages
-                    ]
-
                     capacity_a = (
                         self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_a.model
+                            self.conversation.messages, agent_a.model
                         )
                     )
                     capacity_b = (
                         self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_b.model
+                            self.conversation.messages, agent_b.model
                         )
                     )
 
@@ -303,7 +314,7 @@ class DialogueEngine:
 
                     if max_usage >= self.context_warning_threshold:
                         turns_remaining = self.context_manager.predict_turns_remaining(
-                            messages_dict, most_constrained
+                            self.conversation.messages, most_constrained
                         )
                         self.console.print(
                             f"\n[yellow bold]⚠️  Context Warning: {max_usage:.1f}% of context window used "
@@ -356,25 +367,21 @@ class DialogueEngine:
                     self.context_management_enabled
                     and self.context_manager
                 ):
-                    messages_dict = [
-                        {"content": msg.content}
-                        for msg in self.conversation.messages
-                    ]
                     capacity_a = (
                         self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_a.model
+                            self.conversation.messages, agent_a.model
                         )
                     )
                     context_info_a = capacity_a
 
                     # Check if we should warn about context usage
                     if self.context_manager.should_warn(
-                        messages_dict,
+                        self.conversation.messages,
                         agent_a.model,
                         self.context_warning_threshold,
                     ):
                         turns_remaining = self.context_manager.predict_turns_remaining(
-                            messages_dict, agent_a.model
+                            self.conversation.messages, agent_a.model
                         )
                         self.console.print(
                             f"\n[yellow bold]⚠️  Context Warning ({agent_a.model}): "
@@ -394,7 +401,7 @@ class DialogueEngine:
                     and self.context_manager
                 ):
                     if self.context_manager.should_pause(
-                        messages_dict,
+                        self.conversation.messages,
                         agent_a.model,
                         self.context_auto_pause_threshold,
                     ):
@@ -438,25 +445,21 @@ class DialogueEngine:
                     self.context_management_enabled
                     and self.context_manager
                 ):
-                    messages_dict = [
-                        {"content": msg.content}
-                        for msg in self.conversation.messages
-                    ]
                     capacity_b = (
                         self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_b.model
+                            self.conversation.messages, agent_b.model
                         )
                     )
                     context_info_b = capacity_b
 
                     # Check if we should warn about context usage
                     if self.context_manager.should_warn(
-                        messages_dict,
+                        self.conversation.messages,
                         agent_b.model,
                         self.context_warning_threshold,
                     ):
                         turns_remaining = self.context_manager.predict_turns_remaining(
-                            messages_dict, agent_b.model
+                            self.conversation.messages, agent_b.model
                         )
                         self.console.print(
                             f"\n[yellow bold]⚠️  Context Warning ({agent_b.model}): "
@@ -465,7 +468,7 @@ class DialogueEngine:
 
                     # Check for auto-pause due to context limits
                     if self.context_manager.should_pause(
-                        messages_dict,
+                        self.conversation.messages,
                         agent_b.model,
                         self.context_auto_pause_threshold,
                     ):
@@ -637,16 +640,12 @@ class DialogueEngine:
                         self.context_management_enabled
                         and self.context_manager
                     ):
-                        messages_dict = [
-                            {"content": msg.content}
-                            for msg in self.conversation.messages
-                        ]
                         self.state.metadata["context_stats"] = {
                             "agent_a": self.context_manager.get_remaining_capacity(
-                                messages_dict, agent_a.model
+                                self.conversation.messages, agent_a.model
                             ),
                             "agent_b": self.context_manager.get_remaining_capacity(
-                                messages_dict, agent_b.model
+                                self.conversation.messages, agent_b.model
                             ),
                         }
 
@@ -676,15 +675,11 @@ class DialogueEngine:
                         self.context_management_enabled
                         and self.context_manager
                     ):
-                        messages_dict = [
-                            {"content": msg.content}
-                            for msg in self.conversation.messages
-                        ]
                         capacity_a = self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_a.model
+                            self.conversation.messages, agent_a.model
                         )
                         capacity_b = self.context_manager.get_remaining_capacity(
-                            messages_dict, agent_b.model
+                            self.conversation.messages, agent_b.model
                         )
                         max_usage = max(
                             capacity_a["percentage"],
@@ -742,7 +737,7 @@ class DialogueEngine:
     ):
         """Display a message in the terminal with Rich formatting."""
 
-        # Simple two-way split
+        # Handle different message types
         if message.agent_id == "agent_a":
             title = f"[bold green]Agent A ({model_name})[/bold green]"
             border_style = "green"
@@ -751,9 +746,12 @@ class DialogueEngine:
                 f"[bold magenta]Agent B ({model_name})[/bold magenta]"
             )
             border_style = "magenta"
+        elif message.agent_id == "system":
+            # System messages are internal setup - don't display them
+            return  # Skip display of system messages
         else:
-            # Everything else is a researcher note
-            title = "[bold cyan]Researcher Note[/bold cyan]"
+            # Everything else is a human note
+            title = "[bold cyan]Human Note[/bold cyan]"
             border_style = "cyan"
 
         self.console.print(
@@ -1006,7 +1004,8 @@ class DialogueEngine:
             spinner="dots",
         ):
             try:
-                async for chunk, _ in self.router.get_next_response_stream(  # type: ignore
+                # Protocol limitation: async generators can't be properly typed in protocols
+                async for chunk, _ in self.router.get_next_response_stream(  # type: ignore[attr-defined]
                     self.conversation.messages, agent_id
                 ):
                     chunks.append(chunk)
