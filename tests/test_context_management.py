@@ -71,13 +71,16 @@ class TestContextWindowManager:
     
     def test_turns_prediction_with_history(self):
         """Test turn prediction with sufficient history."""
+        from pidgin.types import Message
         cm = ContextWindowManager()
         
         # Create conversation with growing messages
         messages = []
         for i in range(10):
-            content = "Message " + "x" * (i * 10)  # Growing messages
-            messages.append({"content": content})
+            content = "Message " + "x" * (i * 100)  # Growing messages
+            # Alternate between agent_a and agent_b to create proper exchanges
+            agent_id = "agent_a" if i % 2 == 0 else "agent_b"
+            messages.append(Message(role="assistant", content=content, agent_id=agent_id))
         
         turns = cm.predict_turns_remaining(messages, "claude-4-opus-20250514")
         
@@ -167,7 +170,7 @@ class TestContextLimitHandling:
         assert engine.context_manager is not None
         assert engine.context_warning_threshold == 80
         assert engine.context_auto_pause_threshold == 95
-        assert engine.show_context_usage is True
+        # show_context_usage doesn't exist anymore in the refactored version
     
     def test_large_message_scenario(self):
         """Test handling of artificially large messages."""

@@ -15,7 +15,7 @@ from .router import DirectRouter
 from .dialogue import DialogueEngine
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
-from .config_manager import Config, load_config
+from .config import Config, load_config
 from .dimensional_prompts import DimensionalPromptGenerator
 
 console = Console()

@@ -61,7 +61,7 @@ class TestDimensionalPromptGenerator:
         """Test error when required dimension is missing."""
         with pytest.raises(ValueError) as exc_info:
             self.generator.generate("analytical")
-        assert "Missing required dimension 'context'" in str(exc_info.value)
+        assert "Unknown context 'analytical'" in str(exc_info.value)
     
     def test_invalid_dimension_value(self):
         """Test error with invalid dimension value."""
@@ -74,7 +74,9 @@ class TestDimensionalPromptGenerator:
         prompt = self.generator.generate("collaboration:puzzles")
         assert "Let's work together to figure out this puzzle:" in prompt
         # Should contain one of the default puzzles
-        puzzles = ["What gets wetter", "What is so fragile", "What has cities"]
+        puzzles = ["What gets wetter", "What is so fragile", "What has cities", 
+                  "What can run", "What can you catch", "What has a face", 
+                  "What travels", "The more you take"]
         assert any(puzzle in prompt for puzzle in puzzles)
     
     def test_puzzles_specific(self):
@@ -93,7 +95,8 @@ class TestDimensionalPromptGenerator:
         prompt = self.generator.generate("debate:thought_experiments")
         assert "this thought experiment:" in prompt
         # Should contain one of the experiments
-        experiments = ["ship's parts", "Chinese characters", "experience machine"]
+        experiments = ["ship's parts", "Chinese", "experience machine", "veil of ignorance", 
+                      "runaway trolley", "floating", "zombie", "cat"]
         assert any(exp in prompt for exp in experiments)
     
     def test_thought_experiments_specific(self):

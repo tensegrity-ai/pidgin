@@ -1,4 +1,4 @@
-"""Conductor mode for manual control of AI conversations."""
+"""Intervention handler for manual control of AI conversations."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -12,7 +12,7 @@ from rich.text import Text
 from .types import ConversationTurn, Message
 
 
-class Conductor:
+class InterventionHandler:
     """Clean conductor: end-of-turn interventions only."""
 
     def __init__(self, console: Console, mode: str = "flowing"):

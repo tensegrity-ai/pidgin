@@ -37,7 +37,7 @@ class DimensionalPromptGenerator:
             "peers": "Hello! I'm excited to explore {topic} together.",
             "teaching": "I'd like to help you understand {topic}. Let me explain",
             "debate": "I strongly disagree about {topic}. Here's why:",
-            "interview": "I'm curious about your thoughts on {topic}. Can you tell me",
+            "interview": "I'm curious about your thoughts on {topic}. Can you tell me?",
             "collaboration": "Let's work together to figure out {topic}.",
             "neutral": "Hello! I'm looking forward to discussing {topic}.",
         }
