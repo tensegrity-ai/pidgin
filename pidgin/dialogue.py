@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
-from .types import Message, Conversation, Agent, MessageSource, ConversationTurn, ConversationRole
+from .types import Message, Conversation, Agent, MessageSource, ConversationTurn
 from .router import Router
 from .transcripts import TranscriptManager
 from .checkpoint import ConversationState, CheckpointManager
@@ -665,35 +665,6 @@ class DialogueEngine:
         if hasattr(self, '_original_sigint') and self._original_sigint:
             signal.signal(signal.SIGINT, self._original_sigint)
 
-    async def _save_turn_based_transcript(self, turns):
-        """Save transcript with clear turn boundaries."""
-        # Enhanced JSON format preserves turn structure
-        transcript_data = {
-            "turns": [
-                {
-                    "turn_number": turn.turn_number,
-                    "agent_a_message": turn.agent_a_message.dict()
-                    if turn.agent_a_message
-                    else None,
-                    "agent_b_message": turn.agent_b_message.dict()
-                    if turn.agent_b_message
-                    else None,
-                    "interventions": [
-                        msg.dict() for msg in turn.post_turn_interventions
-                    ],
-                    "complete": turn.complete,
-                }
-                for turn in turns
-            ],
-            "metadata": {
-                "total_turns": len(turns),
-                "total_interventions": sum(
-                    len(turn.post_turn_interventions) for turn in turns
-                ),
-            },
-        }
-        # Save additional metadata
-        self.state.metadata.update(transcript_data["metadata"])
 
     async def _handle_pause(self):
         """Handle pause request."""
