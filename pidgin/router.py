@@ -119,18 +119,3 @@ class DirectRouter:
 
         return agent_history
 
-    # Legacy method for backward compatibility during transition
-    async def route_message(
-        self, message: Message, conversation: Conversation
-    ) -> Message:
-        """Legacy method - determine next agent and get response."""
-        # Determine target agent based on who spoke last
-        if self.last_agent_id is None or self.last_agent_id == "agent_b":
-            target_agent_id = "agent_a"
-        else:
-            target_agent_id = "agent_b"
-
-        # Update last agent tracker
-        self.last_agent_id = target_agent_id
-
-        return await self.get_next_response(conversation.messages, target_agent_id)

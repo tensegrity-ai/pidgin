@@ -49,35 +49,41 @@ Clean abstraction layer for different LLM APIs:
 
 **Common Interface:**
 ```python
-async def get_response(self, messages: List[Message]) -> str
+async def stream_response(self, messages: List[Message]) -> AsyncIterator[str]
 ```
 
 **Implementations:**
 - `AnthropicProvider`: Claude models via Anthropic API
 - `OpenAIProvider`: GPT models via OpenAI API
+- `GoogleProvider`: Gemini models via Google API
+- `xAIProvider`: Grok models via xAI API
 
-### 4. Attractor Detection System (`attractors/`)
+### 4. Convergence Detection System (`convergence.py`)
 
-The breakthrough innovation - detecting structural conversation patterns:
+The primary validated metric for conversation dynamics:
 
-**Core Insight:** Conversations fall into structural templates long before content becomes repetitive.
+**ConvergenceCalculator:**
+- Measures structural similarity between agent responses
+- Tracks how agents' communication styles align over time
+- Provides convergence scores (0.0 = different, 1.0 = identical)
+- Includes trend analysis (increasing, decreasing, stable)
+
+### 5. Attractor Detection System (`attractors/`)
+
+Experimental framework for detecting conversation patterns:
+
+**Note:** This is a hypothesis being tested, not a validated feature.
 
 **StructuralAnalyzer:**
-- Extracts structural elements from messages (EXCITED_OPENING, LIST_ITEM, QUESTION, etc.)
-- Creates structural signatures independent of content
-- Identifies formal patterns in conversation flow
-
-**StructuralPatternDetector:**
-- Detects repeating structural patterns with configurable thresholds
-- Identifies alternating A-B-A-B patterns
-- Calculates confidence scores for pattern detection
+- Extracts structural elements from messages
+- Creates signatures independent of content
+- Framework exists but needs rigorous validation
 
 **AttractorManager:**
 - Orchestrates detection at configurable intervals
-- Maps detected patterns to known attractors (Party Loop, Gratitude Spiral, etc.)
-- Triggers actions (stop, pause, log) based on configuration
+- Currently experimental - convergence is the only validated metric
 
-### 5. Context Window Management (`context_manager.py`)
+### 6. Context Window Management (`context_manager.py`)
 
 Intelligent tracking of conversation size vs model limits:
 
@@ -87,66 +93,53 @@ Intelligent tracking of conversation size vs model limits:
 - Turn estimation based on message growth patterns
 - Auto-pause functionality to prevent crashes
 
-**Token Management:**
-- Approximate tokenization (1 token ≈ 4 characters)
-- Reserved token allocation for system prompts
-- Growth trend analysis for better predictions
+### 7. Conductor System (`conductor.py`)
 
-### 6. Conductor Modes (`conductor.py`)
+Two modes for human interaction:
 
-Two sophisticated modes for human interaction:
+**Manual Mode:**
+- Pauses after each complete turn
+- Allows intervention injection
+- Used for debugging and careful steering
 
-**Manual Mode (`ConductorMiddleware`):**
-- Step-by-step message approval
-- Edit, inject, or skip any message
-- Full conversation control
-
-**Flowing Mode (`FlowingConductorMiddleware`):**
+**Flowing Mode (Default):**
 - Automatic conversation flow
-- Pause on Ctrl+Z for intervention
-- Convergence trend display when paused
-- Seamless resume functionality
+- Pause with Ctrl+C for intervention
+- Standard mode for experiments
 
-### 7. Convergence Tracking (`convergence.py`)
+### 8. Turn Model
 
-Measures how similar agents become over time:
+The atomic unit of conversation is a **Turn** (2+1 tuple):
+- Agent A message
+- Agent B message  
+- Optional intervention
 
-**Analysis Dimensions:**
-- Message length similarity
-- Sentence pattern matching
-- Structural similarity (paragraphs, lists, questions)
-- Punctuation pattern analysis
-
-**Output:**
-- Convergence score (0.0 = different, 1.0 = identical)
-- Trend analysis (increasing, decreasing, stable, fluctuating)
-- Auto-warnings at high convergence (≥75%)
+This model captures the natural conversation flow and makes analysis cleaner.
 
 ## Data Flow Architecture
 
 ### Conversation Lifecycle
 
 1. **Initialization**
-   - User provides initial prompt (direct or dimensional)
+   - User provides initial prompt
    - Conversation object created with agent configurations
    - Providers initialized based on model selections
 
 2. **Turn Processing**
    - Context usage checked before each agent response
    - Message routed to appropriate provider
-   - Conductor processes message (edit/inject/approve)
    - Response added to conversation history
    - Metrics calculated and convergence updated
 
 3. **Detection Phase**
-   - Attractor detection runs at intervals
-   - Convergence warnings if similarity too high
+   - Convergence calculated every turn
+   - Attractor detection runs at intervals (experimental)
    - Auto-pause triggers if thresholds exceeded
 
 4. **Persistence**
-   - Auto-save transcripts after each turn
+   - Transcripts saved after each turn
    - Checkpoint creation for pause/resume
-   - Enhanced metrics saved to JSON format
+   - Metrics saved in JSON format
 
 ### Storage Strategy
 
@@ -156,18 +149,12 @@ Measures how similar agents become over time:
 ├── conversation.json      # Machine-readable with full metrics
 ├── conversation.md        # Human-readable markdown
 ├── conversation.checkpoint # Resumable state
-└── attractor_analysis.json # Pattern detection results
+└── attractor_analysis.json # Pattern detection results (experimental)
 ```
-
-**Enhanced Metrics Integration:**
-- Turn-by-turn convergence history
-- Conductor intervention tracking
-- Structural pattern analysis
-- Phase detection timestamps
 
 ## Configuration System
 
-### YAML Configuration (`config_manager.py`)
+### YAML Configuration (`config.py`)
 
 Hierarchical configuration loading:
 1. `~/.config/pidgin/pidgin.yaml` (XDG standard)
@@ -176,127 +163,64 @@ Hierarchical configuration loading:
 4. `./pidgin.yaml` (current directory)
 
 **Key Configuration Areas:**
-- Attractor detection parameters
-- Context management thresholds
+- Convergence thresholds
+- Context management limits
 - Checkpoint intervals
-- Experiment profiles
+- Experimental feature flags
 
 ### Model Management (`models.py`)
 
 Comprehensive model database with:
 - Model IDs and convenient aliases
-- Context window limits and pricing tiers
-- Conversation characteristics (verbosity, style)
-- Recommended pairings for research
+- Context window limits
+- Provider information
 - Deprecation tracking
 
-## Research Features
+## Imminent Event Architecture
 
-### Dimensional Prompts (`dimensional_prompts.py`)
+The system is about to transition to event-driven architecture:
 
-Systematic prompt generation from orthogonal dimensions:
+### Core Changes Coming
+1. **EventBus** as central communication system
+2. **Turn-based events** with 2+1 tuple as atomic unit
+3. **Streaming via events** instead of blocking calls
+4. **Decoupled components** communicating only through events
 
-**Dimension Categories:**
-- **Context**: peers, teaching, debate, interview, collaboration
-- **Topic**: philosophy, language, science, meta, puzzles, thought_experiments
-- **Mode**: analytical, intuitive, exploratory, focused
-- **Energy**: calm, engaged, passionate
-- **Formality**: casual, professional, academic
+### Benefits
+- Parallel experiment execution
+- Perfect observability
+- Natural streaming updates
+- Component isolation
 
-**Example:**
-`peers:philosophy:analytical` → "Hello! I'm excited to explore the fundamental nature of reality together. Let's systematically analyze..."
+## Current Limitations
 
-### Checkpoint/Resume System (`checkpoint.py`)
-
-Robust state management for long-running experiments:
-
-**Features:**
-- Atomic checkpoint writing (no corruption)
-- Full conversation state serialization
-- Resume info extraction
-- Cleanup utilities for old checkpoints
-
-### Transcript Management (`transcripts.py`)
-
-Dual-format output for different use cases:
-
-**JSON Format:**
-- Complete message history with metadata
-- Enhanced metrics and analysis data
-- Machine-readable for post-processing
-
-**Markdown Format:**
-- Human-readable conversation flow
-- Clean formatting with agent identification
-- Suitable for sharing and review
-
-## Extensibility Points
-
-### Adding New Providers
-
-1. Implement `Provider` interface in `providers/`
-2. Add model configurations to `models.py`
-3. Update router logic if needed
-
-### Custom Attractor Patterns
-
-1. Add pattern definitions to `attractors/patterns.py`
-2. Extend structural element detection in `attractors/structural.py`
-3. Configure detection thresholds
-
-### New Detection Systems
-
-1. Create detector class with `check()` method
-2. Integrate into dialogue engine loop
-3. Add configuration options
+1. **UI Polish** - Some UX rough edges (3-enter input bug)
+2. **Message Types** - Confusing agent_id="system" pattern
+3. **Attractor Detection** - Experimental, needs validation
+4. **Provider Quirks** - Each API has different requirements
 
 ## Performance Considerations
 
 ### Token Efficiency
-- Approximate tokenization for speed vs. accuracy trade-off
+- Approximate tokenization for speed
 - Reserved token allocation prevents API errors
-- Growth trend analysis improves prediction accuracy
+- Growth trend analysis improves predictions
 
 ### Detection Intervals
-- Attractor detection runs every 5 turns (configurable)
-- Convergence calculated every turn but lightweight
-- Context checks are fast and run every turn
+- Convergence calculated every turn (lightweight)
+- Attractor detection every 5 turns (configurable)
+- Context checks every turn (fast)
 
-### Memory Management
-- Message history grows with conversation length
-- Checkpoint system prevents data loss
-- Transcript streaming reduces memory pressure
+## Future Architecture (Post-Event Implementation)
 
-## Security and Error Handling
+### Event-Driven Benefits
+- Conversations as event streams
+- Natural parallelism for experiments
+- Complete observability
+- Replay capability
 
-### API Key Management
-- Environment variable-based configuration
-- Clear error messages for missing keys
-- Provider-specific error handling
-
-### Graceful Degradation
-- Context window auto-pause prevents crashes
-- Checkpoint system ensures no data loss
-- Signal handling for clean interruption
-
-### Validation
-- Message format validation
-- Configuration schema checking
-- Model compatibility verification
-
-## Future Architecture Considerations
-
-### Scalability
-- Multi-conversation management
-- Distributed conversation processing
-- Shared attractor pattern database
-
-### Analytics
-- Cross-conversation pattern analysis
-- Model behavior comparison
-- Convergence trend aggregation
-
-### Integration
-- API endpoints for programmatic access
-- Webhook notifications for events
-- External tool integration
+### Research Enablement
+- Run hundreds of experiments in parallel
+- Real-time analysis dashboards
+- Perfect reproducibility
+- Event log = complete record
