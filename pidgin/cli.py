@@ -605,14 +605,16 @@ def resume(checkpoint_file, latest, convergence_threshold, additional_turns):
             "agent_b": get_provider_for_model(state.model_b),
         }
 
-        # Setup components
-        router = DirectRouter(providers)
-        transcript_manager = TranscriptManager()
-
-        # Load config
-        cfg = Config()
-
-        engine = DialogueEngine(router, transcript_manager, cfg)
+        # TODO: Convert resume command to use event system
+        console.print("[red]Resume command not yet converted to event system[/red]")
+        console.print("[yellow]Please start a new conversation with 'pidgin chat'[/yellow]")
+        return
+        
+        # COMMENTED OUT - needs event system conversion:
+        # router = DirectRouter(providers)
+        # transcript_manager = TranscriptManager()
+        # cfg = Config()
+        # engine = DialogueEngine(router, transcript_manager, cfg)
 
         # Prepare run_conversation arguments
         run_args = {
@@ -742,92 +744,6 @@ def dimensions(example, list_only, detailed, dimension):
         console.print(example_text)
         console.print(f"    → {description}")
     console.print()
-
-
-@cli.command(name="chat-events")
-@click.help_option("-h", "--help")
-@click.option("-a", "--model-a", default="claude", help="First model (default: claude)")
-@click.option("-b", "--model-b", default="gpt", help="Second model (default: gpt)")
-@click.option("-p", "--prompt", help="Initial prompt for conversation")
-@click.option("-t", "--turns", default=5, help="Maximum number of turns (default: 5)")
-def chat_events(model_a, model_b, prompt, turns):
-    """Run a conversation using the new event-driven architecture.
-    
-    This command demonstrates the event system with full transparency.
-    Every action and decision is visible as events flow through the system.
-    """
-    from .event_bus import EventBus
-    from .event_logger import EventLogger
-    from .conductor import Conductor
-    from .providers.event_wrapper import EventAwareProvider
-    
-    # Default prompt
-    if not prompt:
-        prompt = "Hello! I'm looking forward to our conversation."
-    
-    # Initialize event system
-    bus = EventBus()
-    logger = EventLogger(bus, console)
-    
-    # Get model configs
-    try:
-        model_a_config = get_model_config(model_a)
-        model_b_config = get_model_config(model_b)
-        model_a_full = model_a_config.model_id if model_a_config else model_a
-        model_b_full = model_b_config.model_id if model_b_config else model_b
-    except ValueError as e:
-        console.print(f"[red]Model error: {e}[/red]")
-        raise click.Abort()
-    
-    # Create providers
-    providers_map = {
-        "agent_a": get_provider_for_model(model_a),
-        "agent_b": get_provider_for_model(model_b),
-    }
-    
-    # Wrap providers with event awareness
-    wrapped_providers = {
-        agent_id: EventAwareProvider(provider, bus, agent_id)
-        for agent_id, provider in providers_map.items()
-    }
-    
-    # Create conductor
-    conductor = Conductor(bus, wrapped_providers)
-    
-    # Create agents
-    agent_a_obj = Agent(id="agent_a", model=model_a_full)
-    agent_b_obj = Agent(id="agent_b", model=model_b_full)
-    
-    # Run conversation
-    console.print(
-        Panel(
-            "[bold green]Starting Event-Driven Conversation[/bold green]\n"
-            f"Model A: {model_a_full}\n"
-            f"Model B: {model_b_full}\n"
-            f"Max turns: {turns}\n\n"
-            "[yellow]All events will be displayed below...[/yellow]",
-            title="🎭 Event System Demo",
-            border_style="green"
-        )
-    )
-    
-    try:
-        conversation = asyncio.run(
-            conductor.run_conversation(
-                agent_a=agent_a_obj,
-                agent_b=agent_b_obj,
-                initial_prompt=prompt,
-                max_turns=turns,
-            )
-        )
-        
-        console.print("\n[bold green]Conversation completed![/bold green]")
-        console.print(f"Total messages: {len(conversation.messages)}")
-        console.print(f"Event history: {len(bus.get_history())} events")
-        
-    except Exception as e:
-        console.print(f"\n[red]Error: {e}[/red]")
-        raise
 
 
 if __name__ == "__main__":

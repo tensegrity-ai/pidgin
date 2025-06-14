@@ -11,6 +11,7 @@ from ..events import (
 )
 from ..types import Message
 from .base import Provider
+from ..router import DirectRouter  # For message transformation
 
 
 class EventAwareProvider:
@@ -27,6 +28,9 @@ class EventAwareProvider:
         self.provider = provider
         self.bus = bus
         self.agent_id = agent_id
+        
+        # Create a router for message transformation
+        self.router = DirectRouter({})  # Empty providers dict, we just need the transformation
         
         # Subscribe to message requests for this agent
         bus.subscribe(MessageRequestEvent, self.handle_message_request)
@@ -45,10 +49,16 @@ class EventAwareProvider:
         start_time = time.time()
         chunk_index = 0
         
+        # Transform messages for this agent's perspective
+        agent_messages = self.router._build_agent_history(
+            event.conversation_history, 
+            self.agent_id
+        )
+        
         # Stream response and emit chunk events
         chunks = []
         try:
-            async for chunk in self.provider.stream_response(event.conversation_history):
+            async for chunk in self.provider.stream_response(agent_messages):
                 chunks.append(chunk)
                 
                 # Emit chunk event
