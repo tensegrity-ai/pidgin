@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass
 class ModelCharacteristics:
     """Research-relevant characteristics of a model."""
+
     verbosity_level: int  # 1-10 scale
     avg_response_length: Literal["short", "medium", "long"]
     attractor_tendency: Literal["compression", "expansion", "balanced"]
@@ -17,9 +18,10 @@ class ModelCharacteristics:
 @dataclass
 class ModelConfig:
     """Complete configuration for a model."""
+
     model_id: str
     aliases: List[str]
-    provider: Literal["anthropic", "openai"]
+    provider: Literal["anthropic", "openai", "google", "xai"]
     context_window: int
     pricing_tier: Literal["economy", "standard", "premium"]
     characteristics: ModelCharacteristics
@@ -42,8 +44,8 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["gpt-4.1", "o3"],
-            conversation_style="analytical"
-        )
+            conversation_style="analytical",
+        ),
     ),
     "claude-4-sonnet-20250514": ModelConfig(
         model_id="claude-4-sonnet-20250514",
@@ -56,8 +58,8 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["gpt-4.1-mini", "claude-4-sonnet-20250514"],
-            conversation_style="verbose"
-        )
+            conversation_style="verbose",
+        ),
     ),
     "claude-3-7-sonnet-20250224": ModelConfig(
         model_id="claude-3-7-sonnet-20250224",
@@ -70,9 +72,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["o4-mini", "gpt-4.1-mini"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Hybrid reasoning model"
+        notes="Hybrid reasoning model",
     ),
     "claude-3-5-haiku-20241022": ModelConfig(
         model_id="claude-3-5-haiku-20241022",
@@ -85,8 +87,8 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="compression",
             recommended_pairings=["gpt-4.1-nano", "claude-3-5-haiku-20241022"],
-            conversation_style="concise"
-        )
+            conversation_style="concise",
+        ),
     ),
     "claude-3-haiku-20240307": ModelConfig(
         model_id="claude-3-haiku-20240307",
@@ -99,11 +101,10 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="compression",
             recommended_pairings=["gpt-4o-mini", "claude-3-haiku-20240307"],
-            conversation_style="concise"
+            conversation_style="concise",
         ),
-        notes="Legacy Haiku model"
+        notes="Legacy Haiku model",
     ),
-    
     # OpenAI Models
     "gpt-4.1": ModelConfig(
         model_id="gpt-4.1",
@@ -116,9 +117,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "o3"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Primary coding-focused model"
+        notes="Primary coding-focused model",
     ),
     "gpt-4.1-mini": ModelConfig(
         model_id="gpt-4.1-mini",
@@ -131,8 +132,8 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1-mini"],
-            conversation_style="verbose"
-        )
+            conversation_style="verbose",
+        ),
     ),
     "gpt-4.1-nano": ModelConfig(
         model_id="gpt-4.1-nano",
@@ -145,8 +146,8 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4.1-nano"],
-            conversation_style="concise"
-        )
+            conversation_style="concise",
+        ),
     ),
     "o3": ModelConfig(
         model_id="o3",
@@ -159,9 +160,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Premium reasoning model"
+        notes="Premium reasoning model",
     ),
     "o3-mini": ModelConfig(
         model_id="o3-mini",
@@ -174,9 +175,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-3-7-sonnet-20250224", "o4-mini"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Small reasoning model"
+        notes="Small reasoning model",
     ),
     "o4-mini": ModelConfig(
         model_id="o4-mini",
@@ -189,9 +190,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-3-7-sonnet-20250224", "gpt-4.1-mini"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Latest small reasoning model (recommended over o3-mini)"
+        notes="Latest small reasoning model (recommended over o3-mini)",
     ),
     "o4-mini-high": ModelConfig(
         model_id="o4-mini-high",
@@ -204,9 +205,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "o3"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Enhanced reasoning variant"
+        notes="Enhanced reasoning variant",
     ),
     "gpt-4.5": ModelConfig(
         model_id="gpt-4.5",
@@ -219,11 +220,11 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
         deprecated=True,
         deprecation_date="2025-07",
-        notes="Research preview - being deprecated July 2025"
+        notes="Research preview - being deprecated July 2025",
     ),
     "gpt-4o": ModelConfig(
         model_id="gpt-4o",
@@ -236,9 +237,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4o-mini"],
-            conversation_style="verbose"
+            conversation_style="verbose",
         ),
-        notes="Multimodal model"
+        notes="Multimodal model",
     ),
     "gpt-4o-mini": ModelConfig(
         model_id="gpt-4o-mini",
@@ -251,9 +252,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="compression",
             recommended_pairings=["claude-3-haiku-20240307", "gpt-4.1-nano"],
-            conversation_style="concise"
+            conversation_style="concise",
         ),
-        notes="Fast multimodal model"
+        notes="Fast multimodal model",
     ),
     "gpt-image-1": ModelConfig(
         model_id="gpt-image-1",
@@ -266,11 +267,10 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="balanced",
             recommended_pairings=[],
-            conversation_style="creative"
+            conversation_style="creative",
         ),
-        notes="Latest image generation model - not for conversations"
+        notes="Latest image generation model - not for conversations",
     ),
-    
     # Google Models
     "gemini-2.0-flash-exp": ModelConfig(
         model_id="gemini-2.0-flash-exp",
@@ -283,9 +283,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="balanced",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
-            conversation_style="concise"
+            conversation_style="concise",
         ),
-        notes="Fast experimental model with 1M context"
+        notes="Fast experimental model with 1M context",
     ),
     "gemini-2.0-flash-thinking-exp": ModelConfig(
         model_id="gemini-2.0-flash-thinking-exp",
@@ -298,9 +298,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["o4-mini", "claude-4-sonnet-20250514"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Reasoning model with visible thinking process"
+        notes="Reasoning model with visible thinking process",
     ),
     "gemini-exp-1206": ModelConfig(
         model_id="gemini-exp-1206",
@@ -313,9 +313,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Experimental model with 2M context window"
+        notes="Experimental model with 2M context window",
     ),
     "gemini-1.5-pro": ModelConfig(
         model_id="gemini-1.5-pro",
@@ -328,9 +328,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Production model with 2M context"
+        notes="Production model with 2M context",
     ),
     "gemini-1.5-flash": ModelConfig(
         model_id="gemini-1.5-flash",
@@ -343,9 +343,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="medium",
             attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
-            conversation_style="concise"
+            conversation_style="concise",
         ),
-        notes="Fast production model"
+        notes="Fast production model",
     ),
     "gemini-1.5-flash-8b": ModelConfig(
         model_id="gemini-1.5-flash-8b",
@@ -358,11 +358,10 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="short",
             attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
-            conversation_style="concise"
+            conversation_style="concise",
         ),
-        notes="Smallest and fastest Gemini model"
+        notes="Smallest and fastest Gemini model",
     ),
-    
     # xAI Models
     "grok-beta": ModelConfig(
         model_id="grok-beta",
@@ -375,9 +374,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="xAI's flagship reasoning model"
+        notes="xAI's flagship reasoning model",
     ),
     "grok-2-1212": ModelConfig(
         model_id="grok-2-1212",
@@ -390,9 +389,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Latest Grok model with improved capabilities"
+        notes="Latest Grok model with improved capabilities",
     ),
     "grok-2-vision-1212": ModelConfig(
         model_id="grok-2-vision-1212",
@@ -405,9 +404,9 @@ MODELS: Dict[str, ModelConfig] = {
             avg_response_length="long",
             attractor_tendency="balanced",
             recommended_pairings=["gpt-4o", "claude-4-sonnet-20250514"],
-            conversation_style="analytical"
+            conversation_style="analytical",
         ),
-        notes="Grok with vision capabilities for multimodal tasks"
+        notes="Grok with vision capabilities for multimodal tasks",
     ),
 }
 
@@ -417,12 +416,12 @@ def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
     # Direct match
     if model_or_alias in MODELS:
         return MODELS[model_or_alias]
-    
+
     # Search by alias
     for model_id, config in MODELS.items():
         if model_or_alias in config.aliases:
             return config
-    
+
     return None
 
 
@@ -437,10 +436,7 @@ def get_all_aliases() -> Dict[str, str]:
 
 def get_models_by_provider(provider: str) -> List[ModelConfig]:
     """Get all models for a specific provider."""
-    return [
-        config for config in MODELS.values() 
-        if config.provider == provider
-    ]
+    return [config for config in MODELS.values() if config.provider == provider]
 
 
 def get_model_shortcuts() -> Dict[str, str]:

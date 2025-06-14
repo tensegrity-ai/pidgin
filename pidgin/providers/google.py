@@ -1,10 +1,11 @@
 import os
-from typing import List
+from typing import List, AsyncIterator, AsyncGenerator
 from ..types import Message
 from .base import Provider
 
 try:
     import google.generativeai as genai
+
     GOOGLE_AVAILABLE = True
 except ImportError:
     GOOGLE_AVAILABLE = False
@@ -18,7 +19,7 @@ class GoogleProvider(Provider):
                 "Google Generative AI not available. Install with: "
                 "pip install google-generativeai"
             )
-        
+
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError(
@@ -27,24 +28,26 @@ class GoogleProvider(Provider):
             )
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)
-    
-    async def get_response(self, messages: List[Message]) -> str:
+
+    async def stream_response(
+        self, messages: List[Message]
+    ) -> AsyncGenerator[str, None]:
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
         google_messages = []
         for m in messages:
-            role = 'model' if m.role == 'assistant' else m.role
-            google_messages.append({
-                'role': role,
-                'parts': [m.content]
-            })
-        
+            role = "model" if m.role == "assistant" else m.role
+            google_messages.append({"role": role, "parts": [m.content]})
+
         try:
             # Create chat session
             chat = self.model.start_chat(history=google_messages[:-1])
-            # Send the last message
-            response = chat.send_message(google_messages[-1]['parts'][0])
-            return response.text
+            # Stream the response
+            response = chat.send_message(google_messages[-1]["parts"][0], stream=True)
+
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
         except Exception as e:
             # Basic error handling - just don't crash
             raise Exception(f"Google API error: {str(e)}")

@@ -1,9 +1,9 @@
-"""Tests for the conductor mode and message source functionality."""
+"""Tests for the intervention handler and message source functionality."""
 
 import pytest
 from datetime import datetime
 from pidgin.types import Message, MessageSource
-from pidgin.conductor import Conductor
+from pidgin.intervention_handler import InterventionHandler
 from rich.console import Console
 
 
@@ -74,13 +74,13 @@ class TestMessageSource:
         assert MessageSource.MEDIATOR == "mediator"
 
 
-class TestConductor:
+class TestInterventionHandler:
     """Test conductor functionality."""
 
     def setup_method(self):
         """Set up test conductor."""
         self.console = Console()
-        self.conductor = Conductor(self.console, mode="manual")
+        self.conductor = InterventionHandler(self.console, mode="manual")
 
     def test_conductor_initialization(self):
         """Test conductor initializes correctly."""
@@ -133,7 +133,7 @@ class TestConductor:
         """Test intervention decision in flowing mode."""
         from pidgin.types import ConversationTurn, Message
 
-        flowing_conductor = Conductor(self.console, mode="flowing")
+        flowing_conductor = InterventionHandler(self.console, mode="flowing")
 
         # Create a mock turn
         turn = ConversationTurn(

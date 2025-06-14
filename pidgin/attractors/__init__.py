@@ -3,4 +3,4 @@
 from .structural import StructuralAnalyzer, StructuralPatternDetector
 from .manager import AttractorManager
 
-__all__ = ['StructuralAnalyzer', 'StructuralPatternDetector', 'AttractorManager']
+__all__ = ["StructuralAnalyzer", "StructuralPatternDetector", "AttractorManager"]

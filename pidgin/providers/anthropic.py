@@ -1,6 +1,6 @@
 import os
 from anthropic import Anthropic
-from typing import List
+from typing import List, AsyncIterator, AsyncGenerator
 from ..types import Message
 from .base import Provider
 
@@ -15,29 +15,43 @@ class AnthropicProvider(Provider):
             )
         self.client = Anthropic(api_key=api_key)
         self.model = model
-    
-    async def get_response(self, messages: List[Message]) -> str:
-        # Convert to Anthropic format
-        anthropic_messages = [
-            {"role": m.role, "content": m.content}
-            for m in messages
-        ]
-        
-        try:
-            response = self.client.messages.create(
-                model=self.model,
-                messages=anthropic_messages,
-                max_tokens=1000
-            )
-            # Handle both text and tool use responses
-            if response.content:
-                if hasattr(response.content[0], 'text'):
-                    return response.content[0].text
-                else:
-                    # If it's not a text response, return a string representation
-                    return str(response.content[0])
+
+    async def stream_response(
+        self, messages: List[Message]
+    ) -> AsyncGenerator[str, None]:
+        # Extract system messages and conversation messages
+        system_messages = []
+        conversation_messages = []
+
+        for m in messages:
+            if m.role == "system":
+                system_messages.append(m.content)
             else:
-                return ""
+                conversation_messages.append({"role": m.role, "content": m.content})
+
+        # Build API call parameters
+        api_params = {
+            "model": self.model,
+            "messages": conversation_messages,
+            "max_tokens": 1000,
+        }
+
+        # Add system parameter if we have system messages
+        if system_messages:
+            api_params["system"] = "\n\n".join(system_messages)
+
+        # Validate we have at least one conversation message
+        if not conversation_messages:
+            raise ValueError(
+                "Anthropic API requires at least one user or assistant message. "
+                "Only system messages were provided."
+            )
+
+        try:
+            # Make the API call
+            with self.client.messages.stream(**api_params) as stream:
+                for text in stream.text_stream:
+                    yield text
         except Exception as e:
-            # Basic error handling - just don't crash
+            # Better error for debugging
             raise Exception(f"Anthropic API error: {str(e)}")
