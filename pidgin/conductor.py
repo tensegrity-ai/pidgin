@@ -64,14 +64,20 @@ class Conductor:
             initial_prompt=initial_prompt,
         )
         
-        # Add initial prompt as system message
-        conversation.messages.append(
+        # Add system prompt and initial message
+        system_prompt = "You are Agent A. Your conversation partner (Agent B) is another AI. Together, you're having a conversation."
+        conversation.messages.extend([
             Message(
                 role="system",
+                content=system_prompt,
+                agent_id="system"
+            ),
+            Message(
+                role="user",
                 content=initial_prompt,
-                agent_id="human"
+                agent_id="researcher"
             )
-        )
+        ])
         
         # Track timing
         start_time = time.time()

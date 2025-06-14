@@ -11,10 +11,10 @@ from .providers.anthropic import AnthropicProvider
 from .providers.openai import OpenAIProvider
 from .providers.google import GoogleProvider
 from .providers.xai import xAIProvider
-from .router import DirectRouter
-from .dialogue import DialogueEngine
-from .transcripts import TranscriptManager
-from .checkpoint import ConversationState, CheckpointManager
+# from .router import DirectRouter  # No longer needed - using event system
+# from .dialogue import DialogueEngine  # REPLACED by event-driven Conductor
+# from .transcripts import TranscriptManager  # May need later for saving
+# from .checkpoint import ConversationState, CheckpointManager  # May need later
 from .config import Config, load_config
 from .dimensional_prompts import DimensionalPromptGenerator
 
@@ -315,172 +315,90 @@ def chat(
     manual,
     convergence_threshold,
 ):
-    """Run a conversation between two AI agents"""
-
-    # Resolve model shortcuts using the new system
-    config_a = get_model_config(model_a)
-    config_b = get_model_config(model_b)
-
-    model_a_id = config_a.model_id if config_a else model_a
-    model_b_id = config_b.model_id if config_b else model_b
-
+    """Run a conversation between two AI agents using EVENT-DRIVEN ARCHITECTURE"""
+    from .event_bus import EventBus
+    from .event_logger import EventLogger
+    from .conductor import Conductor
+    from .providers.event_wrapper import EventAwareProvider
+    
     # Build initial prompt from dimensions and/or custom prompt
     initial_prompt = _build_initial_prompt(
         prompt, dimensions, puzzle, experiment, topic_content
     )
-
-    # Create agents
-    agents = {
-        "agent_a": Agent(id="agent_a", model=model_a_id),
-        "agent_b": Agent(id="agent_b", model=model_b_id),
-    }
-
-    # Create providers based on model type
+    if not initial_prompt:
+        initial_prompt = "Hello! I'm looking forward to our conversation."
+    
+    # Initialize EVENT SYSTEM
+    bus = EventBus()
+    logger = EventLogger(bus, console)
+    
+    # Get model configs
     try:
-        providers = {
-            "agent_a": get_provider_for_model(model_a_id),
-            "agent_b": get_provider_for_model(model_b_id),
+        config_a = get_model_config(model_a)
+        config_b = get_model_config(model_b)
+        model_a_id = config_a.model_id if config_a else model_a
+        model_b_id = config_b.model_id if config_b else model_b
+    except ValueError as e:
+        console.print(f"[red]Model error: {e}[/red]")
+        return
+    
+    # Create providers
+    try:
+        providers_map = {
+            "agent_a": get_provider_for_model(model_a),
+            "agent_b": get_provider_for_model(model_b),
         }
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
         return
-
-    # Load configuration
-    if config:
-        cfg = load_config(Path(config))
-    else:
-        cfg = Config()
-
-    # Override attractor detection if requested
-    if no_attractor_detection:
-        cfg.set("conversation.attractor_detection.enabled", False)
-
-    # Setup components
-    router = DirectRouter(providers)
-    transcript_manager = TranscriptManager(save_to)
-    engine = DialogueEngine(router, transcript_manager, cfg)
-
-    # Display configuration
-    console.print(f"[bold]🤖 Starting conversation: {model_a_id} ↔ {model_b_id}[/bold]")
+    
+    # Wrap providers with EVENT AWARENESS
+    wrapped_providers = {
+        agent_id: EventAwareProvider(provider, bus, agent_id)
+        for agent_id, provider in providers_map.items()
+    }
+    
+    # Create event-driven CONDUCTOR
+    conductor = Conductor(bus, wrapped_providers)
+    
+    # Create agents
+    agent_a_obj = Agent(id="agent_a", model=model_a_id)
+    agent_b_obj = Agent(id="agent_b", model=model_b_id)
+    
+    # Display EVENT-DRIVEN configuration
     console.print(
-        f"[dim]📝 Initial prompt: {initial_prompt[:50]}{'...' if len(initial_prompt) > 50 else ''}[/dim]"
+        Panel(
+            f"[bold green]🎭 EVENT-DRIVEN CONVERSATION[/bold green]\n"
+            f"Model A: {model_a_id}\n"
+            f"Model B: {model_b_id}\n"
+            f"Max turns: {turns}\n"
+            f"Initial prompt: {initial_prompt[:50]}...\n\n"
+            f"[yellow]All events will be displayed in real-time![/yellow]",
+            title="Event System Active",
+            border_style="green"
+        )
     )
-    console.print(f"[dim]🔄 Max turns: {turns}[/dim]")
-
-    # Show context management status
-    context_enabled = (
-        cfg.get("context_management.enabled", True) if hasattr(cfg, "get") else True
-    )
-    if context_enabled:
-        console.print(f"[dim]📏 Context tracking: [green]ON[/green][/dim]")
-    else:
-        console.print(f"[dim]📏 Context tracking: [red]OFF[/red][/dim]")
-
-    # Show attractor detection status
-    detection_enabled = (
-        cfg.get("conversation.attractor_detection.enabled", True)
-        if hasattr(cfg, "get")
-        else True
-    )
-    if detection_enabled:
-        threshold = (
-            cfg.get("conversation.attractor_detection.threshold", 3)
-            if hasattr(cfg, "get")
-            else 3
-        )
-        window = (
-            cfg.get("conversation.attractor_detection.window_size", 10)
-            if hasattr(cfg, "get")
-            else 10
-        )
-        console.print(
-            f"[dim]🔍 Attractor detection: [green]ON[/green] (threshold: {threshold}, window: {window})[/dim]"
-        )
-    else:
-        console.print(f"[dim]🔍 Attractor detection: [red]OFF[/red][/dim]")
-
-    # Show mode (default is flowing conductor)
-    if manual:
-        console.print(
-            f"[dim]🎼 Mode: [green]MANUAL[/green] (message-by-message approval)[/dim]"
-        )
-    else:
-        console.print(
-            f"[dim]🎼 Mode: [green]FLOWING[/green] (default - press Ctrl+C to pause)[/dim]"
-        )
-
-    # Show convergence tracking
-    console.print(
-        f"[dim]📊 Convergence tracking: [green]ON[/green] (warning at {convergence_threshold:.2f})[/dim]"
-    )
-
-    console.rule(style="dim")
-    console.print()
-
+    
+    # Run the conversation
     try:
-        asyncio.run(
-            engine.run_conversation(
-                agents["agent_a"],
-                agents["agent_b"],
-                initial_prompt,
-                turns,
-                manual_mode=manual,
-                convergence_threshold=convergence_threshold,
+        conversation = asyncio.run(
+            conductor.run_conversation(
+                agent_a=agent_a_obj,
+                agent_b=agent_b_obj,
+                initial_prompt=initial_prompt,
+                max_turns=turns,
             )
         )
-
-        # Success exit message
-        console.print()
-        completion_content = "[green]✅ CONVERSATION COMPLETE[/green]\n"
-        completion_content += "📁 Transcript saved successfully\n"
-
-        # Check if attractor was detected
-        if hasattr(engine, "attractor_detected") and engine.attractor_detected:
-            result = engine.attractor_detected
-            completion_content += f"🎯 Attractor detected: {result['type']} at turn {result['turn_detected']}"
-        else:
-            completion_content += "🎯 All turns completed normally"
-
-        console.print(
-            Panel(
-                completion_content,
-                title="[bold green]Conversation Summary[/bold green]",
-                border_style="green",
-            )
-        )
-        console.print()
-
+        
+        console.print("\n[bold green]Conversation completed![/bold green]")
+        console.print(f"Total messages: {len(conversation.messages)}")
+        console.print(f"Event history: {len(bus.get_history())} events")
+        
     except KeyboardInterrupt:
-        # Interrupted exit message
-        console.print()
-        stopped_content = "[yellow]⏹️  CONVERSATION STOPPED[/yellow]\n"
-        stopped_content += "📁 Transcript saved (partial conversation)\n"
-        stopped_content += "🛑 Stopped by user (Ctrl+C)"
-
-        console.print(
-            Panel(
-                stopped_content,
-                title="[bold yellow]Conversation Interrupted[/bold yellow]",
-                border_style="yellow",
-            )
-        )
-        console.print()
-
+        console.print("\n[yellow]Conversation interrupted by user[/yellow]")
     except Exception as e:
-        # Error exit message
-        console.print()
-        error_content = "[red]❌ CONVERSATION ERROR[/red]\n"
-        error_content += f"💥 Error: {e}\n"
-        error_content += "📁 Transcript may be incomplete"
-
-        console.print(
-            Panel(
-                error_content,
-                title="[bold red]Conversation Error[/bold red]",
-                border_style="red",
-            )
-        )
-        console.print()
+        console.print(f"\n[red]Error: {e}[/red]")
+        raise
 
 
 @cli.command()
