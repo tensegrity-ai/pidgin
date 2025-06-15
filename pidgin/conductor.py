@@ -3,6 +3,7 @@
 import asyncio
 import re
 import time
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from rich.console import Console
@@ -26,6 +27,7 @@ from .events import (
 from .models import get_model_config
 from .output_manager import OutputManager
 from .providers.event_wrapper import EventAwareProvider
+from .system_prompts import get_system_prompts
 from .types import Agent, Conversation, Message
 from .user_interaction import UserInteractionHandler, TimeoutDecision
 
@@ -81,163 +83,48 @@ class Conductor:
             agent_b: Second agent
             initial_prompt: Starting prompt
             max_turns: Maximum number of turns
+            display_mode: Display mode (normal, quiet, verbose)
+            show_timing: Whether to show timing information
+            choose_names: Whether agents should choose their own names
+            stability_level: System prompt stability level (0-4)
 
         Returns:
             The completed conversation
         """
-        # Set name choosing mode
-        self.choose_names_mode = choose_names
-        self.agent_chosen_names = {}
-
-        # Assign display names - always start with model shortnames
-        config_a = get_model_config(agent_a.model)
-        config_b = get_model_config(agent_b.model)
-
-        if config_a and config_b:
-            # Store the model shortnames
-            agent_a.model_shortname = config_a.shortname
-            agent_b.model_shortname = config_b.shortname
-            
-            if config_a.shortname == config_b.shortname:
-                # Same model - add numbers
-                agent_a.display_name = f"{config_a.shortname}-1"
-                agent_b.display_name = f"{config_b.shortname}-2"
-            else:
-                # Different models - use shortnames directly
-                agent_a.display_name = config_a.shortname
-                agent_b.display_name = config_b.shortname
-        else:
-            # Fallback to agent IDs
-            agent_a.display_name = "Agent A"
-            agent_b.display_name = "Agent B"
-            agent_a.model_shortname = None
-            agent_b.model_shortname = None
+        # Initialize name mode
+        self._initialize_name_mode(choose_names)
+        self._assign_display_names(agent_a, agent_b)
         
-        # In choose_names mode, these will be updated after first responses
-
-        # Create conversation directory
+        # Create output directory
         conv_id, conv_dir = self.output_manager.create_conversation_dir()
-
-        # Create event bus with logging
-        event_log_path = conv_dir / "events.jsonl"
-        self.bus = EventBus(event_log_path)
-        await self.bus.start()
-
-        # Create event logger and display filter based on mode
-        if display_mode == "verbose":
-            # Use original event logger for verbose mode
-            self.event_logger = EventLogger(self.bus, self.console)
-        else:
-            # Use display filter for normal/quiet modes
-            agents = {"agent_a": agent_a, "agent_b": agent_b}
-            self.display_filter = DisplayFilter(
-                self.console, display_mode, show_timing, agents
-            )
-            self.bus.subscribe(Event, self.display_filter.handle_event)
-            # Still create event logger but without console output (for file logging)
-            self.event_logger = EventLogger(self.bus, None)
-
-        # Wrap providers with event awareness now that bus exists
-        self.wrapped_providers = {
-            agent_id: EventAwareProvider(provider, self.bus, agent_id)
-            for agent_id, provider in self.base_providers.items()
-        }
-
-        # Subscribe to message completions
-        self.bus.subscribe(MessageCompleteEvent, self._handle_message_complete)
-
+        
+        # Initialize event system
+        await self._initialize_event_system(conv_dir, display_mode, show_timing, 
+                                           {"agent_a": agent_a, "agent_b": agent_b})
+        
         # Create conversation
-        conversation = Conversation(
-            agents=[agent_a, agent_b],
-            initial_prompt=initial_prompt,
-        )
-        conversation.id = conv_id  # Use our generated ID
-
-        # Get system prompts based on stability level
-        from .system_prompts import get_system_prompts
-        system_prompts = get_system_prompts(
-            stability_level=stability_level,
-            choose_names=choose_names
-        )
+        conversation = self._create_conversation(conv_id, agent_a, agent_b, initial_prompt)
         
-        system_prompt_a = system_prompts["agent_a"]
-        system_prompt_b = system_prompts["agent_b"]
-
-        # Add system prompt and initial message
-        messages_to_add = []
-        if system_prompt_a:  # Only add if non-empty (chaos mode has empty prompts)
-            messages_to_add.append(
-                Message(role="system", content=system_prompt_a, agent_id="system")
-            )
-        messages_to_add.append(
-            Message(role="user", content=f"[HUMAN]: {initial_prompt}", agent_id="researcher")
-        )
+        # Get system prompts and add initial messages
+        system_prompts = get_system_prompts(stability_level, choose_names)
+        await self._add_initial_messages(conversation, system_prompts, initial_prompt)
         
-        conversation.messages.extend(messages_to_add)
-
-        # Track timing
+        # Emit start events
         start_time = time.time()
-
-        # Emit start event
-        await self.bus.emit(
-            ConversationStartEvent(
-                conversation_id=conversation.id,
-                agent_a_model=agent_a.model,
-                agent_b_model=agent_b.model,
-                initial_prompt=initial_prompt,
-                max_turns=max_turns,
-                agent_a_display_name=agent_a.display_name,
-                agent_b_display_name=agent_b.display_name,
-            )
-        )
-
-        # Emit system prompt events for both agents
-        if system_prompt_a:  # Only emit if non-empty
-            await self.bus.emit(
-                SystemPromptEvent(
-                    conversation_id=conversation.id,
-                    agent_id="agent_a",
-                    prompt=system_prompt_a,
-                    agent_display_name=agent_a.display_name,
-                )
-            )
-
-        if system_prompt_b:  # Only emit if non-empty
-            await self.bus.emit(
-                SystemPromptEvent(
-                    conversation_id=conversation.id,
-                    agent_id="agent_b",
-                    prompt=system_prompt_b,
-                    agent_display_name=agent_b.display_name,
-                )
-            )
-
+        await self._emit_start_events(conversation, agent_a, agent_b, 
+                                     initial_prompt, max_turns, system_prompts)
+        
         # Run turns
+        final_turn = 0
         for turn_num in range(max_turns):
-            turn = await self.run_single_turn(
-                conversation=conversation,
-                turn_number=turn_num,
-                agent_a=agent_a,
-                agent_b=agent_b,
-            )
-
+            turn = await self.run_single_turn(conversation, turn_num, agent_a, agent_b)
             if turn is None:
                 break
-
-        # Emit end event
-        duration_ms = int((time.time() - start_time) * 1000)
-        await self.bus.emit(
-            ConversationEndEvent(
-                conversation_id=conversation.id,
-                reason="max_turns" if turn_num == max_turns - 1 else "completed",
-                total_turns=turn_num + 1,
-                duration_ms=duration_ms,
-            )
-        )
-
-        # Stop the event bus to ensure all events are written
-        await self.bus.stop()
-
+            final_turn = turn_num
+        
+        # Emit end event and cleanup
+        await self._emit_end_event(conversation, final_turn, max_turns, start_time)
+        
         return conversation
 
     async def run_single_turn(
@@ -444,3 +331,152 @@ class Conductor:
             return bracket_match.group(1)
 
         return None
+    
+    def _initialize_name_mode(self, choose_names: bool):
+        """Set up name choosing mode."""
+        self.choose_names_mode = choose_names
+        self.agent_chosen_names = {}
+        
+    def _assign_display_names(self, agent_a: Agent, agent_b: Agent):
+        """Assign display names to agents based on their models."""
+        config_a = get_model_config(agent_a.model)
+        config_b = get_model_config(agent_b.model)
+
+        if config_a and config_b:
+            # Store the model shortnames
+            agent_a.model_shortname = config_a.shortname
+            agent_b.model_shortname = config_b.shortname
+            
+            if config_a.shortname == config_b.shortname:
+                # Same model - add numbers
+                agent_a.display_name = f"{config_a.shortname}-1"
+                agent_b.display_name = f"{config_b.shortname}-2"
+            else:
+                # Different models - use shortnames directly
+                agent_a.display_name = config_a.shortname
+                agent_b.display_name = config_b.shortname
+        else:
+            # Fallback to agent IDs
+            agent_a.display_name = "Agent A"
+            agent_b.display_name = "Agent B"
+            agent_a.model_shortname = None
+            agent_b.model_shortname = None
+            
+    async def _initialize_event_system(self, conv_dir: Path, display_mode: str, 
+                                      show_timing: bool, agents: Dict[str, Agent]):
+        """Initialize EventBus and display components."""
+        # Create event bus with logging
+        event_log_path = conv_dir / "events.jsonl"
+        self.bus = EventBus(event_log_path)
+        await self.bus.start()
+
+        # Create event logger and display filter based on mode
+        if display_mode == "verbose":
+            # Use original event logger for verbose mode
+            self.event_logger = EventLogger(self.bus, self.console)
+        else:
+            # Use display filter for normal/quiet modes
+            self.display_filter = DisplayFilter(
+                self.console, display_mode, show_timing, agents
+            )
+            self.bus.subscribe(Event, self.display_filter.handle_event)
+            # Still create event logger but without console output (for file logging)
+            self.event_logger = EventLogger(self.bus, None)
+
+        # Wrap providers with event awareness now that bus exists
+        self.wrapped_providers = {
+            agent_id: EventAwareProvider(provider, self.bus, agent_id)
+            for agent_id, provider in self.base_providers.items()
+        }
+
+        # Subscribe to message completions
+        self.bus.subscribe(MessageCompleteEvent, self._handle_message_complete)
+        
+    def _create_conversation(self, conv_id: str, agent_a: Agent, agent_b: Agent, 
+                            initial_prompt: str) -> Conversation:
+        """Create and initialize conversation object."""
+        conversation = Conversation(
+            agents=[agent_a, agent_b],
+            initial_prompt=initial_prompt,
+        )
+        conversation.id = conv_id  # Use our generated ID
+        return conversation
+        
+    async def _add_initial_messages(self, conversation: Conversation, 
+                                   system_prompts: Dict[str, str], 
+                                   initial_prompt: str):
+        """Add system prompts and initial message to conversation."""
+        system_prompt_a = system_prompts["agent_a"]
+        system_prompt_b = system_prompts["agent_b"]
+
+        # Add system prompt and initial message
+        messages_to_add = []
+        if system_prompt_a:  # Only add if non-empty (chaos mode has empty prompts)
+            messages_to_add.append(
+                Message(role="system", content=system_prompt_a, agent_id="system")
+            )
+        messages_to_add.append(
+            Message(role="user", content=f"[HUMAN]: {initial_prompt}", agent_id="researcher")
+        )
+        
+        conversation.messages.extend(messages_to_add)
+        
+    async def _emit_start_events(self, conversation: Conversation, agent_a: Agent, 
+                                agent_b: Agent, initial_prompt: str, max_turns: int,
+                                system_prompts: Dict[str, str]):
+        """Emit all start-of-conversation events."""
+        # Emit conversation start event
+        await self.bus.emit(
+            ConversationStartEvent(
+                conversation_id=conversation.id,
+                agent_a_model=agent_a.model,
+                agent_b_model=agent_b.model,
+                initial_prompt=initial_prompt,
+                max_turns=max_turns,
+                agent_a_display_name=agent_a.display_name,
+                agent_b_display_name=agent_b.display_name,
+            )
+        )
+
+        # Emit system prompt events for both agents
+        system_prompt_a = system_prompts["agent_a"]
+        system_prompt_b = system_prompts["agent_b"]
+        
+        if system_prompt_a:  # Only emit if non-empty
+            await self.bus.emit(
+                SystemPromptEvent(
+                    conversation_id=conversation.id,
+                    agent_id="agent_a",
+                    prompt=system_prompt_a,
+                    agent_display_name=agent_a.display_name,
+                )
+            )
+
+        if system_prompt_b:  # Only emit if non-empty
+            await self.bus.emit(
+                SystemPromptEvent(
+                    conversation_id=conversation.id,
+                    agent_id="agent_b",
+                    prompt=system_prompt_b,
+                    agent_display_name=agent_b.display_name,
+                )
+            )
+            
+    async def _emit_end_event(self, conversation: Conversation, final_turn: int, 
+                             max_turns: int, start_time: float):
+        """Emit conversation end event and cleanup."""
+        # Calculate duration
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        # Emit end event
+        await self.bus.emit(
+            ConversationEndEvent(
+                conversation_id=conversation.id,
+                reason="max_turns" if final_turn == max_turns - 1 else "completed",
+                total_turns=final_turn + 1,
+                duration_ms=duration_ms,
+            )
+        )
+
+        # Stop the event bus to ensure all events are written
+        await self.bus.stop()
