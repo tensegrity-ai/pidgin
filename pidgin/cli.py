@@ -88,21 +88,38 @@ class BannerGroup(click.Group):
 
     def format_help(self, ctx, formatter):
         from rich.console import Console
+        from rich.panel import Panel
         from rich.text import Text
+        from rich.align import Align
 
         console = Console()
-        title = Text("PIDGIN", style="bold cyan")
-        subtitle = Text("AI Conversation Research Tool", style="dim")
-        tagline = Text(
-            "Where language models meet, talk, and sometimes argue...",
-            style="italic dim",
+        
+        # Create the minimalist banner with Nord colors
+        banner_text = Text()
+        banner_text.append("pidgin v0.1.0", style="#d8dee9")  # nord4
+        banner_text.append(" — ", style="#4c566a")  # nord3
+        banner_text.append("linguistic emergence observatory", style="#8fbcbb")  # nord7
+        
+        # Create the separator line
+        separator = "═" * 48
+        
+        # Combine into a panel with Nord styling
+        content = Text()
+        content.append(banner_text)
+        content.append("\n")
+        content.append(separator, style="#5e81ac")  # nord10
+        
+        # Create panel with Nord background color hint
+        panel = Panel(
+            Align.center(content),
+            border_style="#5e81ac",  # nord10
+            padding=(1, 2),
+            style="on #2e3440"  # nord0 background hint
         )
-
+        
+        console.print(panel)
         console.print()
-        console.print(title, justify="left")
-        console.print(subtitle, justify="left")
-        console.print(tagline, justify="left")
-        console.print()
+        
         super().format_help(ctx, formatter)
 
 
