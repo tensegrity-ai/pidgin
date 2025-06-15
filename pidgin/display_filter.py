@@ -31,13 +31,15 @@ class DisplayFilter:
     # Nord color palette
     COLORS = {
         "nord0": "#2e3440",  # Background
-        "nord3": "#4c566a",  # Muted gray
+        "nord3": "#4c566a",  # Muted gray (dim text)
         "nord4": "#d8dee9",  # Light gray
         "nord7": "#8fbcbb",  # Teal - Setup
         "nord8": "#88c0d0",  # Light blue - Human
-        "nord13": "#ebcb8b",  # Yellow - System
-        "nord14": "#a3be8c",  # Green - Agent A
-        "nord15": "#5e81ac",  # Blue - Agent B
+        "nord11": "#bf616a", # Red - Errors
+        "nord12": "#d08770", # Orange - Warnings
+        "nord13": "#ebcb8b", # Yellow - Caution/Timeout
+        "nord14": "#a3be8c", # Green - Success/Agent A
+        "nord15": "#5e81ac", # Blue - Agent B
     }
 
     def __init__(
@@ -110,7 +112,7 @@ class DisplayFilter:
         content += f"◈ {agent_a_display}: {event.agent_a_model}\n"
         content += f"◈ {agent_b_display}: {event.agent_b_model}\n"
         content += f"◈ Max turns: {event.max_turns}\n"
-        content += f"◈ [dim]Press Ctrl+C to pause[/dim]\n\n"
+        content += f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause[/{self.COLORS['nord3']}]\n\n"
 
         # Show initial prompt
         content += f"[bold]Initial Prompt:[/bold]\n{event.initial_prompt}"
@@ -148,7 +150,7 @@ class DisplayFilter:
 
         self.console.print(
             Panel(
-                f"[dim]System instructions:[/dim]\n\n{event.prompt}",
+                f"[{self.COLORS['nord3']}]System instructions:[/{self.COLORS['nord3']}]\n\n{event.prompt}",
                 title=title,
                 border_style=style,
                 padding=(1, 2),
@@ -203,7 +205,7 @@ class DisplayFilter:
             content = str(event.message)
 
         if self.show_timing:
-            timing_info = f"\n\n[dim]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/dim]"
+            timing_info = f"\n\n[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]"
             content += timing_info
 
         self.console.print(
@@ -245,20 +247,20 @@ class DisplayFilter:
         """Minimal start display."""
         self.max_turns = event.max_turns
         self.console.print(
-            f"[dim]Starting conversation ({event.max_turns} turns)...[/dim]"
+            f"[{self.COLORS['nord3']}]Starting conversation ({event.max_turns} turns)...[/{self.COLORS['nord3']}]"
         )
 
     def _show_quiet_turn(self, event: TurnCompleteEvent):
         """Minimal turn display."""
         self.current_turn = event.turn_number + 1
         self.console.print(
-            f"[dim]Turn {self.current_turn}/{self.max_turns} complete[/dim]"
+            f"[{self.COLORS['nord3']}]Turn {self.current_turn}/{self.max_turns} complete[/{self.COLORS['nord3']}]"
         )
 
     def _show_quiet_end(self, event: ConversationEndEvent):
         """Minimal end display."""
         self.console.print(
-            f"[dim]Done. {event.total_turns} turns in {event.duration_ms/1000:.1f}s[/dim]"
+            f"[{self.COLORS['nord3']}]Done. {event.total_turns} turns in {event.duration_ms/1000:.1f}s[/{self.COLORS['nord3']}]"
         )
 
     def _show_api_error(self, event: APIErrorEvent):
@@ -269,7 +271,7 @@ class DisplayFilter:
             agent_name = self.agents[event.agent_id].display_name or event.agent_id
 
         # Build error content
-        content = f"[bold red]API Error[/bold red]\n\n"
+        content = f"[bold {self.COLORS['nord11']}]API Error[/bold {self.COLORS['nord11']}]\n\n"
         content += f"◈ Agent: {agent_name or event.agent_id}\n"
         content += f"◈ Provider: {event.provider}\n"
 
@@ -281,27 +283,27 @@ class DisplayFilter:
 
         # Show retry info
         if event.retryable:
-            content += f"\n[yellow]⟳ This error is retryable. The system will attempt to recover.[/yellow]"
+            content += f"\n[{self.COLORS['nord13']}]⟳ This error is retryable. The system will attempt to recover.[/{self.COLORS['nord13']}]"
         else:
-            content += f"\n[red]✗ This error cannot be automatically retried.[/red]"
+            content += f"\n[{self.COLORS['nord11']}]✗ This error cannot be automatically retried.[/{self.COLORS['nord11']}]"
 
         self.console.print(
-            Panel(content, title="⚠ Error", border_style="red", padding=(1, 2))
+            Panel(content, title="⚠ Error", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
 
     def _show_error(self, event: ErrorEvent):
         """Show generic error."""
         content = (
-            f"[bold red]{event.error_type.replace('_', ' ').title()}[/bold red]\n\n"
+            f"[bold {self.COLORS['nord11']}]{event.error_type.replace('_', ' ').title()}[/bold {self.COLORS['nord11']}]\n\n"
         )
         content += f"{event.error_message}"
 
         if event.context:
-            content += f"\n\n[dim]Context: {event.context}[/dim]"
+            content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title="⚠ Error", border_style="red", padding=(1, 2))
+            Panel(content, title="⚠ Error", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
         
@@ -312,7 +314,7 @@ class DisplayFilter:
         if event.agent_id in self.agents:
             agent_name = self.agents[event.agent_id].display_name or event.agent_id
             
-        content = f"[bold yellow]Timeout[/bold yellow]\n\n"
+        content = f"[bold {self.COLORS['nord13']}]Timeout[/bold {self.COLORS['nord13']}]\n\n"
         content += f"◈ Agent: {agent_name or event.agent_id}\n"
         content += f"◈ Timeout: {event.timeout_seconds}s\n"
         content += f"◈ {event.error_message}\n"
@@ -324,7 +326,7 @@ class DisplayFilter:
             Panel(
                 content,
                 title="⏱ Timeout",
-                border_style="yellow",
+                border_style=self.COLORS["nord13"],
                 padding=(1, 2)
             )
         )
@@ -332,4 +334,4 @@ class DisplayFilter:
     
     def _show_resumed(self, event: ConversationResumedEvent):
         """Show conversation resumed notification."""
-        self.console.print("\n[green]▶ Conversation resumed[/green]\n")
+        self.console.print(f"\n[{self.COLORS['nord14']}]▶ Conversation resumed[/{self.COLORS['nord14']}]\n")

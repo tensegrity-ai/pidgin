@@ -43,6 +43,10 @@ from .user_interaction import UserInteractionHandler, TimeoutDecision
 
 class Conductor:
     """Event-driven conversation orchestrator."""
+    
+    # Nord colors for consistency
+    NORD_YELLOW = "#ebcb8b"  # nord13
+    NORD_RED = "#bf616a"     # nord11
 
     def __init__(
         self,
@@ -90,7 +94,7 @@ class Conductor:
                 self.interrupt_requested = True
                 # Show immediate feedback
                 if self.console:
-                    self.console.print("\n[yellow]⏸ Interrupt received, pausing after current message...[/yellow]")
+                    self.console.print(f"\n[{self.NORD_YELLOW}]⏸ Interrupt received, pausing after current message...[/{self.NORD_YELLOW}]")
         
         # Save original handler and set our own
         self._original_sigint_handler = signal.signal(signal.SIGINT, handle_interrupt)
@@ -423,7 +427,7 @@ class Conductor:
                 except asyncio.TimeoutError:
                     if self.user_interaction.console:
                         self.user_interaction.console.print(
-                            f"[red]{agent.display_name} still not responding. Skipping turn.[/red]"
+                            f"[{self.NORD_RED}]{agent.display_name} still not responding. Skipping turn.[/{self.NORD_RED}]"
                         )
                     return None
 

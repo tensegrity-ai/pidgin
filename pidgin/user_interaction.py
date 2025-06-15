@@ -15,6 +15,15 @@ class TimeoutDecision(Enum):
 class UserInteractionHandler:
     """Handles all user interactions in a consistent way."""
     
+    # Nord color palette for consistency
+    NORD_COLORS = {
+        "dim": "#4c566a",     # nord3 - muted gray
+        "red": "#bf616a",     # nord11 - red
+        "yellow": "#ebcb8b",  # nord13 - yellow
+        "green": "#a3be8c",   # nord14 - green
+        "cyan": "#88c0d0",    # nord8 - cyan
+    }
+    
     def __init__(self, console: Optional[Console] = None):
         """Initialize with optional console for display.
         
@@ -61,9 +70,9 @@ class UserInteractionHandler:
             return
             
         self.console.print(
-            f"\n[yellow]⚠ {agent_display_name} is taking longer than expected.[/yellow]"
+            f"\n[{self.NORD_COLORS['yellow']}]⚠ {agent_display_name} is taking longer than expected.[/{self.NORD_COLORS['yellow']}]"
         )
-        self.console.print("[yellow]Options:[/yellow]")
+        self.console.print(f"[{self.NORD_COLORS['yellow']}]Options:[/{self.NORD_COLORS['yellow']}]")
         self.console.print("  1. Wait longer (press Enter)")
         self.console.print("  2. Skip this turn (type 'skip')")
         self.console.print("  3. End conversation (type 'end')")
@@ -71,17 +80,17 @@ class UserInteractionHandler:
     def show_pause_notification(self):
         """Show that conversation is pausing."""
         if self.console:
-            self.console.print("\n[yellow]⏸ Pausing conversation...[/yellow]\n")
+            self.console.print(f"\n[{self.NORD_COLORS['yellow']}]⏸ Pausing conversation...[/{self.NORD_COLORS['yellow']}]\n")
     
     def get_pause_decision(self) -> str:
         """Get user decision while paused."""
         if not self.console:
             return "continue"
             
-        self.console.print("[bold cyan]Conversation Paused[/bold cyan]")
+        self.console.print(f"[bold {self.NORD_COLORS['cyan']}]Conversation Paused[/bold {self.NORD_COLORS['cyan']}]")
         self.console.print("\nOptions:")
-        self.console.print("  1. [green]Continue[/green] - Resume the conversation")
-        self.console.print("  2. [red]Exit[/red] - End the conversation")
+        self.console.print(f"  1. [{self.NORD_COLORS['green']}]Continue[/{self.NORD_COLORS['green']}] - Resume the conversation")
+        self.console.print(f"  2. [{self.NORD_COLORS['red']}]Exit[/{self.NORD_COLORS['red']}] - End the conversation")
         self.console.print()
         
         while True:
@@ -92,7 +101,7 @@ class UserInteractionHandler:
                 elif choice == "2" or choice.lower() == "exit":
                     return "exit"
                 else:
-                    self.console.print("[red]Invalid choice. Please enter 1 or 2.[/red]")
+                    self.console.print(f"[{self.NORD_COLORS['red']}]Invalid choice. Please enter 1 or 2.[/{self.NORD_COLORS['red']}]")
             except (EOFError, KeyboardInterrupt):
                 # Handle Ctrl+C during pause menu as exit
                 return "exit"
