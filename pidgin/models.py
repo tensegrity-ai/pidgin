@@ -20,6 +20,7 @@ class ModelConfig:
     """Complete configuration for a model."""
 
     model_id: str
+    shortname: str
     aliases: List[str]
     provider: Literal["anthropic", "openai", "google", "xai"]
     context_window: int
@@ -35,6 +36,7 @@ MODELS: Dict[str, ModelConfig] = {
     # Anthropic Models
     "claude-4-opus-20250514": ModelConfig(
         model_id="claude-4-opus-20250514",
+        shortname="Opus",
         aliases=["opus", "opus4", "claude-opus"],
         provider="anthropic",
         context_window=200000,
@@ -49,6 +51,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "claude-4-sonnet-20250514": ModelConfig(
         model_id="claude-4-sonnet-20250514",
+        shortname="Sonnet",
         aliases=["sonnet", "sonnet4", "claude-sonnet", "claude"],
         provider="anthropic",
         context_window=200000,
@@ -63,6 +66,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "claude-3-7-sonnet-20250224": ModelConfig(
         model_id="claude-3-7-sonnet-20250224",
+        shortname="Sonnet3.7",
         aliases=["sonnet3.7", "claude-3.7"],
         provider="anthropic",
         context_window=200000,
@@ -78,6 +82,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "claude-3-5-haiku-20241022": ModelConfig(
         model_id="claude-3-5-haiku-20241022",
+        shortname="Haiku",
         aliases=["haiku", "haiku3.5", "claude-haiku"],
         provider="anthropic",
         context_window=200000,
@@ -92,6 +97,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "claude-3-haiku-20240307": ModelConfig(
         model_id="claude-3-haiku-20240307",
+        shortname="Haiku3",
         aliases=["haiku3", "claude-3-haiku"],
         provider="anthropic",
         context_window=200000,
@@ -108,6 +114,7 @@ MODELS: Dict[str, ModelConfig] = {
     # OpenAI Models
     "gpt-4.1": ModelConfig(
         model_id="gpt-4.1",
+        shortname="GPT-4.1",
         aliases=["gpt4.1", "coding", "4.1"],
         provider="openai",
         context_window=1000000,
@@ -123,6 +130,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4.1-mini": ModelConfig(
         model_id="gpt-4.1-mini",
+        shortname="GPT-Mini",
         aliases=["gpt4.1-mini", "coding-mini", "gpt-mini"],
         provider="openai",
         context_window=1000000,
@@ -137,6 +145,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4.1-nano": ModelConfig(
         model_id="gpt-4.1-nano",
+        shortname="GPT-Nano",
         aliases=["gpt4.1-nano", "coding-fast", "nano"],
         provider="openai",
         context_window=1000000,
@@ -151,6 +160,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "o3": ModelConfig(
         model_id="o3",
+        shortname="O3",
         aliases=["reasoning-premium"],
         provider="openai",
         context_window=128000,
@@ -166,6 +176,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "o3-mini": ModelConfig(
         model_id="o3-mini",
+        shortname="O3-Mini",
         aliases=["reasoning-small"],
         provider="openai",
         context_window=128000,
@@ -181,6 +192,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "o4-mini": ModelConfig(
         model_id="o4-mini",
+        shortname="O4",
         aliases=["reasoning", "o4"],
         provider="openai",
         context_window=128000,
@@ -196,6 +208,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "o4-mini-high": ModelConfig(
         model_id="o4-mini-high",
+        shortname="O4-High",
         aliases=["reasoning-high", "o4-high"],
         provider="openai",
         context_window=128000,
@@ -211,6 +224,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4.5": ModelConfig(
         model_id="gpt-4.5",
+        shortname="GPT-4.5",
         aliases=["gpt4.5", "4.5"],
         provider="openai",
         context_window=128000,
@@ -228,6 +242,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4o": ModelConfig(
         model_id="gpt-4o",
+        shortname="GPT-4o",
         aliases=["gpt4o", "4o", "multimodal", "gpt"],
         provider="openai",
         context_window=128000,
@@ -243,6 +258,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-4o-mini": ModelConfig(
         model_id="gpt-4o-mini",
+        shortname="GPT-4o-Mini",
         aliases=["gpt4o-mini", "4o-mini"],
         provider="openai",
         context_window=128000,
@@ -258,6 +274,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gpt-image-1": ModelConfig(
         model_id="gpt-image-1",
+        shortname="DALL-E",
         aliases=["image", "dalle"],
         provider="openai",
         context_window=0,  # Not applicable for image generation
@@ -274,6 +291,7 @@ MODELS: Dict[str, ModelConfig] = {
     # Google Models
     "gemini-2.0-flash-exp": ModelConfig(
         model_id="gemini-2.0-flash-exp",
+        shortname="Flash",
         aliases=["gemini-flash", "flash", "gemini"],
         provider="google",
         context_window=1048576,  # 1M tokens
@@ -289,6 +307,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gemini-2.0-flash-thinking-exp": ModelConfig(
         model_id="gemini-2.0-flash-thinking-exp",
+        shortname="Thinking",
         aliases=["gemini-thinking", "thinking", "flash-thinking"],
         provider="google",
         context_window=32767,
@@ -304,6 +323,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gemini-exp-1206": ModelConfig(
         model_id="gemini-exp-1206",
+        shortname="Gemini-Exp",
         aliases=["gemini-exp", "exp-1206"],
         provider="google",
         context_window=2097152,  # 2M tokens
@@ -319,6 +339,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gemini-1.5-pro": ModelConfig(
         model_id="gemini-1.5-pro",
+        shortname="Gemini-Pro",
         aliases=["gemini-pro", "1.5-pro"],
         provider="google",
         context_window=2097152,  # 2M tokens
@@ -334,6 +355,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gemini-1.5-flash": ModelConfig(
         model_id="gemini-1.5-flash",
+        shortname="Flash-1.5",
         aliases=["flash-1.5"],
         provider="google",
         context_window=1048576,  # 1M tokens
@@ -349,6 +371,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "gemini-1.5-flash-8b": ModelConfig(
         model_id="gemini-1.5-flash-8b",
+        shortname="Flash-8B",
         aliases=["flash-8b", "gemini-8b"],
         provider="google",
         context_window=1048576,  # 1M tokens
@@ -365,6 +388,7 @@ MODELS: Dict[str, ModelConfig] = {
     # xAI Models
     "grok-beta": ModelConfig(
         model_id="grok-beta",
+        shortname="Grok",
         aliases=["grok", "xai"],
         provider="xai",
         context_window=131072,  # 128K tokens
@@ -380,6 +404,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "grok-2-1212": ModelConfig(
         model_id="grok-2-1212",
+        shortname="Grok-2",
         aliases=["grok-2", "grok2"],
         provider="xai",
         context_window=131072,  # 128K tokens
@@ -395,6 +420,7 @@ MODELS: Dict[str, ModelConfig] = {
     ),
     "grok-2-vision-1212": ModelConfig(
         model_id="grok-2-vision-1212",
+        shortname="Grok-Vision",
         aliases=["grok-vision", "grok-2-vision"],
         provider="xai",
         context_window=131072,  # 128K tokens

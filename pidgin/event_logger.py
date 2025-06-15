@@ -50,6 +50,10 @@ class EventLogger:
         Args:
             event: The event to log
         """
+        # Skip if no console provided (file-only logging)
+        if self.console is None:
+            return
+            
         # Get color for this event type
         color = self.EVENT_COLORS.get(type(event), "white")
         

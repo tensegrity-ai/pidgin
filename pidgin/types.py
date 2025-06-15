@@ -61,6 +61,8 @@ class Message(BaseModel):
 class Agent(BaseModel):
     id: str
     model: str
+    display_name: Optional[str] = None
+    model_shortname: Optional[str] = None  # Store the original model shortname
 
 
 class Conversation(BaseModel):

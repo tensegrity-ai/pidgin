@@ -147,32 +147,6 @@ class TestContextWindowManager:
 class TestContextLimitHandling:
     """Test handling of conversations approaching context limits."""
 
-    def test_context_limit_scenario(self):
-        """Verify graceful handling as context approaches limit."""
-        from pidgin.dialogue import DialogueEngine
-        from pidgin.types import Agent
-
-        # Mock components
-        mock_router = Mock()
-        mock_transcript_manager = Mock()
-        mock_config = {
-            "context_management": {
-                "enabled": True,
-                "warning_threshold": 80,
-                "auto_pause_threshold": 95,
-                "show_usage": True,
-            }
-        }
-
-        # Create engine
-        engine = DialogueEngine(mock_router, mock_transcript_manager, mock_config)
-
-        # Verify context manager is initialized
-        assert engine.context_manager is not None
-        assert engine.context_warning_threshold == 80
-        assert engine.context_auto_pause_threshold == 95
-        # show_context_usage doesn't exist anymore in the refactored version
-
     def test_large_message_scenario(self):
         """Test handling of artificially large messages."""
         cm = ContextWindowManager()

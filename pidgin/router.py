@@ -76,27 +76,45 @@ class DirectRouter:
         for msg in messages:
             # System messages get special handling
             if msg.agent_id == "system":
-                # Adjust the content for Agent B
-                if target_agent == "agent_b":
-                    adjusted_content = msg.content.replace(
-                        "You are Agent A", "You are Agent B"
-                    ).replace(
-                        "Your conversation partner (Agent B)",
-                        "Your conversation partner (Agent A)",
-                    )
-                    agent_history.append(
-                        Message(
-                            role="system",
-                            content=adjusted_content,
-                            agent_id=msg.agent_id,
-                        )
-                    )
-                else:
+                # For choose names mode, use the same system prompt for both agents
+                if "Please choose a short name" in msg.content:
+                    # This is a choose-names prompt, use as-is for both agents
                     agent_history.append(
                         Message(
                             role="system", content=msg.content, agent_id=msg.agent_id
                         )
                     )
+                else:
+                    # Adjust the content for Agent B
+                    if target_agent == "agent_b":
+                        adjusted_content = msg.content.replace(
+                            "You are Agent A", "You are Agent B"
+                        ).replace(
+                            "Your conversation partner (Agent B)",
+                            "Your conversation partner (Agent A)",
+                        )
+                        # Also handle model-specific names
+                        adjusted_content = adjusted_content.replace(
+                            "You are Sonnet-1", "You are Sonnet-2"
+                        ).replace(
+                            "Your conversation partner (Sonnet-2)",
+                            "Your conversation partner (Sonnet-1)",
+                        )
+                        agent_history.append(
+                            Message(
+                                role="system",
+                                content=adjusted_content,
+                                agent_id=msg.agent_id,
+                            )
+                        )
+                    else:
+                        agent_history.append(
+                            Message(
+                                role="system",
+                                content=msg.content,
+                                agent_id=msg.agent_id,
+                            )
+                        )
             # Human interventions (anything not from agents or system)
             elif msg.agent_id not in ["agent_a", "agent_b"]:
                 # Mark ALL non-agent messages as human guidance
@@ -118,4 +136,3 @@ class DirectRouter:
                 )
 
         return agent_history
-

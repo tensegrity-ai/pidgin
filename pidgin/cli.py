@@ -11,10 +11,6 @@ from .providers.anthropic import AnthropicProvider
 from .providers.openai import OpenAIProvider
 from .providers.google import GoogleProvider
 from .providers.xai import xAIProvider
-# from .router import DirectRouter  # No longer needed - using event system
-# from .dialogue import DialogueEngine  # REPLACED by event-driven Conductor
-# from .transcripts import TranscriptManager  # May need later for saving
-# from .checkpoint import ConversationState, CheckpointManager  # May need later
 from .config import Config, load_config
 from .dimensional_prompts import DimensionalPromptGenerator
 
@@ -300,6 +296,45 @@ def cli(ctx, config):
     default=0.75,
     help="Convergence warning threshold (default: 0.75)",
 )
+@click.option(
+    "-o",
+    "--output-dir",
+    type=click.Path(),
+    help="Output directory for conversations (default: ./pidgin_output)",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Show all events and chunks (verbose mode)",
+)
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Minimal output (quiet mode)",
+)
+@click.option(
+    "--timing",
+    is_flag=True,
+    help="Show timing information",
+)
+@click.option(
+    "--choose-names",
+    is_flag=True,
+    help="Let agents choose their own names",
+)
+@click.option(
+    "--stability",
+    type=click.IntRange(0, 4),
+    default=2,
+    help="System prompt stability level (0=chaos, 2=default, 4=max)",
+)
+@click.option(
+    "--show-system-prompts",
+    is_flag=True,
+    help="Display system prompts at start",
+)
 def chat(
     model_a,
     model_b,
@@ -314,24 +349,39 @@ def chat(
     no_attractor_detection,
     manual,
     convergence_threshold,
+    output_dir,
+    verbose,
+    quiet,
+    timing,
+    choose_names,
+    stability,
+    show_system_prompts,
 ):
     """Run a conversation between two AI agents using EVENT-DRIVEN ARCHITECTURE"""
     from .event_bus import EventBus
     from .event_logger import EventLogger
     from .conductor import Conductor
     from .providers.event_wrapper import EventAwareProvider
-    
+    from .output_manager import OutputManager
+
     # Build initial prompt from dimensions and/or custom prompt
     initial_prompt = _build_initial_prompt(
         prompt, dimensions, puzzle, experiment, topic_content
     )
     if not initial_prompt:
         initial_prompt = "Hello! I'm looking forward to our conversation."
-    
-    # Initialize EVENT SYSTEM
-    bus = EventBus()
-    logger = EventLogger(bus, console)
-    
+
+    # Determine display mode
+    if quiet:
+        display_mode = "quiet"
+    elif verbose:
+        display_mode = "verbose"
+    else:
+        display_mode = "normal"
+
+    # Create output manager
+    output_manager = OutputManager(output_dir)  # Uses output_dir if provided
+
     # Get model configs
     try:
         config_a = get_model_config(model_a)
@@ -341,7 +391,7 @@ def chat(
     except ValueError as e:
         console.print(f"[red]Model error: {e}[/red]")
         return
-    
+
     # Create providers
     try:
         providers_map = {
@@ -351,34 +401,61 @@ def chat(
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
         return
-    
-    # Wrap providers with EVENT AWARENESS
-    wrapped_providers = {
-        agent_id: EventAwareProvider(provider, bus, agent_id)
-        for agent_id, provider in providers_map.items()
-    }
-    
-    # Create event-driven CONDUCTOR
-    conductor = Conductor(bus, wrapped_providers)
-    
+
+    # Create event-driven CONDUCTOR with output manager
+    conductor = Conductor(providers_map, output_manager, console)
+
     # Create agents
     agent_a_obj = Agent(id="agent_a", model=model_a_id)
     agent_b_obj = Agent(id="agent_b", model=model_b_id)
-    
-    # Display EVENT-DRIVEN configuration
-    console.print(
-        Panel(
-            f"[bold green]🎭 EVENT-DRIVEN CONVERSATION[/bold green]\n"
-            f"Model A: {model_a_id}\n"
-            f"Model B: {model_b_id}\n"
-            f"Max turns: {turns}\n"
-            f"Initial prompt: {initial_prompt[:50]}...\n\n"
-            f"[yellow]All events will be displayed in real-time![/yellow]",
-            title="Event System Active",
-            border_style="green"
+
+    # Show system prompts if requested
+    if show_system_prompts:
+        from .system_prompts import get_system_prompts, get_preset_info
+        system_prompts = get_system_prompts(
+            stability_level=stability,
+            choose_names=choose_names
         )
-    )
-    
+        preset_info = get_preset_info(stability)
+        
+        console.print(f"\n[bold cyan]System Prompts:[/bold cyan]")
+        console.print(f"Stability Level: {stability} ({preset_info['name']})")
+        console.print(f"Description: {preset_info['description']}\n")
+        
+        if system_prompts["agent_a"]:
+            console.print(Panel(
+                system_prompts["agent_a"],
+                title="System Prompt - Agent A",
+                border_style="green"
+            ))
+        else:
+            console.print("[dim]Agent A: No system prompt (chaos mode)[/dim]")
+            
+        if system_prompts["agent_b"]:
+            console.print(Panel(
+                system_prompts["agent_b"],
+                title="System Prompt - Agent B",
+                border_style="blue"
+            ))
+        else:
+            console.print("[dim]Agent B: No system prompt (chaos mode)[/dim]")
+        console.print()
+
+    # Display EVENT-DRIVEN configuration (only in verbose mode)
+    if verbose:
+        console.print(
+            Panel(
+                f"[bold green]🎭 EVENT-DRIVEN CONVERSATION[/bold green]\n"
+                f"Model A: {model_a_id}\n"
+                f"Model B: {model_b_id}\n"
+                f"Max turns: {turns}\n"
+                f"Initial prompt: {initial_prompt[:50]}...\n\n"
+                f"[yellow]All events will be displayed in real-time![/yellow]",
+                title="Event System Active",
+                border_style="green",
+            )
+        )
+
     # Run the conversation
     try:
         conversation = asyncio.run(
@@ -387,13 +464,17 @@ def chat(
                 agent_b=agent_b_obj,
                 initial_prompt=initial_prompt,
                 max_turns=turns,
+                display_mode=display_mode,
+                show_timing=timing,
+                choose_names=choose_names,
+                stability_level=stability,
             )
         )
-        
+
         console.print("\n[bold green]Conversation completed![/bold green]")
         console.print(f"Total messages: {len(conversation.messages)}")
-        console.print(f"Event history: {len(bus.get_history())} events")
-        
+        console.print(f"Conversation ID: {conversation.id}")
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Conversation interrupted by user[/yellow]")
     except Exception as e:
@@ -607,38 +688,10 @@ def resume(checkpoint_file, latest, convergence_threshold, additional_turns):
 
         # TODO: Convert resume command to use event system
         console.print("[red]Resume command not yet converted to event system[/red]")
-        console.print("[yellow]Please start a new conversation with 'pidgin chat'[/yellow]")
+        console.print(
+            "[yellow]Please start a new conversation with 'pidgin chat'[/yellow]"
+        )
         return
-        
-        # COMMENTED OUT - needs event system conversion:
-        # router = DirectRouter(providers)
-        # transcript_manager = TranscriptManager()
-        # cfg = Config()
-        # engine = DialogueEngine(router, transcript_manager, cfg)
-
-        # Prepare run_conversation arguments
-        run_args = {
-            "agent_a": agents["agent_a"],
-            "agent_b": agents["agent_b"],
-            "initial_prompt": state.initial_prompt,
-            "max_turns": final_max_turns,
-            "resume_from_state": state,
-        }
-
-        # Add convergence threshold if specified
-        if convergence_threshold is not None:
-            run_args["convergence_threshold"] = convergence_threshold
-
-        # Resume conversation
-        asyncio.run(engine.run_conversation(**run_args))
-
-        # Resume success message
-        console.print()
-        console.rule("[green]✅ RESUMED CONVERSATION COMPLETE[/green]", style="green")
-        console.print("[green]📁 Transcript updated successfully[/green]")
-        console.print("[green]🔄 Conversation resumed and finished[/green]")
-        console.rule(style="green")
-        console.print()
 
     except FileNotFoundError:
         # File not found error

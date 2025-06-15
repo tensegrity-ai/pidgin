@@ -1,7 +1,7 @@
-"""Dimensional prompt generation system for Pidgin.
+"""Simplified dimensional prompt generation system for Pidgin.
 
-This module implements a dimensional approach to generating initial conversation prompts
-by combining orthogonal dimensions like context, topic, and mode.
+This module implements a simplified dimensional approach focusing on three core dimensions:
+CONTEXT (how they relate), TOPIC (what they discuss), and MODE (how they think).
 """
 
 import random
@@ -26,21 +26,21 @@ class DimensionalPromptGenerator:
 
     Examples:
         peers:philosophy → "Hello! I'm excited to explore the fundamental nature of reality together."
-        debate:language:analytical → "I strongly disagree about how we communicate and create meaning. Let's systematically analyze..."
+        debate:language:analytical → "I strongly disagree about how we communicate and create meaning. Here's why: Let's systematically analyze what we discover."
     """
 
-    # Built-in dimension definitions
+    # Core dimension definitions (simplified to 3)
     CONTEXT_DIMENSION = Dimension(
         name="context",
         description="The conversational relationship",
         required=True,
         values={
             "peers": "Hello! I'm excited to explore {topic} together.",
-            "teaching": "I'd like to help you understand {topic}. Let me explain",
-            "debate": "I strongly disagree about {topic}. Here's why:",
-            "interview": "I'm curious about your thoughts on {topic}. Can you tell me?",
-            "collaboration": "Let's work together to figure out {topic}.",
-            "neutral": "Hello! I'm looking forward to discussing {topic}.",
+            "teaching": "Let's explore {topic} with one of you teaching the other.",
+            "debate": "I'd love to see you debate different perspectives on {topic}.",
+            "interview": "I'm curious to see one of you interview the other about {topic}.",
+            "collaboration": "Please work together to explore {topic}.",
+            "neutral": "Hello! I'm looking forward to seeing you discuss {topic}.",
         },
     )
 
@@ -52,10 +52,10 @@ class DimensionalPromptGenerator:
             "philosophy": "the fundamental nature of reality",
             "language": "how we communicate and create meaning",
             "science": "how the universe works",
-            "meta": "our own conversation and thinking",
             "creativity": "the creative process and imagination",
-            "puzzles": "[SPECIAL]",  # Requires content parameter
-            "thought_experiments": "[SPECIAL]",  # Requires content parameter
+            "meta": "our own conversation and thinking",
+            "puzzles": "[SPECIAL]",  # Requires --puzzle parameter
+            "thought_experiments": "[SPECIAL]",  # Requires --experiment parameter
         },
     )
 
@@ -64,32 +64,10 @@ class DimensionalPromptGenerator:
         description="The analytical approach",
         required=False,
         values={
-            "analytical": "Let's systematically analyze",
-            "intuitive": "I have a feeling that",
-            "exploratory": "I wonder what would happen if",
-            "focused": "Let's focus specifically on",
-        },
-    )
-
-    ENERGY_DIMENSION = Dimension(
-        name="energy",
-        description="The conversational energy level",
-        required=False,
-        values={
-            "calm": "gently exploring",
-            "engaged": "actively investigating",
-            "passionate": "deeply fascinated by",
-        },
-    )
-
-    FORMALITY_DIMENSION = Dimension(
-        name="formality",
-        description="The linguistic register",
-        required=False,
-        values={
-            "casual": "conversational",
-            "professional": "clear and precise",
-            "academic": "scholarly",
+            "analytical": "Let's see you systematically analyze what you discover.",
+            "intuitive": "I have a feeling that fascinating patterns will emerge as you explore.",
+            "exploratory": "I wonder what happens if you follow your curiosity wherever it leads.",
+            "focused": "Please concentrate specifically on the essential elements.",
         },
     )
 
@@ -118,17 +96,12 @@ class DimensionalPromptGenerator:
     }
 
     def __init__(self):
-        """Initialize the generator with built-in dimensions."""
+        """Initialize the generator with the three core dimensions."""
         self.dimensions = {
             "context": self.CONTEXT_DIMENSION,
             "topic": self.TOPIC_DIMENSION,
             "mode": self.MODE_DIMENSION,
-            "energy": self.ENERGY_DIMENSION,
-            "formality": self.FORMALITY_DIMENSION,
         }
-
-        # Load any custom dimensions from config
-        self._load_custom_dimensions()
 
     def generate(
         self,
@@ -165,9 +138,6 @@ class DimensionalPromptGenerator:
         # Build the prompt
         prompt = self._build_prompt(parsed, topic_value)
 
-        # Apply style modifiers
-        prompt = self._apply_style_modifiers(prompt, parsed)
-
         return prompt
 
     def _parse_dimensions(self, dimension_spec: str) -> Dict[str, str]:
@@ -199,21 +169,26 @@ class DimensionalPromptGenerator:
 
     def _validate_dimensions(self, parsed: Dict[str, str]):
         """Validate that all required dimensions are present and valid."""
-        # Check required dimensions
-        for dim_name, dim in self.dimensions.items():
-            if dim.required and dim_name not in parsed:
-                raise ValueError(
-                    f"Missing required dimension '{dim_name}'. "
-                    f"Available values: {', '.join(dim.values.keys())}"
-                )
+        # Check required dimensions (context and topic)
+        if "context" not in parsed:
+            raise ValueError(
+                f"Missing required dimension 'context'. "
+                f"Available values: {', '.join(self.CONTEXT_DIMENSION.values.keys())}"
+            )
+        
+        if "topic" not in parsed:
+            raise ValueError(
+                f"Missing required dimension 'topic'. "
+                f"Available values: {', '.join(self.TOPIC_DIMENSION.values.keys())}"
+            )
 
-            # Validate values
-            if dim_name in parsed:
-                value = parsed[dim_name]
-                if value not in dim.values:
+        # Validate all provided values
+        for dim_name, value in parsed.items():
+            if dim_name in self.dimensions:
+                if value not in self.dimensions[dim_name].values:
                     raise ValueError(
                         f"Unknown {dim_name} '{value}'. "
-                        f"Available: {', '.join(dim.values.keys())}"
+                        f"Available: {', '.join(self.dimensions[dim_name].values.keys())}"
                     )
 
     def _resolve_topic(
@@ -295,62 +270,22 @@ class DimensionalPromptGenerator:
             return exp_data
 
     def _build_prompt(self, parsed: Dict[str, str], topic_value: str) -> str:
-        """Build the base prompt from dimensions."""
-        # Get context template
-        context = parsed.get("context", "neutral")
-        template = self.CONTEXT_DIMENSION.values[context]
-
-        # Replace topic placeholder
-        prompt = template.format(topic=topic_value)
-
-        # Add mode prefix if specified
+        """Build the prompt from dimensions using simplified composition logic."""
+        # 1. Get context template (required)
+        context = parsed.get("context", "peers")
+        prompt = self.CONTEXT_DIMENSION.values[context].format(topic=topic_value)
+        
+        # 2. Add mode if specified (optional)
         if "mode" in parsed:
-            mode_phrase = self.MODE_DIMENSION.values[parsed["mode"]]
-            prompt = f"{prompt} {mode_phrase}"
-
-        # Add energy modifier if specified
-        if "energy" in parsed:
-            energy_phrase = self.ENERGY_DIMENSION.values[parsed["energy"]]
-            # Insert energy phrase into the prompt
-            if "explore" in prompt:
-                prompt = prompt.replace("explore", f"{energy_phrase}")
-            elif "discuss" in prompt:
-                prompt = prompt.replace("discuss", f"{energy_phrase}")
-            elif "figure out" in prompt:
-                prompt = prompt.replace("figure out", f"{energy_phrase}")
-
-        # Ensure proper ending punctuation
+            mode_sentence = self.MODE_DIMENSION.values[parsed["mode"]]
+            prompt = f"{prompt} {mode_sentence}"
+        
+        # 3. Ensure proper ending
         if not prompt.rstrip().endswith((".", "!", "?", ":")):
             prompt = prompt.rstrip() + "."
-
+        
         return prompt
 
-    def _apply_style_modifiers(self, prompt: str, parsed: Dict[str, str]) -> str:
-        """Apply formality and other style modifiers to the prompt."""
-        formality = parsed.get("formality", "professional")
-
-        if formality == "casual":
-            # Make more casual
-            prompt = prompt.replace("I am", "I'm")
-            prompt = prompt.replace("Let us", "Let's")
-            prompt = prompt.replace("cannot", "can't")
-            prompt = prompt.replace("will not", "won't")
-
-        elif formality == "academic":
-            # Make more formal
-            prompt = prompt.replace("I'm", "I am")
-            prompt = prompt.replace("Let's", "Let us")
-            prompt = prompt.replace("can't", "cannot")
-            prompt = prompt.replace("won't", "will not")
-            # Could add more scholarly language here
-
-        return prompt
-
-    def _load_custom_dimensions(self):
-        """Load custom dimensions from config files if they exist."""
-        # This is for future extensibility
-        # For now, we only use built-in dimensions
-        pass
 
     def _load_custom_content(self, content_type: str) -> Dict:
         """Load custom puzzles or thought experiments from user config."""
