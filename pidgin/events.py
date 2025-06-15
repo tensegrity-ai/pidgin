@@ -141,3 +141,29 @@ class ProviderTimeoutEvent(Event):
     agent_id: str
     timeout_seconds: float
     context: Optional[str] = None
+
+
+@dataclass
+class InterruptRequestEvent(Event):
+    """User requested to pause the conversation."""
+    
+    conversation_id: str
+    turn_number: int
+    interrupt_source: str = "user"  # "user", "convergence", "context_limit"
+
+
+@dataclass
+class ConversationPausedEvent(Event):
+    """Conversation has been paused."""
+    
+    conversation_id: str
+    turn_number: int
+    paused_during: str  # "waiting_for_agent_a", "waiting_for_agent_b", "between_turns"
+
+
+@dataclass
+class ConversationResumedEvent(Event):
+    """Conversation has been resumed."""
+    
+    conversation_id: str
+    turn_number: int

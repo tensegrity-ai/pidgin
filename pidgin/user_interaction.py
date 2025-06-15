@@ -67,3 +67,32 @@ class UserInteractionHandler:
         self.console.print("  1. Wait longer (press Enter)")
         self.console.print("  2. Skip this turn (type 'skip')")
         self.console.print("  3. End conversation (type 'end')")
+    
+    def show_pause_notification(self):
+        """Show that conversation is pausing."""
+        if self.console:
+            self.console.print("\n[yellow]⏸ Pausing conversation...[/yellow]\n")
+    
+    def get_pause_decision(self) -> str:
+        """Get user decision while paused."""
+        if not self.console:
+            return "continue"
+            
+        self.console.print("[bold cyan]Conversation Paused[/bold cyan]")
+        self.console.print("\nOptions:")
+        self.console.print("  1. [green]Continue[/green] - Resume the conversation")
+        self.console.print("  2. [red]Exit[/red] - End the conversation")
+        self.console.print()
+        
+        while True:
+            try:
+                choice = input("Your choice (1/2): ").strip()
+                if choice == "1" or choice.lower() == "continue":
+                    return "continue"
+                elif choice == "2" or choice.lower() == "exit":
+                    return "exit"
+                else:
+                    self.console.print("[red]Invalid choice. Please enter 1 or 2.[/red]")
+            except (EOFError, KeyboardInterrupt):
+                # Handle Ctrl+C during pause menu as exit
+                return "exit"

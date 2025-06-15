@@ -19,6 +19,9 @@ from .events import (
     APIErrorEvent,
     ErrorEvent,
     ProviderTimeoutEvent,
+    InterruptRequestEvent,
+    ConversationPausedEvent,
+    ConversationResumedEvent,
 )
 
 
@@ -92,6 +95,8 @@ class DisplayFilter:
                 self._show_error(event)
             elif isinstance(event, ConversationEndEvent):
                 self._show_conversation_end(event)
+            elif isinstance(event, ConversationResumedEvent):
+                self._show_resumed(event)
 
     def _show_conversation_start(self, event: ConversationStartEvent):
         """Show conversation setup panel."""
@@ -104,7 +109,8 @@ class DisplayFilter:
         content = f"[bold]Starting Conversation[/bold]\n\n"
         content += f"◈ {agent_a_display}: {event.agent_a_model}\n"
         content += f"◈ {agent_b_display}: {event.agent_b_model}\n"
-        content += f"◈ Max turns: {event.max_turns}\n\n"
+        content += f"◈ Max turns: {event.max_turns}\n"
+        content += f"◈ [dim]Press Ctrl+C to pause[/dim]\n\n"
 
         # Show initial prompt
         prompt_preview = event.initial_prompt
@@ -326,3 +332,7 @@ class DisplayFilter:
             )
         )
         self.console.print()
+    
+    def _show_resumed(self, event: ConversationResumedEvent):
+        """Show conversation resumed notification."""
+        self.console.print("\n[green]▶ Conversation resumed[/green]\n")

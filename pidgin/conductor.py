@@ -6,6 +6,7 @@ No need for separate checkpoint files - events ARE the state.
 
 import asyncio
 import re
+import signal
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -27,6 +28,9 @@ from .events import (
     SystemPromptEvent,
     ErrorEvent,
     ProviderTimeoutEvent,
+    InterruptRequestEvent,
+    ConversationPausedEvent,
+    ConversationResumedEvent,
 )
 from .models import get_model_config
 from .output_manager import OutputManager
@@ -72,6 +76,75 @@ class Conductor:
         
         # Track conversation directory for transcript saving
         self.current_conv_dir: Optional[Path] = None
+        
+        # Interrupt handling
+        self.interrupt_requested = False
+        self.paused = False
+        self._original_sigint_handler = None
+        self.current_turn = 0
+
+    def _setup_interrupt_handler(self, conversation_id: str):
+        """Set up Ctrl+C as interrupt trigger."""
+        def handle_interrupt(signum, frame):
+            if not self.interrupt_requested:  # Prevent multiple interrupts
+                self.interrupt_requested = True
+                # Show immediate feedback
+                if self.console:
+                    self.console.print("\n[yellow]⏸ Interrupt received, pausing after current message...[/yellow]")
+        
+        # Save original handler and set our own
+        self._original_sigint_handler = signal.signal(signal.SIGINT, handle_interrupt)
+    
+    def _restore_interrupt_handler(self):
+        """Restore original interrupt handler."""
+        if self._original_sigint_handler:
+            signal.signal(signal.SIGINT, self._original_sigint_handler)
+            self._original_sigint_handler = None
+    
+    async def _handle_interrupt_request(self, conversation_id: str):
+        """Handle interrupt request."""
+        await self.bus.emit(InterruptRequestEvent(
+            conversation_id=conversation_id,
+            turn_number=self.current_turn,
+            interrupt_source="user"
+        ))
+    
+    async def _handle_pause(self, conversation: Conversation):
+        """Handle conversation pause."""
+        # Emit interrupt request event
+        await self._handle_interrupt_request(conversation.id)
+        
+        # Show pause notification
+        self.user_interaction.show_pause_notification()
+        
+        # Emit paused event
+        await self.bus.emit(ConversationPausedEvent(
+            conversation_id=conversation.id,
+            turn_number=self.current_turn,
+            paused_during="between_turns"
+        ))
+        
+        self.paused = True
+    
+    async def _should_continue(self, conversation: Conversation) -> bool:
+        """Check if conversation should continue after pause."""
+        # Get user decision
+        decision = self.user_interaction.get_pause_decision()
+        
+        if decision == "continue":
+            # Emit resumed event
+            await self.bus.emit(ConversationResumedEvent(
+                conversation_id=conversation.id,
+                turn_number=self.current_turn
+            ))
+            self.interrupt_requested = False
+            self.paused = False
+            return True
+        elif decision == "exit":
+            return False
+        else:
+            # For now, just handle continue/exit
+            return False
 
     async def run_conversation(
         self,
@@ -118,21 +191,38 @@ class Conductor:
         system_prompts = get_system_prompts(stability_level, choose_names)
         await self._add_initial_messages(conversation, system_prompts, initial_prompt)
         
-        # Emit start events
-        start_time = time.time()
-        await self._emit_start_events(conversation, agent_a, agent_b, 
-                                     initial_prompt, max_turns, system_prompts)
+        # Set up interrupt handling
+        self._setup_interrupt_handler(conversation.id)
+        self.interrupt_requested = False  # Reset flag
         
-        # Run turns
-        final_turn = 0
-        for turn_num in range(max_turns):
-            turn = await self.run_single_turn(conversation, turn_num, agent_a, agent_b)
-            if turn is None:
-                break
-            final_turn = turn_num
+        try:
+            # Emit start events
+            start_time = time.time()
+            await self._emit_start_events(conversation, agent_a, agent_b, 
+                                         initial_prompt, max_turns, system_prompts)
+            
+            # Run turns
+            final_turn = 0
+            for turn_num in range(max_turns):
+                self.current_turn = turn_num
+                
+                # Check for interrupt before starting turn
+                if self.interrupt_requested:
+                    await self._handle_pause(conversation)
+                    if not await self._should_continue(conversation):
+                        break
+                
+                turn = await self.run_single_turn(conversation, turn_num, agent_a, agent_b)
+                if turn is None:
+                    break
+                final_turn = turn_num
+            
+            # Emit end event and cleanup
+            await self._emit_end_event(conversation, final_turn, max_turns, start_time)
         
-        # Emit end event and cleanup
-        await self._emit_end_event(conversation, final_turn, max_turns, start_time)
+        finally:
+            # Always restore original handler
+            self._restore_interrupt_handler()
         
         # Save transcripts
         await self._save_transcripts(conversation)
@@ -265,10 +355,46 @@ class Conductor:
             )
         )
         
-        # Wait for response with timeout
+        # Create interrupt check task
+        async def check_interrupt():
+            """Check for interrupt flag."""
+            while not self.interrupt_requested:
+                await asyncio.sleep(0.1)  # Check every 100ms
+            return True
+        
+        interrupt_task = asyncio.create_task(check_interrupt())
+        message_task = asyncio.create_task(asyncio.wait_for(future, timeout=timeout))
+        
+        # Wait for response with timeout OR interrupt
         try:
-            message = await asyncio.wait_for(future, timeout=timeout)
-            return message
+            # Wait for EITHER message completion OR interrupt
+            done, pending = await asyncio.wait(
+                [message_task, interrupt_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            # Cancel pending tasks
+            for task in pending:
+                task.cancel()
+            
+            if interrupt_task in done and interrupt_task.result():
+                # Interrupted! Handle pause
+                await self.bus.emit(ConversationPausedEvent(
+                    conversation_id=conversation_id,
+                    turn_number=turn_number,
+                    paused_during=f"waiting_for_{agent.id}"
+                ))
+                
+                # Wait for the message to complete anyway
+                try:
+                    message = await future
+                    return message
+                except:
+                    return None
+            else:
+                # Message completed normally
+                return await message_task
+                
         except asyncio.TimeoutError:
             # Emit timeout event
             await self.bus.emit(
