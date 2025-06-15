@@ -95,7 +95,7 @@ class ResponseHandler(Component):
                     f"\n[red bold]⚠️  Hit actual rate limit: {e}[/red bold]"
                 )
                 self.display_manager.console.print(
-                    "[yellow]Saving checkpoint and pausing...[/yellow]"
+                    "[yellow]Conversation paused due to rate limit.[/yellow]"
                 )
                 raise SystemExit(0)  # Graceful exit
             else:

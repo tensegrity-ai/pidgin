@@ -66,14 +66,3 @@ class ProgressTracker(Component):
             if self.max_turns > 0
             else 0,
         }
-
-    def is_checkpoint_due(self, interval: int = 10) -> bool:
-        """Check if a checkpoint should be saved.
-
-        Args:
-            interval: Checkpoint interval in turns
-
-        Returns:
-            True if checkpoint is due
-        """
-        return self.current_turn > 0 and self.current_turn % interval == 0

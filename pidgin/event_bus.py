@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
 
 from .events import Event
+from .logger import get_logger
+
+logger = get_logger("event_bus")
 
 
 T = TypeVar("T", bound=Event)
@@ -95,7 +98,7 @@ class EventBus:
                 self._event_file.write(json_str + "\n")
                 self._event_file.flush()  # Ensure it's written immediately
             except Exception as e:
-                print(f"Error writing event {type(event).__name__}: {e}")
+                logger.error(f"Error writing event {type(event).__name__}: {e}")
 
         # Get handlers for this event type and parent types
         handlers = []
@@ -114,7 +117,7 @@ class EventBus:
                     handler(event)
             except Exception as e:
                 # Log but don't crash on handler errors
-                print(f"Error in event handler {handler.__name__}: {e}")
+                logger.error(f"Error in event handler {handler.__name__}: {e}", exc_info=True)
 
     def subscribe(self, event_type: Type[T], handler: Callable[[T], None]) -> None:
         """Subscribe to events of a specific type.
@@ -191,4 +194,4 @@ class EventBus:
                 # else:
                 #     print(f"WARNING: No event file open for writing")
             except Exception as e:
-                print(f"Error processing event: {e}")
+                logger.error(f"Error processing event: {e}", exc_info=True)

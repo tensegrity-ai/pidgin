@@ -4,13 +4,16 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from .logger import get_logger
+
+logger = get_logger("config")
+
 
 class Config:
     """Configuration manager for Pidgin."""
 
     DEFAULT_CONFIG = {
         "conversation": {
-            "checkpoint": {"enabled": True, "auto_save_interval": 10},
             "attractor_detection": {
                 "enabled": True,
                 "check_interval": 5,
@@ -67,11 +70,11 @@ class Config:
 
         for location in config_locations:
             if location.exists():
-                print(f"Loading config from: {location}")
+                logger.info(f"Loading config from: {location}")
                 self.load_from_file(location)
                 break
         else:
-            print("No config file found, using defaults")
+            logger.info("No config file found, using defaults")
 
     def load_from_file(self, path: Path):
         """Load configuration from YAML file."""
@@ -140,9 +143,6 @@ class Config:
         with open(save_path, "w") as f:
             yaml.dump(self.config, f, default_flow_style=False)
 
-    def get_checkpoint_config(self) -> Dict[str, Any]:
-        """Get checkpoint-related configuration."""
-        return self.get("conversation.checkpoint", {})
 
     def get_attractor_config(self) -> Dict[str, Any]:
         """Get attractor detection configuration."""

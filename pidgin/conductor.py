@@ -1,4 +1,8 @@
-"""Event-driven conversation orchestrator."""
+"""Event-driven conversation orchestrator.
+
+Future: Event replay will enable resume by replaying events.jsonl
+No need for separate checkpoint files - events ARE the state.
+"""
 
 import asyncio
 import re

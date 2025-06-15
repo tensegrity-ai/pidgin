@@ -10,6 +10,10 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 import yaml
 
+from .logger import get_logger
+
+logger = get_logger("dimensional_prompts")
+
 
 @dataclass
 class Dimension:
@@ -304,7 +308,7 @@ class DimensionalPromptGenerator:
                             custom_content.update(data[content_type])
                 except Exception as e:
                     # Log error but continue with other config files
-                    print(f"Warning: Failed to load {path}: {e}")
+                    logger.warning(f"Failed to load {path}: {e}")
                     continue
 
         return custom_content

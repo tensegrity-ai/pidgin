@@ -162,15 +162,6 @@ class DisplayManager(Component):
         """Display intervention control options."""
         self.console.print("[yellow]🎼 Intervention mode activated[/yellow]")
 
-    def show_checkpoint_saved(self, path: str):
-        """Display checkpoint saved message.
-
-        Args:
-            path: Path where checkpoint was saved
-        """
-        self.console.print(f"\n[green]Checkpoint saved: {path}[/green]")
-        self.console.print(f"[green]Resume with: pidgin resume {path}[/green]\n")
-
     def show_initial_prompt(self, prompt: str):
         """Display the initial conversation prompt.
 

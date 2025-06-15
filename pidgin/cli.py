@@ -590,126 +590,13 @@ def _display_models(models, detailed):
 
 @cli.command()
 @click.help_option("-h", "--help")
-@click.argument("checkpoint_file", required=False, type=click.Path(exists=True))
-@click.option("-l", "--latest", is_flag=True, help="Resume from the latest checkpoint")
-@click.option(
-    "-c",
-    "--convergence-threshold",
-    type=click.FloatRange(0.0, 1.0),
-    help="Override convergence warning threshold (0.0-1.0)",
-)
-@click.option(
-    "-t",
-    "--additional-turns",
-    type=click.IntRange(1, 1000),
-    help="Add extra turns beyond original max_turns",
-)
-def resume(checkpoint_file, latest, convergence_threshold, additional_turns):
-    """Resume a paused conversation from checkpoint"""
-
-    # Use the standard pidgin data directory for checkpoints
-    pidgin_data_dir = Path.home() / ".pidgin_data"
-    checkpoint_manager = CheckpointManager(pidgin_data_dir)
-
-    # Determine which checkpoint to use
-    if latest:
-        checkpoint_path = checkpoint_manager.find_latest_checkpoint()
-        if not checkpoint_path:
-            console.print("[red]No checkpoints found[/red]")
-            return
-    elif checkpoint_file:
-        checkpoint_path = Path(checkpoint_file)
-    else:
-        # List available checkpoints
-        checkpoints = checkpoint_manager.list_checkpoints()
-        if not checkpoints:
-            console.print("[red]No checkpoints found[/red]")
-            console.print("[dim]Use 'pidgin chat' to start a new conversation[/dim]")
-            return
-
-        console.print("\n[bold]Available checkpoints:[/bold]\n")
-        for i, cp in enumerate(checkpoints[:10]):  # Show max 10
-            if "error" in cp:
-                console.print(f"{i+1}. [red]{cp['path']} (Error: {cp['error']})[/red]")
-            else:
-                console.print(f"{i+1}. {cp['path']}")
-                console.print(
-                    f"   [dim]Models: {cp['model_a']} vs {cp['model_b']}[/dim]"
-                )
-                console.print(
-                    f"   [dim]Turn {cp['turn_count']}/{cp['max_turns']} - {cp['remaining_turns']} turns remaining[/dim]"
-                )
-                console.print(f"   [dim]Paused: {cp['pause_time']}[/dim]\n")
-
-        console.print("[yellow]Specify a checkpoint file or use --latest[/yellow]")
-        return
-
-    # Load checkpoint
-    try:
-        state = ConversationState.load_checkpoint(checkpoint_path)
-        info = state.get_resume_info()
-
-        # Apply modifications if specified
-        original_max_turns = state.max_turns
-        final_max_turns = state.max_turns
-
-        if additional_turns:
-            final_max_turns = state.max_turns + additional_turns
-            state.max_turns = final_max_turns
-            console.print(
-                f"[yellow]Added {additional_turns} extra turns (was {original_max_turns}, now {final_max_turns})[/yellow]"
-            )
-
-        # Set convergence threshold for display
-        threshold_msg = ""
-        if convergence_threshold is not None:
-            threshold_msg = (
-                f" [dim](convergence threshold: {convergence_threshold:.2f})[/dim]"
-            )
-
-        console.print(f"\n[bold]Resuming conversation:{threshold_msg}[/bold]")
-        console.print(f"Models: {info['model_a']} vs {info['model_b']}")
-        console.print(f"Turn: {info['turn_count']}/{final_max_turns}")
-
-        # Update remaining turns calculation
-        remaining = final_max_turns - info["turn_count"]
-        console.print(f"Remaining turns: {remaining}\n")
-
-        # Recreate agents and providers
-        agents = {
-            "agent_a": Agent(id=state.agent_a_id, model=state.model_a),
-            "agent_b": Agent(id=state.agent_b_id, model=state.model_b),
-        }
-
-        providers = {
-            "agent_a": get_provider_for_model(state.model_a),
-            "agent_b": get_provider_for_model(state.model_b),
-        }
-
-        # TODO: Convert resume command to use event system
-        console.print("[red]Resume command not yet converted to event system[/red]")
-        console.print(
-            "[yellow]Please start a new conversation with 'pidgin chat'[/yellow]"
-        )
-        return
-
-    except FileNotFoundError:
-        # File not found error
-        console.print()
-        console.rule("[red]❌ CHECKPOINT NOT FOUND[/red]", style="red")
-        console.print(f"[red]📂 File: {checkpoint_path}[/red]")
-        console.print("[red]💡 Use 'pidgin resume' to list available checkpoints[/red]")
-        console.rule(style="red")
-        console.print()
-
-    except Exception as e:
-        # General resume error
-        console.print()
-        console.rule("[red]❌ RESUME ERROR[/red]", style="red")
-        console.print(f"[red]💥 Error: {e}[/red]")
-        console.print("[red]🔧 Try checking the checkpoint file format[/red]")
-        console.rule(style="red")
-        console.print()
+def resume():
+    """Resume conversations by replaying events (coming soon)."""
+    console.print("[yellow]Event replay coming in a future release![/yellow]")
+    console.print("For now, conversations run to completion or exit.")
+    
+    # Future: Event replay will enable resume by replaying events.jsonl
+    # No need for separate checkpoint files - events ARE the state.
 
 
 @cli.command()
