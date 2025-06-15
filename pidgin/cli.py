@@ -271,20 +271,25 @@ custom_dimensions:
 @click.option("--config", is_flag=True, help="Create configuration templates")
 @click.pass_context
 def cli(ctx, config):
-    """AI conversation research tool for studying emergent communication patterns.
+    """[bold cyan]AI conversation research tool[/bold cyan] for studying emergent communication patterns.
     
     Pidgin enables controlled experiments between AI agents to discover how they
     develop communication patterns, convergence behaviors, and linguistic adaptations.
     
-    QUICK START:
-        pidgin chat -a claude -b gpt -t 20
+    [bold green]QUICK START:[/bold green]
+        [yellow]pidgin chat -a claude -b gpt -t 20[/yellow]
     
-    EXAMPLES:
+    [bold]EXAMPLES:[/bold]
+        [dim]# Basic conversation with custom prompt[/dim]
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+        
+        [dim]# Using dimensional prompts with name choosing[/dim]
         pidgin chat -d peers:science --choose-names
+        
+        [dim]# List all available models[/dim]
         pidgin models --detailed
     
-    For more information on a command, use: pidgin COMMAND --help
+    For more information on a command: [cyan]pidgin COMMAND --help[/cyan]
     """
     if config:
         create_config_templates()
@@ -296,19 +301,19 @@ def cli(ctx, config):
 @cli.command()
 @click.help_option("-h", "--help")
 @click.option("-a", "--model-a", default="claude", 
-              help="First model - e.g., claude, opus, gpt, haiku (default: claude)")
+              help="First model - e.g., [green]claude[/green], [cyan]opus[/cyan], [yellow]gpt[/yellow], [magenta]haiku[/magenta] (default: [green]claude[/green])")
 @click.option(
     "-b", "--model-b", default="claude", 
-    help="Second model - e.g., gpt-4.1, gemini, grok (default: claude)"
+    help="Second model - e.g., [green]gpt-4.1[/green], [blue]gemini[/blue], [yellow]grok[/yellow] (default: [green]claude[/green])"
 )
 @click.option(
     "-t", "--turns", default=10, 
-    help="Number of conversation turns (default: 10, recommended: 20-100)"
+    help="Number of conversation turns [dim](default: 10, recommended: 20-100)[/dim]"
 )
 @click.option("-p", "--prompt", 
-              help="Initial prompt to start conversation - sets the topic and tone")
+              help="Initial prompt to start conversation - [italic]sets the topic and tone[/italic]")
 @click.option("-d", "--dimensions", 
-              help="Use dimensional prompt system - e.g., 'peers:philosophy' or 'debate:science:analytical'")
+              help="Use dimensional prompt system - e.g., [cyan]'peers:philosophy'[/cyan] or [cyan]'debate:science:analytical'[/cyan]")
 @click.option("--puzzle", help="Specific puzzle name for puzzles topic")
 @click.option("--experiment", help="Specific thought experiment name")
 @click.option("--topic-content", help="Custom content for puzzles/experiments")
@@ -345,13 +350,13 @@ def cli(ctx, config):
     "-v",
     "--verbose",
     is_flag=True,
-    help="Show all events and chunks (verbose mode)",
+    help="[bold yellow]Show all events[/bold yellow] and chunks (verbose mode)",
 )
 @click.option(
     "-q",
     "--quiet",
     is_flag=True,
-    help="Minimal output (quiet mode)",
+    help="[dim]Minimal output[/dim] (quiet mode)",
 )
 @click.option(
     "--timing",
@@ -361,13 +366,13 @@ def cli(ctx, config):
 @click.option(
     "--choose-names",
     is_flag=True,
-    help="Let agents choose their own names",
+    help="Let agents [bold cyan]choose their own names[/bold cyan]",
 )
 @click.option(
     "--stability",
     type=click.IntRange(0, 4),
     default=2,
-    help="System prompt stability level (0=chaos, 2=default, 4=max)",
+    help="System prompt stability level ([red]0[/red]=chaos, [yellow]2[/yellow]=default, [green]4[/green]=max)",
 )
 @click.option(
     "--show-system-prompts",
@@ -399,35 +404,35 @@ def chat(
     """Run a conversation between two AI agents.
     
     This command starts a conversation that will run for the specified number of turns.
-    The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
+    The conversation is saved to [cyan]./pidgin_output/[/cyan] with full event logs and transcripts.
     
-    EXAMPLES:
+    [bold green]EXAMPLES:[/bold green]
     
-    Basic conversation (10 turns):
-        pidgin chat -a claude -b gpt
+    [bold]Basic conversation[/bold] (10 turns):
+        [yellow]pidgin chat -a claude -b gpt[/yellow]
     
-    Longer philosophical discussion:
-        pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
+    [bold]Longer philosophical discussion[/bold]:
+        [yellow]pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"[/yellow]
     
-    Using dimensional prompts:
-        pidgin chat -d debate:philosophy:analytical
+    [bold]Using dimensional prompts[/bold]:
+        [yellow]pidgin chat -d debate:philosophy:analytical[/yellow]
     
-    Let agents choose names:
-        pidgin chat -a haiku -b nano --choose-names
+    [bold]Let agents choose names[/bold]:
+        [yellow]pidgin chat -a haiku -b nano --choose-names[/yellow]
     
-    Verbose mode with timing:
-        pidgin chat -a claude -b claude -v --timing
+    [bold]Verbose mode with timing[/bold]:
+        [yellow]pidgin chat -a claude -b claude -v --timing[/yellow]
     
-    INTERRUPT CONTROL:
-        Press Ctrl+C at any time to pause the conversation.
-        You can then choose to continue or exit gracefully.
+    [bold red]INTERRUPT CONTROL:[/bold red]
+        Press [bold yellow]Ctrl+C[/bold yellow] at any time to pause the conversation.
+        You can then choose to [green]continue[/green] or [red]exit[/red] gracefully.
     
-    OUTPUT:
-        All conversations are saved to ./pidgin_output/conversations/YYYY-MM-DD/
+    [bold cyan]OUTPUT:[/bold cyan]
+        All conversations are saved to [cyan]./pidgin_output/conversations/YYYY-MM-DD/[/cyan]
         Each conversation includes:
-        - events.jsonl: Complete event log
-        - conversation.json: Structured data with metrics
-        - conversation.md: Human-readable transcript
+        [dim]•[/dim] [green]events.jsonl[/green] - Complete event log
+        [dim]•[/dim] [blue]conversation.json[/blue] - Structured data with metrics
+        [dim]•[/dim] [yellow]conversation.md[/yellow] - Human-readable transcript
     """
     from .event_bus import EventBus
     from .event_logger import EventLogger
@@ -555,31 +560,31 @@ def chat(
 
 @cli.command()
 @click.help_option("-h", "--help")
-@click.option("-p", "--provider", help="Filter by provider (anthropic/openai/google/xai)")
+@click.option("-p", "--provider", help="Filter by provider ([cyan]anthropic[/cyan]/[green]openai[/green]/[blue]google[/blue]/[yellow]xai[/yellow])")
 @click.option("-d", "--detailed", is_flag=True, help="Show detailed model information")
 def models(provider, detailed):
     """List available AI models and their capabilities.
     
-    Shows all models that can be used in conversations, including their context
-    windows, pricing tiers, and recommended pairings.
+    Shows all models that can be used in conversations, including their [bold]context
+    windows[/bold], [bold]pricing tiers[/bold], and [bold]recommended pairings[/bold].
     
-    EXAMPLES:
+    [bold green]EXAMPLES:[/bold green]
     
-    List all models:
-        pidgin models
+    [bold]List all models[/bold]:
+        [yellow]pidgin models[/yellow]
     
-    Show detailed information:
-        pidgin models --detailed
+    [bold]Show detailed information[/bold]:
+        [yellow]pidgin models --detailed[/yellow]
     
-    Filter by provider:
-        pidgin models --provider anthropic
+    [bold]Filter by provider[/bold]:
+        [yellow]pidgin models --provider anthropic[/yellow]
     
-    MODEL SHORTCUTS:
+    [bold cyan]MODEL SHORTCUTS:[/bold cyan]
         Many models have convenient shortcuts:
-        - claude → claude-4-sonnet-20250514
-        - gpt → gpt-4o
-        - opus → claude-4-opus-20250514
-        - haiku → claude-3-5-haiku-20241022
+        [dim]•[/dim] [green]claude[/green] → claude-4-sonnet-20250514
+        [dim]•[/dim] [green]gpt[/green] → gpt-4o
+        [dim]•[/dim] [green]opus[/green] → claude-4-opus-20250514
+        [dim]•[/dim] [green]haiku[/green] → claude-3-5-haiku-20241022
     
     Use any model ID or shortcut in the chat command.
     """
@@ -704,32 +709,32 @@ def dimensions(example, list_only, detailed, dimension):
     """Explore dimensional prompt system for conversation setup.
     
     Dimensional prompts let you quickly configure conversation dynamics by
-    combining different aspects like context (peers/debate/teaching) and
-    topics (philosophy/science/language).
+    combining different aspects like [bold]context[/bold] (peers/debate/teaching) and
+    [bold]topics[/bold] (philosophy/science/language).
     
-    FORMAT:
-        -d context:topic[:mode]
+    [bold cyan]FORMAT:[/bold cyan]
+        [yellow]-d context:topic[:mode][/yellow]
     
-    EXAMPLES:
+    [bold green]EXAMPLES:[/bold green]
     
-    List all dimensions:
-        pidgin dimensions
+    [bold]List all dimensions[/bold]:
+        [yellow]pidgin dimensions[/yellow]
     
-    Show specific dimension:
-        pidgin dimensions context --detailed
+    [bold]Show specific dimension[/bold]:
+        [yellow]pidgin dimensions context --detailed[/yellow]
     
-    See example output:
-        pidgin dimensions --example peers:philosophy
+    [bold]See example output[/bold]:
+        [yellow]pidgin dimensions --example peers:philosophy[/yellow]
     
-    QUICK COMBINATIONS:
-        peers:philosophy → Collaborative philosophical discussion
-        debate:science:analytical → Analytical scientific debate
-        teaching:puzzles --puzzle riddle → Teaching session about riddles
+    [bold]QUICK COMBINATIONS:[/bold]
+        [dim]•[/dim] [green]peers:philosophy[/green] → Collaborative philosophical discussion
+        [dim]•[/dim] [green]debate:science:analytical[/green] → Analytical scientific debate
+        [dim]•[/dim] [green]teaching:puzzles --puzzle riddle[/green] → Teaching session about riddles
     
-    SPECIAL TOPICS:
+    [bold yellow]SPECIAL TOPICS:[/bold yellow]
         Some topics require additional parameters:
-        - puzzles: Use --puzzle to specify which puzzle
-        - thought_experiments: Use --experiment to specify which one
+        [dim]•[/dim] [cyan]puzzles[/cyan]: Use [yellow]--puzzle[/yellow] to specify which puzzle
+        [dim]•[/dim] [cyan]thought_experiments[/cyan]: Use [yellow]--experiment[/yellow] to specify which one
     """
     generator = DimensionalPromptGenerator()
 
@@ -820,56 +825,77 @@ def about():
     from rich.console import Console
     from rich.panel import Panel
     from rich.markdown import Markdown
+    from rich.table import Table
+    from rich.text import Text
     
     console = Console()
     
-    about_text = """
-# About Pidgin
+    # Create a fancy header
+    header = Text()
+    header.append("🧪 ", style="bold")
+    header.append("About Pidgin", style="bold #8fbcbb")
+    header.append(" 🧪", style="bold")
+    
+    # Main content with better formatting
+    about_content = """
+[bold cyan]Pidgin[/bold cyan] is a research tool for studying AI-to-AI communication patterns.
 
-Pidgin is a research tool for studying AI-to-AI communication patterns.
+## [bold green]What We're Studying[/bold green]
 
-## What We're Studying
+• [bold]Convergence[/bold]: How AI agents align their communication styles
+• [bold]Patterns[/bold]: What structures emerge in extended conversations  
+• [bold]Dynamics[/bold]: How different model pairs interact
+• [bold]Interventions[/bold]: How human input affects conversations
 
-- **Convergence**: How AI agents align their communication styles
-- **Patterns**: What structures emerge in extended conversations  
-- **Dynamics**: How different model pairs interact
-- **Interventions**: How human input affects AI conversations
+## [bold yellow]Scientific Approach[/bold yellow]
 
-## Scientific Approach
+We make [bold red]no assumptions[/bold red] about what we'll find. Pidgin:
+• Records [italic]every event[/italic] in conversations
+• Measures convergence between agents
+• Looks for patterns ([dim]without assuming they exist[/dim])
+• Provides reproducible experiments
 
-We make no assumptions about what we'll find. Pidgin:
-- Records every event in conversations
-- Measures convergence between agents
-- Looks for patterns (without assuming they exist)
-- Provides reproducible experiments
-
-## Output Data
+## [bold blue]Output Data[/bold blue]
 
 Each conversation produces:
-- Complete event logs for analysis
-- Convergence metrics over time
-- Structured JSON for data science
-- Human-readable transcripts
+• Complete [green]event logs[/green] for analysis
+• Convergence metrics over time
+• Structured [blue]JSON[/blue] for data science
+• Human-readable [yellow]transcripts[/yellow]
 
-## Contributing
+## [bold magenta]Contributing[/bold magenta]
 
-This is alpha software for research purposes.
-GitHub: https://github.com/tommygun/pidgin
+This is [bold]alpha software[/bold] for research purposes.
+GitHub: [link=https://github.com/tommygun/pidgin]https://github.com/tommygun/pidgin[/link]
 
-## No Claims, Just Observation
+---
+
+[bold italic #5e81ac]No claims, just observation.[/bold italic #5e81ac]
 
 We're building tools to discover what happens when AIs talk,
 not assuming we already know.
     """
     
-    panel = Panel(
-        Markdown(about_text),
-        title="[bold #8fbcbb]About Pidgin[/bold #8fbcbb]",
-        border_style="#5e81ac",
-        padding=(1, 2)
-    )
+    # Create a status table
+    status_table = Table(show_header=True, header_style="bold cyan", border_style="#5e81ac")
+    status_table.add_column("Feature", style="white")
+    status_table.add_column("Status", justify="center")
     
-    console.print(panel)
+    status_table.add_row("Event Architecture", "[bold green]✓ Working[/bold green]")
+    status_table.add_row("Pause/Resume", "[bold green]✓ Working[/bold green]")
+    status_table.add_row("Multi-Provider", "[bold green]✓ Working[/bold green]")
+    status_table.add_row("Convergence Display", "[yellow]⚡ Partial[/yellow]")
+    status_table.add_row("Context Warnings", "[yellow]⚡ Partial[/yellow]")
+    status_table.add_row("Batch Experiments", "[red]✗ Planned[/red]")
+    
+    # Print everything with nice layout
+    console.print()
+    console.print(header, justify="center")
+    console.print()
+    console.print(about_content)
+    console.print()
+    console.print(Panel(status_table, title="[bold]Current Status[/bold]", border_style="#5e81ac"))
+    console.print()
 
 
 if __name__ == "__main__":
