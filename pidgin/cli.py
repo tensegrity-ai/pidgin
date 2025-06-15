@@ -271,7 +271,21 @@ custom_dimensions:
 @click.option("--config", is_flag=True, help="Create configuration templates")
 @click.pass_context
 def cli(ctx, config):
-    """Pidgin - AI conversation research tool"""
+    """AI conversation research tool for studying emergent communication patterns.
+    
+    Pidgin enables controlled experiments between AI agents to discover how they
+    develop communication patterns, convergence behaviors, and linguistic adaptations.
+    
+    QUICK START:
+        pidgin chat -a claude -b gpt -t 20
+    
+    EXAMPLES:
+        pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+        pidgin chat -d peers:science --choose-names
+        pidgin models --detailed
+    
+    For more information on a command, use: pidgin COMMAND --help
+    """
     if config:
         create_config_templates()
     elif ctx.invoked_subcommand is None:
@@ -281,15 +295,20 @@ def cli(ctx, config):
 
 @cli.command()
 @click.help_option("-h", "--help")
-@click.option("-a", "--model-a", default="claude", help="First model (default: claude)")
+@click.option("-a", "--model-a", default="claude", 
+              help="First model - e.g., claude, opus, gpt, haiku (default: claude)")
 @click.option(
-    "-b", "--model-b", default="claude", help="Second model (default: claude)"
+    "-b", "--model-b", default="claude", 
+    help="Second model - e.g., gpt-4.1, gemini, grok (default: claude)"
 )
 @click.option(
-    "-t", "--turns", default=10, help="Number of conversation turns (default: 10)"
+    "-t", "--turns", default=10, 
+    help="Number of conversation turns (default: 10, recommended: 20-100)"
 )
-@click.option("-p", "--prompt", help="Custom initial prompt")
-@click.option("-d", "--dimensions", help="Dimensional prompt (e.g., peers:philosophy)")
+@click.option("-p", "--prompt", 
+              help="Initial prompt to start conversation - sets the topic and tone")
+@click.option("-d", "--dimensions", 
+              help="Use dimensional prompt system - e.g., 'peers:philosophy' or 'debate:science:analytical'")
 @click.option("--puzzle", help="Specific puzzle name for puzzles topic")
 @click.option("--experiment", help="Specific thought experiment name")
 @click.option("--topic-content", help="Custom content for puzzles/experiments")
@@ -377,7 +396,39 @@ def chat(
     stability,
     show_system_prompts,
 ):
-    """Run a conversation between two AI agents using EVENT-DRIVEN ARCHITECTURE"""
+    """Run a conversation between two AI agents.
+    
+    This command starts a conversation that will run for the specified number of turns.
+    The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
+    
+    EXAMPLES:
+    
+    Basic conversation (10 turns):
+        pidgin chat -a claude -b gpt
+    
+    Longer philosophical discussion:
+        pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
+    
+    Using dimensional prompts:
+        pidgin chat -d debate:philosophy:analytical
+    
+    Let agents choose names:
+        pidgin chat -a haiku -b nano --choose-names
+    
+    Verbose mode with timing:
+        pidgin chat -a claude -b claude -v --timing
+    
+    INTERRUPT CONTROL:
+        Press Ctrl+C at any time to pause the conversation.
+        You can then choose to continue or exit gracefully.
+    
+    OUTPUT:
+        All conversations are saved to ./pidgin_output/conversations/YYYY-MM-DD/
+        Each conversation includes:
+        - events.jsonl: Complete event log
+        - conversation.json: Structured data with metrics
+        - conversation.md: Human-readable transcript
+    """
     from .event_bus import EventBus
     from .event_logger import EventLogger
     from .conductor import Conductor
@@ -504,10 +555,34 @@ def chat(
 
 @cli.command()
 @click.help_option("-h", "--help")
-@click.option("-p", "--provider", help="Filter by provider (anthropic/openai)")
-@click.option("-d", "--detailed", is_flag=True, help="Show detailed information")
+@click.option("-p", "--provider", help="Filter by provider (anthropic/openai/google/xai)")
+@click.option("-d", "--detailed", is_flag=True, help="Show detailed model information")
 def models(provider, detailed):
-    """List all available models and their shortcuts"""
+    """List available AI models and their capabilities.
+    
+    Shows all models that can be used in conversations, including their context
+    windows, pricing tiers, and recommended pairings.
+    
+    EXAMPLES:
+    
+    List all models:
+        pidgin models
+    
+    Show detailed information:
+        pidgin models --detailed
+    
+    Filter by provider:
+        pidgin models --provider anthropic
+    
+    MODEL SHORTCUTS:
+        Many models have convenient shortcuts:
+        - claude → claude-4-sonnet-20250514
+        - gpt → gpt-4o
+        - opus → claude-4-opus-20250514
+        - haiku → claude-3-5-haiku-20241022
+    
+    Use any model ID or shortcut in the chat command.
+    """
 
     if provider:
         # Filter by provider
@@ -626,7 +701,36 @@ def resume():
 @click.option("--detailed", is_flag=True, help="Show detailed info about a dimension")
 @click.argument("dimension", required=False)
 def dimensions(example, list_only, detailed, dimension):
-    """Explore available dimensional prompts"""
+    """Explore dimensional prompt system for conversation setup.
+    
+    Dimensional prompts let you quickly configure conversation dynamics by
+    combining different aspects like context (peers/debate/teaching) and
+    topics (philosophy/science/language).
+    
+    FORMAT:
+        -d context:topic[:mode]
+    
+    EXAMPLES:
+    
+    List all dimensions:
+        pidgin dimensions
+    
+    Show specific dimension:
+        pidgin dimensions context --detailed
+    
+    See example output:
+        pidgin dimensions --example peers:philosophy
+    
+    QUICK COMBINATIONS:
+        peers:philosophy → Collaborative philosophical discussion
+        debate:science:analytical → Analytical scientific debate
+        teaching:puzzles --puzzle riddle → Teaching session about riddles
+    
+    SPECIAL TOPICS:
+        Some topics require additional parameters:
+        - puzzles: Use --puzzle to specify which puzzle
+        - thought_experiments: Use --experiment to specify which one
+    """
     generator = DimensionalPromptGenerator()
 
     if example:
@@ -704,6 +808,68 @@ def dimensions(example, list_only, detailed, dimension):
         console.print(example_text)
         console.print(f"    → {description}")
     console.print()
+
+
+@cli.command()
+def about():
+    """Learn more about Pidgin and its research goals.
+    
+    Displays information about the project, its scientific approach,
+    and how to contribute to the research.
+    """
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.markdown import Markdown
+    
+    console = Console()
+    
+    about_text = """
+# About Pidgin
+
+Pidgin is a research tool for studying AI-to-AI communication patterns.
+
+## What We're Studying
+
+- **Convergence**: How AI agents align their communication styles
+- **Patterns**: What structures emerge in extended conversations  
+- **Dynamics**: How different model pairs interact
+- **Interventions**: How human input affects AI conversations
+
+## Scientific Approach
+
+We make no assumptions about what we'll find. Pidgin:
+- Records every event in conversations
+- Measures convergence between agents
+- Looks for patterns (without assuming they exist)
+- Provides reproducible experiments
+
+## Output Data
+
+Each conversation produces:
+- Complete event logs for analysis
+- Convergence metrics over time
+- Structured JSON for data science
+- Human-readable transcripts
+
+## Contributing
+
+This is alpha software for research purposes.
+GitHub: https://github.com/tommygun/pidgin
+
+## No Claims, Just Observation
+
+We're building tools to discover what happens when AIs talk,
+not assuming we already know.
+    """
+    
+    panel = Panel(
+        Markdown(about_text),
+        title="[bold #8fbcbb]About Pidgin[/bold #8fbcbb]",
+        border_style="#5e81ac",
+        padding=(1, 2)
+    )
+    
+    console.print(panel)
 
 
 if __name__ == "__main__":
