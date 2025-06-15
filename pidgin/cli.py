@@ -118,9 +118,9 @@ class BannerGroup(click.Group):
             expand=False  # Don't expand to full width
         )
         
-        # Print with padding
+        # Print left-aligned
         console.print()
-        console.print(Align.center(panel))
+        console.print(panel)
         console.print()
         
         super().format_help(ctx, formatter)
