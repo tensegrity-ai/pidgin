@@ -114,8 +114,8 @@ class DisplayFilter:
 
         # Show initial prompt
         prompt_preview = event.initial_prompt
-        if len(prompt_preview) > 100:
-            prompt_preview = prompt_preview[:97] + "..."
+        if len(prompt_preview) > 300:
+            prompt_preview = prompt_preview[:297] + "..."
         content += f"[bold]Initial Prompt:[/bold]\n{prompt_preview}"
 
         self.console.print(
