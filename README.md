@@ -4,18 +4,36 @@ AI conversation research tool for studying emergent communication between langua
 
 ## Overview
 
-Pidgin enables conversations between AI agents to study how they develop communication patterns and linguistic convergence. It features automatic detection of conversation dynamics, pause/resume functionality, and comprehensive model support across multiple providers.
+Pidgin enables controlled experiments between AI agents to study their communication patterns. It features a fully event-driven architecture, real-time streaming, and the ability to pause conversations with Ctrl+C.
+
+## What's Actually Working ✅
+
+- **Event-driven architecture** - Every action emits observable events
+- **Conversation streaming** - Real-time responses from all providers  
+- **Pause/Resume** - Press Ctrl+C to pause any conversation
+- **Multi-provider support** - 15+ models from Anthropic, OpenAI, Google, xAI
+- **Structured output** - Conversations saved with full event logs
+- **Dimensional prompts** - Quick conversation setup system
+
+## What's In Progress 🚧
+
+- **Convergence detection** - Metrics are calculated but not displayed/used
+- **Context window tracking** - Code exists but isn't active
+- **Message injection** - Can pause but can't inject messages yet
+
+## What's Planned 📋
+
+- **Batch experiments** - Run multiple conversations in parallel
+- **Live dashboard** - Real-time monitoring with Rich
+- **Pattern analysis** - Discover emergent behaviors
+- **Event replay** - Resume conversations from event logs
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.9 or higher
-- API keys for the providers you want to use:
-  - Anthropic API key (for Claude models)
-  - OpenAI API key (for GPT models)
-  - Google API key (for Gemini models)
-  - xAI API key (for Grok models)
+- API keys for the providers you want to use
 
 ### Install from source
 
@@ -25,9 +43,8 @@ cd pidgin
 pip install -e .
 ```
 
-## Configuration
+### Set API Keys
 
-Set your API keys as environment variables:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
@@ -37,134 +54,66 @@ export XAI_API_KEY="..."
 
 ## Quick Start
 
-### Basic Conversations
+### Basic Usage
 
 ```bash
-# Basic conversation (10 turns)
-pidgin chat -a claude -b gpt -t 10
+# Simple conversation
+pidgin chat -a claude -b gpt -t 20
 
-# Custom initial prompt
-pidgin chat -a opus -b gpt-4.1 -t 20 -p "Let's discuss compression algorithms"
+# With custom prompt
+pidgin chat -a opus -b gpt-4.1 -p "Discuss mathematics"
 
-# Manual mode for turn-by-turn control
-pidgin chat -a claude -b gemini -t 20 --manual
+# Using dimensional prompts
+pidgin chat -d peers:philosophy
 
-# Disable experimental features
-pidgin chat -a haiku -b nano -t 100 --no-attractor-detection
+# Let agents choose names
+pidgin chat -a haiku -b nano --choose-names
 ```
 
-### List Available Models
+### Pause/Resume
 
-```bash
-# List all models and their shortcuts
-pidgin models
+During any conversation, press `Ctrl+C` to pause:
+1. The current message will complete
+2. A menu appears with Continue/Exit options
+3. All data is saved automatically
 
-# Show detailed model information
-pidgin models --detailed
+### Output Files
 
-# Filter by provider
-pidgin models --provider anthropic
-```
+Conversations are saved to `./pidgin_output/conversations/YYYY-MM-DD/[id]/`:
+- `events.jsonl` - Complete event log (every action recorded)
+- `conversation.json` - Structured conversation data
+- `conversation.md` - Human-readable transcript
 
-### Pause and Resume Conversations
+## Available Models
 
-```bash
-# Start a long conversation
-pidgin chat -a opus -b gpt-4.1 -t 500
+Use `pidgin models` to see all available models. Common shortcuts:
+- `claude` → claude-4-sonnet (default)
+- `opus` → claude-4-opus (most capable)
+- `haiku` → claude-3-5-haiku (fastest)
+- `gpt` → gpt-4o
+- `gemini` → gemini-2.0-flash-exp
 
-# Press Ctrl+C to pause gracefully
-# The system will save a checkpoint and show resume instructions
+## Architecture
 
-# Resume from the latest checkpoint
-pidgin resume --latest
+Pidgin is built on an event-driven architecture where:
+- Every action emits an event
+- Events are logged to JSONL for analysis
+- Components communicate only through events
+- No hidden state or side effects
 
-# Resume from specific checkpoint
-pidgin resume path/to/conversation.checkpoint
+## Research Focus
 
-# List available checkpoints
-pidgin resume
-```
+We're building tools to observe what happens when AIs communicate, without assuming what we'll find. Current areas of investigation:
 
-### Available Models
-
-Use `pidgin models` to see all available models. Key shortcuts include:
-
-**Anthropic (200k context):**
-- `claude` → claude-4-sonnet-20250514 (default)
-- `opus` → claude-4-opus-20250514 (most capable)
-- `sonnet` → claude-4-sonnet-20250514 (balanced)
-- `haiku` → claude-3-5-haiku-20241022 (fastest)
-
-**OpenAI (128k-1M context):**
-- `gpt` → gpt-4o (default)
-- `4.1` → gpt-4.1 (latest)
-- `nano` → gpt-4.1-nano (fastest)
-- `o3` → o3-mini (reasoning)
-
-**Google (32k-2M context):**
-- `gemini` → gemini-2.0-flash-exp (default)
-- `thinking` → gemini-2.0-flash-thinking-exp (reasoning)
-- `gemini-pro` → gemini-1.5-pro (most capable)
-
-**xAI (128k context):**
-- `grok` → grok-beta (default)
-- `grok-2` → grok-2-1212 (latest)
-
-## Key Features
-
-### Convergence Detection
-- **What It Measures**: How similar agents' communication styles become (0.0-1.0)
-- **Automatic Warnings**: At 75% convergence
-- **Auto-Pause**: At 90% convergence
-- **Why It Matters**: High convergence indicates agents synchronizing their communication
-
-### Context Window Management
-- **Automatic Tracking**: Monitors usage vs. model limits
-- **Predictive Warnings**: Shows estimated remaining turns
-- **Auto-Pause**: At 95% capacity to prevent crashes
-- **Model-Aware**: Different limits for each model
-
-### Conversation Control
-- **Flowing Mode** (default): Runs automatically, pause with Ctrl+C
-- **Manual Mode**: Pause after each turn for intervention
-- **Interventions**: Inject messages when paused
-- **Resume**: Continue from any checkpoint
-
-### Experimental Features
-- **Structural Pattern Detection**: Framework for detecting conversation patterns (hypothesis being tested)
-
-## Output
-
-Conversations are saved to `~/.pidgin_data/transcripts/YYYY-MM-DD/[conversation-id]/`:
-- `conversation.json` - Machine-readable format with metrics
-- `conversation.md` - Human-readable markdown transcript
-- `conversation.checkpoint` - Resumable state (if paused)
-
-## Research Applications
-
-Pidgin is designed for studying:
-- **Linguistic Convergence** - How AI agents align their communication styles
-- **Emergent Patterns** - What structures emerge in extended conversations
-- **Model Dynamics** - How different model pairs interact
-- **Intervention Effects** - How human input affects conversations
-
-## Roadmap
-
-1. **Current**: Stable conversation engine with convergence tracking
-2. **Next**: Event-driven architecture for better observability
-3. **Then**: Experiments module for parallel runs and analytics
-4. **Finally**: Publication and community release
+- How do conversation patterns evolve over many turns?
+- Do certain model pairs develop unique dynamics?
+- What happens during very long conversations?
+- How do interruptions affect conversation flow?
 
 ## Contributing
 
-This is alpha software under active development. The architecture is being refactored to an event-driven model. Contributions welcome after the refactor stabilizes.
+This is alpha software under active development. The architecture is stabilizing but features are still being added.
 
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Acknowledgments
-
-- Built with Rich for beautiful terminal output
-- Inspired by research in emergent communication
-- Thanks to all AI model providers for their APIs
