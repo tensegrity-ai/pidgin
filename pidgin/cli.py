@@ -5,6 +5,8 @@ from typing import Optional
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.text import Text
 from .models import MODELS, get_model_config, get_models_by_provider
 from .types import Agent
 from .providers.anthropic import AnthropicProvider
@@ -271,25 +273,25 @@ custom_dimensions:
 @click.option("--config", is_flag=True, help="Create configuration templates")
 @click.pass_context
 def cli(ctx, config):
-    """[bold cyan]AI conversation research tool[/bold cyan] for studying emergent communication patterns.
+    """AI conversation research tool for studying emergent communication patterns.
     
     Pidgin enables controlled experiments between AI agents to discover how they
     develop communication patterns, convergence behaviors, and linguistic adaptations.
     
-    [bold green]QUICK START:[/bold green]
-        [yellow]pidgin chat -a claude -b gpt -t 20[/yellow]
+    QUICK START:
+        pidgin chat -a claude -b gpt -t 20
     
-    [bold]EXAMPLES:[/bold]
-        [dim]# Basic conversation with custom prompt[/dim]
+    EXAMPLES:
+        # Basic conversation with custom prompt
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
         
-        [dim]# Using dimensional prompts with name choosing[/dim]
+        # Using dimensional prompts with name choosing
         pidgin chat -d peers:science --choose-names
         
-        [dim]# List all available models[/dim]
+        # List all available models
         pidgin models --detailed
     
-    For more information on a command: [cyan]pidgin COMMAND --help[/cyan]
+    For more information on a command: pidgin COMMAND --help
     """
     if config:
         create_config_templates()
@@ -301,19 +303,19 @@ def cli(ctx, config):
 @cli.command()
 @click.help_option("-h", "--help")
 @click.option("-a", "--model-a", default="claude", 
-              help="First model - e.g., [green]claude[/green], [cyan]opus[/cyan], [yellow]gpt[/yellow], [magenta]haiku[/magenta] (default: [green]claude[/green])")
+              help="First model - e.g., claude, opus, gpt, haiku (default: claude)")
 @click.option(
     "-b", "--model-b", default="claude", 
-    help="Second model - e.g., [green]gpt-4.1[/green], [blue]gemini[/blue], [yellow]grok[/yellow] (default: [green]claude[/green])"
+    help="Second model - e.g., gpt-4.1, gemini, grok (default: claude)"
 )
 @click.option(
     "-t", "--turns", default=10, 
-    help="Number of conversation turns [dim](default: 10, recommended: 20-100)[/dim]"
+    help="Number of conversation turns (default: 10, recommended: 20-100)"
 )
 @click.option("-p", "--prompt", 
-              help="Initial prompt to start conversation - [italic]sets the topic and tone[/italic]")
+              help="Initial prompt to start conversation - sets the topic and tone")
 @click.option("-d", "--dimensions", 
-              help="Use dimensional prompt system - e.g., [cyan]'peers:philosophy'[/cyan] or [cyan]'debate:science:analytical'[/cyan]")
+              help="Use dimensional prompt system - e.g., 'peers:philosophy' or 'debate:science:analytical'")
 @click.option("--puzzle", help="Specific puzzle name for puzzles topic")
 @click.option("--experiment", help="Specific thought experiment name")
 @click.option("--topic-content", help="Custom content for puzzles/experiments")
@@ -350,13 +352,13 @@ def cli(ctx, config):
     "-v",
     "--verbose",
     is_flag=True,
-    help="[bold yellow]Show all events[/bold yellow] and chunks (verbose mode)",
+    help="Show all events and chunks (verbose mode)",
 )
 @click.option(
     "-q",
     "--quiet",
     is_flag=True,
-    help="[dim]Minimal output[/dim] (quiet mode)",
+    help="Minimal output (quiet mode)",
 )
 @click.option(
     "--timing",
@@ -366,13 +368,13 @@ def cli(ctx, config):
 @click.option(
     "--choose-names",
     is_flag=True,
-    help="Let agents [bold cyan]choose their own names[/bold cyan]",
+    help="Let agents choose their own names",
 )
 @click.option(
     "--stability",
     type=click.IntRange(0, 4),
     default=2,
-    help="System prompt stability level ([red]0[/red]=chaos, [yellow]2[/yellow]=default, [green]4[/green]=max)",
+    help="System prompt stability level (0=chaos, 2=default, 4=max)",
 )
 @click.option(
     "--show-system-prompts",
@@ -404,35 +406,35 @@ def chat(
     """Run a conversation between two AI agents.
     
     This command starts a conversation that will run for the specified number of turns.
-    The conversation is saved to [cyan]./pidgin_output/[/cyan] with full event logs and transcripts.
+    The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
     
-    [bold green]EXAMPLES:[/bold green]
+    EXAMPLES:
     
-    [bold]Basic conversation[/bold] (10 turns):
-        [yellow]pidgin chat -a claude -b gpt[/yellow]
+    Basic conversation (10 turns):
+        pidgin chat -a claude -b gpt
     
-    [bold]Longer philosophical discussion[/bold]:
-        [yellow]pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"[/yellow]
+    Longer philosophical discussion:
+        pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
     
-    [bold]Using dimensional prompts[/bold]:
-        [yellow]pidgin chat -d debate:philosophy:analytical[/yellow]
+    Using dimensional prompts:
+        pidgin chat -d debate:philosophy:analytical
     
-    [bold]Let agents choose names[/bold]:
-        [yellow]pidgin chat -a haiku -b nano --choose-names[/yellow]
+    Let agents choose names:
+        pidgin chat -a haiku -b nano --choose-names
     
-    [bold]Verbose mode with timing[/bold]:
-        [yellow]pidgin chat -a claude -b claude -v --timing[/yellow]
+    Verbose mode with timing:
+        pidgin chat -a claude -b claude -v --timing
     
-    [bold red]INTERRUPT CONTROL:[/bold red]
-        Press [bold yellow]Ctrl+C[/bold yellow] at any time to pause the conversation.
-        You can then choose to [green]continue[/green] or [red]exit[/red] gracefully.
+    INTERRUPT CONTROL:
+        Press Ctrl+C at any time to pause the conversation.
+        You can then choose to continue or exit gracefully.
     
-    [bold cyan]OUTPUT:[/bold cyan]
-        All conversations are saved to [cyan]./pidgin_output/conversations/YYYY-MM-DD/[/cyan]
+    OUTPUT:
+        All conversations are saved to ./pidgin_output/conversations/YYYY-MM-DD/
         Each conversation includes:
-        [dim]•[/dim] [green]events.jsonl[/green] - Complete event log
-        [dim]•[/dim] [blue]conversation.json[/blue] - Structured data with metrics
-        [dim]•[/dim] [yellow]conversation.md[/yellow] - Human-readable transcript
+        • events.jsonl - Complete event log
+        • conversation.json - Structured data with metrics
+        • conversation.md - Human-readable transcript
     """
     from .event_bus import EventBus
     from .event_logger import EventLogger
@@ -560,31 +562,31 @@ def chat(
 
 @cli.command()
 @click.help_option("-h", "--help")
-@click.option("-p", "--provider", help="Filter by provider ([cyan]anthropic[/cyan]/[green]openai[/green]/[blue]google[/blue]/[yellow]xai[/yellow])")
+@click.option("-p", "--provider", help="Filter by provider (anthropic/openai/google/xai)")
 @click.option("-d", "--detailed", is_flag=True, help="Show detailed model information")
 def models(provider, detailed):
     """List available AI models and their capabilities.
     
-    Shows all models that can be used in conversations, including their [bold]context
-    windows[/bold], [bold]pricing tiers[/bold], and [bold]recommended pairings[/bold].
+    Shows all models that can be used in conversations, including their context
+    windows, pricing tiers, and recommended pairings.
     
-    [bold green]EXAMPLES:[/bold green]
+    EXAMPLES:
     
-    [bold]List all models[/bold]:
-        [yellow]pidgin models[/yellow]
+    List all models:
+        pidgin models
     
-    [bold]Show detailed information[/bold]:
-        [yellow]pidgin models --detailed[/yellow]
+    Show detailed information:
+        pidgin models --detailed
     
-    [bold]Filter by provider[/bold]:
-        [yellow]pidgin models --provider anthropic[/yellow]
+    Filter by provider:
+        pidgin models --provider anthropic
     
-    [bold cyan]MODEL SHORTCUTS:[/bold cyan]
+    MODEL SHORTCUTS:
         Many models have convenient shortcuts:
-        [dim]•[/dim] [green]claude[/green] → claude-4-sonnet-20250514
-        [dim]•[/dim] [green]gpt[/green] → gpt-4o
-        [dim]•[/dim] [green]opus[/green] → claude-4-opus-20250514
-        [dim]•[/dim] [green]haiku[/green] → claude-3-5-haiku-20241022
+        • claude → claude-4-sonnet-20250514
+        • gpt → gpt-4o
+        • opus → claude-4-opus-20250514
+        • haiku → claude-3-5-haiku-20241022
     
     Use any model ID or shortcut in the chat command.
     """
@@ -709,32 +711,32 @@ def dimensions(example, list_only, detailed, dimension):
     """Explore dimensional prompt system for conversation setup.
     
     Dimensional prompts let you quickly configure conversation dynamics by
-    combining different aspects like [bold]context[/bold] (peers/debate/teaching) and
-    [bold]topics[/bold] (philosophy/science/language).
+    combining different aspects like context (peers/debate/teaching) and
+    topics (philosophy/science/language).
     
-    [bold cyan]FORMAT:[/bold cyan]
-        [yellow]-d context:topic[:mode][/yellow]
+    FORMAT:
+        -d context:topic[:mode]
     
-    [bold green]EXAMPLES:[/bold green]
+    EXAMPLES:
     
-    [bold]List all dimensions[/bold]:
-        [yellow]pidgin dimensions[/yellow]
+    List all dimensions:
+        pidgin dimensions
     
-    [bold]Show specific dimension[/bold]:
-        [yellow]pidgin dimensions context --detailed[/yellow]
+    Show specific dimension:
+        pidgin dimensions context --detailed
     
-    [bold]See example output[/bold]:
-        [yellow]pidgin dimensions --example peers:philosophy[/yellow]
+    See example output:
+        pidgin dimensions --example peers:philosophy
     
-    [bold]QUICK COMBINATIONS:[/bold]
-        [dim]•[/dim] [green]peers:philosophy[/green] → Collaborative philosophical discussion
-        [dim]•[/dim] [green]debate:science:analytical[/green] → Analytical scientific debate
-        [dim]•[/dim] [green]teaching:puzzles --puzzle riddle[/green] → Teaching session about riddles
+    QUICK COMBINATIONS:
+        • peers:philosophy → Collaborative philosophical discussion
+        • debate:science:analytical → Analytical scientific debate
+        • teaching:puzzles --puzzle riddle → Teaching session about riddles
     
-    [bold yellow]SPECIAL TOPICS:[/bold yellow]
+    SPECIAL TOPICS:
         Some topics require additional parameters:
-        [dim]•[/dim] [cyan]puzzles[/cyan]: Use [yellow]--puzzle[/yellow] to specify which puzzle
-        [dim]•[/dim] [cyan]thought_experiments[/cyan]: Use [yellow]--experiment[/yellow] to specify which one
+        • puzzles: Use --puzzle to specify which puzzle
+        • thought_experiments: Use --experiment to specify which one
     """
     generator = DimensionalPromptGenerator()
 
