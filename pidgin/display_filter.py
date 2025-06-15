@@ -113,10 +113,7 @@ class DisplayFilter:
         content += f"◈ [dim]Press Ctrl+C to pause[/dim]\n\n"
 
         # Show initial prompt
-        prompt_preview = event.initial_prompt
-        if len(prompt_preview) > 300:
-            prompt_preview = prompt_preview[:297] + "..."
-        content += f"[bold]Initial Prompt:[/bold]\n{prompt_preview}"
+        content += f"[bold]Initial Prompt:[/bold]\n{event.initial_prompt}"
 
         self.console.print(
             Panel(
