@@ -114,10 +114,13 @@ class BannerGroup(click.Group):
             Align.center(content),
             border_style="#5e81ac",  # nord10
             padding=(1, 2),
-            style="on #2e3440"  # nord0 background hint
+            style="on #2e3440",  # nord0 background hint
+            expand=False  # Don't expand to full width
         )
         
-        console.print(panel)
+        # Print with padding
+        console.print()
+        console.print(Align.center(panel))
         console.print()
         
         super().format_help(ctx, formatter)
