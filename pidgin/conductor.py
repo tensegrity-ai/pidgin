@@ -32,6 +32,7 @@ from .models import get_model_config
 from .output_manager import OutputManager
 from .providers.event_wrapper import EventAwareProvider
 from .system_prompts import get_system_prompts
+from .transcripts import TranscriptManager
 from .types import Agent, Conversation, Message
 from .user_interaction import UserInteractionHandler, TimeoutDecision
 
@@ -68,6 +69,9 @@ class Conductor:
         # Name choosing mode
         self.choose_names_mode = False
         self.agent_chosen_names: Dict[str, str] = {}
+        
+        # Track conversation directory for transcript saving
+        self.current_conv_dir: Optional[Path] = None
 
     async def run_conversation(
         self,
@@ -101,6 +105,7 @@ class Conductor:
         
         # Create output directory
         conv_id, conv_dir = self.output_manager.create_conversation_dir()
+        self.current_conv_dir = conv_dir  # Store for transcript saving
         
         # Initialize event system
         await self._initialize_event_system(conv_dir, display_mode, show_timing, 
@@ -128,6 +133,9 @@ class Conductor:
         
         # Emit end event and cleanup
         await self._emit_end_event(conversation, final_turn, max_turns, start_time)
+        
+        # Save transcripts
+        await self._save_transcripts(conversation)
         
         return conversation
 
@@ -484,3 +492,14 @@ class Conductor:
 
         # Stop the event bus to ensure all events are written
         await self.bus.stop()
+        
+    async def _save_transcripts(self, conversation: Conversation):
+        """Save conversation transcripts to output directory.
+        
+        Args:
+            conversation: The completed conversation
+        """
+        if self.current_conv_dir:
+            transcript_manager = TranscriptManager(self.current_conv_dir)
+            # TODO: Gather metrics if needed
+            await transcript_manager.save(conversation)

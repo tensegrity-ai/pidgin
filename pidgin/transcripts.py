@@ -6,26 +6,30 @@ from .types import Conversation
 
 
 class TranscriptManager:
-    def __init__(self, save_path: Optional[str] = None):
-        self.save_path = save_path
+    def __init__(self, output_dir: Path):
+        """Initialize transcript manager.
+        
+        Args:
+            output_dir: Directory where transcripts should be saved
+        """
+        self.output_dir = output_dir
         self._transcript_path: Optional[Path] = None
 
     async def save(
         self, conversation: Conversation, metrics: Optional[Dict[str, Any]] = None
     ):
-        # Determine save location
-        if self.save_path:
-            base_dir = Path(self.save_path)
-        else:
-            # Default: ~/.pidgin_data/transcripts/YYYY-MM-DD/conversation_id/
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            home_dir = Path.home()
-            base_dir = (
-                home_dir / ".pidgin_data" / "transcripts" / date_str / conversation.id
-            )
-
-        # Create directory
-        base_dir.mkdir(parents=True, exist_ok=True)
+        """Save conversation transcript to the output directory.
+        
+        Args:
+            conversation: The conversation to save
+            metrics: Optional metrics to include in the JSON output
+        """
+        # Use the provided output directory
+        base_dir = self.output_dir
+        
+        # Directory should already exist from OutputManager
+        if not base_dir.exists():
+            base_dir.mkdir(parents=True, exist_ok=True)
 
         # Save JSON (machine-readable) with enhanced metrics
         json_path = base_dir / "conversation.json"
@@ -87,21 +91,6 @@ class TranscriptManager:
         """Get the path where the transcript will be saved."""
         if self._transcript_path:
             return self._transcript_path
-
-        # Calculate the path without saving
-        if self.save_path:
-            base_dir = Path(self.save_path)
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            home_dir = Path.home()
-            # Use a temporary conversation ID
-            conv_id = datetime.now().strftime("%H%M%S")
-            base_dir = (
-                home_dir
-                / ".pidgin_data"
-                / "transcripts"
-                / date_str
-                / f"conversation_{conv_id}"
-            )
-
-        return base_dir / "conversation.md"
+        
+        # Return the markdown path in the output directory
+        return self.output_dir / "conversation.md"
