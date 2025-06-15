@@ -1,3 +1,7 @@
+import os
+# Force color output for rich-click
+os.environ['FORCE_COLOR'] = '1'
+
 import rich_click as click
 import asyncio
 from pathlib import Path
@@ -9,30 +13,33 @@ from rich.markdown import Markdown
 from rich.text import Text
 
 # Configure rich-click with Nord colors
-click.rich_click.USE_RICH_MARKUP = True
-click.rich_click.SHOW_ARGUMENTS = True
-click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
-click.rich_click.SHOW_METAVARS_COLUMN = False
-click.rich_click.APPEND_METAVARS_HELP = True
+# Set configuration directly on the rich_click module
+click.COLOR_SYSTEM = "truecolor"
+click.FORCE_TERMINAL = True
+
+click.USE_RICH_MARKUP = True
+click.SHOW_ARGUMENTS = True
+click.GROUP_ARGUMENTS_OPTIONS = True
+click.SHOW_METAVARS_COLUMN = False
+click.APPEND_METAVARS_HELP = True
 
 # Nord color scheme
-click.rich_click.STYLE_OPTION = "bold #8fbcbb"  # Nord7 teal
-click.rich_click.STYLE_ARGUMENT = "bold #88c0d0"  # Nord8 light blue
-click.rich_click.STYLE_COMMAND = "bold #5e81ac"  # Nord10 blue
-click.rich_click.STYLE_SWITCH = "#a3be8c"  # Nord14 green
-click.rich_click.STYLE_METAVAR = "#d8dee9"  # Nord4 light gray
-click.rich_click.STYLE_USAGE = "bold #8fbcbb"
-click.rich_click.STYLE_OPTION_DEFAULT = "#4c566a"  # Nord3 dim gray
-click.rich_click.STYLE_REQUIRED_SHORT = "bold #bf616a"  # Nord11 red
-click.rich_click.STYLE_REQUIRED_LONG = "bold #bf616a"
+click.STYLE_OPTION = "bold #8fbcbb"  # Nord7 teal
+click.STYLE_ARGUMENT = "bold #88c0d0"  # Nord8 light blue
+click.STYLE_COMMAND = "bold #5e81ac"  # Nord10 blue
+click.STYLE_SWITCH = "#a3be8c"  # Nord14 green
+click.STYLE_METAVAR = "#d8dee9"  # Nord4 light gray
+click.STYLE_USAGE = "bold #8fbcbb"
+click.STYLE_OPTION_DEFAULT = "#4c566a"  # Nord3 dim gray
+click.STYLE_REQUIRED_SHORT = "bold #bf616a"  # Nord11 red
+click.STYLE_REQUIRED_LONG = "bold #bf616a"
 
 # Maximum width for help text
-click.rich_click.MAX_WIDTH = 100
+click.MAX_WIDTH = 100
 
-# Enable click.rich markup rendering
-from click import formatting
-click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "bold"
-click.rich_click.STYLE_HELPTEXT = ""
+# Enable rich formatting
+click.STYLE_HELPTEXT_FIRST_LINE = "bold"
+click.STYLE_HELPTEXT = ""
 from .models import MODELS, get_model_config, get_models_by_provider
 from .types import Agent
 from .providers.anthropic import AnthropicProvider
