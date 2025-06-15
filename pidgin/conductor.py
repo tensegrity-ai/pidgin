@@ -27,6 +27,7 @@ from .models import get_model_config
 from .output_manager import OutputManager
 from .providers.event_wrapper import EventAwareProvider
 from .types import Agent, Conversation, Message
+from .user_interaction import UserInteractionHandler, TimeoutDecision
 
 
 class Conductor:
@@ -51,6 +52,9 @@ class Conductor:
         self.bus = None  # Will be created per conversation
         self.wrapped_providers = None  # Will be created when bus is available
         self.event_logger = None  # Will be created with bus
+        
+        # User interaction handler
+        self.user_interaction = UserInteractionHandler(console)
 
         # Track message completion
         self.pending_messages: Dict[str, asyncio.Future] = {}
@@ -262,126 +266,28 @@ class Conductor:
             )
         )
 
-        # Request Agent A message
-        agent_a_future = asyncio.Future()
-        self.pending_messages[agent_a.id] = agent_a_future
-
-        await self.bus.emit(
-            MessageRequestEvent(
-                conversation_id=conversation.id,
-                agent_id=agent_a.id,
-                turn_number=turn_number,
-                conversation_history=conversation.messages.copy(),
-            )
+        # Get Agent A message
+        agent_a_message = await self._get_agent_message(
+            conversation.id, 
+            agent_a, 
+            turn_number, 
+            conversation.messages
         )
-
-        # Wait for Agent A response
-        try:
-            agent_a_message = await asyncio.wait_for(agent_a_future, timeout=60.0)
-        except asyncio.TimeoutError:
-            # Emit timeout event
-            await self.bus.emit(
-                ProviderTimeoutEvent(
-                    conversation_id=conversation.id,
-                    error_type="timeout",
-                    error_message=f"Agent A ({agent_a.display_name}) did not respond within 60 seconds",
-                    context=f"Turn {turn_number}",
-                    agent_id=agent_a.id,
-                    timeout_seconds=60.0,
-                )
-            )
-
-            # Ask user what to do
-            if hasattr(self, "console") and self.console:
-                self.console.print(
-                    "\n[yellow]⚠ Agent A is taking longer than expected.[/yellow]"
-                )
-                self.console.print("[yellow]Options:[/yellow]")
-                self.console.print("  1. Wait longer (press Enter)")
-                self.console.print("  2. Skip this turn (type 'skip')")
-                self.console.print("  3. End conversation (type 'end')")
-
-                try:
-                    user_input = input("\nYour choice: ").strip().lower()
-                    if user_input == "skip":
-                        return None
-                    elif user_input == "end":
-                        raise KeyboardInterrupt("User requested end")
-                    else:
-                        # Wait longer
-                        agent_a_message = await asyncio.wait_for(
-                            agent_a_future, timeout=120.0
-                        )
-                except asyncio.TimeoutError:
-                    self.console.print(
-                        "[red]Agent still not responding. Skipping turn.[/red]"
-                    )
-                    return None
-            else:
-                return None
-
-        # Add to conversation
+        if agent_a_message is None:
+            return None
+            
         conversation.messages.append(agent_a_message)
 
-        # Request Agent B message
-        agent_b_future = asyncio.Future()
-        self.pending_messages[agent_b.id] = agent_b_future
-
-        await self.bus.emit(
-            MessageRequestEvent(
-                conversation_id=conversation.id,
-                agent_id=agent_b.id,
-                turn_number=turn_number,
-                conversation_history=conversation.messages.copy(),
-            )
+        # Get Agent B message
+        agent_b_message = await self._get_agent_message(
+            conversation.id, 
+            agent_b, 
+            turn_number, 
+            conversation.messages
         )
-
-        # Wait for Agent B response
-        try:
-            agent_b_message = await asyncio.wait_for(agent_b_future, timeout=60.0)
-        except asyncio.TimeoutError:
-            # Emit timeout event
-            await self.bus.emit(
-                ProviderTimeoutEvent(
-                    conversation_id=conversation.id,
-                    error_type="timeout",
-                    error_message=f"Agent B ({agent_b.display_name}) did not respond within 60 seconds",
-                    context=f"Turn {turn_number}",
-                    agent_id=agent_b.id,
-                    timeout_seconds=60.0,
-                )
-            )
-
-            # Ask user what to do
-            if hasattr(self, "console") and self.console:
-                self.console.print(
-                    "\n[yellow]⚠ Agent B is taking longer than expected.[/yellow]"
-                )
-                self.console.print("[yellow]Options:[/yellow]")
-                self.console.print("  1. Wait longer (press Enter)")
-                self.console.print("  2. Skip this turn (type 'skip')")
-                self.console.print("  3. End conversation (type 'end')")
-
-                try:
-                    user_input = input("\nYour choice: ").strip().lower()
-                    if user_input == "skip":
-                        return None
-                    elif user_input == "end":
-                        raise KeyboardInterrupt("User requested end")
-                    else:
-                        # Wait longer
-                        agent_b_message = await asyncio.wait_for(
-                            agent_b_future, timeout=120.0
-                        )
-                except asyncio.TimeoutError:
-                    self.console.print(
-                        "[red]Agent still not responding. Skipping turn.[/red]"
-                    )
-                    return None
-            else:
-                return None
-
-        # Add to conversation
+        if agent_b_message is None:
+            return None
+            
         conversation.messages.append(agent_b_message)
 
         # Build turn
@@ -425,6 +331,76 @@ class Conductor:
             future = self.pending_messages.pop(event.agent_id)
             if not future.done():
                 future.set_result(event.message)
+
+    async def _get_agent_message(
+        self, 
+        conversation_id: str,
+        agent: Agent, 
+        turn_number: int,
+        conversation_history: List[Message],
+        timeout: float = 60.0
+    ) -> Optional[Message]:
+        """Get a single agent's message with timeout handling.
+        
+        Args:
+            conversation_id: ID of the current conversation
+            agent: The agent to get a message from
+            turn_number: Current turn number
+            conversation_history: Full conversation history
+            timeout: Initial timeout in seconds
+            
+        Returns:
+            The agent's message or None if skipped
+        """
+        # Create future for this agent's response
+        future = asyncio.Future()
+        self.pending_messages[agent.id] = future
+        
+        # Request message
+        await self.bus.emit(
+            MessageRequestEvent(
+                conversation_id=conversation_id,
+                agent_id=agent.id,
+                turn_number=turn_number,
+                conversation_history=conversation_history.copy(),
+            )
+        )
+        
+        # Wait for response with timeout
+        try:
+            message = await asyncio.wait_for(future, timeout=timeout)
+            return message
+        except asyncio.TimeoutError:
+            # Emit timeout event
+            await self.bus.emit(
+                ProviderTimeoutEvent(
+                    conversation_id=conversation_id,
+                    error_type="timeout",
+                    error_message=f"{agent.display_name} did not respond within {timeout} seconds",
+                    context=f"Turn {turn_number}",
+                    agent_id=agent.id,
+                    timeout_seconds=timeout,
+                )
+            )
+            
+            # Get user decision
+            decision = self.user_interaction.get_timeout_decision(agent.display_name)
+            
+            if decision == TimeoutDecision.SKIP:
+                return None
+            elif decision == TimeoutDecision.END:
+                raise KeyboardInterrupt("User requested end")
+            else:  # WAIT
+                try:
+                    # Wait longer (double the timeout)
+                    message = await asyncio.wait_for(future, timeout=timeout * 2)
+                    return message
+                except asyncio.TimeoutError:
+                    if self.user_interaction.console:
+                        self.user_interaction.console.print(
+                            f"[red]{agent.display_name} still not responding. Skipping turn.[/red]"
+                        )
+                    return None
 
     def _extract_chosen_name(self, message_content: str) -> Optional[str]:
         """Extract self-chosen name from first response"""

@@ -302,9 +302,10 @@ class DimensionalPromptGenerator:
                         data = yaml.safe_load(f)
                         if data and content_type in data:
                             custom_content.update(data[content_type])
-                except Exception:
-                    # Silently ignore bad config files
-                    pass
+                except Exception as e:
+                    # Log error but continue with other config files
+                    print(f"Warning: Failed to load {path}: {e}")
+                    continue
 
         return custom_content
 

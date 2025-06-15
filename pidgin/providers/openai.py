@@ -1,10 +1,9 @@
 import os
-import asyncio
-import time
 from openai import AsyncOpenAI
 from typing import List, AsyncIterator, AsyncGenerator
 from ..types import Message
 from .base import Provider
+from .retry_utils import retry_with_exponential_backoff, is_retryable_error
 
 
 class OpenAIProvider(Provider):
