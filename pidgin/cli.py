@@ -1,4 +1,4 @@
-import click
+import rich_click as click
 import asyncio
 from pathlib import Path
 from typing import Optional
@@ -7,6 +7,32 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
+
+# Configure rich-click with Nord colors
+click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.SHOW_ARGUMENTS = True
+click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
+click.rich_click.SHOW_METAVARS_COLUMN = False
+click.rich_click.APPEND_METAVARS_HELP = True
+
+# Nord color scheme
+click.rich_click.STYLE_OPTION = "bold #8fbcbb"  # Nord7 teal
+click.rich_click.STYLE_ARGUMENT = "bold #88c0d0"  # Nord8 light blue
+click.rich_click.STYLE_COMMAND = "bold #5e81ac"  # Nord10 blue
+click.rich_click.STYLE_SWITCH = "#a3be8c"  # Nord14 green
+click.rich_click.STYLE_METAVAR = "#d8dee9"  # Nord4 light gray
+click.rich_click.STYLE_USAGE = "bold #8fbcbb"
+click.rich_click.STYLE_OPTION_DEFAULT = "#4c566a"  # Nord3 dim gray
+click.rich_click.STYLE_REQUIRED_SHORT = "bold #bf616a"  # Nord11 red
+click.rich_click.STYLE_REQUIRED_LONG = "bold #bf616a"
+
+# Maximum width for help text
+click.rich_click.MAX_WIDTH = 100
+
+# Enable click.rich markup rendering
+from click import formatting
+click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "bold"
+click.rich_click.STYLE_HELPTEXT = ""
 from .models import MODELS, get_model_config, get_models_by_provider
 from .types import Agent
 from .providers.anthropic import AnthropicProvider
@@ -303,10 +329,10 @@ def cli(ctx, config):
 @cli.command()
 @click.help_option("-h", "--help")
 @click.option("-a", "--model-a", default="claude", 
-              help="First model - e.g., claude, opus, gpt, haiku (default: claude)")
+              help="First model - e.g., claude, opus, gpt, haiku")
 @click.option(
     "-b", "--model-b", default="claude", 
-    help="Second model - e.g., gpt-4.1, gemini, grok (default: claude)"
+    help="Second model - e.g., gpt-4.1, gemini, grok"
 )
 @click.option(
     "-t", "--turns", default=10, 
