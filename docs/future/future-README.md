@@ -3,10 +3,10 @@
 Planned functionality for upcoming modules.
 
 ## Experiments Module (Next Priority)
-- **linguistic-metrics-design.md** - Compression, vocabulary, symbol tracking
 - Parallel batch execution
 - SQLite results storage
-- Cost tracking
+- Statistical analysis pipeline
+- Control conditions
 
 ## Analytics Module (After Experiments)
 - Pattern discovery

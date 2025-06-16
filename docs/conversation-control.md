@@ -1,17 +1,17 @@
 # Conversation Control
 
-## Current Implementation ✅
+## What Actually Works
 
-### Interrupt System
+### Basic Interrupt System
 
-Press `Ctrl+C` during any conversation to pause:
+Press `Ctrl+C` to pause conversations:
 
-1. **Signal Handling**: Ctrl+C is caught by custom handler
-2. **Graceful Completion**: Current message finishes
-3. **Pause Menu**: Two options: Continue or Exit
-4. **Event Logging**: All transitions recorded
+1. Catches the signal and shows a menu
+2. Current message finishes first
+3. You can continue or exit
+4. Logs events about pausing (unclear why this matters)
 
-This is fully working and tested.
+That's it. It's a pause button.
 
 ### How It Works
 
@@ -29,24 +29,28 @@ All pause/resume actions emit events:
 - `ConversationPausedEvent` - Conversation paused
 - `ConversationResumedEvent` - User chose to continue
 
-## Not Yet Implemented ❌
+## Broken or Missing Features
 
 ### Message Injection
-- Framework exists but not connected
-- Would allow adding messages during pause
-- Planned for future release
+- Can't actually inject messages despite the pause menu
+- Original idea was to let users steer conversations
+- Just shows a menu and continues
 
-### Convergence-Based Pausing
-- Code calculates convergence metrics
-- Auto-pause at threshold NOT implemented
-- Needs UI integration
+### "Convergence-Based Pausing"
+- Supposedly would pause when AIs "converge"
+- The metrics are meaningless anyway
+- Even if implemented, would pause at random
 
-### Context Limit Pausing  
-- Token counting exists but not active
-- No automatic pausing at context limits
-- Manual implementation needed
+### Context Limit Warnings
+- Should warn when hitting token limits
+- Token counting code exists but does nothing
+- Would need major refactoring to work
 
-### Event Replay Resume
-- Cannot resume from previous conversations
-- Event logs exist but replay not implemented
-- Checkpoint system was removed
+### Resume from Previous Runs
+- Can't resume despite all the event logging
+- JSONL files just take up disk space
+- Original "event sourcing" vision didn't pan out
+
+## The Reality
+
+This is a pause button that generates huge log files. The original vision of "conversation control" for "emergence research" resulted in basic interrupt handling wrapped in layers of abstraction.

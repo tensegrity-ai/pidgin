@@ -1,32 +1,36 @@
 # Pidgin
 
-AI conversation research tool for studying emergent communication between language models.
+A tool for running conversations between AI language models and logging what happens.
 
 ## Overview
 
-Pidgin enables controlled experiments between AI agents to study their communication patterns. It features a fully event-driven architecture, real-time streaming, and the ability to pause conversations with Ctrl+C.
+Pidgin runs conversations between different AI models and saves the output. It has an event-driven architecture that logs everything to JSONL files. You can pause conversations with Ctrl+C.
 
-## What's Actually Working ✅
+## What Actually Works
 
-- **Event-driven architecture** - Every action emits observable events
-- **Conversation streaming** - Real-time responses from all providers  
-- **Pause/Resume** - Press Ctrl+C to pause any conversation
-- **Multi-provider support** - 15+ models from Anthropic, OpenAI, Google, xAI
-- **Structured output** - Conversations saved with full event logs
-- **Dimensional prompts** - Quick conversation setup system
+- **Basic conversation runner** - Runs conversations between AI models
+- **Event logging** - Saves events to JSONL files (whether this is useful is unclear)
+- **Ctrl+C interrupt** - You can pause conversations
+- **Multiple providers** - Works with Anthropic, OpenAI, Google, xAI
+- **Output files** - Saves transcripts and logs to `./pidgin_output/`
+- **Preset prompts** - Some built-in conversation starters
 
-## What's In Progress 🚧
+## What Doesn't Work
 
-- **Convergence detection** - Metrics are calculated but not displayed/used
-- **Context window tracking** - Code exists but isn't active
-- **Message injection** - Can pause but can't inject messages yet
+- **Convergence detection** - Code calculates metrics but they don't do anything
+- **Context tracking** - Code exists but isn't connected to anything
+- **Message injection** - You can pause but can't actually inject messages
+- **Pattern analysis** - There's no actual analysis of anything
+- **Resuming conversations** - Can't resume from previous runs
+- **Batch execution** - Can only run one conversation at a time
 
-## What's Planned 📋
+## Important Limitations
 
-- **Batch experiments** - Run multiple conversations in parallel
-- **Live dashboard** - Real-time monitoring with Rich
-- **Pattern analysis** - Discover emergent behaviors
-- **Event replay** - Resume conversations from event logs
+- This is basically a conversation logger with a pause button
+- The "convergence metrics" are arbitrary and probably meaningless
+- There's no evidence that AI conversations produce interesting "emergent" patterns
+- Most observed behaviors are likely just model artifacts or randomness
+- The event system is over-engineered for what the tool actually does
 
 ## Installation
 
@@ -93,26 +97,44 @@ Use `pidgin models` to see all available models. Common shortcuts:
 - `gpt` → gpt-4o
 - `gemini` → gemini-2.0-flash-exp
 
-## Architecture
+## Technical Architecture
 
-Pidgin is built on an event-driven architecture where:
-- Every action emits an event
-- Events are logged to JSONL for analysis
-- Components communicate only through events
-- No hidden state or side effects
+The codebase uses an event-driven pattern where everything emits events to a JSONL file. This is probably overkill for a conversation logger, but it's what we have. The main components:
+- Event bus that everything publishes to
+- Providers that wrap AI APIs
+- A conductor that manages turn-taking
+- Output managers that save files
 
-## Research Focus
+## What This Tool Is For
 
-We're building tools to observe what happens when AIs communicate, without assuming what we'll find. Current areas of investigation:
+If you want to:
+- Run conversations between AI models
+- Save the output for later analysis
+- Have a simple way to pause conversations
 
-- How do conversation patterns evolve over many turns?
-- Do certain model pairs develop unique dynamics?
-- What happens during very long conversations?
-- How do interruptions affect conversation flow?
+This tool does that. Nothing more, nothing less.
+
+## What This Tool Is Not
+
+- Not a research platform (despite the original vision)
+- Not detecting meaningful patterns (convergence metrics are arbitrary)
+- Not discovering new AI behaviors (it's just logging chat)
+- Not scientifically validated in any way
+
+## A Note on "Emergent Communication"
+
+The original vision for this tool involved studying "emergent communication patterns" between AIs. After implementation, we must be honest: there's no evidence that AI conversations produce meaningful emergent phenomena. What appears to be "convergence" or "pattern formation" is more likely:
+
+- Statistical artifacts from limited sampling
+- Model training biases showing through
+- Confirmation bias in human observers
+- Random variations being over-interpreted
+
+The code still contains remnants of this vision (convergence metrics, attractor detection, etc.) but these should be viewed with extreme skepticism.
 
 ## Contributing
 
-This is alpha software under active development. The architecture is stabilizing but features are still being added.
+This is experimental software. Many features don't work as originally intended. The codebase has significant technical debt from its ambitious original vision. Contributions that simplify the code or make it more honest about its capabilities are welcome.
 
 ## License
 
