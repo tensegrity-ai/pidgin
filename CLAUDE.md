@@ -249,7 +249,7 @@ pidgin/
 │   └── xai.py          # Grok models
 │
 ├── dialogue_components/# Separated display components
-├── attractors/         # Pattern detection (experimental)
+├── convergence.py      # Convergence calculation
 │
 ├── config.py           # Configuration management
 ├── context_manager.py  # Token/context tracking

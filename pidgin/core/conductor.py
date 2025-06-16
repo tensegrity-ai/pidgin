@@ -14,8 +14,8 @@ from typing import Dict, List, Optional
 from rich.console import Console
 
 from .event_bus import EventBus
-from .event_logger import EventLogger
-from .display_filter import DisplayFilter
+from ..ui.event_logger import EventLogger
+from ..ui.display_filter import DisplayFilter
 from .events import (
     Event,
     Turn,
@@ -32,15 +32,15 @@ from .events import (
     ConversationPausedEvent,
     ConversationResumedEvent,
 )
-from .models import get_model_config
-from .output_manager import OutputManager
-from .providers.event_wrapper import EventAwareProvider
-from .system_prompts import get_system_prompts
-from .transcripts import TranscriptManager
+from ..config.models import get_model_config
+from ..io.output_manager import OutputManager
+from ..providers.event_wrapper import EventAwareProvider
+from ..config.system_prompts import get_system_prompts
+from ..io.transcripts import TranscriptManager
 from .types import Agent, Conversation, Message
-from .user_interaction import UserInteractionHandler, TimeoutDecision
-from .convergence import ConvergenceCalculator
-from .config import get_config
+from ..ui.user_interaction import UserInteractionHandler, TimeoutDecision
+from ..analysis.convergence import ConvergenceCalculator
+from ..config.config import get_config
 
 
 class Conductor:
@@ -165,7 +165,10 @@ class Conductor:
         display_mode: str = "normal",
         show_timing: bool = False,
         choose_names: bool = False,
-        stability_level: int = 2,
+        awareness_a: str = "basic",
+        awareness_b: str = "basic",
+        temperature_a: Optional[float] = None,
+        temperature_b: Optional[float] = None,
     ) -> Conversation:
         """Run a complete conversation using events.
 
@@ -177,7 +180,10 @@ class Conductor:
             display_mode: Display mode (normal, quiet, verbose)
             show_timing: Whether to show timing information
             choose_names: Whether agents should choose their own names
-            stability_level: System prompt stability level (0-4)
+            awareness_a: Awareness level for agent A (none, basic, firm, research)
+            awareness_b: Awareness level for agent B (none, basic, firm, research)
+            temperature_a: Temperature setting for agent A (0.0-2.0)
+            temperature_b: Temperature setting for agent B (0.0-2.0)
 
         Returns:
             The completed conversation
@@ -198,7 +204,13 @@ class Conductor:
         conversation = self._create_conversation(conv_id, agent_a, agent_b, initial_prompt)
         
         # Get system prompts and add initial messages
-        system_prompts = get_system_prompts(stability_level, choose_names)
+        system_prompts = get_system_prompts(
+            awareness_a=awareness_a,
+            awareness_b=awareness_b,
+            choose_names=choose_names,
+            model_a_name=agent_a.model,
+            model_b_name=agent_b.model
+        )
         await self._add_initial_messages(conversation, system_prompts, initial_prompt)
         
         # Set up interrupt handling
@@ -209,7 +221,8 @@ class Conductor:
             # Emit start events
             self.start_time = time.time()
             await self._emit_start_events(conversation, agent_a, agent_b, 
-                                         initial_prompt, max_turns, system_prompts)
+                                         initial_prompt, max_turns, system_prompts,
+                                         temperature_a, temperature_b)
             
             # Run turns
             final_turn = 0
@@ -389,6 +402,7 @@ class Conductor:
                 agent_id=agent.id,
                 turn_number=turn_number,
                 conversation_history=conversation_history.copy(),
+                temperature=agent.temperature,
             )
         )
         
@@ -598,7 +612,8 @@ class Conductor:
         
     async def _emit_start_events(self, conversation: Conversation, agent_a: Agent, 
                                 agent_b: Agent, initial_prompt: str, max_turns: int,
-                                system_prompts: Dict[str, str]):
+                                system_prompts: Dict[str, str], temperature_a: Optional[float],
+                                temperature_b: Optional[float]):
         """Emit all start-of-conversation events."""
         # Emit conversation start event
         await self.bus.emit(
@@ -610,6 +625,8 @@ class Conductor:
                 max_turns=max_turns,
                 agent_a_display_name=agent_a.display_name,
                 agent_b_display_name=agent_b.display_name,
+                temperature_a=temperature_a,
+                temperature_b=temperature_b,
             )
         )
 

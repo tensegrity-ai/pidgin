@@ -1,6 +1,6 @@
 import os
-from typing import List, AsyncIterator, AsyncGenerator
-from ..types import Message
+from typing import List, AsyncIterator, AsyncGenerator, Optional
+from ..core.types import Message
 from .base import Provider
 
 try:
@@ -30,7 +30,7 @@ class GoogleProvider(Provider):
         self.model = genai.GenerativeModel(model)
 
     async def stream_response(
-        self, messages: List[Message]
+        self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
@@ -42,8 +42,18 @@ class GoogleProvider(Provider):
         try:
             # Create chat session
             chat = self.model.start_chat(history=google_messages[:-1])
+            
+            # Build generation config if temperature is specified
+            generation_config = {}
+            if temperature is not None:
+                generation_config["temperature"] = temperature
+            
             # Stream the response
-            response = chat.send_message(google_messages[-1]["parts"][0], stream=True)
+            response = chat.send_message(
+                google_messages[-1]["parts"][0], 
+                stream=True,
+                generation_config=generation_config if generation_config else None
+            )
 
             for chunk in response:
                 if chunk.text:

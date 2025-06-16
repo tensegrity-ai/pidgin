@@ -124,7 +124,7 @@ The system uses a **convergence threshold** approach:
 - Stops conversation when convergence exceeds configured threshold
 - No prescriptive pattern categories - just measures similarity
 
-The previous "attractor" system with named patterns has been deprecated in favor of this simpler threshold approach.
+The system uses a simple convergence threshold approach - when agents become too similar (configurable, default 0.85), the conversation stops automatically.
 │
 ├── cli.py              # Command-line interface
 ├── config.py           # Configuration management

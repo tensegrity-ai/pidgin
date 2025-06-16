@@ -1,6 +1,6 @@
 import os
-from typing import List, AsyncIterator, AsyncGenerator
-from ..types import Message
+from typing import List, AsyncIterator, AsyncGenerator, Optional
+from ..core.types import Message
 from .base import Provider
 
 try:
@@ -31,7 +31,7 @@ class xAIProvider(Provider):
         self.model = model
 
     async def stream_response(
-        self, messages: List[Message]
+        self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Convert to OpenAI format (xAI is OpenAI-compatible)
         openai_messages = [{"role": m.role, "content": m.content} for m in messages]
@@ -45,9 +45,19 @@ class xAIProvider(Provider):
             openai_messages = system_msgs + other_msgs[-19:]
 
         try:
-            stream = await self.client.chat.completions.create(
-                model=self.model, messages=openai_messages, max_tokens=1000, stream=True
-            )
+            # Build parameters
+            params = {
+                "model": self.model,
+                "messages": openai_messages,
+                "max_tokens": 1000,
+                "stream": True,
+            }
+            
+            # Add temperature if specified (xAI/OpenAI allows 0-2)
+            if temperature is not None:
+                params["temperature"] = temperature
+                
+            stream = await self.client.chat.completions.create(**params)
 
             async for chunk in stream:
                 if chunk.choices[0].delta.content:

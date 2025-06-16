@@ -14,13 +14,8 @@ class Config:
 
     DEFAULT_CONFIG = {
         "conversation": {
-            "attractor_detection": {
-                "enabled": True,
-                "check_interval": 5,
-                "window_size": 10,
-                "threshold": 3,
-                "on_detection": "stop",
-            },
+            "convergence_threshold": 0.85,
+            "convergence_action": "stop",  # "stop", "warn", or "continue"
         },
         "context_management": {
             "enabled": True,
@@ -31,18 +26,14 @@ class Config:
         "defaults": {
             "max_turns": 20,
             "manual_mode": False,
-            "convergence_threshold": 0.75,
             "streaming_interrupts": False,  # Removed - using Ctrl+C signals instead
         },
         "experiments": {
             "unattended": {
-                "attractor_detection": {
-                    "on_detection": "stop",
-                    "threshold": 2,  # More aggressive
-                    "window_size": 8,
-                }
+                "convergence_threshold": 0.75,  # More aggressive
+                "convergence_action": "stop",
             },
-            "baseline": {"attractor_detection": {"enabled": False}},
+            "baseline": {"convergence_threshold": 1.0},  # Never stop on convergence
         },
     }
 
@@ -144,9 +135,9 @@ class Config:
             yaml.dump(self.config, f, default_flow_style=False)
 
 
-    def get_attractor_config(self) -> Dict[str, Any]:
-        """Get attractor detection configuration."""
-        return self.get("conversation.attractor_detection", {})
+    def get_convergence_config(self) -> Dict[str, Any]:
+        """Get convergence configuration."""
+        return self.get("conversation", {})
 
     def get_context_config(self) -> Dict[str, Any]:
         """Get context management configuration."""

@@ -45,7 +45,7 @@ class ProgressTracker(Component):
         """Mark conversation as stopped.
 
         Args:
-            reason: Reason for stopping (e.g., "attractor", "error", "intervention")
+            reason: Reason for stopping (e.g., "high_convergence", "error", "intervention")
         """
         self.completed = True
         self.completion_reason = reason

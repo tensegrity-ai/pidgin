@@ -1,7 +1,7 @@
 import os
 from anthropic import Anthropic
-from typing import List, AsyncIterator, AsyncGenerator
-from ..types import Message
+from typing import List, AsyncIterator, AsyncGenerator, Optional
+from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_overloaded_error
 
@@ -18,7 +18,7 @@ class AnthropicProvider(Provider):
         self.model = model
 
     async def stream_response(
-        self, messages: List[Message]
+        self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Extract system messages and conversation messages
         system_messages = []
@@ -36,6 +36,10 @@ class AnthropicProvider(Provider):
             "messages": conversation_messages,
             "max_tokens": 1000,
         }
+        
+        # Add temperature if specified (Anthropic caps at 1.0)
+        if temperature is not None:
+            api_params["temperature"] = min(temperature, 1.0)
 
         # Add system parameter if we have system messages
         if system_messages:

@@ -10,7 +10,6 @@ class ModelCharacteristics:
 
     verbosity_level: int  # 1-10 scale
     avg_response_length: Literal["short", "medium", "long"]
-    attractor_tendency: Literal["compression", "expansion", "balanced"]
     recommended_pairings: List[str]
     conversation_style: Literal["concise", "verbose", "analytical", "creative"]
 
@@ -44,7 +43,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=8,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["gpt-4.1", "o3"],
             conversation_style="analytical",
         ),
@@ -59,7 +57,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=6,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["gpt-4.1-mini", "claude-4-sonnet-20250514"],
             conversation_style="verbose",
         ),
@@ -74,7 +71,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["o4-mini", "gpt-4.1-mini"],
             conversation_style="analytical",
         ),
@@ -90,7 +86,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=3,
             avg_response_length="short",
-            attractor_tendency="compression",
             recommended_pairings=["gpt-4.1-nano", "claude-3-5-haiku-20241022"],
             conversation_style="concise",
         ),
@@ -105,7 +100,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=3,
             avg_response_length="short",
-            attractor_tendency="compression",
             recommended_pairings=["gpt-4o-mini", "claude-3-haiku-20240307"],
             conversation_style="concise",
         ),
@@ -122,7 +116,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "o3"],
             conversation_style="analytical",
         ),
@@ -138,7 +131,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=5,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1-mini"],
             conversation_style="verbose",
         ),
@@ -153,7 +145,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=3,
             avg_response_length="short",
-            attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4.1-nano"],
             conversation_style="concise",
         ),
@@ -168,7 +159,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=9,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -184,7 +174,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=6,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-3-7-sonnet-20250224", "o4-mini"],
             conversation_style="analytical",
         ),
@@ -200,7 +189,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-3-7-sonnet-20250224", "gpt-4.1-mini"],
             conversation_style="analytical",
         ),
@@ -216,7 +204,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=8,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "o3"],
             conversation_style="analytical",
         ),
@@ -232,7 +219,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -250,7 +236,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=6,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4o-mini"],
             conversation_style="verbose",
         ),
@@ -266,7 +251,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=4,
             avg_response_length="short",
-            attractor_tendency="compression",
             recommended_pairings=["claude-3-haiku-20240307", "gpt-4.1-nano"],
             conversation_style="concise",
         ),
@@ -282,7 +266,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=0,
             avg_response_length="short",
-            attractor_tendency="balanced",
             recommended_pairings=[],
             conversation_style="creative",
         ),
@@ -299,7 +282,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=5,
             avg_response_length="medium",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
             conversation_style="concise",
         ),
@@ -315,7 +297,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=8,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["o4-mini", "claude-4-sonnet-20250514"],
             conversation_style="analytical",
         ),
@@ -331,7 +312,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -347,7 +327,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="long",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -363,7 +342,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=4,
             avg_response_length="medium",
-            attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
             conversation_style="concise",
         ),
@@ -379,7 +357,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=3,
             avg_response_length="short",
-            attractor_tendency="compression",
             recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4o-mini"],
             conversation_style="concise",
         ),
@@ -396,7 +373,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=8,
             avg_response_length="long",
-            attractor_tendency="expansion",
             recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -412,7 +388,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="long",
-            attractor_tendency="balanced",
             recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1"],
             conversation_style="analytical",
         ),
@@ -428,7 +403,6 @@ MODELS: Dict[str, ModelConfig] = {
         characteristics=ModelCharacteristics(
             verbosity_level=7,
             avg_response_length="long",
-            attractor_tendency="balanced",
             recommended_pairings=["gpt-4o", "claude-4-sonnet-20250514"],
             conversation_style="analytical",
         ),

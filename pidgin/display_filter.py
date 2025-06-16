@@ -216,12 +216,25 @@ class DisplayFilter:
     def _show_turn_complete(self, event: TurnCompleteEvent):
         """Show turn completion marker."""
         self.current_turn = event.turn_number + 1
-        self.console.print(
-            Rule(
-                f"━━━ Turn {self.current_turn}/{self.max_turns} Complete ━━━",
-                style=self.COLORS["nord3"],
-            )
-        )
+        
+        # Build the turn marker text
+        turn_text = f"━━━ Turn {self.current_turn}/{self.max_turns} Complete"
+        
+        # Add convergence if available
+        if event.convergence_score is not None:
+            conv_color = self.COLORS["nord3"]  # Dim gray default
+            conv_text = f" | Convergence: {event.convergence_score:.2f}"
+            
+            # Add warning if convergence is high
+            if event.convergence_score > 0.75:
+                conv_color = self.COLORS["nord13"]  # Yellow warning
+                conv_text += " ⚠"
+            
+            turn_text += f" [{conv_color}]{conv_text}[/{conv_color}]"
+        
+        turn_text += " ━━━"
+        
+        self.console.print(Rule(turn_text, style=self.COLORS["nord3"]))
         self.console.print()
 
     def _show_conversation_end(self, event: ConversationEndEvent):

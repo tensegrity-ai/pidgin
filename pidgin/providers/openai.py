@@ -1,7 +1,7 @@
 import os
 from openai import AsyncOpenAI
-from typing import List, AsyncIterator, AsyncGenerator
-from ..types import Message
+from typing import List, AsyncIterator, AsyncGenerator, Optional
+from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_retryable_error
 
@@ -18,7 +18,7 @@ class OpenAIProvider(Provider):
         self.model = model
 
     async def stream_response(
-        self, messages: List[Message]
+        self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Convert to OpenAI format
         openai_messages = [{"role": m.role, "content": m.content} for m in messages]
@@ -37,12 +37,19 @@ class OpenAIProvider(Provider):
 
         for attempt in range(max_retries):
             try:
-                stream = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=openai_messages,
-                    max_tokens=1000,
-                    stream=True,
-                )
+                # Build parameters
+                params = {
+                    "model": self.model,
+                    "messages": openai_messages,
+                    "max_tokens": 1000,
+                    "stream": True,
+                }
+                
+                # Add temperature if specified (OpenAI allows 0-2)
+                if temperature is not None:
+                    params["temperature"] = temperature
+                
+                stream = await self.client.chat.completions.create(**params)
 
                 async for chunk in stream:
                     if chunk.choices[0].delta.content:

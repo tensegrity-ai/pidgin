@@ -46,14 +46,14 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
-from .models import MODELS, get_model_config, get_models_by_provider
-from .types import Agent
+from .config.models import MODELS, get_model_config, get_models_by_provider
+from .core.types import Agent
 from .providers.anthropic import AnthropicProvider
 from .providers.openai import OpenAIProvider
 from .providers.google import GoogleProvider
 from .providers.xai import xAIProvider
-from .config import Config, load_config
-from .dimensional_prompts import DimensionalPromptGenerator
+from .config.config import Config, load_config
+from .config.dimensional_prompts import DimensionalPromptGenerator
 
 console = Console()
 
@@ -65,34 +65,131 @@ def _build_initial_prompt(
     experiment: Optional[str] = None,
     topic_content: Optional[str] = None,
 ) -> str:
-    """Build initial prompt from custom prompt and/or dimensions."""
+    """Build initial prompt from custom prompt and/or dimensions.
+    
+    Args:
+        custom_prompt: Either a string or path to .md file
+        dimensions: Dimensional prompt specification
+        puzzle: Puzzle name for dimensional prompts
+        experiment: Experiment name for dimensional prompts
+        topic_content: Custom content for puzzles/experiments
+    """
     parts = []
-
-    # Add dimensional prompt if specified
+    
+    # Handle dimensional prompt if specified
     if dimensions:
         try:
             generator = DimensionalPromptGenerator()
-            dimensional_prompt = generator.generate(
-                dimensions,
-                puzzle=puzzle,
-                experiment=experiment,
-                topic_content=topic_content,
-            )
-            parts.append(dimensional_prompt)
+            
+            # Check if we need to handle custom prompt integration
+            if custom_prompt and not (puzzle or experiment or topic_content):
+                # Parse dimensions to check if it's a regular topic
+                dim_parts = dimensions.split(':')
+                if len(dim_parts) >= 2:
+                    topic = dim_parts[1]
+                    
+                    # Check if it's a file
+                    if custom_prompt.endswith('.md') and os.path.exists(custom_prompt):
+                        # Read file content
+                        try:
+                            with open(custom_prompt, 'r', encoding='utf-8') as f:
+                                content = f.read().strip()
+                            if not content:
+                                console.print(f"[#ebcb8b]Warning: File '{custom_prompt}' is empty[/#ebcb8b]")
+                            
+                            # For files, use "the following scenario"
+                            if topic not in ['puzzles', 'thought_experiments']:
+                                # Generate dimensional prompt with placeholder
+                                dimensional_prompt = generator.generate(dimensions)
+                                # Replace {topic} with transition phrase
+                                dimensional_prompt = dimensional_prompt.replace(
+                                    generator.TOPIC_DIMENSION.values[topic],
+                                    "the following scenario"
+                                )
+                                parts.append(dimensional_prompt)
+                                parts.append("\n\n" + content)
+                            else:
+                                # For puzzles/experiments, use content as topic_content
+                                dimensional_prompt = generator.generate(
+                                    dimensions,
+                                    topic_content=content
+                                )
+                                parts.append(dimensional_prompt)
+                        except IOError as e:
+                            console.print(f"[#bf616a]Error reading file '{custom_prompt}': {e}[/#bf616a]")
+                            raise click.Abort()
+                        except UnicodeDecodeError:
+                            console.print(f"[#bf616a]Error: File '{custom_prompt}' is not valid UTF-8 text[/#bf616a]")
+                            raise click.Abort()
+                    else:
+                        # It's a string
+                        if custom_prompt.endswith('.md') and not os.path.exists(custom_prompt):
+                            console.print(f"[#bf616a]Error: File '{custom_prompt}' not found[/#bf616a]")
+                            raise click.Abort()
+                        
+                        # For strings with regular topics, replace {topic} with the custom prompt
+                        if topic not in ['puzzles', 'thought_experiments']:
+                            dimensional_prompt = generator.generate(dimensions)
+                            # Replace the topic value with custom prompt
+                            dimensional_prompt = dimensional_prompt.replace(
+                                generator.TOPIC_DIMENSION.values[topic],
+                                custom_prompt
+                            )
+                            parts.append(dimensional_prompt)
+                        else:
+                            # For puzzles/experiments, use as topic_content
+                            dimensional_prompt = generator.generate(
+                                dimensions,
+                                topic_content=custom_prompt
+                            )
+                            parts.append(dimensional_prompt)
+                else:
+                    # Invalid dimension format, just generate normally
+                    dimensional_prompt = generator.generate(dimensions)
+                    parts.append(dimensional_prompt)
+                    parts.append(custom_prompt)
+            else:
+                # No custom prompt or special parameters provided
+                dimensional_prompt = generator.generate(
+                    dimensions,
+                    puzzle=puzzle,
+                    experiment=experiment,
+                    topic_content=topic_content,
+                )
+                parts.append(dimensional_prompt)
         except ValueError as e:
-            console.print(f"[red]Error in dimensional prompt: {e}[/red]")
+            console.print(f"[#bf616a]Error in dimensional prompt: {e}[/#bf616a]")
             raise click.Abort()
-
-    # Add custom prompt if specified
-    if custom_prompt:
-        parts.append(custom_prompt)
-
+    else:
+        # No dimensional prompt, just use custom prompt if provided
+        if custom_prompt:
+            # Check if it's a file path
+            if custom_prompt.endswith('.md') and os.path.exists(custom_prompt):
+                try:
+                    with open(custom_prompt, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+                    if not content:
+                        console.print(f"[#ebcb8b]Warning: File '{custom_prompt}' is empty[/#ebcb8b]")
+                    parts.append(content)
+                except IOError as e:
+                    console.print(f"[#bf616a]Error reading file '{custom_prompt}': {e}[/#bf616a]")
+                    raise click.Abort()
+                except UnicodeDecodeError:
+                    console.print(f"[#bf616a]Error: File '{custom_prompt}' is not valid UTF-8 text[/#bf616a]")
+                    raise click.Abort()
+            else:
+                # It's a string
+                if custom_prompt.endswith('.md') and not os.path.exists(custom_prompt):
+                    console.print(f"[#bf616a]Error: File '{custom_prompt}' not found[/#bf616a]")
+                    raise click.Abort()
+                parts.append(custom_prompt)
+    
     # If nothing specified, use default
     if not parts:
         return "Hello! I'm looking forward to our conversation."
-
-    # Combine parts with space
-    return " ".join(parts)
+    
+    # Combine parts
+    return " ".join(parts) if all(isinstance(p, str) for p in parts) else "".join(str(p) for p in parts)
 
 
 def get_provider_for_model(model: str):
@@ -119,84 +216,96 @@ def get_provider_for_model(model: str):
     elif model.startswith("grok"):
         return xAIProvider(model)
     else:
-        raise ValueError(
-            f"Unknown model type: {model}. Model should start with 'claude', 'gpt'/'o3'/'o4', 'gemini', or 'grok'"
-        )
+        raise ValueError(f"Unknown model provider for: {model}")
 
 
-class BannerGroup(click.Group):
-    """Custom group that shows banner before help"""
-
-    def format_help(self, ctx, formatter):
-        from rich.console import Console
-        from rich.panel import Panel
-        from rich.text import Text
-        from rich.align import Align
-
-        console = Console()
+@click.group()
+@click.version_option()
+def cli():
+    """AI conversation research tool for studying emergent communication patterns.
+    
+    Pidgin enables controlled experiments between AI agents to discover how they
+    develop communication patterns, convergence behaviors, and linguistic adaptations.
+    
+    QUICK START:
+        pidgin chat -a claude -b gpt -t 20
+    
+    EXAMPLES:
+        # Basic conversation with custom prompt
+        pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
         
-        # Create the minimalist banner with Nord colors
-        banner_text = Text()
-        banner_text.append("pidgin v0.1.0", style="#d8dee9")  # nord4
-        banner_text.append(" — ", style="#4c566a")  # nord3
-        banner_text.append("linguistic emergence observatory", style="#8fbcbb")  # nord7
+        # Using dimensional prompts
+        pidgin chat -a claude -b gpt -d peers:philosophy:analytical
         
-        # Create the separator line
-        separator = "═" * 48
+        # Let agents choose names
+        pidgin chat -a claude -b gpt --choose-names
         
-        # Combine into a panel with Nord styling
-        content = Text()
-        content.append(banner_text)
-        content.append("\n")
-        content.append(separator, style="#5e81ac")  # nord10
-        
-        # Create panel with Nord background color hint
-        panel = Panel(
-            Align.center(content),
-            border_style="#5e81ac",  # nord10
-            padding=(1, 2),
-            style="on #2e3440",  # nord0 background hint
-            expand=False  # Don't expand to full width
-        )
-        
-        # Print left-aligned
-        console.print()
-        console.print(panel)
-        console.print()
-        
-        super().format_help(ctx, formatter)
+        # Run with high convergence monitoring
+        pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
+    
+    CONFIGURATION:
+        Configuration files can be placed in ~/.pidgin/ or ./.pidgin/
+        Use 'pidgin init' to create template configuration files.
+    """
+    pass
 
 
-def create_config_templates():
-    """Create all configuration templates and show usage instructions"""
-    from datetime import datetime
-
-    config_dir = Path.home() / ".pidgin"
-    config_dir.mkdir(exist_ok=True)
+@cli.command()
+def init():
+    """Initialize configuration directory with template files.
+    
+    Creates a .pidgin/ directory in your current folder with template
+    configuration files for:
+    - Custom thought experiments
+    - Custom puzzles  
+    - Custom dimensions (planned)
+    
+    After running this command, edit the YAML files to add your own content.
+    """
+    config_dir = Path.cwd() / ".pidgin"
     created_files = []
-
+    
+    # Create directory
+    if not config_dir.exists():
+        config_dir.mkdir(parents=True)
+        console.print(f"Created directory: {config_dir}")
+    
     # Puzzles template
     puzzle_path = config_dir / "puzzles.yaml"
     if not puzzle_path.exists():
+        from datetime import datetime
         puzzle_content = f"""# Pidgin Custom Puzzle Library
 # Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 #
 # Add your own puzzles here. They'll be available with:
-#   pidgin chat -d collaboration:puzzles --puzzle your_puzzle_name
+#   pidgin chat -d debate:puzzles --puzzle your_puzzle_name
 #
 # Format:
 #   puzzle_id:
-#     content: "The puzzle question"
-#     category: "type of puzzle" (optional)
+#     content: "The puzzle text"
 #     difficulty: "easy/medium/hard" (optional)
-#     answer: "The solution" (optional, for research tracking)
-#     source: "Where it's from" (optional)
+#     answer: "The solution" (optional)
+#     source: "Attribution" (optional)
 
 puzzles:
   # Example custom puzzles
-  keyboard:
-    content: "What has many keys but can't open any doors?"
-    category: "objects"
+  pattern_recognition:
+    content: "1, 1, 2, 3, 5, 8, 13, ?"
+    difficulty: "easy"
+    answer: "21 (Fibonacci sequence)"
+    
+  word_play:
+    content: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?"
+    difficulty: "medium"
+    answer: "A map"
+    
+  logic_twist:
+    content: "If you have me, you want to share me. If you share me, you haven't got me. What am I?"
+    difficulty: "easy"
+    answer: "A secret"
+    
+  musical_riddle:
+    content: "I have 88 keys but cannot open a single door. What am I?"
     difficulty: "easy"
     answer: "A keyboard (piano or computer)"
     
@@ -247,162 +356,145 @@ thought_experiments:
 # Define custom dimensions for prompt generation.
 # (This feature is planned for future releases)
 #
-# Format:
-#   dimension_name:
-#     description: "What this dimension represents"
-#     required: false
-#     values:
-#       value_name: "Template or description"
+# For now, use the built-in dimensions:
+#   Context: peers, teaching, debate, interview, collaboration, neutral
+#   Topic: philosophy, language, science, creativity, meta, puzzles, thought_experiments
+#   Mode: analytical, intuitive, exploratory, focused
 
-custom_dimensions:
-  # Example: Add a "persona" dimension
-  # persona:
-  #   description: "The conversational persona"
-  #   required: false
-  #   values:
-  #     scientist: "As a curious scientist"
-  #     artist: "From an artistic perspective" 
-  #     child: "With childlike wonder"
-  
+dimensions:
+  # Future feature - custom dimensions will go here
 """
         with open(dim_path, "w") as f:
             f.write(dim_content)
         created_files.append(dim_path)
-
-    # Display results
-    console.print()
+    
+    # Report results
     if created_files:
-        console.print("[bold green]✨ Configuration templates created![/bold green]\n")
+        console.print("\n[bold green]✓ Configuration templates created:[/bold green]")
         for file in created_files:
-            console.print(f"  [green]✓[/green] {file}")
-        console.print()
+            console.print(f"  • {file.relative_to(Path.cwd())}")
+        console.print("\n[dim]Edit these files to add your own content.[/dim]")
     else:
-        console.print("[yellow]All configuration files already exist.[/yellow]\n")
-
-    # Usage instructions
-    console.print("[bold]How to use these files:[/bold]\n")
-
-    console.print("[cyan]1. Custom Puzzles[/cyan] (~/.pidgin/puzzles.yaml)")
-    console.print("   Add your own puzzles to use in conversations:")
-    console.print(
-        "   [dim]pidgin chat -d teaching:puzzles --puzzle your_puzzle_name[/dim]\n"
-    )
-
-    console.print(
-        "[cyan]2. Thought Experiments[/cyan] (~/.pidgin/thought_experiments.yaml)"
-    )
-    console.print("   Add philosophical scenarios for debate:")
-    console.print(
-        "   [dim]pidgin chat -d debate:thought_experiments --experiment your_experiment[/dim]\n"
-    )
-
-    console.print("[cyan]3. Custom Dimensions[/cyan] (~/.pidgin/dimensions.yaml)")
-    console.print(
-        "   [dim]Note: Custom dimensions are planned for a future release.[/dim]\n"
-    )
-
-    console.print("[bold]Tips:[/bold]")
-    console.print("  • Edit the YAML files with your favorite text editor")
-    console.print("  • Follow the examples provided in each file")
-    console.print("  • Your custom content will be immediately available\n")
-
-
-@click.group(cls=BannerGroup, invoke_without_command=True)
-@click.help_option("-h", "--help")
-@click.option("--config", is_flag=True, help="Create configuration templates")
-@click.pass_context
-def cli(ctx, config):
-    """AI conversation research tool for studying emergent communication patterns.
-    
-    Pidgin enables controlled experiments between AI agents to discover how they
-    develop communication patterns, convergence behaviors, and linguistic adaptations.
-    
-    QUICK START:
-        pidgin chat -a claude -b gpt -t 20
-    
-    EXAMPLES:
-        # Basic conversation with custom prompt
-        pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
-        
-        # Using dimensional prompts with name choosing
-        pidgin chat -d peers:science --choose-names
-        
-        # List all available models
-        pidgin models --detailed
-    
-    For more information on a command: pidgin COMMAND --help
-    """
-    if config:
-        create_config_templates()
-    elif ctx.invoked_subcommand is None:
-        # Show help if no command provided
-        click.echo(ctx.get_help())
+        console.print("[yellow]All configuration files already exist.[/yellow]")
+        console.print(f"[dim]Check {config_dir.relative_to(Path.cwd())}/[/dim]")
 
 
 @cli.command()
-@click.help_option("-h", "--help")
-@click.option("-a", "--model-a", default="claude", 
-              help="First model - e.g., claude, opus, gpt, haiku")
+def models():
+    """Display available AI models organized by provider."""
+    table = Table(title="Available Models", show_header=True, header_style="bold")
+    table.add_column("Provider", style="cyan", width=12)
+    table.add_column("Model ID", style="green")
+    table.add_column("Alias", style="yellow")
+    table.add_column("Context", style="blue", justify="right")
+    table.add_column("Characteristics", style="dim")
+
+    # Group models by provider
+    providers = ["anthropic", "openai", "google", "xai"]
+    
+    for provider in providers:
+        models = get_models_by_provider(provider)
+        
+        # Add provider header row
+        if models:
+            table.add_row(
+                f"[bold]{provider.title()}[/bold]",
+                "",
+                "",
+                "",
+                "",
+                style="bold cyan"
+            )
+            
+            # Add each model
+            for model_id, config in models.items():
+                characteristics = []
+                if config.characteristics.reasoning_style:
+                    characteristics.append(config.characteristics.reasoning_style)
+                if config.characteristics.personality_tendency:
+                    characteristics.append(config.characteristics.personality_tendency)
+                
+                table.add_row(
+                    "",  # Empty provider column for individual models
+                    config.model_id,
+                    config.alias or "-",
+                    f"{config.context_window // 1000}k",
+                    ", ".join(characteristics) if characteristics else "-"
+                )
+            
+            # Add spacing between providers
+            if provider != providers[-1]:
+                table.add_row("", "", "", "", "")
+
+    console.print(table)
+    
+    # Add usage hints
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("  pidgin chat -a claude -b gpt")
+    console.print("  pidgin chat -a opus -b gemini-1.5-pro")
+    console.print("  pidgin chat -a gpt-4.1 -b claude-haiku")
+    
+    console.print("\n[dim]Use either the model ID or alias with the -a and -b flags.[/dim]")
+
+
+@cli.command()
 @click.option(
-    "-b", "--model-b", default="claude", 
-    help="Second model - e.g., gpt-4.1, gemini, grok"
+    "-a", "--model-a", required=True,
+    help="First model (e.g., 'claude', 'gpt-4', 'opus')"
+)
+@click.option(
+    "-b", "--model-b", required=True,
+    help="Second model (e.g., 'gpt', 'gemini', 'haiku')"
 )
 @click.option(
     "-t", "--turns", default=10, 
     help="Number of conversation turns (default: 10, recommended: 20-100)"
 )
 @click.option("-p", "--prompt", 
-              help="Initial prompt to start conversation - sets the topic and tone")
+              help="Initial prompt (string or path to .md file)")
 @click.option("-d", "--dimensions", 
               help="Use dimensional prompt system - e.g., 'peers:philosophy' or 'debate:science:analytical'")
 @click.option("--puzzle", help="Specific puzzle name for puzzles topic")
 @click.option("--experiment", help="Specific thought experiment name")
-@click.option("--topic-content", help="Custom content for puzzles/experiments")
-@click.option("-s", "--save-to", help="Save transcript to specific location")
+@click.option("--topic-content", help="Custom content for dimensional topics")
 @click.option(
-    "-c", "--config", type=click.Path(exists=True), help="Path to config file"
+    "-s", "--save-to",
+    help="Custom path to save conversation (defaults to ./pidgin_output/)"
 )
 @click.option(
-    "-n",
-    "--no-attractor-detection",
-    "--no-detection",
-    is_flag=True,
-    help="Disable attractor detection",
+    "-c", "--config",
+    type=click.Path(exists=True),
+    help="Path to custom configuration file"
 )
 @click.option(
-    "-m",
-    "--manual",
+    "-m", "--manual",
     is_flag=True,
-    help="Enable manual mode (approve each message step-by-step)",
+    help="Manual mode - pause after each turn"
 )
 @click.option(
     "--convergence-threshold",
     type=click.FloatRange(0.0, 1.0),
-    default=0.75,
-    help="Convergence warning threshold (default: 0.75)",
+    help="Stop when convergence reaches this threshold (0.0-1.0)"
 )
 @click.option(
-    "-o",
-    "--output-dir",
+    "-o", "--output-dir",
     type=click.Path(),
-    help="Output directory for conversations (default: ./pidgin_output)",
+    help="Override default output directory"
 )
 @click.option(
-    "-v",
-    "--verbose",
+    "-v", "--verbose",
     is_flag=True,
-    help="Show all events and chunks (verbose mode)",
+    help="Show detailed event information"
 )
 @click.option(
-    "-q",
-    "--quiet",
+    "-q", "--quiet",
     is_flag=True,
-    help="Minimal output (quiet mode)",
+    help="Minimal output - only show essential information"
 )
 @click.option(
     "--timing",
     is_flag=True,
-    help="Show timing information",
+    help="Show detailed timing information"
 )
 @click.option(
     "--choose-names",
@@ -410,15 +502,40 @@ def cli(ctx, config):
     help="Let agents choose their own names",
 )
 @click.option(
-    "--stability",
-    type=click.IntRange(0, 4),
-    default=2,
-    help="System prompt stability level (0=chaos, 2=default, 4=max)",
+    "-w", "--awareness",
+    type=click.Choice(['none', 'basic', 'firm', 'research']),
+    default='basic',
+    help="Awareness level for both agents",
+)
+@click.option(
+    "--awareness-a",
+    type=click.Choice(['none', 'basic', 'firm', 'research']),
+    help="Awareness level for agent A only",
+)
+@click.option(
+    "--awareness-b",
+    type=click.Choice(['none', 'basic', 'firm', 'research']),
+    help="Awareness level for agent B only",
 )
 @click.option(
     "--show-system-prompts",
     is_flag=True,
     help="Display system prompts at start",
+)
+@click.option(
+    "--temperature",
+    type=click.FloatRange(0.0, 2.0),
+    help="Temperature for both models (0.0-2.0)",
+)
+@click.option(
+    "--temp-a",
+    type=click.FloatRange(0.0, 2.0),
+    help="Temperature for model A only",
+)
+@click.option(
+    "--temp-b",
+    type=click.FloatRange(0.0, 2.0),
+    help="Temperature for model B only",
 )
 def chat(
     model_a,
@@ -431,7 +548,6 @@ def chat(
     topic_content,
     save_to,
     config,
-    no_attractor_detection,
     manual,
     convergence_threshold,
     output_dir,
@@ -439,8 +555,13 @@ def chat(
     quiet,
     timing,
     choose_names,
-    stability,
+    awareness,
+    awareness_a,
+    awareness_b,
     show_system_prompts,
+    temperature,
+    temp_a,
+    temp_b,
 ):
     """Run a conversation between two AI agents.
     
@@ -456,50 +577,42 @@ def chat(
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
     
     Using dimensional prompts:
-        pidgin chat -d debate:philosophy:analytical
+        pidgin chat -a claude -b gpt -d peers:philosophy
+        pidgin chat -a gpt -b gemini -d debate:language:analytical
     
-    Let agents choose names:
-        pidgin chat -a haiku -b nano --choose-names
+    With specific puzzles:
+        pidgin chat -a claude -b gpt -d teaching:puzzles --puzzle fibonacci
     
-    Verbose mode with timing:
-        pidgin chat -a claude -b claude -v --timing
+    Let agents name themselves:
+        pidgin chat -a claude -b gpt --choose-names
     
-    INTERRUPT CONTROL:
-        Press Ctrl+C at any time to pause the conversation.
-        You can then choose to continue or exit gracefully.
+    High convergence monitoring:
+        pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
     
-    OUTPUT:
-        All conversations are saved to ./pidgin_output/conversations/YYYY-MM-DD/
-        Each conversation includes:
-        • events.jsonl - Complete event log
-        • conversation.json - Structured data with metrics
-        • conversation.md - Human-readable transcript
+    Different awareness levels:
+        pidgin chat -a claude -b gpt --awareness research
+        pidgin chat -a claude -b gpt --awareness-a firm --awareness-b none
     """
-    from .event_bus import EventBus
-    from .event_logger import EventLogger
-    from .conductor import Conductor
-    from .providers.event_wrapper import EventAwareProvider
-    from .output_manager import OutputManager
-
-    # Build initial prompt from dimensions and/or custom prompt
+    # Import here to avoid circular imports
+    from .core.conductor import Conductor
+    from .core.event_bus import EventBus
+    from .io.output_manager import OutputManager
+    from .config.system_prompts import get_system_prompts, get_awareness_info
+    
+    # Validate exclusive options
+    if quiet and verbose:
+        raise click.BadParameter("Cannot use both --quiet and --verbose")
+    
+    # Build initial prompt
     initial_prompt = _build_initial_prompt(
-        prompt, dimensions, puzzle, experiment, topic_content
+        custom_prompt=prompt,
+        dimensions=dimensions,
+        puzzle=puzzle,
+        experiment=experiment,
+        topic_content=topic_content,
     )
-    if not initial_prompt:
-        initial_prompt = "Hello! I'm looking forward to our conversation."
-
-    # Determine display mode
-    if quiet:
-        display_mode = "quiet"
-    elif verbose:
-        display_mode = "verbose"
-    else:
-        display_mode = "normal"
-
-    # Create output manager
-    output_manager = OutputManager(output_dir)  # Uses output_dir if provided
-
-    # Get model configs
+    
+    # Get model configurations
     try:
         config_a = get_model_config(model_a)
         config_b = get_model_config(model_b)
@@ -507,37 +620,75 @@ def chat(
         model_b_id = config_b.model_id if config_b else model_b
     except ValueError as e:
         console.print(f"[red]Model error: {e}[/red]")
-        return
-
-    # Create providers
+        console.print("\n[dim]Run 'pidgin models' to see available models.[/dim]")
+        raise click.Abort()
+    
+    # Determine temperatures for each model
+    if temperature is not None:
+        # --temperature sets both
+        temperature_a = temperature_b = temperature
+    else:
+        # Use individual settings or None
+        temperature_a = temp_a
+        temperature_b = temp_b
+    
+    # Determine display mode
+    if quiet:
+        display_mode = "quiet"
+    elif verbose:
+        display_mode = "verbose"
+    else:
+        display_mode = "normal"
+    
+    # Create output manager
+    output_manager = OutputManager(output_dir)  # Uses output_dir if provided
+    
+    # Get provider objects
+    providers_map = {}
     try:
-        providers_map = {
-            "agent_a": get_provider_for_model(model_a),
-            "agent_b": get_provider_for_model(model_b),
-        }
+        # Agent A
+        provider_a = get_provider_for_model(model_a)
+        if hasattr(provider_a, "model"):
+            providers_map[provider_a.model] = provider_a
+        else:
+            providers_map[model_a_id] = provider_a
+            
+        # Agent B  
+        provider_b = get_provider_for_model(model_b)
+        if hasattr(provider_b, "model"):
+            providers_map[provider_b.model] = provider_b
+        else:
+            providers_map[model_b_id] = provider_b
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
-        return
-
+        raise click.Abort()
+    
     # Create event-driven CONDUCTOR with output manager
     conductor = Conductor(providers_map, output_manager, console)
-
-    # Create agents
-    agent_a_obj = Agent(id="agent_a", model=model_a_id)
-    agent_b_obj = Agent(id="agent_b", model=model_b_id)
-
+    
+    # Create agents with temperature settings
+    agent_a_obj = Agent(id="agent_a", model=model_a_id, temperature=temperature_a)
+    agent_b_obj = Agent(id="agent_b", model=model_b_id, temperature=temperature_b)
+    
     # Show system prompts if requested
     if show_system_prompts:
-        from .system_prompts import get_system_prompts, get_preset_info
+        from .config.system_prompts import get_system_prompts, get_awareness_info
+        
+        # Determine actual awareness levels
+        actual_awareness_a = awareness_a if awareness_a else awareness
+        actual_awareness_b = awareness_b if awareness_b else awareness
+        
         system_prompts = get_system_prompts(
-            stability_level=stability,
-            choose_names=choose_names
+            awareness_a=actual_awareness_a,
+            awareness_b=actual_awareness_b,
+            choose_names=choose_names,
+            model_a_name=model_a_id,
+            model_b_name=model_b_id
         )
-        preset_info = get_preset_info(stability)
         
         console.print(f"\n[bold cyan]System Prompts:[/bold cyan]")
-        console.print(f"Stability Level: {stability} ({preset_info['name']})")
-        console.print(f"Description: {preset_info['description']}\n")
+        console.print(f"Agent A Awareness: {actual_awareness_a}")
+        console.print(f"Agent B Awareness: {actual_awareness_b}\n")
         
         if system_prompts["agent_a"]:
             console.print(Panel(
@@ -551,7 +702,7 @@ def chat(
         if system_prompts["agent_b"]:
             console.print(Panel(
                 system_prompts["agent_b"],
-                title="System Prompt - Agent B",
+                title="System Prompt - Agent B", 
                 border_style="blue"
             ))
         else:
@@ -584,359 +735,38 @@ def chat(
                 display_mode=display_mode,
                 show_timing=timing,
                 choose_names=choose_names,
-                stability_level=stability,
+                awareness_a=awareness_a if awareness_a else awareness,
+                awareness_b=awareness_b if awareness_b else awareness,
+                temperature_a=temperature_a,
+                temperature_b=temperature_b,
             )
         )
 
-        console.print("\n[bold green]Conversation completed![/bold green]")
-        console.print(f"Total messages: {len(conversation.messages)}")
-        console.print(f"Conversation ID: {conversation.id}")
+        # Show completion summary
+        if not quiet:
+            console.print(f"\n[bold green]Conversation completed![/bold green]")
+            console.print(f"Total messages: [cyan]{len(conversation.messages)}[/cyan]")
+            console.print(f"Conversation ID: {conversation.id}")
+
+            # Save transcript
+            if conductor.current_conv_dir:
+                transcript_path = (
+                    conductor.current_conv_dir / "conversation.md"
+                )
+                if transcript_path.exists():
+                    console.print(
+                        f"\n[dim]Transcript saved to: {transcript_path}[/dim]"
+                    )
 
     except KeyboardInterrupt:
-        console.print("\n[yellow]Conversation interrupted by user[/yellow]")
+        console.print("\n[yellow]Conversation interrupted by user.[/yellow]")
+        raise click.Abort()
     except Exception as e:
         console.print(f"\n[red]Error: {e}[/red]")
-        raise
-
-
-@cli.command()
-@click.help_option("-h", "--help")
-@click.option("-p", "--provider", help="Filter by provider (anthropic/openai/google/xai)")
-@click.option("-d", "--detailed", is_flag=True, help="Show detailed model information")
-def models(provider, detailed):
-    """List available AI models and their capabilities.
-    
-    Shows all models that can be used in conversations, including their context
-    windows, pricing tiers, and recommended pairings.
-    
-    EXAMPLES:
-    
-    List all models:
-        pidgin models
-    
-    Show detailed information:
-        pidgin models --detailed
-    
-    Filter by provider:
-        pidgin models --provider anthropic
-    
-    MODEL SHORTCUTS:
-        Many models have convenient shortcuts:
-        • claude → claude-4-sonnet-20250514
-        • gpt → gpt-4o
-        • opus → claude-4-opus-20250514
-        • haiku → claude-3-5-haiku-20241022
-    
-    Use any model ID or shortcut in the chat command.
-    """
-
-    if provider:
-        # Filter by provider
-        if provider.lower() not in ["anthropic", "openai", "google", "xai"]:
-            console.print(
-                f"[red]Error: Invalid provider '{provider}'. Use 'anthropic', 'openai', 'google', or 'xai'.[/red]"
-            )
-            return
-        models_to_show = get_models_by_provider(provider.lower())
-        console.print(f"\n[bold]Available {provider.upper()} Models:[/bold]\n")
-    else:
-        # Show all models
-        console.print("\n[bold]Available Models:[/bold]\n")
-        models_to_show = list(MODELS.values())
-
-    # Group by provider if showing all
-    if not provider:
-        # Anthropic models
-        console.print("[cyan]ANTHROPIC:[/cyan]")
-        anthropic_models = [m for m in models_to_show if m.provider == "anthropic"]
-        _display_models(anthropic_models, detailed)
-
-        console.print("\n[cyan]OPENAI:[/cyan]")
-        openai_models = [m for m in models_to_show if m.provider == "openai"]
-        _display_models(openai_models, detailed)
-
-        console.print("\n[cyan]GOOGLE:[/cyan]")
-        google_models = [m for m in models_to_show if m.provider == "google"]
-        _display_models(google_models, detailed)
-
-        console.print("\n[cyan]XAI:[/cyan]")
-        xai_models = [m for m in models_to_show if m.provider == "xai"]
-        _display_models(xai_models, detailed)
-    else:
-        _display_models(models_to_show, detailed)
-
-    console.print("\n[dim]Use any model ID or alias in conversations.[/dim]")
-    console.print("[dim]Example: pidgin chat --agent-a haiku --agent-b gpt[/dim]\n")
-
-
-def _display_models(models, detailed):
-    """Display models in a formatted table"""
-    if detailed:
-        # Detailed table
-        table = Table(show_header=True, header_style="bold")
-        table.add_column("Model ID", style="green")
-        table.add_column("Aliases", style="yellow")
-        table.add_column("Context", style="cyan")
-        table.add_column("Tier", style="blue")
-        table.add_column("Style", style="magenta")
-        table.add_column("Notes")
-
-        for model in models:
-            aliases = ", ".join(model.aliases[:3])  # Show first 3 aliases
-            if len(model.aliases) > 3:
-                aliases += f" (+{len(model.aliases)-3} more)"
-
-            context = f"{model.context_window:,}" if model.context_window > 0 else "N/A"
-            notes = model.notes or ""
-            if model.deprecated:
-                notes = f"[red]DEPRECATED {model.deprecation_date}[/red] {notes}"
-
-            table.add_row(
-                model.model_id,
-                aliases,
-                context,
-                model.pricing_tier,
-                model.characteristics.conversation_style,
-                notes,
-            )
-    else:
-        # Simple table format
-        table = Table(show_header=True, header_style="bold blue", show_lines=False)
-        table.add_column("Model", style="green", min_width=25, max_width=30)
-        table.add_column("Aliases", style="dim", max_width=30)
-        table.add_column("Context", justify="right", style="cyan", min_width=7)
-        table.add_column("Notes", style="dim", max_width=40)
-
-        for model in models:
-            # Format aliases (limit to 3 most important)
-            aliases = model.aliases[:3]  # Take first 3 aliases
-            aliases_str = ", ".join(aliases)
-            if len(model.aliases) > 3:
-                aliases_str += f", +{len(model.aliases)-3}"
-
-            # Format context window
-            context = (
-                f"{model.context_window//1000}K" if model.context_window > 0 else "–"
-            )
-
-            # Format notes
-            notes = model.notes or ""
-            if model.deprecated:
-                notes = f"⚠️ DEPRECATED {model.deprecation_date}"
-
-            table.add_row(model.model_id, aliases_str, context, notes)
-
-    console.print(table)
-
-
-@cli.command()
-@click.help_option("-h", "--help")
-def resume():
-    """Resume conversations by replaying events (coming soon)."""
-    console.print("[yellow]Event replay coming in a future release![/yellow]")
-    console.print("For now, conversations run to completion or exit.")
-    
-    # Future: Event replay will enable resume by replaying events.jsonl
-    # No need for separate checkpoint files - events ARE the state.
-
-
-@cli.command()
-@click.help_option("-h", "--help")
-@click.option("--example", help="Show example for specific dimension combination")
-@click.option("--list", "list_only", is_flag=True, help="List just dimension names")
-@click.option("--detailed", is_flag=True, help="Show detailed info about a dimension")
-@click.argument("dimension", required=False)
-def dimensions(example, list_only, detailed, dimension):
-    """Explore dimensional prompt system for conversation setup.
-    
-    Dimensional prompts let you quickly configure conversation dynamics by
-    combining different aspects like context (peers/debate/teaching) and
-    topics (philosophy/science/language).
-    
-    FORMAT:
-        -d context:topic[:mode]
-    
-    EXAMPLES:
-    
-    List all dimensions:
-        pidgin dimensions
-    
-    Show specific dimension:
-        pidgin dimensions context --detailed
-    
-    See example output:
-        pidgin dimensions --example peers:philosophy
-    
-    QUICK COMBINATIONS:
-        • peers:philosophy → Collaborative philosophical discussion
-        • debate:science:analytical → Analytical scientific debate
-        • teaching:puzzles --puzzle riddle → Teaching session about riddles
-    
-    SPECIAL TOPICS:
-        Some topics require additional parameters:
-        • puzzles: Use --puzzle to specify which puzzle
-        • thought_experiments: Use --experiment to specify which one
-    """
-    generator = DimensionalPromptGenerator()
-
-    if example:
-        # Show example for specific combination
-        try:
-            prompt = generator.generate(example)
-            console.print(f"\n[bold]Example for '{example}':[/bold]")
-            console.print(f'"{prompt}"\n')
-        except ValueError as e:
-            console.print(f"[red]Error: {e}[/red]")
-        return
-
-    if dimension and detailed:
-        # Show detailed info about a specific dimension
-        console.print()
-        console.print(generator.describe_dimension(dimension))
-        console.print()
-        return
-
-    if list_only:
-        # Just list dimension names
-        all_dims = generator.get_all_dimensions()
-        console.print("\n[bold]Available dimensions:[/bold]")
-        for dim_name in all_dims:
-            console.print(f"  • {dim_name}")
-        console.print()
-        return
-
-    # Default: show all dimensions and their values
-    console.print("\n[bold]Dimensional Prompt System[/bold]\n")
-    console.print("Create prompts by combining dimensions with colons:")
-    console.print("  pidgin chat -d context:topic[:mode][:energy][:formality]\n")
-
-    all_dims = generator.get_all_dimensions()
-
-    for dim_name, dim in all_dims.items():
-        console.print(f"[bold cyan]{dim_name.upper()}[/bold cyan] - {dim.description}")
-        console.print(f"  Required: {'Yes' if dim.required else 'No'}")
-        console.print("  Values:")
-
-        for value, desc in dim.values.items():
-            if desc == "[SPECIAL]":
-                console.print(
-                    f"    • [yellow]{value}[/yellow] - Requires additional content"
-                )
-            else:
-                # Truncate long descriptions
-                if len(desc) > 60:
-                    desc = desc[:57] + "..."
-                console.print(f"    • [green]{value}[/green] - {desc}")
-        console.print()
-
-    # Show examples
-    console.print("[bold]Examples:[/bold]")
-    examples = [
-        ("peers:philosophy", "Collaborative philosophical discussion"),
-        ("debate:science:analytical", "Analytical debate about science"),
-        ("teaching:puzzles --puzzle towel", "Teaching session about a specific puzzle"),
-        (
-            "interview:meta:exploratory",
-            "Exploratory interview about the conversation itself",
-        ),
-        (
-            "collaboration:thought_experiments --experiment trolley_problem",
-            "Work together on the trolley problem",
-        ),
-    ]
-
-    for example_spec, description in examples:
-        from rich.text import Text
-
-        example_text = Text()
-        example_text.append("  pidgin chat -d ", style="dim")
-        example_text.append(example_spec, style="dim")
-        console.print(example_text)
-        console.print(f"    → {description}")
-    console.print()
-
-
-@cli.command()
-def about():
-    """Learn more about Pidgin and its research goals.
-    
-    Displays information about the project, its scientific approach,
-    and how to contribute to the research.
-    """
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.markdown import Markdown
-    from rich.table import Table
-    from rich.text import Text
-    
-    console = Console()
-    
-    # Create a fancy header
-    header = Text()
-    header.append("🧪 ", style="bold")
-    header.append("About Pidgin", style="bold #8fbcbb")
-    header.append(" 🧪", style="bold")
-    
-    # Main content with better formatting
-    about_content = """
-[bold cyan]Pidgin[/bold cyan] is a research tool for studying AI-to-AI communication patterns.
-
-## [bold green]What We're Studying[/bold green]
-
-• [bold]Convergence[/bold]: How AI agents align their communication styles
-• [bold]Patterns[/bold]: What structures emerge in extended conversations  
-• [bold]Dynamics[/bold]: How different model pairs interact
-• [bold]Interventions[/bold]: How human input affects conversations
-
-## [bold yellow]Scientific Approach[/bold yellow]
-
-We make [bold red]no assumptions[/bold red] about what we'll find. Pidgin:
-• Records [italic]every event[/italic] in conversations
-• Measures convergence between agents
-• Looks for patterns ([dim]without assuming they exist[/dim])
-• Provides reproducible experiments
-
-## [bold blue]Output Data[/bold blue]
-
-Each conversation produces:
-• Complete [green]event logs[/green] for analysis
-• Convergence metrics over time
-• Structured [blue]JSON[/blue] for data science
-• Human-readable [yellow]transcripts[/yellow]
-
-## [bold magenta]Contributing[/bold magenta]
-
-This is [bold]alpha software[/bold] for research purposes.
-GitHub: [link=https://github.com/tommygun/pidgin]https://github.com/tommygun/pidgin[/link]
-
----
-
-[bold italic #5e81ac]No claims, just observation.[/bold italic #5e81ac]
-
-We're building tools to discover what happens when AIs talk,
-not assuming we already know.
-    """
-    
-    # Create a status table
-    status_table = Table(show_header=True, header_style="bold cyan", border_style="#5e81ac")
-    status_table.add_column("Feature", style="white")
-    status_table.add_column("Status", justify="center")
-    
-    status_table.add_row("Event Architecture", "[bold green]✓ Working[/bold green]")
-    status_table.add_row("Pause/Resume", "[bold green]✓ Working[/bold green]")
-    status_table.add_row("Multi-Provider", "[bold green]✓ Working[/bold green]")
-    status_table.add_row("Convergence Display", "[yellow]⚡ Partial[/yellow]")
-    status_table.add_row("Context Warnings", "[yellow]⚡ Partial[/yellow]")
-    status_table.add_row("Batch Experiments", "[red]✗ Planned[/red]")
-    
-    # Print everything with nice layout
-    console.print()
-    console.print(header, justify="center")
-    console.print()
-    console.print(about_content)
-    console.print()
-    console.print(Panel(status_table, title="[bold]Current Status[/bold]", border_style="#5e81ac"))
-    console.print()
+        if verbose:
+            import traceback
+            console.print(traceback.format_exc())
+        raise click.Abort()
 
 
 if __name__ == "__main__":

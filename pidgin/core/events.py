@@ -51,6 +51,7 @@ class MessageRequestEvent(Event):
     agent_id: str
     turn_number: int
     conversation_history: List[Message]
+    temperature: Optional[float] = None
 
 
 @dataclass
@@ -96,6 +97,8 @@ class ConversationStartEvent(Event):
     max_turns: int
     agent_a_display_name: Optional[str] = None
     agent_b_display_name: Optional[str] = None
+    temperature_a: Optional[float] = None
+    temperature_b: Optional[float] = None
 
 
 @dataclass

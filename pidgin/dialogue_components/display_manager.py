@@ -95,25 +95,6 @@ class DisplayManager(Component):
             # Minimal turn counter every turn
             self.console.print(f"\n[dim]Turn {turn + 1}/{max_turns}[/dim]\n")
 
-    def show_attractor_detection(self, result: Dict[str, Any]):
-        """Display attractor detection results.
-
-        Args:
-            result: Attractor detection result dictionary
-        """
-        self.console.print()
-        max_turns = result.get("max_turns", "?")
-        self.console.print(
-            f"[red bold]🎯 ATTRACTOR DETECTED - Turn {result['turn_detected']}/{max_turns}[/red bold]"
-        )
-        self.console.print(f"[yellow]Type:[/yellow] {result['type']}")
-        self.console.print(f"[yellow]Pattern:[/yellow] {result['description']}")
-        self.console.print(f"[yellow]Confidence:[/yellow] {result['confidence']:.0%}")
-        if "typical_turns" in result:
-            self.console.print(
-                f"[yellow]Typical occurrence:[/yellow] Turn {result['typical_turns']}"
-            )
-        self.console.print()
 
     def show_context_windows(self, agents: list[Agent], context_manager: Any):
         """Display context window limits for agents.

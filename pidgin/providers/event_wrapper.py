@@ -3,16 +3,16 @@
 import time
 from typing import List
 
-from ..event_bus import EventBus
-from ..events import (
+from ..core.event_bus import EventBus
+from ..core.events import (
     MessageRequestEvent,
     MessageChunkEvent,
     MessageCompleteEvent,
     APIErrorEvent,
 )
-from ..types import Message
+from ..core.types import Message
 from .base import Provider
-from ..router import DirectRouter  # For message transformation
+from ..core.router import DirectRouter  # For message transformation
 
 
 class EventAwareProvider:
@@ -60,7 +60,7 @@ class EventAwareProvider:
         # Stream response and emit chunk events
         chunks = []
         try:
-            async for chunk in self.provider.stream_response(agent_messages):
+            async for chunk in self.provider.stream_response(agent_messages, temperature=event.temperature):
                 chunks.append(chunk)
 
                 # Emit chunk event

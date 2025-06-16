@@ -74,7 +74,7 @@ Is this compression? Attractor dynamics? Random chance? We need data.
 Pidgin is a full-featured research tool with:
 - **Event-driven architecture**: Complete observability via EventBus
 - **Multiple components**: Display, metrics, convergence, context tracking
-- **Pattern detection**: Experimental attractor analysis
+- **Convergence detection**: Stops conversations when agents become too similar
 - **Rich CLI**: Dimensional prompts, model shortcuts, configuration
 - **Clean separation**: UI, business logic, and providers properly separated
 
@@ -82,7 +82,7 @@ Key modules:
 - `conductor.py` - Orchestrates conversations through events
 - `providers/` - Integrations for Anthropic, OpenAI, Google, xAI
 - `convergence.py` - Calculates linguistic similarity metrics
-- `attractors/` - Experimental pattern detection system
+- `convergence.py` - Calculates structural similarity between agents
 - `dialogue_components/` - Modular UI components
 
 Built for extensibility: The architecture supports n-agent conversations, but current implementation focuses on 2-agent dynamics.
