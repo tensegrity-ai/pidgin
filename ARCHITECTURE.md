@@ -1,112 +1,180 @@
-# Pidgin Architecture
+# Architecture
+
+This document describes the actual implementation - a well-structured research tool with ~20 modules, not a minimal prototype.
 
 ## Overview
 
-Event-driven system for recording AI-to-AI conversations. Built to support n-agent conversations in the future, currently implements 2-agent only.
+Pidgin uses an event-driven architecture where every action emits an event. These events are both the communication mechanism and the permanent record.
 
-## Core Architecture
+```
+User → CLI → Conductor → EventBus → Components
+                ↓           ↓
+            Providers    events.jsonl
+```
 
-### Event System
+## Core Components
 
-Central event bus enables:
-- Complete conversation recording
-- Future n-agent support
-- Pause/resume functionality
-- Comprehensive logging to `events.jsonl`
+### EventBus (`event_bus.py`)
+- Central publish/subscribe system
+- Writes all events to JSONL in real-time
+- No hidden state - if it's not in an event, it didn't happen
 
-### Main Components
-
-#### Conductor (`conductor.py`)
+### Conductor (`conductor.py`)
 - Orchestrates conversations through events
-- Handles Ctrl+C interrupts
-- Manages turn flow
-- ~500 lines after refactoring
+- Handles interrupt signals (Ctrl+C)
+- ~500 lines, manageable complexity
 
-#### Providers (`providers/`)
-- Clean abstraction for AI APIs
-- All providers support streaming
-- Event-aware wrappers emit events during streaming
-- Supports: Anthropic, OpenAI, Google, xAI
+### Event Types (`events.py`)
+- `ConversationStartEvent` / `ConversationEndEvent`
+- `MessageRequestEvent` / `MessageCompleteEvent`
+- `TurnStartEvent` / `TurnCompleteEvent`
+- Various error and control events
 
-#### UserInteractionHandler (`user_interaction.py`)
-- Handles pause/resume menus
-- Manages timeout decisions
-- Future home for message injection
+### Providers (`providers/`)
+- Wrapped to emit events during streaming
+- Support for Anthropic, OpenAI, Google, xAI
+- Consistent interface despite API differences
 
-#### Output Management
-- `OutputManager` - Creates directory structure
-- `TranscriptManager` - Saves conversation files
-- All output goes to `./pidgin_output/`
+## How a Conversation Flows
 
-### Event Types
-
-Currently implemented events:
-- `ConversationStartEvent/EndEvent`
-- `TurnStartEvent/CompleteEvent`
-- `MessageRequestEvent/CompleteEvent`
-- `MessageChunkEvent` (streaming)
-- `InterruptRequestEvent`
-- `ConversationPausedEvent/ResumedEvent`
-- `ErrorEvent/APIErrorEvent/ProviderTimeoutEvent`
-
-## Experimental Features (Unvalidated)
-
-### Convergence Metrics (`convergence.py`)
-- Measures vocabulary overlap and compression patterns
-- **Not scientifically validated**
-- Needs rigorous testing to determine if meaningful
-- Currently just logs metrics without analysis
-
-### Context Tracking (`context_manager.py`)
-- Token counting for context window management
-- Not yet integrated with conversation flow
-- Placeholder for future context-aware features
-
-## Not Yet Implemented
-
-### Critical for Research
-- **Batch Experiments** - Need to run hundreds of conversations
-- **Statistical Analysis** - Validate if patterns are real
-- **Control Conditions** - Test against random baselines
-- **Message Injection** - Modify conversations mid-stream
-
-### Future Capabilities
-- **Checkpoint/Resume** - Event replay from specific points
-- **N-agent Support** - Architecture ready, needs implementation
-- **Real-time Analysis** - Pattern detection during conversations
+1. **Setup**: CLI creates Conductor with providers
+2. **Initialize**: EventBus created, output directory prepared
+3. **Start**: System prompts sent (if any), initial prompt displayed
+4. **Turns**: For each turn:
+   - Request message from Agent A
+   - Stream response, emitting chunk events
+   - Request message from Agent B
+   - Stream response, emitting chunk events
+   - Emit turn complete event
+5. **End**: Save transcripts, close event log
 
 ## Data Flow
 
-1. User starts conversation via CLI
-2. Conductor orchestrates via events
-3. Providers stream responses as events
-4. All events logged to `events.jsonl`
-5. Transcripts saved after conversation
-6. Ctrl+C can interrupt at any time
+All conversation data flows through events:
+```
+MessageRequestEvent → Provider → MessageChunkEvents → MessageCompleteEvent
+```
 
-## Architecture Decisions
+Every event is logged to `./pidgin_output/conversations/*/events.jsonl`
 
-### Why Event-Driven?
-- Enables future n-agent conversations
-- Complete audit trail for research
-- Supports pause/resume functionality
-- Allows replay and analysis
+## Current Limitations
 
-### Current Limitations
-- Single-threaded (batch experiments need parallel execution)
-- 2-agent only (n-agent requires conductor refactor)
-- No real-time analysis (events logged but not processed)
+### Single Conversation Only
+- No parallel execution
+- No batch runner
+- One conversation at a time
 
-## Next Steps for Valid Research
+### Basic Analysis
+- Convergence metrics calculated but not displayed
+- No statistical tools
+- No pattern detection beyond simple structural matching
 
-1. **Batch Infrastructure** - Run many conversations with identical conditions
-2. **Statistical Tools** - Analyze patterns across conversations
-3. **Control Design** - Test against shuffled/random baselines
-4. **Hypothesis Testing** - Pre-register experiments
-5. **Reproducibility** - Version lock, seed management
+### Limited Intervention
+- Can pause (Ctrl+C) but can't inject messages
+- No dynamic prompt modification
+- No mid-conversation adjustments
 
-## Technical Status
+## Design Decisions
 
-- **Stable**: Event system, provider abstraction, basic flow
-- **Experimental**: Convergence metrics, pattern detection
-- **Missing**: Batch runner, analysis pipeline, validation tools
+### Why Events?
+- Complete observability
+- Natural fit for streaming
+- Enables future features (replay, analysis)
+- No hidden state to debug
+
+### Why Not Checkpoints?
+- Events contain full history
+- Checkpoints were redundant
+- Simpler is better
+
+### Current 2-Agent Focus
+- Architecture could support n-agents
+- Current implementation is 2-agent only
+- No immediate plans for multi-agent features
+
+## File Structure
+
+```
+pidgin/
+├── conductor.py          # Main orchestrator (~500 lines)
+├── event_bus.py         # Event publish/subscribe system
+├── events.py            # Event type definitions
+├── event_logger.py      # Event display formatting
+├── display_filter.py    # Human-readable output filtering
+│
+├── providers/           # AI provider integrations
+│   ├── base.py         # Provider interface
+│   ├── anthropic.py    # Claude models
+│   ├── openai.py       # GPT/O-series models
+│   ├── google.py       # Gemini models
+│   ├── xai.py          # Grok models
+│   └── event_wrapper.py # Event-aware provider wrapper
+│
+├── dialogue_components/ # Separated UI/display components
+│   ├── display_manager.py
+│   ├── metrics_tracker.py
+│   ├── progress_tracker.py
+│   └── response_handler.py
+│
+### Pattern Detection
+
+The system uses a **convergence threshold** approach:
+- Calculates structural similarity between agents (0.0-1.0)
+- Monitors vocabulary overlap, message length ratios, syntactic patterns
+- Stops conversation when convergence exceeds configured threshold
+- No prescriptive pattern categories - just measures similarity
+
+The previous "attractor" system with named patterns has been deprecated in favor of this simpler threshold approach.
+│
+├── cli.py              # Command-line interface
+├── config.py           # Configuration management
+├── context_manager.py  # Token/context window tracking
+├── convergence.py      # Convergence metrics calculator
+├── dimensional_prompts.py # Prompt generation system
+├── intervention_handler.py # Pause/resume handling (was conductor.py)
+├── logger.py           # Logging configuration
+├── metrics.py          # Turn metrics calculation
+├── models.py           # Model configurations and metadata
+├── output_manager.py   # Output directory management
+├── router.py           # Message routing between agents
+├── system_prompts.py   # System prompt templates
+├── transcripts.py      # Transcript generation
+├── types.py            # Type definitions
+└── user_interaction.py # User interaction handling
+```
+
+## Output Structure
+
+Each conversation creates:
+```
+./pidgin_output/
+└── conversations/
+    └── YYYY-MM-DD/
+        └── HHMMSS_xxxxx/
+            ├── events.jsonl    # Complete event log
+            ├── conversation.json # Structured data
+            └── conversation.md   # Human-readable
+```
+
+## What's Not Built
+
+- **Batch execution**: Critical for research validity
+- **Event replay**: Can't resume from logs yet
+- **Analysis pipeline**: No tools to find patterns
+- **Message injection**: Framework exists but not connected
+- **Real token counting**: Just word estimates
+
+## Future Possibilities
+
+The event architecture enables:
+- Replay from any point
+- Time-travel debugging
+- Statistical analysis
+- Pattern detection
+- Multi-agent support
+
+But these aren't built yet. We focused on getting clean data capture working first.
+
+---
+
+This architecture is complete for its current purpose: recording single conversations with full observability. The next critical need is batch execution for statistical validity.

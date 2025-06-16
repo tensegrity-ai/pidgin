@@ -1,150 +1,291 @@
 # Development Guide for Pidgin
 
-## Current State (Accurate as of December 2024)
+## What This Project Actually Is
 
-### ✅ What's Working
-- Event-driven architecture with EventBus
-- Streaming from all providers  
-- Ctrl+C interrupt system
-- Clean component separation
-- Output to `./pidgin_output/`
-- Dimensional prompt system
-- Full conversation transcripts
+Pidgin is a well-developed research tool with ~20 modules for recording and analyzing AI conversations. We've noticed interesting behaviors but haven't proven anything statistically. The tool is feature-complete for single conversations - what's missing is batch execution and validation.
 
-### 🚧 What's Partial
-- Convergence calculation (not displayed)
-- Context tracking (not integrated)
-- Message injection framework (not connected)
+## Development Environment
 
-### ❌ What's Not Done
-- Checkpoint/resume system (removed)
-- Batch experiments
-- Live dashboard
-- Pattern analysis
-- Event replay
+### Package Management
+This project uses **Poetry** for dependency management:
 
-## Development Commands
-
-### Testing
 ```bash
-# Run all tests with coverage
-pytest
+# Install poetry
+curl -sSL https://install.python-poetry.org | python3 -
 
-# Run specific test file
-pytest tests/test_dialogue.py
+# Install dependencies
+poetry install
 
-# Run tests with verbose output and coverage report
-pytest -v --cov=pidgin --cov-report=html --cov-report=term
+# Add new dependencies
+poetry add package-name
 
-# Run tests matching a pattern
-pytest -k "test_conductor"
+# Add dev dependencies
+poetry add --group dev package-name
+
+# Run commands in virtual environment
+poetry run pidgin chat -a claude -b gpt
 ```
 
-### Code Quality
-```bash
-# Format code (automatically fixes formatting)
-black pidgin tests
+### Code Style
 
-# Sort imports
-isort pidgin tests
-
-# Lint code (checks for style issues)
-flake8 pidgin tests
-
-# Type checking
-mypy pidgin
+#### Colors - Nord Theme
+Use the Nord color palette for all terminal output:
+```python
+NORD_COLORS = {
+    "nord0": "#2e3440",   # Polar Night - darkest
+    "nord1": "#3b4252",   # Polar Night
+    "nord2": "#434c5e",   # Polar Night
+    "nord3": "#4c566a",   # Polar Night - comments/subtle
+    "nord4": "#d8dee9",   # Snow Storm - main content
+    "nord5": "#e5e9f0",   # Snow Storm
+    "nord6": "#eceff4",   # Snow Storm - brightest
+    "nord7": "#8fbcbb",   # Frost - teal
+    "nord8": "#88c0d0",   # Frost - light blue
+    "nord9": "#81a1c1",   # Frost - blue
+    "nord10": "#5e81ac",  # Frost - dark blue
+    "nord11": "#bf616a",  # Aurora - red
+    "nord12": "#d08770",  # Aurora - orange
+    "nord13": "#ebcb8b",  # Aurora - yellow
+    "nord14": "#a3be8c",  # Aurora - green
+    "nord15": "#b48ead",  # Aurora - purple
+}
 ```
 
-### Development Setup
+#### Glyphs Not Emoji
+Use Unicode glyphs for visual elements:
+```python
+# Good - geometric glyphs
+"◆ Starting conversation"
+"▶ Continue"
+"■ Stop"
+"○ Pending"
+"● Complete"
+"⟐ Duration"
 
-#### Virtual Environment Setup (Recommended)
-```bash
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode with all dependencies
-pip install -e ".[dev]"
+# Bad - emoji
+"🚀 Starting"
+"✅ Done"
+"❌ Error"
 ```
 
-## Architecture Overview
+Common glyphs:
+- Shapes: ◆ ◇ ○ ● □ ■ ▲ ▼ ► ◄
+- Arrows: → ← ↔ ⇒ ⇐ ⇔ ➜ 
+- Math: ≈ ≡ ≠ ≤ ≥ ± × ÷
+- Box: ┌ ┐ └ ┘ ─ │ ├ ┤ ┬ ┴ ┼
 
-The system is event-driven:
-- `Conductor` orchestrates via events
-- `EventBus` handles all communication
-- `events.jsonl` is the source of truth
-- No checkpoint files
+## Current Reality
 
-### Key Files
+### Working ✅
+- Event system records everything
+- Streaming from all providers
+- Ctrl+C interrupt
+- Clean file output
 
-- `conductor.py` - Main orchestrator (~500 lines)
-- `event_bus.py` - Event system core
-- `events.py` - Event type definitions
-- `user_interaction.py` - User interaction handling
-- `providers/` - AI provider integrations
-- `display_filter.py` - UI display logic
+### Partial 🚧
+- Metrics calculated but not shown
+- Context tracking exists but unused
 
-### Data Flow
+### Missing ❌
+- Batch experiments (critical)
+- Statistical analysis
+- Message injection
+- Pattern validation
 
-1. User starts conversation via CLI
-2. Conductor creates output directory
-3. Events flow through EventBus
-4. Providers stream responses
-5. All events logged to events.jsonl
-6. Ctrl+C interrupts handled gracefully
-7. Transcripts saved on completion
-
-## Development Workflow
+## Quick Start
 
 ```bash
-# Run a test conversation
-pidgin chat -a claude -b gpt -t 10
-
-# See all events (verbose mode)
-pidgin chat -a claude -b gpt -t 10 -v
+# Run a conversation
+pidgin chat -a claude -b gpt -t 20
 
 # Check output
 ls ./pidgin_output/conversations/*/
+cat ./pidgin_output/conversations/*/events.jsonl
 ```
 
-## Adding Features
+## Architecture That Exists
 
-New features should:
-1. Emit events for all actions
-2. Work with existing event flow
-3. Not create hidden state
-4. Be observable through events
+```
+CLI → Conductor → EventBus → events.jsonl
+         ↓
+     Providers → Streaming → Display
+```
+
+Not built: batch runner, analysis tools, validation frameworks.
+
+## Code Guidelines
+
+### What to Build
+1. Things that emit events
+2. Things that analyze events
+3. Things that validate observations
+
+### What NOT to Build
+- Complex frameworks
+- "Revolutionary" features
+- Anything claiming "proven" results
+
+### Adding Features
+
+```python
+# Good: Observable action
+await self.bus.emit(SomethingHappenedEvent(...))
+
+# Bad: Hidden state
+self.secret_state = {"dont": "do this"}
+```
 
 ## Testing
 
 ```bash
-# Run tests
-pytest
-
-# Test specific component
-pytest tests/test_conductor.py
+pytest                          # Run all tests
+pytest tests/test_conductor.py  # Single file
+pytest -v --cov=pidgin         # With coverage
 ```
 
-## Common Issues
+## Common Tasks
 
-1. **Output location**: Always `./pidgin_output/`, not home directory
-2. **No checkpoints**: Events are the only state
-3. **Convergence metrics**: Calculated but not shown (yet)
-4. **Resume command**: Shows "coming soon" message
+### Run Different Models
+```bash
+pidgin chat -a opus -b gpt-4.1 -t 30
+pidgin chat -a haiku -b gemini -t 50
+```
 
-## Commit Message Style
+### Check Convergence (manual)
+```python
+# In the JSON output, look for structural patterns
+# No automated tools yet - that's what we need built
+```
 
-Use lowercase commit messages for consistency:
+## Priority Development Areas
+
+### 1. Convergence Threshold System
+```python
+# Simple threshold-based stopping
+if convergence_score >= threshold:
+    stop_conversation("high_convergence")
+```
+
+Configuration:
+```yaml
+conversation:
+  convergence_threshold: 0.85  # Stop at 85% similarity
+  convergence_action: "stop"   # or "warn"
+```
+
+### 2. Batch Runner (CRITICAL)
+```python
+# Concept (not built):
+async def run_batch(config, n=100):
+    """Run n identical conversations for statistics"""
+    results = []
+    for i in range(n):
+        conv = await run_conversation(config)
+        results.append(conv)
+    return analyze_patterns(results)
+```
+
+### 3. Display Convergence
+```python
+# Add to display_filter.py
+if convergence > 0:
+    console.print(f"[{NORD_COLORS['nord3']}]Convergence: {convergence:.2f}[/{NORD_COLORS['nord3']}]")
+    if convergence > 0.75:
+        console.print(f"[{NORD_COLORS['nord13']}]⚠ High convergence warning[/{NORD_COLORS['nord13']}]")
+```
+
+## What We've Observed (Not Proven)
+
+- Gratitude spirals in polite models
+- Possible linguistic compression
+- Model-specific conversation styles
+- High sensitivity to initial conditions
+
+These need validation through batch experiments.
+
+## Contributing
+
+We need:
+1. **Batch execution** - Run many conversations
+2. **Pattern detection** - Find what we're missing  
+3. **Statistical tools** - Validate observations
+4. **Skeptical review** - Challenge our assumptions
+
+## Don't Do This
+
+- Don't claim discoveries
+- Don't add philosophy  
+- Don't build frameworks
+- Don't compete with MCP
+
+## Do This
+
+- Run experiments
+- Analyze data
+- Question everything
+- Keep it simple
+
+## Research Ethics
+
+- Label everything "preliminary"
+- No claims without data
+- Open about limitations
+- Invite replication
+
+## File Structure
+```
+pidgin/
+├── cli.py              # Command-line interface
+├── conductor.py        # Main orchestrator (~500 lines)
+├── event_bus.py        # Event publish/subscribe system
+├── events.py           # Event type definitions
+├── event_logger.py     # Event display formatting
+├── display_filter.py   # Human-readable output
+│
+├── providers/          # AI provider integrations
+│   ├── anthropic.py    # Claude models
+│   ├── openai.py       # GPT/O-series
+│   ├── google.py       # Gemini models
+│   └── xai.py          # Grok models
+│
+├── dialogue_components/# Separated display components
+├── attractors/         # Pattern detection (experimental)
+│
+├── config.py           # Configuration management
+├── context_manager.py  # Token/context tracking
+├── convergence.py      # Convergence calculator
+├── dimensional_prompts.py # Prompt generation
+├── intervention_handler.py # Pause/resume handling
+├── metrics.py          # Turn metrics
+├── models.py           # Model configurations
+├── router.py           # Message routing
+├── system_prompts.py   # System prompt templates
+├── transcripts.py      # Transcript generation
+├── types.py            # Type definitions
+└── user_interaction.py # User interaction
+
+./pidgin_output/        # All output here
+└── conversations/      # Organized by date
+```
+
+## Commit Style
 
 ```bash
-# Good examples:
-git commit -m "add event bus implementation"
-git commit -m "fix context window calculation"
-git commit -m "implement turn-based event system"
+# Lowercase, pragmatic
+git commit -m "add batch runner skeleton"
+git commit -m "fix convergence display"
 
-# Avoid:
-git commit -m "Add Event Bus Implementation"
-git commit -m "Fix Context Window Calculation"
+# Not
+git commit -m "Revolutionize AI Communication"
 ```
 
-This maintains a clean, consistent git history.
+## Remember
+
+1. We built a tool that works
+2. We saw interesting patterns
+3. We haven't proven anything
+4. Statistical validation is the next step
+
+The interesting part isn't what we've built - it's what we might learn from it. But learning requires rigorous experiments we haven't run yet.
+
+Help us find out what's real.
