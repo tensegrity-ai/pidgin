@@ -5,6 +5,15 @@ os.environ['CLICOLOR_FORCE'] = '1'
 
 # Configure rich-click BEFORE importing
 import rich_click.rich_click as rc
+
+# Force terminal and color detection
+rc.COLOR_SYSTEM = "truecolor"
+rc.FORCE_TERMINAL = True
+
+# Configure rich console directly
+from rich.console import Console
+rc.CONSOLE = Console(force_terminal=True, color_system="truecolor")
+
 rc.USE_RICH_MARKUP = True
 rc.SHOW_ARGUMENTS = True
 rc.GROUP_ARGUMENTS_OPTIONS = True
@@ -23,11 +32,8 @@ rc.STYLE_OPTION_DEFAULT = "#4c566a"  # Nord3 dim gray
 rc.STYLE_REQUIRED_SHORT = "bold #bf616a"  # Nord11 red
 rc.STYLE_REQUIRED_LONG = "bold #bf616a"
 rc.STYLE_HELPTEXT_FIRST_LINE = "bold"
-rc.STYLE_HELPTEXT = ""
-
-# Force color output
-rc.COLOR_SYSTEM = "truecolor"
-rc.FORCE_TERMINAL = True
+rc.STYLE_HELPTEXT = "#d8dee9"  # Nord4 light gray
+rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 
 # Now import as click
 import rich_click as click
