@@ -18,7 +18,7 @@ class Event:
 
 @dataclass
 class Turn:
-    """The 2+1 tuple - core conversation unit."""
+    """A conversation turn between two agents."""
 
     agent_a_message: Message
     agent_b_message: Message

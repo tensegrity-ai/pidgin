@@ -1,17 +1,18 @@
-# Pidgin Architecture Documentation
+# Pidgin Architecture
 
 ## Overview
 
-Pidgin is a conversation runner that logs everything to JSONL files. This document describes what actually exists in the codebase (not what was originally envisioned).
+Event-driven system for recording AI-to-AI conversations. Built to support n-agent conversations in the future, currently implements 2-agent only.
 
-## What Actually Works
+## Core Architecture
 
-### Event System (Over-engineered but functional)
+### Event System
 
-The entire system publishes events to a central bus:
-- `EventBus` - A pub/sub system (overkill for this use case)
-- `events.jsonl` - Logs every tiny action as JSON
-- Generates massive log files for simple conversations
+Central event bus enables:
+- Complete conversation recording
+- Future n-agent support
+- Pause/resume functionality
+- Comprehensive logging to `events.jsonl`
 
 ### Main Components
 
@@ -48,37 +49,31 @@ Currently implemented events:
 - `ConversationPausedEvent/ResumedEvent`
 - `ErrorEvent/APIErrorEvent/ProviderTimeoutEvent`
 
-## Code That Exists But Does Nothing
+## Experimental Features (Unvalidated)
 
-### Convergence Detection (`convergence.py`)
-- Calculates arbitrary "similarity" metrics
-- Has no scientific basis or validation
-- Metrics are computed but never used
-- Original vision was to detect "convergent communication"
-- In reality, just measures text similarity with made-up formulas
+### Convergence Metrics (`convergence.py`)
+- Measures vocabulary overlap and compression patterns
+- **Not scientifically validated**
+- Needs rigorous testing to determine if meaningful
+- Currently just logs metrics without analysis
 
-### Context Management (`context_manager.py`)
-- Token counting code that isn't connected to anything
-- Would theoretically warn about context limits
-- Never actually called during conversations
-- Another remnant of the original ambitious vision
+### Context Tracking (`context_manager.py`)
+- Token counting for context window management
+- Not yet integrated with conversation flow
+- Placeholder for future context-aware features
 
-## Things That Don't Work
+## Not Yet Implemented
 
-### Checkpoint/Resume
-- Can't resume previous conversations
-- Event logs exist but replay isn't implemented
-- The "event-driven" design was supposed to enable this
+### Critical for Research
+- **Batch Experiments** - Need to run hundreds of conversations
+- **Statistical Analysis** - Validate if patterns are real
+- **Control Conditions** - Test against random baselines
+- **Message Injection** - Modify conversations mid-stream
 
-### Message Injection
-- You can pause but can't add your own messages
-- The UI shows a pause menu but that's it
-
-### "Attractor Detection"
-- Pseudoscientific concept from the original vision
-- Some experimental code exists
-- No evidence these "attractors" are real phenomena
-- Likely just seeing patterns in randomness
+### Future Capabilities
+- **Checkpoint/Resume** - Event replay from specific points
+- **N-agent Support** - Architecture ready, needs implementation
+- **Real-time Analysis** - Pattern detection during conversations
 
 ## Data Flow
 
@@ -89,19 +84,29 @@ Currently implemented events:
 5. Transcripts saved after conversation
 6. Ctrl+C can interrupt at any time
 
-## Unrealistic Future Plans
+## Architecture Decisions
 
-These were planned but are unlikely to happen:
-- Event replay (would require significant refactoring)
-- Batch execution (current design is single-threaded)
-- Live dashboard (would need complete UI rewrite)
-- "Time-travel debugging" (buzzword with no clear meaning)
+### Why Event-Driven?
+- Enables future n-agent conversations
+- Complete audit trail for research
+- Supports pause/resume functionality
+- Allows replay and analysis
 
-## Honest Assessment of Technical Debt
+### Current Limitations
+- Single-threaded (batch experiments need parallel execution)
+- 2-agent only (n-agent requires conductor refactor)
+- No real-time analysis (events logged but not processed)
 
-1. **Over-engineered for its actual purpose** - Event system is complex for a chat logger
-2. **Half-implemented features everywhere** - Convergence, context, injection all partially done
-3. **No scientific validation** - Metrics and patterns are arbitrary
-4. **Original vision doesn't match reality** - Built for "emergence research" but just logs chats
-5. **Event logs are huge** - Gigabytes of JSON for simple conversations
-6. **Code complexity unjustified** - Could be 1/10th the size for same functionality
+## Next Steps for Valid Research
+
+1. **Batch Infrastructure** - Run many conversations with identical conditions
+2. **Statistical Tools** - Analyze patterns across conversations
+3. **Control Design** - Test against shuffled/random baselines
+4. **Hypothesis Testing** - Pre-register experiments
+5. **Reproducibility** - Version lock, seed management
+
+## Technical Status
+
+- **Stable**: Event system, provider abstraction, basic flow
+- **Experimental**: Convergence metrics, pattern detection
+- **Missing**: Batch runner, analysis pipeline, validation tools

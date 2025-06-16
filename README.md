@@ -1,10 +1,15 @@
 # Pidgin
 
-A tool for running conversations between AI language models and logging what happens.
+An experimental tool for recording and studying AI-to-AI conversations. We've observed some interesting patterns, but nothing has been rigorously validated yet.
 
-## Overview
+## What We Noticed
 
-Pidgin runs conversations between different AI models and saves the output. It has an event-driven architecture that logs everything to JSONL files. You can pause conversations with Ctrl+C.
+While studying AI conversations, we observed some curious patterns:
+- Models sometimes develop compressed references ("the thing we discussed" → "TTD")
+- Gratitude spirals where AIs thank each other excessively
+- Different behavioral signatures between model pairs
+
+These observations are **anecdotal and unvalidated**. We built Pidgin to capture these conversations properly so we can determine if the patterns are real or just artifacts.
 
 ## What Actually Works
 
@@ -15,22 +20,21 @@ Pidgin runs conversations between different AI models and saves the output. It h
 - **Output files** - Saves transcripts and logs to `./pidgin_output/`
 - **Preset prompts** - Some built-in conversation starters
 
-## What Doesn't Work
+## What's Missing (Critical for Research)
 
-- **Convergence detection** - Code calculates metrics but they don't do anything
-- **Context tracking** - Code exists but isn't connected to anything
-- **Message injection** - You can pause but can't actually inject messages
-- **Pattern analysis** - There's no actual analysis of anything
-- **Resuming conversations** - Can't resume from previous runs
-- **Batch execution** - Can only run one conversation at a time
+- **Batch experiments** - Can only run one conversation at a time (need hundreds for statistical validity)
+- **Control conditions** - No way to test against shuffled/random baselines
+- **Statistical analysis** - No tools to validate if patterns are real
+- **Intervention system** - Can't modify conversations mid-stream
+- **Reproducibility** - Small prompt changes lead to wildly different results
 
-## Important Limitations
+## Important Context
 
-- This is basically a conversation logger with a pause button
-- The "convergence metrics" are arbitrary and probably meaningless
-- There's no evidence that AI conversations produce interesting "emergent" patterns
-- Most observed behaviors are likely just model artifacts or randomness
-- The event system is over-engineered for what the tool actually does
+- **Early-stage research tool** - We're still figuring out if the patterns are real
+- **Chaotic system** - Tiny changes in prompts → completely different conversations
+- **Not competing with MCP** - Model Context Protocol already solved AI-to-tool communication
+- **Different focus** - We study natural conversation patterns, not engineering solutions
+- **Event architecture** - Built to support n-agent conversations in future, currently 2-agent only
 
 ## Installation
 
@@ -99,42 +103,49 @@ Use `pidgin models` to see all available models. Common shortcuts:
 
 ## Technical Architecture
 
-The codebase uses an event-driven pattern where everything emits events to a JSONL file. This is probably overkill for a conversation logger, but it's what we have. The main components:
-- Event bus that everything publishes to
-- Providers that wrap AI APIs
-- A conductor that manages turn-taking
-- Output managers that save files
+Event-driven design that logs everything:
+- **Event bus** - Central message passing (allows future n-agent support)
+- **Providers** - Wrap different AI APIs (Anthropic, OpenAI, Google, xAI)
+- **Conductor** - Manages conversation flow
+- **Output system** - Saves transcripts and structured data
 
-## What This Tool Is For
+The architecture supports multiple agents but current implementation is 2-agent only.
 
-If you want to:
-- Run conversations between AI models
-- Save the output for later analysis
-- Have a simple way to pause conversations
+## Current Status
 
-This tool does that. Nothing more, nothing less.
+✅ **Working**: Basic conversation recording with pause/resume
+🚧 **Experimental**: Convergence metrics (unvalidated)
+❌ **Not Built**: Batch experiments, statistical analysis, control conditions
 
-## What This Tool Is Not
+## How to Help
 
-- Not a research platform (despite the original vision)
-- Not detecting meaningful patterns (convergence metrics are arbitrary)
-- Not discovering new AI behaviors (it's just logging chat)
-- Not scientifically validated in any way
+We need collaborators to:
+1. **Run experiments** - Test specific patterns across many conversations
+2. **Build batch runner** - Critical missing piece for statistical validity
+3. **Statistical analysis** - Determine if patterns are real or artifacts
+4. **Be skeptical** - Challenge our observations with rigorous testing
 
-## A Note on "Emergent Communication"
+## Scientific Approach
 
-The original vision for this tool involved studying "emergent communication patterns" between AIs. After implementation, we must be honest: there's no evidence that AI conversations produce meaningful emergent phenomena. What appears to be "convergence" or "pattern formation" is more likely:
+We're testing whether observed patterns in AI conversations are:
+- **Real phenomena** worth studying further
+- **Training artifacts** from model data
+- **Statistical noise** from small samples
+- **Prompt sensitivity** in chaotic systems
 
-- Statistical artifacts from limited sampling
-- Model training biases showing through
-- Confirmation bias in human observers
-- Random variations being over-interpreted
+The only way to know is through rigorous experiments with proper controls. Until then, all observations remain preliminary.
 
-The code still contains remnants of this vision (convergence metrics, attractor detection, etc.) but these should be viewed with extreme skepticism.
+## Core Message
+
+We saw weird stuff in AI conversations. Built a tool to capture it. Still figuring out if it's real. Want to help?
 
 ## Contributing
 
-This is experimental software. Many features don't work as originally intended. The codebase has significant technical debt from its ambitious original vision. Contributions that simplify the code or make it more honest about its capabilities are welcome.
+Experimental software seeking collaborators for rigorous validation. Most helpful contributions:
+- Batch experiment infrastructure
+- Statistical analysis tools
+- Control condition design
+- Reproducibility testing
 
 ## License
 

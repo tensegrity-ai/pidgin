@@ -27,13 +27,24 @@ But this might just be:
 
 ### Model-Specific Behaviors
 - **Claude**: Tends toward philosophical tangents
-- **GPT-4**: More likely to suggest structured frameworks
+- **GPT-4**: More likely to suggest structured frameworks  
 - **Gemini**: Often asks clarifying questions
 
 These could easily be:
 - Training data differences
 - RLHF variations
 - Selective observation on our part
+
+### Extreme Sensitivity to Initial Conditions
+The system appears chaotic - tiny changes lead to wildly different outcomes:
+- Adding a comma can change entire conversation trajectory
+- Same prompt, different day → completely different discussion
+- Word choice ("discuss" vs "explore") → different behavioral patterns
+
+This suggests we're dealing with a chaotic system where:
+- Initial conditions matter enormously
+- Reproducibility requires exact prompt control
+- Many repetitions needed to find stable patterns
 
 ## Why We're Skeptical
 

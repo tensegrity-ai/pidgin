@@ -1,59 +1,58 @@
 # Project Status
 
-A brutally honest assessment of what works, what doesn't, and what's missing.
+Honest assessment of an experimental research tool.
 
 ## ✅ What Actually Works
 
-- **Basic conversation runner**: You can run a conversation between two AI models
-- **Event logging**: Everything gets logged to events.jsonl (whether you need it or not)
-- **Streaming output**: See responses as they're generated
-- **Pause/resume**: You can Ctrl+C to pause, then continue or exit
-- **Output files**: Creates conversation.md (readable) and conversation.json (structured)
+- **Conversation recording**: Runs and logs AI-to-AI conversations
+- **Event-driven architecture**: Complete audit trail in events.jsonl
+- **Streaming output**: Real-time response display
+- **Pause/resume**: Ctrl+C interrupt handling
+- **Multi-provider support**: Anthropic, OpenAI, Google, xAI
+- **Clean abstractions**: Providers, event bus, output management
+- **2-agent conversations**: Current implementation focus
 
-That's it. It's a conversation runner with logging.
-
-## 🚧 What Exists But Doesn't Really Work
+## 🚧 Experimental Features (Need Validation)
 
 - **Convergence metrics**: 
-  - Calculates some numbers based on token overlap
-  - No scientific basis
-  - Not displayed anywhere
-  - Probably meaningless
+  - Measures vocabulary overlap and compression
+  - Interesting patterns observed
+  - Not scientifically validated
+  - Needs statistical testing
 
-- **Context tracking**:
-  - Code exists to track token usage
-  - Doesn't integrate with anything
-  - No actual context window management
+- **Pattern observations**:
+  - Gratitude spirals documented
+  - Compression attempts noted
+  - Could be real or artifacts
+  - Requires controlled experiments
 
-- **Event system**:
-  - Over-engineered for what we need
-  - Works fine but adds complexity
-  - Could have been simple function calls
+## ❌ Critical Missing Pieces (Needed for Research)
 
-## ❌ What's Completely Missing
-
-- **Batch experiments**: Can only run one conversation at a time
-- **Statistical analysis**: No way to analyze patterns across conversations
+- **Batch experiments**: Single conversation limit (need hundreds for validity)
+- **Statistical analysis**: No tools to test if patterns are significant
 - **Control conditions**: No shuffled/baseline comparisons
-- **Intervention system**: Can't modify conversations mid-stream
-- **Checkpoint/resume**: Can't resume from a specific point
-- **Multi-agent**: Only supports 2 agents despite architecture that could handle more
-- **Validation pipeline**: No infrastructure for testing hypotheses
+- **Reproducibility**: Chaotic system - tiny changes → different results
+- **N-agent support**: Architecture ready but not implemented
+- **Hypothesis testing**: No framework for systematic experiments
 
-## 📊 Reality Check
+## 📊 Current Understanding
 
-### What we claimed vs. what exists:
-- **"Studies emergent communication"** → Records conversations
-- **"Convergence detection"** → Calculates arbitrary metrics
-- **"Event-driven architecture"** → Unnecessary complexity
-- **"Pause/resume conversations"** → It's just a pause button
-- **"Intervention system"** → Doesn't exist
+### What we've observed:
+- Strange patterns DO appear in AI conversations
+- Gratitude spirals, compression, behavioral signatures
+- Extreme sensitivity to initial conditions
+- Different model pairs show different dynamics
 
-### Technical debt:
-- Event system is overkill for serial message passing
-- Convergence calculations have no theoretical basis
-- Architecture assumes n-agents but hard-coded for 2
-- Many half-implemented features
+### What we don't know:
+- Are these patterns real or artifacts?
+- Do they emerge from training or interaction?
+- Can they be reproduced reliably?
+- Do they have any practical significance?
+
+### Architecture choices:
+- Event-driven design enables future n-agent support
+- Complete logging allows retrospective analysis
+- Clean provider abstraction supports multiple models
 
 ## 🔬 What Would Make This Scientific?
 
@@ -65,32 +64,32 @@ To do actual research, we'd need:
 4. **Hypothesis testing**: Pre-registered experiments with clear predictions
 5. **Reproducibility**: Version locking, seed management, exact replay
 
-## 🎯 Realistic Next Steps
+## 🎯 Next Steps for Valid Research
 
-1. **Admit what it is**: A conversation logger with nice output formatting
-2. **Remove half-baked features**: Strip out convergence metrics, unused event complexity
-3. **Build batch infrastructure**: This is the main missing piece
-4. **Design real experiments**: What patterns can we actually test?
-5. **Get statistical help**: We need proper experimental design
+1. **Build batch runner**: Critical for statistical validity
+2. **Design control experiments**: Test against random baselines
+3. **Statistical framework**: Proper hypothesis testing
+4. **Reproducibility tools**: Seed management, version locking
+5. **Collaborate with skeptics**: Need rigorous validation
 
-## 💭 Should This Project Continue?
+## 🔬 Research Questions
 
-Honest questions:
-- Is there anything here beyond confirmation bias?
-- Are we just seeing training data artifacts?
-- Would batch experiments find anything meaningful?
-- Is this solving a problem that exists?
+What we're trying to determine:
+- Are the observed patterns reproducible?
+- Do they emerge from interaction or just reflect training?
+- Can we distinguish real phenomena from artifacts?
+- Is this worth studying further?
 
-The answer might be no. But we won't know without proper experiments.
+We need rigorous experiments to answer these questions.
 
 ## 🤝 How to Help
 
-If you're interested despite all these limitations:
+We need collaborators to:
 
-1. **Run conversations**: Document what you see (including boring results)
-2. **Build batch runner**: This is the critical missing piece
-3. **Design experiments**: Propose testable hypotheses
-4. **Statistical analysis**: Help design proper validation
-5. **Be skeptical**: Challenge our observations
+1. **Build batch infrastructure**: Run hundreds of controlled conversations
+2. **Design experiments**: Test specific hypotheses
+3. **Statistical analysis**: Validate or debunk patterns
+4. **Document null results**: "Found nothing" is valuable data
+5. **Challenge observations**: Skeptical review essential
 
-The most helpful thing would be someone saying "I ran 1000 conversations and found nothing interesting."
+**Core message**: We saw weird stuff in AI conversations. Built a tool to capture it. Still figuring out if it's real. Want to help?
