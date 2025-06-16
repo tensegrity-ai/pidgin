@@ -219,7 +219,7 @@ def get_provider_for_model(model: str):
         raise ValueError(f"Unknown model provider for: {model}")
 
 
-@click.group()
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
 def cli():
     """AI conversation research tool for studying emergent communication patterns.
@@ -250,7 +250,7 @@ def cli():
     pass
 
 
-@cli.command()
+@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 def init():
     """Initialize configuration directory with template files.
     
@@ -379,7 +379,7 @@ dimensions:
         console.print(f"[dim]Check {config_dir.relative_to(Path.cwd())}/[/dim]")
 
 
-@cli.command()
+@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 def models():
     """Display available AI models organized by provider."""
     table = Table(title="Available Models", show_header=True, header_style="bold")
@@ -437,7 +437,7 @@ def models():
     console.print("\n[dim]Use either the model ID or alias with the -a and -b flags.[/dim]")
 
 
-@cli.command()
+@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "-a", "--model-a", required=True,
     help="First model (e.g., 'claude', 'gpt-4', 'opus')"
@@ -568,7 +568,7 @@ def chat(
     This command starts a conversation that will run for the specified number of turns.
     The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
     
-    EXAMPLES:
+    [bold]EXAMPLES:[/bold]
     
     Basic conversation (10 turns):
         pidgin chat -a claude -b gpt
