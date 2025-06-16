@@ -232,16 +232,16 @@ def cli():
 
     [bold]EXAMPLES:[/bold]
 
-    Basic conversation with custom prompt:
+    [#4c566a]Basic conversation with custom prompt:[/#4c566a]
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
 
-    Using dimensional prompts:
+    [#4c566a]Using dimensional prompts:[/#4c566a]
         pidgin chat -a claude -b gpt -d peers:philosophy:analytical
 
-    Let agents choose names:
+    [#4c566a]Let agents choose names:[/#4c566a]
         pidgin chat -a claude -b gpt --choose-names
 
-    High convergence monitoring:
+    [#4c566a]High convergence monitoring:[/#4c566a]
         pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
 
     [bold]CONFIGURATION:[/bold]
@@ -376,10 +376,10 @@ dimensions:
         console.print("\n[bold green]✓ Configuration templates created:[/bold green]")
         for file in created_files:
             console.print(f"  • {file.relative_to(Path.cwd())}")
-        console.print("\n[dim]Edit these files to add your own content.[/dim]")
+        console.print("\n[#4c566a]Edit these files to add your own content.[/#4c566a]")
     else:
         console.print("[yellow]All configuration files already exist.[/yellow]")
-        console.print(f"[dim]Check {config_dir.relative_to(Path.cwd())}/[/dim]")
+        console.print(f"[#4c566a]Check {config_dir.relative_to(Path.cwd())}/[/#4c566a]")
 
 
 @cli.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -441,7 +441,7 @@ def models():
     console.print("  pidgin chat -a opus -b gemini-1.5-pro")
     console.print("  pidgin chat -a gpt-4.1 -b claude-haiku")
     
-    console.print("\n[dim]Use either the model ID or alias with the -a and -b flags.[/dim]")
+    console.print("\n[#4c566a]Use either the model ID or alias with the -a and -b flags.[/#4c566a]")
 
 
 @cli.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -577,26 +577,26 @@ def chat(
 
     [bold]EXAMPLES:[/bold]
 
-    Basic conversation (10 turns):
+    [#4c566a]Basic conversation (10 turns):[/#4c566a]
         pidgin chat -a claude -b gpt
 
-    Longer philosophical discussion:
+    [#4c566a]Longer philosophical discussion:[/#4c566a]
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
 
-    Using dimensional prompts:
+    [#4c566a]Using dimensional prompts:[/#4c566a]
         pidgin chat -a claude -b gpt -d peers:philosophy
         pidgin chat -a gpt -b gemini -d debate:language:analytical
 
-    With specific puzzles:
+    [#4c566a]With specific puzzles:[/#4c566a]
         pidgin chat -a claude -b gpt -d teaching:puzzles --puzzle fibonacci
 
-    Let agents name themselves:
+    [#4c566a]Let agents name themselves:[/#4c566a]
         pidgin chat -a claude -b gpt --choose-names
 
-    High convergence monitoring:
+    [#4c566a]High convergence monitoring:[/#4c566a]
         pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
 
-    Different awareness levels:
+    [#4c566a]Different awareness levels:[/#4c566a]
         pidgin chat -a claude -b gpt --awareness research
         pidgin chat -a claude -b gpt --awareness-a firm --awareness-b none
     """
@@ -627,7 +627,7 @@ def chat(
         model_b_id = config_b.model_id if config_b else model_b
     except ValueError as e:
         console.print(f"[red]Model error: {e}[/red]")
-        console.print("\n[dim]Run 'pidgin models' to see available models.[/dim]")
+        console.print("\n[#4c566a]Run 'pidgin models' to see available models.[/#4c566a]")
         raise click.Abort()
     
     # Determine temperatures for each model
@@ -704,7 +704,7 @@ def chat(
                 border_style="green"
             ))
         else:
-            console.print("[dim]Agent A: No system prompt (chaos mode)[/dim]")
+            console.print("[#4c566a]Agent A: No system prompt (chaos mode)[/#4c566a]")
             
         if system_prompts["agent_b"]:
             console.print(Panel(
@@ -713,7 +713,7 @@ def chat(
                 border_style="blue"
             ))
         else:
-            console.print("[dim]Agent B: No system prompt (chaos mode)[/dim]")
+            console.print("[#4c566a]Agent B: No system prompt (chaos mode)[/#4c566a]")
         console.print()
 
     # Display EVENT-DRIVEN configuration (only in verbose mode)
@@ -762,7 +762,7 @@ def chat(
                 )
                 if transcript_path.exists():
                     console.print(
-                        f"\n[dim]Transcript saved to: {transcript_path}[/dim]"
+                        f"\n[#4c566a]Transcript saved to: {transcript_path}[/#4c566a]"
                     )
 
     except KeyboardInterrupt:
