@@ -223,29 +223,31 @@ def get_provider_for_model(model: str):
 @click.version_option()
 def cli():
     """AI conversation research tool for studying emergent communication patterns.
-    
+
     Pidgin enables controlled experiments between AI agents to discover how they
     develop communication patterns, convergence behaviors, and linguistic adaptations.
-    
-    QUICK START:
-        pidgin chat -a claude -b gpt -t 20
-    
-    EXAMPLES:
-        # Basic conversation with custom prompt
+
+    [bold]QUICK START:[/bold]
+    pidgin chat -a claude -b gpt -t 20
+
+    [bold]EXAMPLES:[/bold]
+
+    Basic conversation with custom prompt:
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
-        
-        # Using dimensional prompts
+
+    Using dimensional prompts:
         pidgin chat -a claude -b gpt -d peers:philosophy:analytical
-        
-        # Let agents choose names
+
+    Let agents choose names:
         pidgin chat -a claude -b gpt --choose-names
-        
-        # Run with high convergence monitoring
+
+    High convergence monitoring:
         pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
-    
-    CONFIGURATION:
-        Configuration files can be placed in ~/.pidgin/ or ./.pidgin/
-        Use 'pidgin init' to create template configuration files.
+
+    [bold]CONFIGURATION:[/bold]
+
+    • Configuration files: ~/.pidgin/ or ./.pidgin/
+    • Create templates: pidgin init
     """
     pass
 
@@ -253,13 +255,14 @@ def cli():
 @cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 def init():
     """Initialize configuration directory with template files.
-    
+
     Creates a .pidgin/ directory in your current folder with template
     configuration files for:
-    - Custom thought experiments
-    - Custom puzzles  
-    - Custom dimensions (planned)
-    
+
+    • Custom thought experiments
+    • Custom puzzles
+    • Custom dimensions (planned)
+
     After running this command, edit the YAML files to add your own content.
     """
     config_dir = Path.cwd() / ".pidgin"
@@ -381,7 +384,11 @@ dimensions:
 
 @cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 def models():
-    """Display available AI models organized by provider."""
+    """Display available AI models organized by provider.
+
+    Shows all supported models with their aliases, context windows,
+    and key characteristics.
+    """
     table = Table(title="Available Models", show_header=True, header_style="bold")
     table.add_column("Provider", style="cyan", width=12)
     table.add_column("Model ID", style="green")
@@ -564,31 +571,31 @@ def chat(
     temp_b,
 ):
     """Run a conversation between two AI agents.
-    
+
     This command starts a conversation that will run for the specified number of turns.
     The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
-    
+
     [bold]EXAMPLES:[/bold]
-    
+
     Basic conversation (10 turns):
         pidgin chat -a claude -b gpt
-    
+
     Longer philosophical discussion:
         pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
-    
+
     Using dimensional prompts:
         pidgin chat -a claude -b gpt -d peers:philosophy
         pidgin chat -a gpt -b gemini -d debate:language:analytical
-    
+
     With specific puzzles:
         pidgin chat -a claude -b gpt -d teaching:puzzles --puzzle fibonacci
-    
+
     Let agents name themselves:
         pidgin chat -a claude -b gpt --choose-names
-    
+
     High convergence monitoring:
         pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
-    
+
     Different awareness levels:
         pidgin chat -a claude -b gpt --awareness research
         pidgin chat -a claude -b gpt --awareness-a firm --awareness-b none
