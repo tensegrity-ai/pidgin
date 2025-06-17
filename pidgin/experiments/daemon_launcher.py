@@ -47,10 +47,10 @@ def main():
         sys.stderr.write(f"Failed to parse config: {e}\n")
         sys.exit(1)
     
-    # Create daemon
+    # Create daemon with absolute path
     daemon = ExperimentDaemon(
         args.experiment_id,
-        Path("./pidgin_output/experiments/active")
+        Path("./pidgin_output/experiments/active").resolve()
     )
     
     # Daemonize

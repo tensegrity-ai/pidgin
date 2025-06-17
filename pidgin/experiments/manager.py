@@ -24,7 +24,10 @@ class ExperimentManager:
             base_dir: Base directory for experiments
         """
         if base_dir is None:
-            base_dir = Path("./pidgin_output/experiments")
+            base_dir = Path("./pidgin_output/experiments").resolve()
+        else:
+            base_dir = base_dir.resolve()
+            
         self.base_dir = base_dir
         self.active_dir = base_dir / "active"
         self.logs_dir = base_dir / "logs"

@@ -20,8 +20,9 @@ class ExperimentDaemon:
             pid_dir: Directory for PID files
         """
         self.experiment_id = experiment_id
-        self.pid_file = pid_dir / f"{experiment_id}.pid"
-        self.log_file = pid_dir.parent / "logs" / f"{experiment_id}.log"
+        # Convert to absolute paths before daemonizing
+        self.pid_file = pid_dir.resolve() / f"{experiment_id}.pid"
+        self.log_file = pid_dir.parent.resolve() / "logs" / f"{experiment_id}.log"
         self.stop_requested = False
         
     def daemonize(self):

@@ -123,7 +123,9 @@ class ExperimentRunner:
         providers = await self._get_providers(config)
         
         # Create output manager (minimal output for experiments)
-        output_dir = Path(f"./pidgin_output/experiments/{experiment_id}/{conversation_id}")
+        # Use absolute path to ensure it works after daemonization
+        base_dir = Path("./pidgin_output").resolve()
+        output_dir = base_dir / "experiments" / experiment_id / conversation_id
         display = DisplayFilter(console=None)  # No console output
         output_manager = OutputManager(
             display=display,
