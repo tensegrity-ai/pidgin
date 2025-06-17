@@ -1,5 +1,5 @@
 import os
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 from typing import List, AsyncIterator, AsyncGenerator, Optional
 from ..core.types import Message
 from .base import Provider
@@ -14,7 +14,7 @@ class AnthropicProvider(Provider):
                 "ANTHROPIC_API_KEY environment variable not set. "
                 "Please set it to your Anthropic API key."
             )
-        self.client = Anthropic(api_key=api_key)
+        self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
 
     async def stream_response(
@@ -54,8 +54,9 @@ class AnthropicProvider(Provider):
 
         # Define inner function for retry wrapper
         async def _make_api_call():
-            with self.client.messages.stream(**api_params) as stream:
-                for text in stream.text_stream:
+            # Use async streaming
+            async with self.client.messages.stream(**api_params) as stream:
+                async for text in stream.text_stream:
                     yield text
         
         # Use retry wrapper with exponential backoff
