@@ -20,7 +20,7 @@ from ..providers.openai import OpenAIProvider
 from ..providers.google import GoogleProvider
 from ..providers.xai import xAIProvider
 from ..config.models import get_model_config
-from ..io.display_filter import DisplayFilter
+from ..ui.display_filter import DisplayFilter
 from ..io.output_manager import OutputManager
 from .storage import ExperimentStore
 from .config import ExperimentConfig
