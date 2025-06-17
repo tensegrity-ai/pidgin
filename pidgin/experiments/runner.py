@@ -192,26 +192,27 @@ class ExperimentRunner:
         if not model_b_config:
             raise ValueError(f"Unknown model: {config.agent_b_model}")
         
-        # Create providers as needed
-        provider_instances = {}
-        
-        for model_config in [model_a_config, model_b_config]:
-            provider_name = model_config.provider
+        # Create providers for each agent
+        if model_a_config.provider == "anthropic":
+            providers['agent_a'] = AnthropicProvider(config.agent_a_model)
+        elif model_a_config.provider == "openai":
+            providers['agent_a'] = OpenAIProvider(config.agent_a_model)
+        elif model_a_config.provider == "google":
+            providers['agent_a'] = GoogleProvider(config.agent_a_model)
+        elif model_a_config.provider == "xai":
+            providers['agent_a'] = xAIProvider(config.agent_a_model)
+        else:
+            raise ValueError(f"Unknown provider: {model_a_config.provider}")
             
-            if provider_name not in provider_instances:
-                if provider_name == "anthropic":
-                    provider_instances[provider_name] = AnthropicProvider()
-                elif provider_name == "openai":
-                    provider_instances[provider_name] = OpenAIProvider()
-                elif provider_name == "google":
-                    provider_instances[provider_name] = GoogleProvider()
-                elif provider_name == "xai":
-                    provider_instances[provider_name] = xAIProvider()
-                else:
-                    raise ValueError(f"Unknown provider: {provider_name}")
-        
-        # Map to conductor format
-        providers['agent_a'] = provider_instances[model_a_config.provider]
-        providers['agent_b'] = provider_instances[model_b_config.provider]
+        if model_b_config.provider == "anthropic":
+            providers['agent_b'] = AnthropicProvider(config.agent_b_model)
+        elif model_b_config.provider == "openai":
+            providers['agent_b'] = OpenAIProvider(config.agent_b_model)
+        elif model_b_config.provider == "google":
+            providers['agent_b'] = GoogleProvider(config.agent_b_model)
+        elif model_b_config.provider == "xai":
+            providers['agent_b'] = xAIProvider(config.agent_b_model)
+        else:
+            raise ValueError(f"Unknown provider: {model_b_config.provider}")
         
         return providers

@@ -201,9 +201,9 @@ class ParallelExperimentRunner(ExperimentRunner):
         # Update experiment status
         final_status = 'completed'
         if self.daemon and self.daemon.is_stopping():
-            final_status = 'interrupted'
+            final_status = 'failed'  # Use 'failed' instead of 'interrupted'
         elif self.failed_count > 0:
-            final_status = 'completed_with_errors'
+            final_status = 'failed'  # Use 'failed' instead of 'completed_with_errors'
             
         self.storage.update_experiment_status(experiment_id, final_status)
         
