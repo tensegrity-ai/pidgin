@@ -22,6 +22,9 @@ class ExperimentConfig:
     temperature_a: Optional[float] = None
     temperature_b: Optional[float] = None
     
+    # Parallel execution
+    max_parallel: Optional[int] = None  # None = auto-calculate based on providers
+    
     # Turn control
     first_speaker: str = 'agent_a'  # Alternates per repetition for fairness
     

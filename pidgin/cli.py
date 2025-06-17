@@ -1059,37 +1059,63 @@ def experiment(
     console.print("\n[#4c566a]Note: Full statistical analysis coming soon![/#4c566a]")
 
 
-@cli.command()
-@click.option("-a", "--agent-a", "model_a", required=True, help="First model")
-@click.option("-b", "--agent-b", "model_b", required=True, help="Second model")
-@click.option("-r", "--repetitions", default=5, help="Number of conversations to run")
-@click.option("-p", "--initial-prompt", default="Hello! Let's have a conversation.", help="Initial prompt")
-@click.option("-t", "--max-turns", default=20, help="Maximum turns per conversation")
-@click.option("--temperature", type=float, help="Temperature for both models")
-@click.option("--convergence-threshold", type=float, help="Stop at convergence threshold")
-@click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
-@click.option("--name", help="Experiment name (auto-generated if not provided)")
-def experiment(model_a, model_b, repetitions, initial_prompt, max_turns, 
-               temperature, convergence_threshold, choose_names, name):
-    """Run a batch experiment with multiple conversations (Phase 2 - serial only).
+@cli.group()
+def experiment():
+    """Run and manage batch experiments.
     
-    This command runs multiple identical conversations for statistical analysis.
-    Results are stored in the experiments database for later analysis.
+    This command group allows you to start, monitor, and manage experiments
+    that run multiple conversations for statistical analysis.
     
     [bold]EXAMPLES:[/bold]
     
-    [#4c566a]Basic experiment (5 conversations):[/#4c566a]
-        pidgin experiment -a claude -b gpt
+    [#4c566a]Start an experiment in background:[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 20
     
-    [#4c566a]Larger experiment with custom parameters:[/#4c566a]
-        pidgin experiment -a opus -b gpt-4 -r 20 -t 30
+    [#4c566a]Check status of all experiments:[/#4c566a]
+        pidgin experiment status
     
-    [#4c566a]Convergence testing:[/#4c566a]
-        pidgin experiment -a claude -b gpt -r 100 --convergence-threshold 0.85
+    [#4c566a]View logs of running experiment:[/#4c566a]
+        pidgin experiment logs exp_abc123
+    
+    [#4c566a]Stop a running experiment:[/#4c566a]
+        pidgin experiment stop exp_abc123
+    """
+    pass
+
+
+@experiment.command()
+@click.option("-a", "--agent-a", "model_a", required=True, help="First model")
+@click.option("-b", "--agent-b", "model_b", required=True, help="Second model")
+@click.option("-r", "--repetitions", default=10, help="Number of conversations to run")
+@click.option("-t", "--max-turns", default=50, help="Maximum turns per conversation")
+@click.option("-p", "--initial-prompt", default="Hello! Let's have a conversation.", help="Initial prompt")
+@click.option("--name", help="Experiment name (auto-generated if not provided)")
+@click.option("--temperature", type=float, help="Temperature for both models")
+@click.option("--convergence-threshold", type=float, help="Stop at convergence threshold")
+@click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
+@click.option("--max-parallel", type=int, help="Max parallel conversations (auto if not set)")
+@click.option("--background/--foreground", default=True, help="Run as daemon (default) or foreground")
+def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
+          temperature, convergence_threshold, choose_names, max_parallel, background):
+    """Start a new experiment.
+    
+    By default, experiments run in the background as daemons. Use --foreground
+    to run interactively (useful for debugging).
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Basic experiment (background):[/#4c566a]
+        pidgin experiment start -a claude -b gpt
+    
+    [#4c566a]Large experiment with custom parallelism:[/#4c566a]
+        pidgin experiment start -a opus -b gpt-4 -r 100 --max-parallel 8
+    
+    [#4c566a]Run in foreground for debugging:[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 5 --foreground
     """
     import time
-    from .experiments import ExperimentStore, ExperimentRunner
-    from .experiments.config import ExperimentConfig
+    from .experiments import ExperimentConfig, ExperimentManager, ExperimentStore
+    from .experiments.parallel_runner import ParallelExperimentRunner
     
     # Generate experiment name if not provided
     if not name:
@@ -1106,7 +1132,8 @@ def experiment(model_a, model_b, repetitions, initial_prompt, max_turns,
         temperature_a=temperature,
         temperature_b=temperature,
         convergence_threshold=convergence_threshold,
-        choose_names=choose_names
+        choose_names=choose_names,
+        max_parallel=max_parallel
     )
     
     # Validate configuration
@@ -1117,40 +1144,161 @@ def experiment(model_a, model_b, repetitions, initial_prompt, max_turns,
             console.print(f"  • {error}")
         return
     
-    # Create storage and runner
-    storage = ExperimentStore()
-    runner = ExperimentRunner(storage)
+    if background:
+        # Start as daemon
+        manager = ExperimentManager()
+        console.print(f"[#8fbcbb]◆ Starting experiment: {config.name}[/#8fbcbb]")
+        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+        
+        try:
+            exp_id = manager.start_experiment(config)
+            console.print(f"\n[#a3be8c]✓ Experiment started in background[/#a3be8c]")
+            console.print(f"[#4c566a]  ID: {exp_id}[/#4c566a]")
+            console.print(f"\n[#4c566a]Check status:[/#4c566a] pidgin experiment status")
+            console.print(f"[#4c566a]View logs:[/#4c566a] pidgin experiment logs {exp_id}")
+            console.print(f"[#4c566a]Stop:[/#4c566a] pidgin experiment stop {exp_id}")
+        except Exception as e:
+            console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+            raise
+    else:
+        # Run in foreground
+        storage = ExperimentStore()
+        runner = ParallelExperimentRunner(storage)
+        
+        console.print(f"\n[#8fbcbb]◆ Starting experiment (foreground): {config.name}[/#8fbcbb]")
+        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+        if max_parallel:
+            console.print(f"[#4c566a]  Parallelism: {max_parallel}[/#4c566a]")
+        console.print()
+        
+        try:
+            start_time = time.time()
+            experiment_id = asyncio.run(runner.run_experiment(config))
+            duration = time.time() - start_time
+            
+            # Get final status
+            status = storage.get_experiment_status(experiment_id)
+            
+            # Show results
+            console.print(f"\n[#a3be8c]✓ Experiment complete![/#a3be8c]")
+            console.print(f"[#4c566a]  ID: {experiment_id}[/#4c566a]")
+            console.print(f"[#4c566a]  Duration: {duration:.1f}s[/#4c566a]")
+            console.print(f"[#4c566a]  Completed: {status.get('completed_conversations', 0)}/{repetitions}[/#4c566a]")
+            if status.get('avg_convergence'):
+                console.print(f"[#4c566a]  Avg convergence: {status['avg_convergence']:.3f}[/#4c566a]")
+        except Exception as e:
+            console.print(f"\n[#bf616a]✗ Experiment failed: {str(e)}[/#bf616a]")
+            raise
+
+
+@experiment.command()
+def status():
+    """Show status of all experiments.
     
-    # Show experiment plan
-    console.print(f"\n[#8fbcbb]◆ Starting experiment: {config.name}[/#8fbcbb]")
-    console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
-    console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
-    console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-    if convergence_threshold:
-        console.print(f"[#4c566a]  Convergence threshold: {convergence_threshold}[/#4c566a]")
-    console.print()
+    Lists recent experiments with their current status, progress, and
+    whether they're currently running.
+    """
+    from .experiments import ExperimentManager
+    from rich.table import Table
     
-    # Run experiment
-    try:
-        start_time = time.time()
-        experiment_id = asyncio.run(runner.run_experiment(config))
-        duration = time.time() - start_time
+    manager = ExperimentManager()
+    experiments = manager.list_experiments(limit=20)
+    
+    if not experiments:
+        console.print("[#4c566a]No experiments found.[/#4c566a]")
+        return
+    
+    # Create table
+    table = Table(title="Experiments", title_style="#8fbcbb")
+    table.add_column("ID", style="#88c0d0", width=12)
+    table.add_column("Name", style="#a3be8c", max_width=30)
+    table.add_column("Models", style="#d8dee9")
+    table.add_column("Status", style="#ebcb8b")
+    table.add_column("Progress", justify="right", style="#d8dee9")
+    table.add_column("Running", style="#bf616a", justify="center")
+    
+    for exp in experiments:
+        # Format progress
+        total = exp.get('total_conversations', 0)
+        completed = exp.get('completed_conversations', 0)
+        failed = exp.get('failed_conversations', 0)
         
-        # Get final status
-        status = storage.get_experiment_status(experiment_id)
+        if failed > 0:
+            progress = f"{completed}/{total} ({failed} failed)"
+        else:
+            progress = f"{completed}/{total}"
         
-        # Show results
-        console.print(f"\n[#a3be8c]✓ Experiment complete![/#a3be8c]")
-        console.print(f"[#4c566a]  ID: {experiment_id}[/#4c566a]")
-        console.print(f"[#4c566a]  Duration: {duration:.1f}s[/#4c566a]")
-        console.print(f"[#4c566a]  Completed: {status.get('completed_conversations', 0)}/{repetitions}[/#4c566a]")
-        if status.get('avg_convergence'):
-            console.print(f"[#4c566a]  Avg convergence: {status['avg_convergence']:.3f}[/#4c566a]")
-        console.print(f"\n[#4c566a]Results stored in: ./pidgin_output/experiments/experiments.db[/#4c566a]")
+        # Format models
+        models = f"{exp.get('agent_a_model', '?')} vs {exp.get('agent_b_model', '?')}"
         
-    except Exception as e:
-        console.print(f"\n[#bf616a]✗ Experiment failed: {str(e)}[/#bf616a]")
-        raise
+        # Running indicator
+        running = "●" if exp.get('is_running') else "○"
+        
+        # Add row
+        table.add_row(
+            exp['experiment_id'],
+            exp['name'],
+            models,
+            exp['status'],
+            progress,
+            running
+        )
+    
+    console.print(table)
+    console.print(f"\n[#4c566a]● = running, ○ = stopped[/#4c566a]")
+
+
+@experiment.command()
+@click.argument('experiment_id')
+def stop(experiment_id):
+    """Stop a running experiment gracefully."""
+    from .experiments import ExperimentManager
+    
+    manager = ExperimentManager()
+    
+    console.print(f"[#ebcb8b]→ Stopping experiment {experiment_id}...[/#ebcb8b]")
+    
+    if manager.stop_experiment(experiment_id):
+        console.print(f"[#a3be8c]✓ Stopped experiment {experiment_id}[/#a3be8c]")
+    else:
+        console.print(f"[#bf616a]✗ Failed to stop experiment {experiment_id}[/#bf616a]")
+        console.print(f"[#4c566a]  (It may not be running)[/#4c566a]")
+
+
+@experiment.command()
+@click.argument('experiment_id')
+@click.option('--lines', '-n', default=50, help='Number of lines to show')
+@click.option('--follow', '-f', is_flag=True, help='Follow log output (like tail -f)')
+def logs(experiment_id, lines, follow):
+    """Show logs from an experiment.
+    
+    By default shows the last 50 lines. Use -f to follow the log
+    in real-time (press Ctrl+C to stop).
+    """
+    from .experiments import ExperimentManager
+    
+    manager = ExperimentManager()
+    
+    if follow:
+        console.print(f"[#4c566a]Following logs for {experiment_id} (Ctrl+C to stop)...[/#4c566a]\n")
+        try:
+            manager.tail_logs(experiment_id, follow=True)
+        except KeyboardInterrupt:
+            console.print("\n[#4c566a]Stopped following logs.[/#4c566a]")
+    else:
+        log_lines = manager.get_logs(experiment_id, lines)
+        
+        if not log_lines:
+            console.print(f"[#bf616a]No logs found for experiment {experiment_id}[/#bf616a]")
+            return
+        
+        # Print logs
+        for line in log_lines:
+            console.print(line.rstrip(), markup=False)
 
 
 if __name__ == "__main__":

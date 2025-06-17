@@ -391,3 +391,48 @@ class ExperimentStore:
                 rows = conn.execute(query, (experiment_id,)).fetchall()
             
             return [dict(row) for row in rows]
+    
+    def list_experiments(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """List experiments with summary information.
+        
+        Args:
+            limit: Maximum number of experiments to return
+            offset: Number of experiments to skip
+            
+        Returns:
+            List of experiment dictionaries with summary info
+        """
+        with self._get_connection() as conn:
+            query = """
+                SELECT 
+                    e.experiment_id,
+                    e.name,
+                    e.status,
+                    e.created_at,
+                    e.started_at,
+                    e.completed_at,
+                    e.total_conversations,
+                    e.completed_conversations,
+                    e.failed_conversations,
+                    json_extract(e.config, '$.agent_a_model') as agent_a_model,
+                    json_extract(e.config, '$.agent_b_model') as agent_b_model,
+                    json_extract(e.config, '$.max_turns') as max_turns,
+                    json_extract(e.config, '$.repetitions') as repetitions
+                FROM experiments e
+                ORDER BY e.created_at DESC
+                LIMIT ? OFFSET ?
+            """
+            rows = conn.execute(query, (limit, offset)).fetchall()
+            
+            experiments = []
+            for row in rows:
+                exp = dict(row)
+                # Parse JSON config for convenience
+                if 'config' in exp and exp['config']:
+                    try:
+                        exp['config'] = json.loads(exp['config'])
+                    except:
+                        pass
+                experiments.append(exp)
+                
+            return experiments
