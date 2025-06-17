@@ -19,15 +19,18 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Streaming**: Real-time response display
 - **Interrupts**: Ctrl+C to pause/resume conversations
 - **Output**: Clean JSON and markdown transcripts
+- **Experiments**: Run hundreds of conversations in parallel with comprehensive metrics
+- **Background Execution**: Experiments run as Unix daemons
+- **Analysis**: ~150 metrics captured per conversation turn
 
 ### 🚧 What's Partial
-- **Metrics**: Convergence calculated but not displayed
-- **Context Tracking**: Code exists but not integrated
+- **Live Dashboard**: Coming in Phase 4
+- **Statistical Analysis**: Basic queries work, full analysis tools coming
 
 ### ❌ What's Missing
-- **Batch Experiments**: Can only run one conversation at a time
-- **Statistical Analysis**: No tools to validate observations
-- **Message Injection**: Can pause but can't intervene
+- **Rich dashboard visualization**: Real-time experiment monitoring
+- **Automated pattern detection**: Statistical validation tools
+- **Report generation**: Publication-ready outputs
 
 ## Quick Start
 
@@ -39,8 +42,14 @@ pip install -e .
 export ANTHROPIC_API_KEY="..."
 export OPENAI_API_KEY="..."
 
-# Run a conversation
+# Run a single conversation
 pidgin chat -a claude -b gpt -t 20
+
+# Run an experiment (10 conversations)
+pidgin experiment start -a claude -b gpt -r 10
+
+# Check experiment progress
+pidgin experiment status
 
 # Output saved to ./pidgin_output/
 ```
@@ -62,38 +71,96 @@ Turn 32: "🙏"
 
 Is this compression? Attractor dynamics? Random chance? We need data.
 
+## Running Experiments
+
+Pidgin can now run batch experiments for statistical analysis:
+
+```bash
+# Run 100 conversations between Claude and GPT
+pidgin experiment start -a claude -b gpt -r 100 -t 50
+
+# Check progress
+pidgin experiment status
+
+# Follow logs in real-time
+pidgin experiment logs <experiment_id> -f
+
+# Stop an experiment
+pidgin experiment stop <experiment_id>
+```
+
+### Experiment Features
+
+- **Parallel execution** with automatic rate limiting
+- **Background operation** - experiments continue after disconnect
+- **Comprehensive metrics** - ~150 measurements per turn including:
+  - Lexical diversity (TTR, vocabulary overlap)
+  - Convergence metrics (structural similarity)
+  - Symbol emergence (emoji, arrows, special characters)
+  - Linguistic patterns (hedging, agreement, politeness)
+  - Information theory metrics (entropy)
+- **Smart defaults** - automatically alternates first speaker, manages parallelism
+
+### Example Experiment
+
+```bash
+# Compare Haiku vs GPT-4o-mini with 20 conversations
+pidgin experiment start \
+  -a haiku \
+  -b gpt-4o-mini \
+  -r 20 \
+  -t 40 \
+  --name "economical_model_comparison"
+
+# Data stored in SQLite for analysis
+sqlite3 ./pidgin_output/experiments/experiments.db \
+  "SELECT AVG(convergence_score) FROM turns WHERE turn_number = 30"
+```
+
 ## How to Help
 
 1. **Run experiments**: Try different model pairs and initial prompts
 2. **Report patterns**: What do you observe?
 3. **Build analysis**: Help create tools to validate observations
-4. **Add batch running**: This is the critical missing piece
+4. **Statistical validation**: Help prove whether patterns are real
 
 ## Technical Overview
 
-Pidgin is a full-featured research tool with:
-- **Event-driven architecture**: Complete observability via EventBus
-- **Multiple components**: Display, metrics, convergence, context tracking
-- **Convergence detection**: Stops conversations when agents become too similar
-- **Rich CLI**: Dimensional prompts, model shortcuts, configuration
-- **Clean separation**: UI, business logic, and providers properly separated
+Pidgin is a comprehensive research tool with:
 
-Key modules:
-- `conductor.py` - Orchestrates conversations through events
-- `providers/` - Integrations for Anthropic, OpenAI, Google, xAI
-- `convergence.py` - Calculates linguistic similarity metrics
-- `convergence.py` - Calculates structural similarity between agents
-- `dialogue_components/` - Modular UI components
+### Core Architecture
+- **Event-driven system**: Complete observability via EventBus
+- **Modular components**: Clean separation of concerns
+- **Provider abstraction**: Easy to add new AI providers
+- **Streaming support**: Real-time response display
 
-Built for extensibility: The architecture supports n-agent conversations, but current implementation focuses on 2-agent dynamics.
+### Experiment System
+- **Unix daemon processes**: Proper background execution
+- **Parallel orchestration**: Smart rate limiting per provider
+- **SQLite storage**: Comprehensive metrics database
+- **Fault tolerance**: Graceful handling of API failures
+
+### Metrics System
+- **Unified calculation**: Single source of truth in `pidgin/metrics/`
+- **150+ metrics per turn**: Comprehensive conversation analysis
+- **Real-time + batch**: Same metrics for live and experiments
+- **Extensible**: Easy to add new metrics
+
+### Key Modules
+- `pidgin/core/` - Event bus, conductor, conversation management
+- `pidgin/providers/` - AI provider integrations
+- `pidgin/metrics/` - Unified metrics calculation system
+- `pidgin/experiments/` - Batch experiment runner with daemon support
+- `pidgin/ui/` - Display components and filters
 
 ## Contributing
 
 This is early-stage research. We need:
-- Batch experiment runner (critical priority)
 - Statistical analysis tools
 - Pattern validation methods
 - More observations from different model combinations
+- Dashboard for real-time experiment monitoring
+- Automated report generation
 
 ## Not a Competition
 

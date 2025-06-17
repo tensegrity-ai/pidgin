@@ -1,5 +1,7 @@
 # Observations
 
+**Update**: With the experiments system now complete, we can move from anecdotal observations to statistical validation. The patterns described below need rigorous testing with N>100 conversations.
+
 These are patterns we've noticed in AI-to-AI conversations. They're interesting but **not scientifically validated**. We need batch experiments to determine if they're real or artifacts.
 
 ## High Convergence States
