@@ -47,7 +47,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
 from .config.models import MODELS, get_model_config, get_models_by_provider
-from .core.types import Agent
+from .core.types import Agent, Conversation
 from .providers.anthropic import AnthropicProvider
 from .providers.openai import OpenAIProvider
 from .providers.google import GoogleProvider
@@ -748,6 +748,409 @@ def chat(
             import traceback
             console.print(traceback.format_exc())
         raise click.Abort()
+
+
+@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "-n", "--count", 
+    default=10,
+    help="Number of conversations to run (default: 10)"
+)
+@click.option(
+    "-a", "--model-a", 
+    required=True,
+    help="First model (e.g., 'claude', 'gpt-4', 'opus')"
+)
+@click.option(
+    "-b", "--model-b",
+    required=True,
+    help="Second model (e.g., 'gpt', 'gemini', 'haiku')"
+)
+@click.option(
+    "-t", "--turns",
+    default=20,
+    help="Number of turns per conversation (default: 20)"
+)
+@click.option(
+    "-p", "--prompt",
+    help="Initial prompt for all conversations"
+)
+@click.option(
+    "-d", "--dimensions",
+    help="Dimensional prompt (e.g., 'peers:philosophy')"
+)
+@click.option(
+    "--parallel",
+    default=1,
+    help="Number of conversations to run in parallel (default: 1)"
+)
+@click.option(
+    "--name",
+    help="Experiment name (for output organization)"
+)
+@click.option(
+    "--temperature",
+    type=click.FloatRange(0.0, 2.0),
+    help="Temperature for both models"
+)
+@click.option(
+    "--convergence-threshold",
+    type=click.FloatRange(0.0, 1.0),
+    help="Stop conversations at this convergence level"
+)
+@click.option(
+    "-o", "--output-dir",
+    type=click.Path(),
+    help="Override default output directory"
+)
+@click.option(
+    "-v", "--verbose",
+    is_flag=True,
+    help="Show detailed progress"
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be run without executing"
+)
+def experiment(
+    count,
+    model_a,
+    model_b,
+    turns,
+    prompt,
+    dimensions,
+    parallel,
+    name,
+    temperature,
+    convergence_threshold,
+    output_dir,
+    verbose,
+    dry_run,
+):
+    """Run batch experiments with multiple conversations.
+    
+    This command runs multiple identical conversations to gather statistical
+    data about convergence patterns, conversation dynamics, and emergent behaviors.
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Basic experiment (10 conversations):[/#4c566a]
+        pidgin experiment -a claude -b gpt -n 10
+    
+    [#4c566a]Convergence threshold testing:[/#4c566a]
+        pidgin experiment -a claude -b gpt -n 100 -t 50 --convergence-threshold 0.85
+    
+    [#4c566a]Temperature comparison:[/#4c566a]
+        pidgin experiment -a claude -b gpt -n 50 --temperature 0.3 --name "low-temp"
+        pidgin experiment -a claude -b gpt -n 50 --temperature 0.9 --name "high-temp"
+    
+    [#4c566a]Model comparison study:[/#4c566a]
+        pidgin experiment -a claude -b claude -n 100 --name "claude-self"
+        pidgin experiment -a gpt -b gpt -n 100 --name "gpt-self"
+        pidgin experiment -a claude -b gpt -n 100 --name "claude-gpt"
+    
+    [bold]OUTPUT:[/bold]
+    
+    Results are saved to:
+        ./pidgin_output/experiments/<date>/<name>/
+    
+    Including:
+        • Individual conversation logs
+        • Aggregate statistics (summary.json)
+        • Convergence analysis
+        • Pattern detection results
+    """
+    import json
+    from datetime import datetime
+    from pathlib import Path
+    import asyncio
+    from .core.conductor import Conductor
+    from .io.output_manager import OutputManager
+    
+    # Validate models
+    try:
+        config_a = get_model_config(model_a)
+        config_b = get_model_config(model_b)
+        model_a_id = config_a.model_id if config_a else model_a
+        model_b_id = config_b.model_id if config_b else model_b
+    except ValueError as e:
+        console.print(f"[#bf616a]Model error: {e}[/#bf616a]")
+        console.print("\n[#4c566a]Run 'pidgin models' to see available models.[/#4c566a]")
+        raise click.Abort()
+    
+    # Build initial prompt
+    initial_prompt = _build_initial_prompt(
+        custom_prompt=prompt,
+        dimensions=dimensions,
+    )
+    
+    # Create experiment name if not provided
+    if not name:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        name = f"{model_a}_{model_b}_{timestamp}"
+    
+    # Setup experiment directory
+    base_output = Path(output_dir) if output_dir else Path("./pidgin_output")
+    experiment_dir = base_output / "experiments" / datetime.now().strftime("%Y-%m-%d") / name
+    
+    if dry_run:
+        console.print("\n[bold cyan]◆ Experiment Configuration (DRY RUN)[/bold cyan]")
+        console.print(f"  Models: {model_a_id} ↔ {model_b_id}")
+        console.print(f"  Conversations: {count}")
+        console.print(f"  Turns per conversation: {turns}")
+        console.print(f"  Initial prompt: {initial_prompt[:50]}...")
+        if temperature is not None:
+            console.print(f"  Temperature: {temperature}")
+        if convergence_threshold is not None:
+            console.print(f"  Convergence threshold: {convergence_threshold}")
+        console.print(f"  Parallel execution: {parallel}")
+        console.print(f"  Output directory: {experiment_dir}")
+        console.print("\n[#4c566a]No conversations will be run (dry run mode)[/#4c566a]")
+        return
+    
+    # Create experiment directory
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save experiment configuration
+    config_data = {
+        "name": name,
+        "timestamp": datetime.now().isoformat(),
+        "model_a": model_a_id,
+        "model_b": model_b_id,
+        "count": count,
+        "turns": turns,
+        "initial_prompt": initial_prompt,
+        "temperature": temperature,
+        "convergence_threshold": convergence_threshold,
+        "parallel": parallel,
+    }
+    
+    with open(experiment_dir / "config.json", "w") as f:
+        json.dump(config_data, f, indent=2)
+    
+    console.print(f"\n[bold cyan]◆ Starting Experiment: {name}[/bold cyan]")
+    console.print(f"  Output: {experiment_dir}")
+    
+    # For now, implement sequential execution
+    # TODO: Add parallel execution support
+    results = []
+    convergence_scores = []
+    total_turns = []
+    
+    async def run_single_conversation(index):
+        """Run a single conversation in the experiment."""
+        # Create conversation-specific output directory
+        conv_dir = experiment_dir / f"conversation_{index:03d}"
+        conv_dir.mkdir(exist_ok=True)
+        
+        # Create output manager for this conversation
+        output_manager = OutputManager(str(conv_dir.parent))
+        output_manager.conversation_dir = conv_dir
+        
+        # Get providers
+        try:
+            provider_a = get_provider_for_model(model_a)
+            provider_b = get_provider_for_model(model_b)
+            
+            providers_map = {}
+            if hasattr(provider_a, "model"):
+                providers_map[provider_a.model] = provider_a
+            else:
+                providers_map[model_a_id] = provider_a
+                
+            if hasattr(provider_b, "model"):
+                providers_map[provider_b.model] = provider_b
+            else:
+                providers_map[model_b_id] = provider_b
+                
+        except ValueError as e:
+            console.print(f"[#bf616a]Error creating providers: {e}[/#bf616a]")
+            return None
+        
+        # Create conductor
+        conductor = Conductor(providers_map, output_manager, console)
+        
+        # Create agents
+        agent_a_obj = Agent(id="agent_a", model=model_a_id, temperature=temperature)
+        agent_b_obj = Agent(id="agent_b", model=model_b_id, temperature=temperature)
+        
+        try:
+            # Run conversation with minimal output
+            conversation = await conductor.run_conversation(
+                agent_a=agent_a_obj,
+                agent_b=agent_b_obj,
+                initial_prompt=initial_prompt,
+                max_turns=turns,
+                display_mode="quiet",  # Quiet mode for batch
+                show_timing=False,
+                choose_names=False,
+                awareness_a="basic",
+                awareness_b="basic",
+                temperature_a=temperature,
+                temperature_b=temperature,
+                convergence_threshold=convergence_threshold,
+            )
+            
+            # Extract metrics
+            # TODO: Get actual convergence scores from conductor
+            result = {
+                "index": index,
+                "id": conversation.id,
+                "turns": len(conversation.messages) // 2,
+                "completed": True,
+                "directory": str(conv_dir),
+            }
+            
+            return result
+            
+        except Exception as e:
+            console.print(f"[#bf616a]Error in conversation {index}: {e}[/#bf616a]")
+            return {
+                "index": index,
+                "completed": False,
+                "error": str(e),
+            }
+    
+    # Progress tracking
+    with console.status(f"[bold cyan]Running {count} conversations...[/bold cyan]") as status:
+        for i in range(count):
+            if verbose:
+                console.print(f"\n[#4c566a]→ Starting conversation {i+1}/{count}[/#4c566a]")
+            else:
+                status.update(f"[bold cyan]Running conversation {i+1}/{count}...[/bold cyan]")
+            
+            result = asyncio.run(run_single_conversation(i))
+            if result:
+                results.append(result)
+                if result["completed"]:
+                    total_turns.append(result["turns"])
+    
+    # Calculate summary statistics
+    successful = sum(1 for r in results if r["completed"])
+    failed = len(results) - successful
+    
+    summary = {
+        "experiment": config_data,
+        "results": {
+            "total": count,
+            "successful": successful,
+            "failed": failed,
+            "average_turns": sum(total_turns) / len(total_turns) if total_turns else 0,
+            "min_turns": min(total_turns) if total_turns else 0,
+            "max_turns": max(total_turns) if total_turns else 0,
+        },
+        "conversations": results,
+    }
+    
+    # Save summary
+    with open(experiment_dir / "summary.json", "w") as f:
+        json.dump(summary, f, indent=2)
+    
+    # Display results
+    console.print(f"\n[bold green]✓ Experiment Complete[/bold green]")
+    console.print(f"  Successful: {successful}/{count}")
+    if failed > 0:
+        console.print(f"  Failed: {failed}")
+    console.print(f"  Average turns: {summary['results']['average_turns']:.1f}")
+    console.print(f"  Results saved to: {experiment_dir}")
+    
+    # TODO: Add more sophisticated analysis
+    console.print("\n[#4c566a]Note: Full statistical analysis coming soon![/#4c566a]")
+
+
+@cli.command()
+@click.option("-a", "--agent-a", "model_a", required=True, help="First model")
+@click.option("-b", "--agent-b", "model_b", required=True, help="Second model")
+@click.option("-r", "--repetitions", default=5, help="Number of conversations to run")
+@click.option("-p", "--initial-prompt", default="Hello! Let's have a conversation.", help="Initial prompt")
+@click.option("-t", "--max-turns", default=20, help="Maximum turns per conversation")
+@click.option("--temperature", type=float, help="Temperature for both models")
+@click.option("--convergence-threshold", type=float, help="Stop at convergence threshold")
+@click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
+@click.option("--name", help="Experiment name (auto-generated if not provided)")
+def experiment(model_a, model_b, repetitions, initial_prompt, max_turns, 
+               temperature, convergence_threshold, choose_names, name):
+    """Run a batch experiment with multiple conversations (Phase 2 - serial only).
+    
+    This command runs multiple identical conversations for statistical analysis.
+    Results are stored in the experiments database for later analysis.
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Basic experiment (5 conversations):[/#4c566a]
+        pidgin experiment -a claude -b gpt
+    
+    [#4c566a]Larger experiment with custom parameters:[/#4c566a]
+        pidgin experiment -a opus -b gpt-4 -r 20 -t 30
+    
+    [#4c566a]Convergence testing:[/#4c566a]
+        pidgin experiment -a claude -b gpt -r 100 --convergence-threshold 0.85
+    """
+    import time
+    from .experiments import ExperimentStore, ExperimentRunner
+    from .experiments.config import ExperimentConfig
+    
+    # Generate experiment name if not provided
+    if not name:
+        name = f"{model_a}_vs_{model_b}_{int(time.time())}"
+    
+    # Create configuration
+    config = ExperimentConfig(
+        name=name,
+        agent_a_model=model_a,
+        agent_b_model=model_b,
+        initial_prompt=initial_prompt,
+        max_turns=max_turns,
+        repetitions=repetitions,
+        temperature_a=temperature,
+        temperature_b=temperature,
+        convergence_threshold=convergence_threshold,
+        choose_names=choose_names
+    )
+    
+    # Validate configuration
+    errors = config.validate()
+    if errors:
+        console.print(f"[#bf616a]Configuration errors:[/#bf616a]")
+        for error in errors:
+            console.print(f"  • {error}")
+        return
+    
+    # Create storage and runner
+    storage = ExperimentStore()
+    runner = ExperimentRunner(storage)
+    
+    # Show experiment plan
+    console.print(f"\n[#8fbcbb]◆ Starting experiment: {config.name}[/#8fbcbb]")
+    console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+    console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+    console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+    if convergence_threshold:
+        console.print(f"[#4c566a]  Convergence threshold: {convergence_threshold}[/#4c566a]")
+    console.print()
+    
+    # Run experiment
+    try:
+        start_time = time.time()
+        experiment_id = asyncio.run(runner.run_experiment(config))
+        duration = time.time() - start_time
+        
+        # Get final status
+        status = storage.get_experiment_status(experiment_id)
+        
+        # Show results
+        console.print(f"\n[#a3be8c]✓ Experiment complete![/#a3be8c]")
+        console.print(f"[#4c566a]  ID: {experiment_id}[/#4c566a]")
+        console.print(f"[#4c566a]  Duration: {duration:.1f}s[/#4c566a]")
+        console.print(f"[#4c566a]  Completed: {status.get('completed_conversations', 0)}/{repetitions}[/#4c566a]")
+        if status.get('avg_convergence'):
+            console.print(f"[#4c566a]  Avg convergence: {status['avg_convergence']:.3f}[/#4c566a]")
+        console.print(f"\n[#4c566a]Results stored in: ./pidgin_output/experiments/experiments.db[/#4c566a]")
+        
+    except Exception as e:
+        console.print(f"\n[#bf616a]✗ Experiment failed: {str(e)}[/#bf616a]")
+        raise
 
 
 if __name__ == "__main__":
