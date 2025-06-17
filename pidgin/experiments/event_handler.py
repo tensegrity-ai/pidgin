@@ -102,17 +102,31 @@ class ExperimentEventHandler:
         # Calculate all metrics
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
         
+        # Extract agent-specific metrics and strip suffixes
+        agent_a_metrics = {}
+        agent_b_metrics = {}
+        
+        for k, v in metrics.items():
+            if k.endswith('_a'):
+                # Remove _a suffix
+                agent_a_metrics[k[:-2]] = v
+            elif k.endswith('_b'):
+                # Remove _b suffix
+                agent_b_metrics[k[:-2]] = v
+        
         # Add speaker information for each message
         metrics_a = {
             'speaker': 'agent_a',
             'message': msg_a,
-            **{k: v for k, v in metrics.items() if k.endswith('_a')}
+            'message_length': len(msg_a),  # Add message length
+            **agent_a_metrics
         }
         
         metrics_b = {
             'speaker': 'agent_b', 
             'message': msg_b,
-            **{k: v for k, v in metrics.items() if k.endswith('_b')}
+            'message_length': len(msg_b),  # Add message length
+            **agent_b_metrics
         }
         
         # Add convergence metrics to both (they're shared)

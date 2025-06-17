@@ -1,5 +1,6 @@
 """Launch experiment daemon - called by subprocess."""
 
+import os
 import sys
 import json
 import asyncio
@@ -46,6 +47,11 @@ def main():
     except Exception as e:
         sys.stderr.write(f"Failed to parse config: {e}\n")
         sys.exit(1)
+    
+    # Set project base path as environment variable before daemonizing
+    # This will be preserved across the fork
+    project_base = Path(".").resolve()
+    os.environ['PIDGIN_PROJECT_BASE'] = str(project_base)
     
     # Create daemon with absolute path
     daemon = ExperimentDaemon(

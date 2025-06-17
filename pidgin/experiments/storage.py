@@ -1,5 +1,6 @@
 """Storage layer for Pidgin experiments using SQLite."""
 
+import os
 import json
 import sqlite3
 import uuid
@@ -17,7 +18,14 @@ class ExperimentStore:
             db_path: Path to SQLite database. Defaults to ./pidgin_output/experiments/experiments.db
         """
         if db_path is None:
-            db_path = Path("./pidgin_output/experiments/experiments.db").resolve()
+            # Check if we're in a daemon context
+            project_base = os.environ.get('PIDGIN_PROJECT_BASE')
+            if project_base:
+                # Use the preserved project base path
+                db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.db"
+            else:
+                # Normal operation - resolve relative to current directory
+                db_path = Path("./pidgin_output/experiments/experiments.db").resolve()
         
         self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

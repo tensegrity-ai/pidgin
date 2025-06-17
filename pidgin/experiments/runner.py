@@ -1,5 +1,6 @@
 """Experiment runner for serial conversation execution."""
 
+import os
 import asyncio
 import uuid
 from typing import Optional, Dict, Any
@@ -123,16 +124,29 @@ class ExperimentRunner:
         providers = await self._get_providers(config)
         
         # Create output manager (minimal output for experiments)
-        # Use absolute path to ensure it works after daemonization
-        base_dir = Path("./pidgin_output").resolve()
+        # Check if we're in a daemon context
+        project_base = os.environ.get('PIDGIN_PROJECT_BASE')
+        if project_base:
+            # Use the preserved project base path
+            base_dir = Path(project_base) / "pidgin_output"
+        else:
+            # Normal operation - resolve relative to current directory
+            base_dir = Path("./pidgin_output").resolve()
+        
+        # Create a custom output manager that will use our conversation ID
+        class ExperimentOutputManager(OutputManager):
+            def __init__(self, base_dir, conv_id, conv_dir):
+                super().__init__(base_dir)
+                self._conv_id = conv_id
+                self._conv_dir = conv_dir
+                
+            def create_conversation_dir(self):
+                # Return our pre-determined conversation ID and directory
+                self._conv_dir.mkdir(parents=True, exist_ok=True)
+                return self._conv_id, self._conv_dir
+        
         output_dir = base_dir / "experiments" / experiment_id / conversation_id
-        display = DisplayFilter(console=None)  # No console output
-        output_manager = OutputManager(
-            display=display,
-            output_dir=output_dir,
-            save_transcripts=config.save_transcripts,
-            save_events=config.save_events
-        )
+        output_manager = ExperimentOutputManager(str(base_dir), conversation_id, output_dir)
         
         # Create agents
         agent_a = Agent(
@@ -150,35 +164,46 @@ class ExperimentRunner:
         conductor = Conductor(
             providers=providers,
             output_manager=output_manager,
-            event_bus=event_bus
+            console=None  # No console output for experiments
         )
-        
-        # Configure conversation parameters
-        conductor.max_turns = config.max_turns
-        conductor.conversation_id = conversation_id
-        
-        # Set temperatures if specified
-        if config.temperature_a is not None:
-            conductor.temperature_overrides['agent_a'] = config.temperature_a
-        if config.temperature_b is not None:
-            conductor.temperature_overrides['agent_b'] = config.temperature_b
         
         # Set convergence threshold if specified
         if config.convergence_threshold is not None:
             conductor.convergence_threshold = config.convergence_threshold
             conductor.convergence_action = config.convergence_action
         
-        # Set other parameters
-        conductor.choose_names = config.choose_names
-        conductor.awareness_a = config.awareness_a
-        conductor.awareness_b = config.awareness_b
+        # Monkey patch the conductor to subscribe our handler to events
+        original_init_event_system = conductor._initialize_event_system
+        
+        async def patched_init_event_system(conv_dir, display_mode, show_timing, agents):
+            # Call the original method
+            await original_init_event_system(conv_dir, display_mode, show_timing, agents)
+            
+            # Now subscribe our experiment handler to the events
+            conductor.bus.subscribe(ConversationStartEvent, handler.handle_conversation_start)
+            conductor.bus.subscribe(TurnCompleteEvent, handler.handle_turn_complete)
+            conductor.bus.subscribe(ConversationEndEvent, handler.handle_conversation_end)
+            conductor.bus.subscribe(MessageCompleteEvent, handler.handle_message_complete)
+            conductor.bus.subscribe(SystemPromptEvent, handler.handle_system_prompt)
+            
+            # Also set the conversation ID in the handler
+            handler.conversation_id = conversation_id
+        
+        conductor._initialize_event_system = patched_init_event_system
         
         # Run the conversation
         await conductor.run_conversation(
             agent_a=agent_a,
             agent_b=agent_b,
             initial_prompt=config.initial_prompt,
-            first_speaker=conv_config.get('first_speaker', 'agent_a')
+            max_turns=config.max_turns,
+            display_mode='quiet',  # Minimal output
+            show_timing=False,
+            choose_names=config.choose_names,
+            awareness_a=config.awareness_a,
+            awareness_b=config.awareness_b,
+            temperature_a=config.temperature_a,
+            temperature_b=config.temperature_b
         )
     
     async def _get_providers(self, config: ExperimentConfig) -> Dict[str, Any]:
