@@ -24,24 +24,32 @@ class ExperimentManager:
             base_dir: Base directory for experiments
         """
         if base_dir is None:
-            base_dir = Path("./pidgin_output/experiments").resolve()
+            # Check if we're in a daemon context
+            project_base = os.environ.get('PIDGIN_PROJECT_BASE')
+            if project_base:
+                base_dir = Path(project_base) / "pidgin_output" / "experiments"
+            else:
+                base_dir = Path("./pidgin_output/experiments").resolve()
         else:
             base_dir = base_dir.resolve()
             
         self.base_dir = base_dir
         self.active_dir = base_dir / "active"
         self.logs_dir = base_dir / "logs"
-        self.storage = ExperimentStore()
+        # Use the same database path as the base_dir
+        db_path = base_dir / "experiments.db"
+        self.storage = ExperimentStore(db_path=db_path)
         
         # Ensure directories exist
         self.active_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         
-    def start_experiment(self, config: ExperimentConfig) -> str:
+    def start_experiment(self, config: ExperimentConfig, working_dir: Optional[str] = None) -> str:
         """Start experiment as daemon process.
         
         Args:
             config: Experiment configuration
+            working_dir: Working directory to use for output (defaults to cwd)
             
         Returns:
             Experiment ID
@@ -49,12 +57,21 @@ class ExperimentManager:
         # Create experiment record
         exp_id = self.storage.create_experiment(config.name, config.dict())
         
+        # Get working directory
+        if working_dir is None:
+            working_dir = os.getcwd()
+        
+        # Debug log
+        logging.info(f"Starting experiment {exp_id} with working_dir: {working_dir}")
+        
         # Launch daemon process
         cmd = [
             sys.executable, "-m", "pidgin.experiments.daemon_launcher",
             "--experiment-id", exp_id,
-            "--config", json.dumps(config.dict())
+            "--config", json.dumps(config.dict()),
+            "--working-dir", working_dir
         ]
+        
         
         # Start the daemon
         process = subprocess.Popen(

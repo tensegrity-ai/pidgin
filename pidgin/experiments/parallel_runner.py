@@ -108,6 +108,22 @@ class ParallelExperimentRunner(ExperimentRunner):
         else:
             return 'unknown'
             
+    async def run_experiment_with_id(self, experiment_id: str, config: ExperimentConfig) -> str:
+        """Run experiment with parallel execution using existing experiment ID.
+        
+        Args:
+            experiment_id: Existing experiment ID
+            config: Experiment configuration
+            
+        Returns:
+            Experiment ID
+        """
+        # Update status to running
+        self.storage.update_experiment_status(experiment_id, 'running')
+        
+        # Continue with the existing logic
+        return await self._run_experiment_internal(experiment_id, config)
+    
     async def run_experiment(self, config: ExperimentConfig) -> str:
         """Run experiment with parallel execution.
         
@@ -119,6 +135,20 @@ class ParallelExperimentRunner(ExperimentRunner):
         """
         experiment_id = self.storage.create_experiment(config.name, config.dict())
         self.storage.update_experiment_status(experiment_id, 'running')
+        
+        # Continue with the existing logic
+        return await self._run_experiment_internal(experiment_id, config)
+    
+    async def _run_experiment_internal(self, experiment_id: str, config: ExperimentConfig) -> str:
+        """Internal method to run experiment with given ID.
+        
+        Args:
+            experiment_id: Experiment ID
+            config: Experiment configuration
+            
+        Returns:
+            Experiment ID
+        """
         
         # Calculate parallelism
         max_parallel = config.max_parallel or self.calculate_parallelism(config)

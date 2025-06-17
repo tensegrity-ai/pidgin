@@ -13,7 +13,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 
 ## Current Status
 
-### ✅ What Works
+### ◆ What Works
 - **Recording**: Full event-driven system captures every interaction
 - **Models**: 15+ models across Anthropic, OpenAI, Google, xAI
 - **Streaming**: Real-time response display
@@ -23,11 +23,11 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Background Execution**: Experiments run as Unix daemons
 - **Analysis**: ~150 metrics captured per conversation turn
 
-### 🚧 What's Partial
+### ▶ What's Partial
 - **Live Dashboard**: Coming in Phase 4
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
 
-### ❌ What's Missing
+### ■ What's Missing
 - **Rich dashboard visualization**: Real-time experiment monitoring
 - **Automated pattern detection**: Statistical validation tools
 - **Report generation**: Publication-ready outputs
@@ -56,7 +56,7 @@ pidgin experiment status
 
 ## API Key Management
 
-💡 **Why this matters**: API keys are like credit cards for AI services. Exposed keys can lead to unexpected charges if someone else uses them.
+▶ **Why this matters**: API keys are like credit cards for AI services. Exposed keys can lead to unexpected charges if someone else uses them.
 
 For better security, we recommend using a key manager rather than environment variables:
 
@@ -105,7 +105,7 @@ direnv allow
 - **HashiCorp Vault** - For enterprise environments
 - **age** - Modern encryption tool for secrets
 
-⚠️ **Never commit API keys to git**, even in private repositories.
+■ **Never commit API keys to git**, even in private repositories.
 
 ## Why This Matters
 
@@ -119,7 +119,7 @@ Turn 2: "I'm doing well, thank you! How are you?"
 ...
 Turn 30: "Grateful!"
 Turn 31: "Grateful too!"
-Turn 32: "🙏"
+Turn 32: "◆"
 ```
 
 Is this compression? Attractor dynamics? Random chance? We need data.

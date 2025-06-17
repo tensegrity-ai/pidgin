@@ -13,10 +13,11 @@ from .daemon import ExperimentDaemon
 from .parallel_runner import ParallelExperimentRunner
 
 
-async def run_experiment(config: ExperimentConfig, daemon: ExperimentDaemon):
+async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: ExperimentDaemon):
     """Run the experiment with the parallel runner.
     
     Args:
+        experiment_id: Existing experiment ID to use
         config: Experiment configuration
         daemon: Daemon instance
     """
@@ -24,7 +25,7 @@ async def run_experiment(config: ExperimentConfig, daemon: ExperimentDaemon):
     runner = ParallelExperimentRunner(storage, daemon)
     
     try:
-        await runner.run_experiment(config)
+        await runner.run_experiment_with_id(experiment_id, config)
     except asyncio.CancelledError:
         logging.info("Experiment cancelled")
         raise
@@ -38,6 +39,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment-id', required=True, help='Experiment ID')
     parser.add_argument('--config', required=True, help='JSON config')
+    parser.add_argument('--working-dir', required=True, help='Working directory for output')
     args = parser.parse_args()
     
     # Parse config
@@ -50,13 +52,15 @@ def main():
     
     # Set project base path as environment variable before daemonizing
     # This will be preserved across the fork
-    project_base = Path(".").resolve()
-    os.environ['PIDGIN_PROJECT_BASE'] = str(project_base)
+    working_dir = Path(args.working_dir)
+    os.environ['PIDGIN_PROJECT_BASE'] = str(working_dir)
     
-    # Create daemon with absolute path
+    # Create daemon with absolute path based on working directory
+    active_dir = working_dir / "pidgin_output" / "experiments" / "active"
+    
     daemon = ExperimentDaemon(
         args.experiment_id,
-        Path("./pidgin_output/experiments/active").resolve()
+        active_dir
     )
     
     # Daemonize
@@ -72,10 +76,12 @@ def main():
     
     logging.info(f"Starting experiment {args.experiment_id}")
     logging.info(f"Config: {config.name} - {config.repetitions} repetitions")
+    logging.info(f"PIDGIN_PROJECT_BASE after daemon: {os.environ.get('PIDGIN_PROJECT_BASE', 'NOT SET')}")
+    logging.info(f"Current working directory: {os.getcwd()}")
     
     # Run experiment
     try:
-        asyncio.run(run_experiment(config, daemon))
+        asyncio.run(run_experiment(args.experiment_id, config, daemon))
         logging.info("Experiment completed successfully")
     except KeyboardInterrupt:
         logging.info("Experiment interrupted by user")

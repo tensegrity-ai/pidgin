@@ -3,6 +3,10 @@ import os
 os.environ['FORCE_COLOR'] = '1'
 os.environ['CLICOLOR_FORCE'] = '1'
 
+# Store the original working directory before any imports that might change it
+# When running with python -m, the working directory may be changed
+ORIGINAL_CWD = os.environ.get('PWD', os.getcwd())
+
 # Configure rich-click BEFORE importing
 import rich_click.rich_click as rc
 
@@ -890,8 +894,12 @@ def experiment(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         name = f"{model_a}_{model_b}_{timestamp}"
     
-    # Setup experiment directory
-    base_output = Path(output_dir) if output_dir else Path("./pidgin_output")
+    # Setup experiment directory using the original working directory
+    if output_dir:
+        base_output = Path(output_dir)
+    else:
+        # Use the original working directory for relative paths
+        base_output = Path(ORIGINAL_CWD) / "pidgin_output"
     experiment_dir = base_output / "experiments" / datetime.now().strftime("%Y-%m-%d") / name
     
     if dry_run:
@@ -1146,14 +1154,16 @@ def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
     
     if background:
         # Start as daemon
-        manager = ExperimentManager()
+        base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+        manager = ExperimentManager(base_dir=base_dir)
         console.print(f"[#8fbcbb]◆ Starting experiment: {config.name}[/#8fbcbb]")
         console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
         console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
         console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
         
         try:
-            exp_id = manager.start_experiment(config)
+            # Use the original working directory captured at module import
+            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
             console.print(f"\n[#a3be8c]✓ Experiment started in background[/#a3be8c]")
             console.print(f"[#4c566a]  ID: {exp_id}[/#4c566a]")
             console.print(f"\n[#4c566a]Check status:[/#4c566a] pidgin experiment status")
@@ -1205,7 +1215,8 @@ def status():
     from .experiments import ExperimentManager
     from rich.table import Table
     
-    manager = ExperimentManager()
+    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    manager = ExperimentManager(base_dir=base_dir)
     experiments = manager.list_experiments(limit=20)
     
     if not experiments:
@@ -1258,7 +1269,8 @@ def stop(experiment_id):
     """Stop a running experiment gracefully."""
     from .experiments import ExperimentManager
     
-    manager = ExperimentManager()
+    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    manager = ExperimentManager(base_dir=base_dir)
     
     console.print(f"[#ebcb8b]→ Stopping experiment {experiment_id}...[/#ebcb8b]")
     
@@ -1281,7 +1293,8 @@ def logs(experiment_id, lines, follow):
     """
     from .experiments import ExperimentManager
     
-    manager = ExperimentManager()
+    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    manager = ExperimentManager(base_dir=base_dir)
     
     if follow:
         console.print(f"[#4c566a]Following logs for {experiment_id} (Ctrl+C to stop)...[/#4c566a]\n")
