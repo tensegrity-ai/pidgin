@@ -14,7 +14,7 @@ from ..core.events import (
 )
 from ..core.types import Message
 from .storage import ExperimentStore
-from .metrics import MetricsCalculator
+from ..metrics import MetricsCalculator
 
 
 class ExperimentEventHandler:

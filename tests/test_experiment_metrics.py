@@ -1,7 +1,7 @@
 """Tests for experiment metrics calculation."""
 
 import pytest
-from pidgin.experiments.metrics import MetricsCalculator
+from pidgin.metrics import MetricsCalculator
 
 
 def test_basic_metrics():

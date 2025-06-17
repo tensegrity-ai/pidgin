@@ -1,54 +1,17 @@
-"""Comprehensive metrics calculator for conversation turns."""
+"""Comprehensive metrics calculator for conversation analysis."""
 
 import re
 import math
 from collections import Counter, defaultdict
 from typing import Dict, List, Set, Tuple, Any, Optional
-from dataclasses import dataclass, asdict
 
-
-# Word sets for linguistic markers
-HEDGE_WORDS = {
-    'maybe', 'perhaps', 'possibly', 'probably', 'might', 'could', 'seems',
-    'appears', 'suggests', 'somewhat', 'fairly', 'quite', 'rather', 'sort of',
-    'kind of', 'basically', 'essentially', 'generally', 'typically', 'usually'
-}
-
-AGREEMENT_MARKERS = {
-    'yes', 'yeah', 'yep', 'sure', 'agreed', 'agree', 'exactly', 'precisely',
-    'absolutely', 'definitely', 'certainly', 'indeed', 'right', 'correct',
-    'true', 'affirmative', 'of course', 'naturally', 'obviously'
-}
-
-DISAGREEMENT_MARKERS = {
-    'no', 'nope', 'not', 'disagree', 'wrong', 'incorrect', 'false', 'but',
-    'however', 'although', 'though', 'actually', 'conversely', 'contrary',
-    'unfortunately', 'negative', 'nah', 'doubt', 'doubtful'
-}
-
-POLITENESS_MARKERS = {
-    'please', 'thank', 'thanks', 'sorry', 'excuse', 'pardon', 'appreciate',
-    'grateful', 'kindly', 'respectfully', 'humbly', 'graciously', 'sincerely'
-}
-
-# Pronoun sets
-FIRST_PERSON_SINGULAR = {'i', 'me', 'my', 'mine', 'myself'}
-FIRST_PERSON_PLURAL = {'we', 'us', 'our', 'ours', 'ourselves'}
-SECOND_PERSON = {'you', 'your', 'yours', 'yourself', 'yourselves'}
-
-# Unicode ranges for symbol detection
-EMOJI_PATTERN = re.compile(
-    "[\U0001F600-\U0001F64F"  # emoticons
-    "\U0001F300-\U0001F5FF"   # symbols & pictographs
-    "\U0001F680-\U0001F6FF"   # transport & map symbols
-    "\U0001F1E0-\U0001F1FF"   # flags
-    "\U00002702-\U000027B0"   # dingbats
-    "\U000024C2-\U0001F251"   # enclosed characters
-    "]+", flags=re.UNICODE
+from .constants import (
+    HEDGE_WORDS, AGREEMENT_MARKERS, DISAGREEMENT_MARKERS, POLITENESS_MARKERS,
+    FIRST_PERSON_SINGULAR, FIRST_PERSON_PLURAL, SECOND_PERSON,
+    EMOJI_PATTERN, ARROW_PATTERN, MATH_PATTERN, ALL_SPECIAL_SYMBOLS,
+    SENTENCE_ENDINGS, QUESTION_PATTERN, EXCLAMATION_PATTERN,
+    ACKNOWLEDGMENT_REGEX
 )
-
-ARROW_PATTERN = re.compile(r'[→←↔⇒⇐⇔➜➡⬅↑↓⬆⬇]')
-MATH_PATTERN = re.compile(r'[≈≡≠≤≥±×÷∞∑∏∂∇√∫]')
 
 
 class MetricsCalculator:
@@ -125,8 +88,8 @@ class MetricsCalculator:
         new_words = vocabulary - self.all_words_seen
         
         # Pattern detection
-        questions = len(re.findall(r'\?', message))
-        exclamations = len(re.findall(r'!', message))
+        questions = len(QUESTION_PATTERN.findall(message))
+        exclamations = len(EXCLAMATION_PATTERN.findall(message))
         
         # Linguistic markers
         words_lower = [w.lower() for w in words]
@@ -249,7 +212,7 @@ class MetricsCalculator:
     def _split_sentences(self, text: str) -> List[str]:
         """Split text into sentences."""
         # Simple sentence splitting
-        sentences = re.split(r'[.!?]+', text)
+        sentences = SENTENCE_ENDINGS.split(text)
         return [s.strip() for s in sentences if s.strip()]
     
     def _calculate_entropy(self, counter: Counter) -> float:
@@ -353,18 +316,8 @@ class MetricsCalculator:
     
     def _starts_with_acknowledgment(self, message: str) -> bool:
         """Check if message starts with acknowledgment."""
-        ack_patterns = [
-            r'^(yes|yeah|yep|sure|okay|ok|right|correct|agreed|indeed)',
-            r'^(ah|oh|hmm|hm|well|so|now)',
-            r'^(i see|i understand|i agree|got it|makes sense)',
-            r'^(thank|thanks|appreciate)',
-        ]
-        
         message_lower = message.lower().strip()
-        for pattern in ack_patterns:
-            if re.match(pattern, message_lower):
-                return True
-        return False
+        return bool(ACKNOWLEDGMENT_REGEX.match(message_lower))
     
     def _count_other_symbols(self, message: str) -> int:
         """Count other Unicode symbols not covered by emoji/arrow/math."""
@@ -374,8 +327,7 @@ class MetricsCalculator:
             if ord(char) > 127:  # Non-ASCII
                 # Check if it's not already counted
                 if not (EMOJI_PATTERN.match(char) or 
-                       ARROW_PATTERN.match(char) or 
-                       MATH_PATTERN.match(char)):
+                       char in ALL_SPECIAL_SYMBOLS):
                     symbols += 1
         return symbols
     

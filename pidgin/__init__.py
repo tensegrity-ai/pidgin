@@ -15,9 +15,14 @@ from .core import (
 # Analysis exports
 from .analysis import (
     ConvergenceCalculator,
+    ContextWindowManager,
+)
+
+# Metrics exports
+from .metrics import (
     calculate_turn_metrics,
     calculate_structural_similarity,
-    ContextWindowManager,
+    MetricsCalculator,
 )
 
 # UI exports
@@ -59,9 +64,12 @@ __all__ = [
     
     # Analysis
     'ConvergenceCalculator',
+    'ContextWindowManager',
+    
+    # Metrics
     'calculate_turn_metrics',
     'calculate_structural_similarity',
-    'ContextWindowManager',
+    'MetricsCalculator',
     
     # UI
     'DisplayFilter',

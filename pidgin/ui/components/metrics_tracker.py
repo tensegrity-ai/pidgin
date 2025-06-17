@@ -6,7 +6,7 @@ from datetime import datetime
 
 from ...core.types import Message
 from ...analysis.convergence import ConvergenceCalculator
-from ...analysis.metrics import calculate_turn_metrics, update_phase_detection
+from ...metrics import calculate_turn_metrics, update_phase_detection
 from .base import Component
 
 
