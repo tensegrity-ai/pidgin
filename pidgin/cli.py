@@ -1314,5 +1314,64 @@ def logs(experiment_id, lines, follow):
             console.print(line.rstrip(), markup=False)
 
 
+@experiment.command()
+@click.option("--db", "db_path", help="Path to experiments database", 
+              type=click.Path(exists=True, path_type=Path))
+@click.option("--refresh", default=0.25, help="Refresh rate in seconds", type=float)
+def dashboard(db_path, refresh):
+    """Launch live dashboard for real-time experiment monitoring.
+    
+    The dashboard provides a real-time view of running experiments with:
+    
+    • Active experiment status
+    • Live conversation feed
+    • Real-time metrics with sparklines
+    • Pattern detection and insights
+    • Convergence tracking
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Monitor experiments with default database:[/#4c566a]
+        pidgin experiment dashboard
+    
+    [#4c566a]Use custom database location:[/#4c566a]
+        pidgin experiment dashboard --db ./experiments.db
+    
+    [#4c566a]Slower refresh rate:[/#4c566a]
+        pidgin experiment dashboard --refresh 1.0
+    
+    [bold]CONTROLS:[/bold]
+    
+    • [q] Quit dashboard
+    • [e] Export current data
+    • [p] Pause updates
+    • [r] Force refresh
+    """
+    from .dashboard import ExperimentDashboard
+    
+    # Default to standard experiments database
+    if not db_path:
+        db_path = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
+    
+    if not db_path.exists():
+        console.print(f"[#bf616a]✗ Database not found: {db_path}[/#bf616a]")
+        console.print("\n[#4c566a]Make sure you have experiments running or completed.[/#4c566a]")
+        console.print("[#4c566a]Start an experiment:[/#4c566a] pidgin experiment start -a claude -b gpt")
+        return
+    
+    console.print(f"[#8fbcbb]◆ Launching experiment dashboard...[/#8fbcbb]")
+    console.print(f"[#4c566a]  Database: {db_path}[/#4c566a]")
+    console.print(f"[#4c566a]  Refresh: {refresh}s[/#4c566a]")
+    console.print("\n[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
+    
+    # Create and run dashboard
+    dashboard = ExperimentDashboard(db_path, refresh_rate=refresh)
+    
+    try:
+        asyncio.run(dashboard.run())
+    except KeyboardInterrupt:
+        console.print("\n[#8fbcbb]◆ Dashboard closed[/#8fbcbb]")
+
+
 if __name__ == "__main__":
     cli()

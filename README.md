@@ -22,13 +22,12 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Experiments**: Run hundreds of conversations in parallel with comprehensive metrics
 - **Background Execution**: Experiments run as Unix daemons
 - **Analysis**: ~150 metrics captured per conversation turn
+- **Live Dashboard**: Real-time monitoring of running experiments
 
 ### ▶ What's Partial
-- **Live Dashboard**: Coming in Phase 4
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
 
 ### ■ What's Missing
-- **Rich dashboard visualization**: Real-time experiment monitoring
 - **Automated pattern detection**: Statistical validation tools
 - **Report generation**: Publication-ready outputs
 
@@ -140,12 +139,20 @@ pidgin experiment logs <experiment_id> -f
 
 # Stop an experiment
 pidgin experiment stop <experiment_id>
+
+# Monitor live with dashboard (NEW!)
+pidgin experiment dashboard
 ```
 
 ### Experiment Features
 
 - **Parallel execution** with automatic rate limiting
 - **Background operation** - experiments continue after disconnect
+- **Live dashboard** - Real-time monitoring with pattern detection:
+  - Visual metrics with sparklines
+  - High convergence warnings
+  - Symbol emergence detection
+  - Export capability for analysis
 - **Comprehensive metrics** - ~150 measurements per turn including:
   - Lexical diversity (TTR, vocabulary overlap)
   - Convergence metrics (structural similarity)
@@ -168,6 +175,10 @@ pidgin experiment start \
 # Data stored in SQLite for analysis
 sqlite3 ./pidgin_output/experiments/experiments.db \
   "SELECT AVG(convergence_score) FROM turns WHERE turn_number = 30"
+
+# Monitor with live dashboard
+pidgin experiment dashboard
+# Controls: q=quit, e=export, p=pause, r=refresh
 ```
 
 ## How to Help
