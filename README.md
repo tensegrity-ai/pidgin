@@ -54,6 +54,59 @@ pidgin experiment status
 # Output saved to ./pidgin_output/
 ```
 
+## API Key Management
+
+💡 **Why this matters**: API keys are like credit cards for AI services. Exposed keys can lead to unexpected charges if someone else uses them.
+
+For better security, we recommend using a key manager rather than environment variables:
+
+### Using 1Password CLI (Recommended)
+```bash
+# Install 1Password CLI
+brew install --cask 1password-cli
+
+# Run Pidgin with keys from 1Password
+op run --env-file=.env.1password -- pidgin chat -a claude -b gpt
+
+# Where .env.1password contains:
+# ANTHROPIC_API_KEY="op://Personal/Anthropic API/credential"
+# OPENAI_API_KEY="op://Personal/OpenAI API/credential"
+```
+
+### Using macOS Keychain
+```bash
+# Store keys securely
+security add-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w "your-key-here"
+security add-generic-password -a "$USER" -s "OPENAI_API_KEY" -w "your-key-here"
+
+# Retrieve in shell profile
+export ANTHROPIC_API_KEY=$(security find-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w)
+export OPENAI_API_KEY=$(security find-generic-password -a "$USER" -s "OPENAI_API_KEY" -w)
+```
+
+### Using direnv (Project-specific)
+```bash
+# Install direnv
+brew install direnv
+
+# Create .envrc in project root
+echo 'export ANTHROPIC_API_KEY="sk-ant-..."' > .envrc
+echo 'export OPENAI_API_KEY="sk-..."' >> .envrc
+
+# Never commit .envrc
+echo ".envrc" >> .gitignore
+
+# Allow direnv to load
+direnv allow
+```
+
+### Other Options
+- **AWS Secrets Manager** - For cloud deployments
+- **HashiCorp Vault** - For enterprise environments
+- **age** - Modern encryption tool for secrets
+
+⚠️ **Never commit API keys to git**, even in private repositories.
+
 ## Why This Matters
 
 When AIs talk to each other millions of times daily, do they develop more efficient protocols? We don't know. That's what we're trying to find out.

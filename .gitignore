@@ -69,6 +69,7 @@ config.yaml
 .env
 .env.local
 *.env
+.envrc
 
 # But allow example/default configs
 !pidgin.yaml.example
