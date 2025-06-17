@@ -126,7 +126,8 @@ class DisplayFilter:
         self.console.print(
             Panel(
                 content,
-                title="⬡ Conversation Setup",
+                title=" ⬡ Conversation Setup",
+                title_align="left",
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
             )
@@ -157,7 +158,8 @@ class DisplayFilter:
         self.console.print(
             Panel(
                 f"[{self.COLORS['nord3']}]System instructions:[/{self.COLORS['nord3']}]\n\n{event.prompt}",
-                title=title,
+                title=f" {title}",
+                title_align="left",
                 border_style=style,
                 padding=(1, 2),
             )
@@ -215,7 +217,7 @@ class DisplayFilter:
             content += timing_info
 
         self.console.print(
-            Panel(content, title=title, border_style=style, padding=(1, 2))
+            Panel(content, title=f" {title}", title_align="left", border_style=style, padding=(1, 2))
         )
         self.console.print()
 
@@ -255,7 +257,8 @@ class DisplayFilter:
         self.console.print(
             Panel(
                 content,
-                title="⬟ Summary",
+                title=" ⬟ Summary",
+                title_align="left",
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
             )
@@ -307,7 +310,7 @@ class DisplayFilter:
             content += f"\n[{self.COLORS['nord11']}]✗ This error cannot be automatically retried.[/{self.COLORS['nord11']}]"
 
         self.console.print(
-            Panel(content, title="⚠ Error", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(content, title=" ⚠ Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
 
@@ -322,7 +325,7 @@ class DisplayFilter:
             content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title="⚠ Error", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(content, title=" ⚠ Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
         
@@ -344,7 +347,8 @@ class DisplayFilter:
         self.console.print(
             Panel(
                 content,
-                title="⏱ Timeout",
+                title=" ⏱ Timeout",
+                title_align="left",
                 border_style=self.COLORS["nord13"],
                 padding=(1, 2)
             )
