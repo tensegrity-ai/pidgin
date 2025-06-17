@@ -9,7 +9,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 
-from .types import ConversationTurn, Message
+from ..core.types import ConversationTurn, Message
 
 
 class InterventionHandler:

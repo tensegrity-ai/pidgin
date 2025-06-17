@@ -61,18 +61,12 @@ console = Console()
 def _build_initial_prompt(
     custom_prompt: Optional[str],
     dimensions: Optional[str],
-    puzzle: Optional[str] = None,
-    experiment: Optional[str] = None,
-    topic_content: Optional[str] = None,
 ) -> str:
     """Build initial prompt from custom prompt and/or dimensions.
     
     Args:
         custom_prompt: Either a string or path to .md file
         dimensions: Dimensional prompt specification
-        puzzle: Puzzle name for dimensional prompts
-        experiment: Experiment name for dimensional prompts
-        topic_content: Custom content for puzzles/experiments
     """
     parts = []
     
@@ -82,7 +76,7 @@ def _build_initial_prompt(
             generator = DimensionalPromptGenerator()
             
             # Check if we need to handle custom prompt integration
-            if custom_prompt and not (puzzle or experiment or topic_content):
+            if custom_prompt:
                 # Parse dimensions to check if it's a regular topic
                 dim_parts = dimensions.split(':')
                 if len(dim_parts) >= 2:
@@ -97,24 +91,15 @@ def _build_initial_prompt(
                             if not content:
                                 console.print(f"[#ebcb8b]Warning: File '{custom_prompt}' is empty[/#ebcb8b]")
                             
-                            # For files, use "the following scenario"
-                            if topic not in ['puzzles', 'thought_experiments']:
-                                # Generate dimensional prompt with placeholder
-                                dimensional_prompt = generator.generate(dimensions)
-                                # Replace {topic} with transition phrase
-                                dimensional_prompt = dimensional_prompt.replace(
-                                    generator.TOPIC_DIMENSION.values[topic],
-                                    "the following scenario"
-                                )
-                                parts.append(dimensional_prompt)
-                                parts.append("\n\n" + content)
-                            else:
-                                # For puzzles/experiments, use content as topic_content
-                                dimensional_prompt = generator.generate(
-                                    dimensions,
-                                    topic_content=content
-                                )
-                                parts.append(dimensional_prompt)
+                            # Generate dimensional prompt with placeholder
+                            dimensional_prompt = generator.generate(dimensions)
+                            # Replace {topic} with transition phrase
+                            dimensional_prompt = dimensional_prompt.replace(
+                                generator.TOPIC_DIMENSION.values[topic],
+                                "the following scenario"
+                            )
+                            parts.append(dimensional_prompt)
+                            parts.append("\n\n" + content)
                         except IOError as e:
                             console.print(f"[#bf616a]Error reading file '{custom_prompt}': {e}[/#bf616a]")
                             raise click.Abort()
@@ -127,35 +112,22 @@ def _build_initial_prompt(
                             console.print(f"[#bf616a]Error: File '{custom_prompt}' not found[/#bf616a]")
                             raise click.Abort()
                         
-                        # For strings with regular topics, replace {topic} with the custom prompt
-                        if topic not in ['puzzles', 'thought_experiments']:
-                            dimensional_prompt = generator.generate(dimensions)
-                            # Replace the topic value with custom prompt
-                            dimensional_prompt = dimensional_prompt.replace(
-                                generator.TOPIC_DIMENSION.values[topic],
-                                custom_prompt
-                            )
-                            parts.append(dimensional_prompt)
-                        else:
-                            # For puzzles/experiments, use as topic_content
-                            dimensional_prompt = generator.generate(
-                                dimensions,
-                                topic_content=custom_prompt
-                            )
-                            parts.append(dimensional_prompt)
+                        # For strings, replace {topic} with the custom prompt
+                        dimensional_prompt = generator.generate(dimensions)
+                        # Replace the topic value with custom prompt
+                        dimensional_prompt = dimensional_prompt.replace(
+                            generator.TOPIC_DIMENSION.values[topic],
+                            custom_prompt
+                        )
+                        parts.append(dimensional_prompt)
                 else:
                     # Invalid dimension format, just generate normally
                     dimensional_prompt = generator.generate(dimensions)
                     parts.append(dimensional_prompt)
                     parts.append(custom_prompt)
             else:
-                # No custom prompt or special parameters provided
-                dimensional_prompt = generator.generate(
-                    dimensions,
-                    puzzle=puzzle,
-                    experiment=experiment,
-                    topic_content=topic_content,
-                )
+                # No custom prompt provided
+                dimensional_prompt = generator.generate(dimensions)
                 parts.append(dimensional_prompt)
         except ValueError as e:
             console.print(f"[#bf616a]Error in dimensional prompt: {e}[/#bf616a]")
@@ -259,8 +231,6 @@ def init():
     Creates a .pidgin/ directory in your current folder with template
     configuration files for:
 
-    • Custom thought experiments
-    • Custom puzzles
     • Custom dimensions (planned)
 
     After running this command, edit the YAML files to add your own content.
@@ -273,86 +243,11 @@ def init():
         config_dir.mkdir(parents=True)
         console.print(f"Created directory: {config_dir}")
     
-    # Puzzles template
-    puzzle_path = config_dir / "puzzles.yaml"
-    if not puzzle_path.exists():
-        from datetime import datetime
-        puzzle_content = f"""# Pidgin Custom Puzzle Library
-# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-#
-# Add your own puzzles here. They'll be available with:
-#   pidgin chat -d debate:puzzles --puzzle your_puzzle_name
-#
-# Format:
-#   puzzle_id:
-#     content: "The puzzle text"
-#     difficulty: "easy/medium/hard" (optional)
-#     answer: "The solution" (optional)
-#     source: "Attribution" (optional)
-
-puzzles:
-  # Example custom puzzles
-  pattern_recognition:
-    content: "1, 1, 2, 3, 5, 8, 13, ?"
-    difficulty: "easy"
-    answer: "21 (Fibonacci sequence)"
-    
-  word_play:
-    content: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?"
-    difficulty: "medium"
-    answer: "A map"
-    
-  logic_twist:
-    content: "If you have me, you want to share me. If you share me, you haven't got me. What am I?"
-    difficulty: "easy"
-    answer: "A secret"
-    
-  musical_riddle:
-    content: "I have 88 keys but cannot open a single door. What am I?"
-    difficulty: "easy"
-    answer: "A keyboard (piano or computer)"
-    
-  # Add your puzzles below:
-  
-"""
-        with open(puzzle_path, "w") as f:
-            f.write(puzzle_content)
-        created_files.append(puzzle_path)
-
-    # Thought experiments template
-    exp_path = config_dir / "thought_experiments.yaml"
-    if not exp_path.exists():
-        exp_content = f"""# Pidgin Thought Experiment Library
-# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-#
-# Add your own thought experiments here. They'll be available with:
-#   pidgin chat -d debate:thought_experiments --experiment your_experiment_name
-#
-# Format:
-#   experiment_id:
-#     content: "The thought experiment description"
-#     category: "philosophical area" (optional)
-#     source: "Original philosopher/paper" (optional)
-#     year: "When it was proposed" (optional)
-#     variants: ["list of variations"] (optional)
-
-thought_experiments:
-  # Example custom experiments
-  ai_consciousness:
-    content: "If an AI can perfectly simulate human responses to any question about its inner experience, including expressing uncertainty about consciousness, does it have inner experience?"
-    category: "consciousness"
-    source: "Contemporary AI ethics"
-    
-  # Add your experiments below:
-  
-"""
-        with open(exp_path, "w") as f:
-            f.write(exp_content)
-        created_files.append(exp_path)
 
     # Dimensions template
     dim_path = config_dir / "dimensions.yaml"
     if not dim_path.exists():
+        from datetime import datetime
         dim_content = f"""# Pidgin Custom Dimensions
 # Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 #
@@ -361,7 +256,7 @@ thought_experiments:
 #
 # For now, use the built-in dimensions:
 #   Context: peers, teaching, debate, interview, collaboration, neutral
-#   Topic: philosophy, language, science, creativity, meta, puzzles, thought_experiments
+#   Topic: philosophy, language, science, creativity, meta
 #   Mode: analytical, intuitive, exploratory, focused
 
 dimensions:
@@ -414,17 +309,15 @@ def models():
             )
             
             # Add each model
-            for model_id, config in models.items():
+            for config in models:
                 characteristics = []
-                if config.characteristics.reasoning_style:
-                    characteristics.append(config.characteristics.reasoning_style)
-                if config.characteristics.personality_tendency:
-                    characteristics.append(config.characteristics.personality_tendency)
+                characteristics.append(config.characteristics.conversation_style)
+                characteristics.append(f"~{config.characteristics.avg_response_length}")
                 
                 table.add_row(
                     "",  # Empty provider column for individual models
                     config.model_id,
-                    config.alias or "-",
+                    config.aliases[0] if config.aliases else "-",
                     f"{config.context_window // 1000}k",
                     ", ".join(characteristics) if characteristics else "-"
                 )
@@ -445,6 +338,99 @@ def models():
 
 
 @cli.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option("--example", help="Show example for specific dimension combination")
+@click.option("--list", "list_only", is_flag=True, help="List just dimension names")
+@click.option("--detailed", is_flag=True, help="Show detailed info about a dimension")
+@click.argument("dimension", required=False)
+def dimensions(example, list_only, detailed, dimension):
+    """Explore dimensional prompt system for conversation setup.
+    
+    Dimensional prompts let you quickly configure conversation dynamics by
+    combining different aspects like context (peers/debate/teaching) and
+    topics (philosophy/science/language).
+    
+    [bold]FORMAT:[/bold]
+        [#4c566a]-d context:topic[:mode][/#4c566a]
+    
+    [bold]EXAMPLES:[/bold]
+    
+    List all dimensions:
+        [#4c566a]pidgin dimensions[/#4c566a]
+    
+    Show specific dimension:
+        [#4c566a]pidgin dimensions context --detailed[/#4c566a]
+    
+    See example output:
+        [#4c566a]pidgin dimensions --example peers:philosophy[/#4c566a]
+    
+    [bold]QUICK COMBINATIONS:[/bold]
+        • [green]peers:philosophy[/green] → Collaborative philosophical discussion
+        • [green]debate:science:analytical[/green] → Analytical scientific debate
+        • [green]teaching:language[/green] → Teaching session about language
+    """
+    generator = DimensionalPromptGenerator()
+
+    if example:
+        # Show example for specific combination
+        try:
+            prompt = generator.generate(example)
+            console.print(f"\n[bold]Example for '{example}':[/bold]")
+            console.print(f'"{prompt}"\n')
+        except ValueError as e:
+            console.print(f"[red]Error: {e}[/red]")
+        return
+
+    if dimension and detailed:
+        # Show detailed info about a specific dimension
+        console.print()
+        console.print(generator.describe_dimension(dimension))
+        console.print()
+        return
+
+    if list_only:
+        # Just list dimension names
+        all_dims = generator.get_all_dimensions()
+        console.print("\n[bold]Available dimensions:[/bold]")
+        for dim_name in all_dims:
+            console.print(f"  • {dim_name}")
+        console.print()
+        return
+
+    # Default: show all dimensions and their values
+    console.print("\n[bold]Dimensional Prompt System[/bold]\n")
+    console.print("Create prompts by combining dimensions with colons:")
+    console.print("  [#4c566a]pidgin chat -d context:topic[:mode][/#4c566a]\n")
+
+    all_dims = generator.get_all_dimensions()
+
+    for dim_name, dim in all_dims.items():
+        console.print(f"[bold cyan]{dim_name.upper()}[/bold cyan] - {dim.description}")
+        console.print(f"  Required: {'Yes' if dim.required else 'No'}")
+        console.print("  Values:")
+
+        for value, desc in dim.values.items():
+            # Truncate long descriptions
+            if len(desc) > 60:
+                desc = desc[:57] + "..."
+            console.print(f"    • [green]{value}[/green] - {desc}")
+        console.print()
+
+    # Show examples
+    console.print("[bold]Examples:[/bold]")
+    examples = [
+        ("peers:philosophy", "Collaborative philosophical discussion"),
+        ("debate:science:analytical", "Analytical debate about science"),
+        ("teaching:language", "Teaching session about language"),
+        ("interview:meta:exploratory", "Exploratory interview about the conversation itself"),
+    ]
+
+    for example_spec, description in examples:
+        console.print(f"  [#4c566a]pidgin chat -d {example_spec}[/#4c566a]")
+        console.print(f"    → {description}")
+    console.print()
+
+
+@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "-a", "--model-a", required=True,
     help="First model (e.g., 'claude', 'gpt-4', 'opus')"
@@ -461,9 +447,6 @@ def models():
               help="Initial prompt (string or path to .md file)")
 @click.option("-d", "--dimensions", 
               help="Use dimensional prompt system - e.g., 'peers:philosophy' or 'debate:science:analytical'")
-@click.option("--puzzle", help="Specific puzzle name for puzzles topic")
-@click.option("--experiment", help="Specific thought experiment name")
-@click.option("--topic-content", help="Custom content for dimensional topics")
 @click.option(
     "-s", "--save-to",
     help="Custom path to save conversation (defaults to ./pidgin_output/)"
@@ -550,9 +533,6 @@ def chat(
     turns,
     prompt,
     dimensions,
-    puzzle,
-    experiment,
-    topic_content,
     save_to,
     config,
     manual,
@@ -587,9 +567,6 @@ def chat(
         pidgin chat -a claude -b gpt -d peers:philosophy
         pidgin chat -a gpt -b gemini -d debate:language:analytical
 
-    [#4c566a]With specific puzzles:[/#4c566a]
-        pidgin chat -a claude -b gpt -d teaching:puzzles --puzzle fibonacci
-
     [#4c566a]Let agents name themselves:[/#4c566a]
         pidgin chat -a claude -b gpt --choose-names
 
@@ -614,9 +591,6 @@ def chat(
     initial_prompt = _build_initial_prompt(
         custom_prompt=prompt,
         dimensions=dimensions,
-        puzzle=puzzle,
-        experiment=experiment,
-        topic_content=topic_content,
     )
     
     # Get model configurations

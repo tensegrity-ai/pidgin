@@ -2,7 +2,7 @@
 
 import logging
 from typing import List, Dict, Any, Union
-from .types import Message
+from ..core.types import Message
 
 logger = logging.getLogger(__name__)
 

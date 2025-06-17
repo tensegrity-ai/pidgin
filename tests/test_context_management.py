@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from pidgin.context_manager import ContextWindowManager
+from pidgin.analysis.context_manager import ContextWindowManager
 
 
 class TestContextWindowManager:
@@ -71,7 +71,7 @@ class TestContextWindowManager:
 
     def test_turns_prediction_with_history(self):
         """Test turn prediction with sufficient history."""
-        from pidgin.types import Message
+        from pidgin.core.types import Message
 
         cm = ContextWindowManager()
 

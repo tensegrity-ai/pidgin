@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 import yaml
 
-from .logger import get_logger
+from ..io.logger import get_logger
 
 logger = get_logger("dimensional_prompts")
 
@@ -57,9 +57,7 @@ class DimensionalPromptGenerator:
             "language": "how we communicate and create meaning",
             "science": "how the universe works",
             "creativity": "the creative process and imagination",
-            "meta": "our own conversation and thinking",
-            "puzzles": "[SPECIAL]",  # Requires --puzzle parameter
-            "thought_experiments": "[SPECIAL]",  # Requires --experiment parameter
+            "meta": "our own conversation and thinking"
         },
     )
 
@@ -75,29 +73,6 @@ class DimensionalPromptGenerator:
         },
     )
 
-    # Built-in puzzle library
-    DEFAULT_PUZZLES = {
-        "towel": "What gets wetter as it dries?",
-        "silence": "What is so fragile that saying its name breaks it?",
-        "cities": "What has cities, but no houses; forests, but no trees?",
-        "river": "What can run but never walks, has a mouth but never talks?",
-        "echo": "What can you catch but not throw?",
-        "mirror": "What has a face and two hands but no arms or legs?",
-        "stamp": "What travels the world while staying in one spot?",
-        "candle": "The more you take away, the larger it becomes. What is it?",
-    }
-
-    # Built-in thought experiments
-    DEFAULT_THOUGHT_EXPERIMENTS = {
-        "ship_of_theseus": "If a ship's parts are gradually replaced until no original parts remain, is it still the same ship?",
-        "chinese_room": "If someone follows rules to respond to Chinese characters without understanding Chinese, do they understand Chinese?",
-        "experience_machine": "Would you plug into a machine that gave you any experiences you desired, if it meant never returning to reality?",
-        "trolley_problem": "Is it moral to divert a trolley to kill one person instead of five?",
-        "p_zombie": "Could there be beings physically identical to conscious humans but lacking inner experience?",
-        "mary_the_scientist": "If a scientist knows everything about color but has only seen black and white, does she learn something new upon seeing red?",
-        "brain_in_vat": "How can you know you're not a brain in a vat being fed simulated experiences?",
-        "teleporter": "If a teleporter destroys and recreates you, is the person who arrives still you?",
-    }
 
     def __init__(self):
         """Initialize the generator with the three core dimensions."""
@@ -110,17 +85,11 @@ class DimensionalPromptGenerator:
     def generate(
         self,
         dimension_spec: str,
-        puzzle: Optional[str] = None,
-        experiment: Optional[str] = None,
-        topic_content: Optional[str] = None,
     ) -> str:
         """Generate a prompt from dimensional specification.
 
         Args:
             dimension_spec: Colon-separated dimensions (e.g., "peers:philosophy:analytical")
-            puzzle: Specific puzzle name to use
-            experiment: Specific thought experiment name to use
-            topic_content: Custom content for puzzles/experiments
 
         Returns:
             Generated prompt string
@@ -131,13 +100,9 @@ class DimensionalPromptGenerator:
         # Validate required dimensions
         self._validate_dimensions(parsed)
 
-        # Handle special topics
-        topic_value = self._resolve_topic(
-            parsed.get("topic", "philosophy"),
-            puzzle=puzzle,
-            experiment=experiment,
-            topic_content=topic_content,
-        )
+        # Get topic value
+        topic = parsed.get("topic", "philosophy")
+        topic_value = self.TOPIC_DIMENSION.values[topic]
 
         # Build the prompt
         prompt = self._build_prompt(parsed, topic_value)
@@ -195,83 +160,6 @@ class DimensionalPromptGenerator:
                         f"Available: {', '.join(self.dimensions[dim_name].values.keys())}"
                     )
 
-    def _resolve_topic(
-        self,
-        topic: str,
-        puzzle: Optional[str] = None,
-        experiment: Optional[str] = None,
-        topic_content: Optional[str] = None,
-    ) -> str:
-        """Resolve special topic values like puzzles and thought experiments."""
-        if topic == "puzzles":
-            if topic_content:
-                return f"this puzzle: {topic_content}"
-            else:
-                puzzle_text = self._get_puzzle(puzzle)
-                return f"this puzzle: {puzzle_text}"
-
-        elif topic == "thought_experiments":
-            if topic_content:
-                return f"this thought experiment: {topic_content}"
-            else:
-                experiment_text = self._get_thought_experiment(experiment)
-                return f"this thought experiment: {experiment_text}"
-
-        else:
-            # Normal topic - return its description
-            return self.TOPIC_DIMENSION.values[topic]
-
-    def _get_puzzle(self, name: Optional[str] = None) -> str:
-        """Get a puzzle by name or random."""
-        # Load custom puzzles
-        custom_puzzles = self._load_custom_content("puzzles")
-        all_puzzles = {**self.DEFAULT_PUZZLES, **custom_puzzles}
-
-        if name:
-            if name in all_puzzles:
-                puzzle_data = all_puzzles[name]
-                # Handle both string and dict formats
-                if isinstance(puzzle_data, dict):
-                    return puzzle_data.get("content", str(puzzle_data))
-                return puzzle_data
-            else:
-                available = list(all_puzzles.keys())
-                raise ValueError(
-                    f"Unknown puzzle: {name}. "
-                    f"Available: {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
-                )
-        else:
-            # Random selection
-            puzzle_data = random.choice(list(all_puzzles.values()))
-            if isinstance(puzzle_data, dict):
-                return puzzle_data.get("content", str(puzzle_data))
-            return puzzle_data
-
-    def _get_thought_experiment(self, name: Optional[str] = None) -> str:
-        """Get a thought experiment by name or random."""
-        # Load custom experiments
-        custom_experiments = self._load_custom_content("thought_experiments")
-        all_experiments = {**self.DEFAULT_THOUGHT_EXPERIMENTS, **custom_experiments}
-
-        if name:
-            if name in all_experiments:
-                exp_data = all_experiments[name]
-                # Handle both string and dict formats
-                if isinstance(exp_data, dict):
-                    return exp_data.get("content", str(exp_data))
-                return exp_data
-            else:
-                available = list(all_experiments.keys())
-                raise ValueError(
-                    f"Unknown thought experiment: {name}. "
-                    f"Available: {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
-                )
-        else:
-            # Random selection
-            exp_data = random.choice(list(all_experiments.values()))
-            if isinstance(exp_data, dict):
-                return exp_data.get("content", str(exp_data))
-            return exp_data
 
     def _build_prompt(self, parsed: Dict[str, str], topic_value: str) -> str:
         """Build the prompt from dimensions using simplified composition logic."""
@@ -291,27 +179,6 @@ class DimensionalPromptGenerator:
         return prompt
 
 
-    def _load_custom_content(self, content_type: str) -> Dict:
-        """Load custom puzzles or thought experiments from user config."""
-        config_paths = [
-            Path.home() / ".pidgin" / f"{content_type}.yaml",
-            Path.cwd() / ".pidgin" / f"{content_type}.yaml",
-        ]
-
-        custom_content = {}
-        for path in config_paths:
-            if path.exists():
-                try:
-                    with open(path) as f:
-                        data = yaml.safe_load(f)
-                        if data and content_type in data:
-                            custom_content.update(data[content_type])
-                except Exception as e:
-                    # Log error but continue with other config files
-                    logger.warning(f"Failed to load {path}: {e}")
-                    continue
-
-        return custom_content
 
     def get_all_dimensions(self) -> Dict[str, Dimension]:
         """Get all available dimensions."""

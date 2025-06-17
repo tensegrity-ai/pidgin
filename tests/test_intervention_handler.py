@@ -2,8 +2,8 @@
 
 import pytest
 from datetime import datetime
-from pidgin.types import Message
-from pidgin.intervention_handler import InterventionHandler
+from pidgin.core.types import Message
+from pidgin.ui.intervention_handler import InterventionHandler
 from rich.console import Console
 
 
@@ -48,7 +48,7 @@ class TestInterventionHandler:
 
     def test_should_intervene_manual_mode(self):
         """Test intervention decision in manual mode."""
-        from pidgin.types import ConversationTurn, Message
+        from pidgin.core.types import ConversationTurn, Message
 
         # Create a mock turn
         turn = ConversationTurn(
@@ -64,7 +64,7 @@ class TestInterventionHandler:
 
     def test_should_intervene_flowing_mode(self):
         """Test intervention decision in flowing mode."""
-        from pidgin.types import ConversationTurn, Message
+        from pidgin.core.types import ConversationTurn, Message
 
         flowing_conductor = InterventionHandler(self.console, mode="flowing")
 

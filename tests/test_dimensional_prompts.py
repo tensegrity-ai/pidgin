@@ -1,7 +1,7 @@
 """Tests for the dimensional prompt system."""
 
 import pytest
-from pidgin.dimensional_prompts import DimensionalPromptGenerator
+from pidgin.config.dimensional_prompts import DimensionalPromptGenerator
 
 
 class TestDimensionalPromptGenerator:

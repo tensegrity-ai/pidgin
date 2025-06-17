@@ -5,8 +5,8 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.table import Table
 
-from .event_bus import EventBus
-from .events import (
+from ..core.event_bus import EventBus
+from ..core.events import (
     Event,
     ConversationStartEvent,
     ConversationEndEvent,
@@ -89,13 +89,20 @@ class EventLogger:
             Formatted content string
         """
         if isinstance(event, ConversationStartEvent):
-            return (
+            content = (
                 f"  conversation_id: {event.conversation_id}\n"
-                f"  agent_a: {event.agent_a_model}\n"
-                f"  agent_b: {event.agent_b_model}\n"
-                f"  max_turns: {event.max_turns}\n"
+                f"  agent_a: {event.agent_a_model}"
+            )
+            if event.temperature_a is not None:
+                content += f" (temp: {event.temperature_a})"
+            content += f"\n  agent_b: {event.agent_b_model}"
+            if event.temperature_b is not None:
+                content += f" (temp: {event.temperature_b})"
+            content += (
+                f"\n  max_turns: {event.max_turns}\n"
                 f"  initial_prompt: {event.initial_prompt[:50]}..."
             )
+            return content
             
         elif isinstance(event, ConversationEndEvent):
             return (

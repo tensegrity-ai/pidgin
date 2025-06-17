@@ -28,6 +28,8 @@ flake8 = "^6.0.0"
 mypy = "^1.0.0"
 isort = "^5.0.0"
 pre-commit = "^3.0.0"
+radon = "^6.0.1"
+rich-click = "^1.8.9"
 
 [tool.poetry.scripts]
 pidgin = "pidgin.cli:cli"

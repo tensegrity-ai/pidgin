@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
-from .types import Conversation
+from ..core.types import Conversation
 
 
 class TranscriptManager:

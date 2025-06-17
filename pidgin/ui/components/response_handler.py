@@ -3,8 +3,8 @@
 from typing import Optional, Tuple, List
 import asyncio
 
-from ..types import Message
-from ..router import Router
+from ...core.types import Message
+from ...core.router import Router
 from .display_manager import DisplayManager
 from .base import Component
 

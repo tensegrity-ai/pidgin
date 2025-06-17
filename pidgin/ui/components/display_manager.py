@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from rich.console import Console
 from rich.panel import Panel
 
-from ..types import Message, Agent
+from ...core.types import Message, Agent
 from .base import Component
 
 

@@ -3,10 +3,10 @@
 
 import asyncio
 import os
-from pidgin.models import MODELS
+from pidgin.config.models import MODELS
 from pidgin.providers.anthropic import AnthropicProvider
 from pidgin.providers.openai import OpenAIProvider
-from pidgin.types import Message
+from pidgin.core.types import Message
 
 
 async def test_model(provider_class, model_id):

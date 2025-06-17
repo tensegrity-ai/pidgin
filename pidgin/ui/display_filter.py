@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.text import Text
 from rich.rule import Rule
 
-from .events import (
+from ..core.events import (
     Event,
     ConversationStartEvent,
     ConversationEndEvent,
@@ -109,8 +109,14 @@ class DisplayFilter:
         agent_b_display = event.agent_b_display_name or "Agent B"
 
         content = f"[bold]Starting Conversation[/bold]\n\n"
-        content += f"◈ {agent_a_display}: {event.agent_a_model}\n"
-        content += f"◈ {agent_b_display}: {event.agent_b_model}\n"
+        content += f"◈ {agent_a_display}: {event.agent_a_model}"
+        if event.temperature_a is not None:
+            content += f" (temp: {event.temperature_a})"
+        content += "\n"
+        content += f"◈ {agent_b_display}: {event.agent_b_model}"
+        if event.temperature_b is not None:
+            content += f" (temp: {event.temperature_b})"
+        content += "\n"
         content += f"◈ Max turns: {event.max_turns}\n"
         content += f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause[/{self.COLORS['nord3']}]\n\n"
 

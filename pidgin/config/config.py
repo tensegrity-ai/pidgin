@@ -4,7 +4,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from .logger import get_logger
+from ..io.logger import get_logger
 
 logger = get_logger("config")
 

@@ -4,9 +4,9 @@ from typing import Dict, List, Any, Optional
 from collections import defaultdict
 from datetime import datetime
 
-from ..types import Message
-from ..convergence import ConvergenceCalculator
-from ..metrics import calculate_turn_metrics, update_phase_detection
+from ...core.types import Message
+from ...analysis.convergence import ConvergenceCalculator
+from ...analysis.metrics import calculate_turn_metrics, update_phase_detection
 from .base import Component
 
 
