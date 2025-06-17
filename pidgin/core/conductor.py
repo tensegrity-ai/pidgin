@@ -573,10 +573,24 @@ class Conductor:
             self.event_logger = EventLogger(self.bus, None)
 
         # Wrap providers with event awareness now that bus exists
-        self.wrapped_providers = {
-            agent_id: EventAwareProvider(provider, self.bus, agent_id)
-            for agent_id, provider in self.base_providers.items()
-        }
+        # Create wrapped providers for agent_a and agent_b
+        self.wrapped_providers = {}
+        
+        # Map providers to agents based on model
+        agent_a = agents["agent_a"]
+        agent_b = agents["agent_b"]
+        
+        # Find provider for agent_a
+        for model_id, provider in self.base_providers.items():
+            if model_id == agent_a.model:
+                self.wrapped_providers["agent_a"] = EventAwareProvider(provider, self.bus, "agent_a")
+                break
+                
+        # Find provider for agent_b  
+        for model_id, provider in self.base_providers.items():
+            if model_id == agent_b.model:
+                self.wrapped_providers["agent_b"] = EventAwareProvider(provider, self.bus, "agent_b")
+                break
 
         # Subscribe to message completions
         self.bus.subscribe(MessageCompleteEvent, self._handle_message_complete)

@@ -102,6 +102,7 @@ class DisplayFilter:
 
     def _show_conversation_start(self, event: ConversationStartEvent):
         """Show conversation setup panel."""
+        self.console.print()  # Add newline before panel
         self.max_turns = event.max_turns
 
         # Use display names if available
