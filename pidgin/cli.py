@@ -162,7 +162,7 @@ def _build_initial_prompt(
     
     # If nothing specified, use default
     if not parts:
-        return "Hello! I'm looking forward to our conversation."
+        return "Hello! I'm looking forward to your conversation."
     
     # Combine parts
     return " ".join(parts) if all(isinstance(p, str) for p in parts) else "".join(str(p) for p in parts)

@@ -1,291 +1,223 @@
-# Development Guide for Pidgin
-
-## What This Project Actually Is
-
-Pidgin is a well-developed research tool with ~20 modules for recording and analyzing AI conversations. We've noticed interesting behaviors but haven't proven anything statistically. The tool is feature-complete for single conversations - what's missing is batch execution and validation.
-
-## Development Environment
-
-### Package Management
-This project uses **Poetry** for dependency management:
-
-```bash
-# Install poetry
-curl -sSL https://install.python-poetry.org | python3 -
-
-# Install dependencies
-poetry install
-
-# Add new dependencies
-poetry add package-name
-
-# Add dev dependencies
-poetry add --group dev package-name
-
-# Run commands in virtual environment
-poetry run pidgin chat -a claude -b gpt
-```
-
-### Code Style
-
-#### Colors - Nord Theme
-Use the Nord color palette for all terminal output:
-```python
-NORD_COLORS = {
-    "nord0": "#2e3440",   # Polar Night - darkest
-    "nord1": "#3b4252",   # Polar Night
-    "nord2": "#434c5e",   # Polar Night
-    "nord3": "#4c566a",   # Polar Night - comments/subtle
-    "nord4": "#d8dee9",   # Snow Storm - main content
-    "nord5": "#e5e9f0",   # Snow Storm
-    "nord6": "#eceff4",   # Snow Storm - brightest
-    "nord7": "#8fbcbb",   # Frost - teal
-    "nord8": "#88c0d0",   # Frost - light blue
-    "nord9": "#81a1c1",   # Frost - blue
-    "nord10": "#5e81ac",  # Frost - dark blue
-    "nord11": "#bf616a",  # Aurora - red
-    "nord12": "#d08770",  # Aurora - orange
-    "nord13": "#ebcb8b",  # Aurora - yellow
-    "nord14": "#a3be8c",  # Aurora - green
-    "nord15": "#b48ead",  # Aurora - purple
-}
-```
-
-#### Glyphs Not Emoji
-Use Unicode glyphs for visual elements:
-```python
-# Good - geometric glyphs
-"◆ Starting conversation"
-"▶ Continue"
-"■ Stop"
-"○ Pending"
-"● Complete"
-"⟐ Duration"
-
-# Bad - emoji
-"🚀 Starting"
-"✅ Done"
-"❌ Error"
-```
-
-Common glyphs:
-- Shapes: ◆ ◇ ○ ● □ ■ ▲ ▼ ► ◄
-- Arrows: → ← ↔ ⇒ ⇐ ⇔ ➜ 
-- Math: ≈ ≡ ≠ ≤ ≥ ± × ÷
-- Box: ┌ ┐ └ ┘ ─ │ ├ ┤ ┬ ┴ ┼
-
-## Current Reality
-
-### Working ✅
-- Event system records everything
-- Streaming from all providers
-- Ctrl+C interrupt
-- Clean file output
-
-### Partial 🚧
-- Metrics calculated but not shown
-- Context tracking exists but unused
-
-### Missing ❌
-- Batch experiments (critical)
-- Statistical analysis
-- Message injection
-- Pattern validation
+# Pidgin Development Guide
 
 ## Quick Start
 
 ```bash
-# Run a conversation
-pidgin chat -a claude -b gpt -t 20
+# Install
+poetry install
 
-# Check output
-ls ./pidgin_output/conversations/*/
-cat ./pidgin_output/conversations/*/events.jsonl
+# Run conversation
+poetry run pidgin chat -a claude -b gpt -t 20
+
+# Run experiment (batch)
+poetry run pidgin experiment start -a claude -b gpt --reps 100
+
+# View dashboard
+poetry run pidgin experiment dashboard my_experiment
 ```
 
-## Architecture That Exists
+## Code Style
 
+### Visual Design - Nord Theme
+```python
+# Use Nord colors for all terminal output
+NORD_COLORS = {
+    "dim": "#4c566a",     # nord3 - subtle text
+    "text": "#d8dee9",    # nord4 - main content  
+    "cyan": "#88c0d0",    # nord8 - info
+    "red": "#bf616a",     # nord11 - errors
+    "yellow": "#ebcb8b",  # nord13 - warnings
+    "green": "#a3be8c",   # nord14 - success
+    "blue": "#5e81ac",    # nord10 - primary
+}
+
+# Use geometric glyphs, not emoji
+"◆ Starting"  # Good
+"🚀 Starting" # Bad
+
+# Common glyphs
+◆ ◇ ○ ● □ ■ ▲ ▼ ► ◄ → ← ↔ ≈ ≡
 ```
-CLI → Conductor → EventBus → events.jsonl
-         ↓
-     Providers → Streaming → Display
-```
 
-Not built: batch runner, analysis tools, validation frameworks.
-
-## Code Guidelines
-
-### What to Build
-1. Things that emit events
-2. Things that analyze events
-3. Things that validate observations
-
-### What NOT to Build
-- Complex frameworks
-- "Revolutionary" features
-- Anything claiming "proven" results
-
-### Adding Features
+### Code Organization
 
 ```python
-# Good: Observable action
-await self.bus.emit(SomethingHappenedEvent(...))
+# Everything emits events
+await self.bus.emit(TurnCompleteEvent(...))
 
-# Bad: Hidden state
-self.secret_state = {"dont": "do this"}
+# No hidden state
+# Bad: self.convergence = 0.8
+# Good: emit convergence in event
+
+# Small focused modules
+# <200 lines per file
+# Single responsibility
 ```
+
+### Error Handling
+
+```python
+# Be specific about errors
+raise ValueError(f"Model {model} not in MODELS")
+
+# Don't hide failures
+try:
+    result = await api_call()
+except RateLimitError as e:
+    # Log it, show it, handle it
+    await self.bus.emit(APIErrorEvent(...))
+    raise
+```
+
+## Architecture Patterns
+
+### Event-Driven Everything
+```python
+# Conductor orchestrates via events
+# Components subscribe to what they need
+# No direct coupling between components
+
+# Good: Event flows
+Conductor → EventBus → Component
+         ↓
+      events.jsonl
+
+# Bad: Direct calls
+Conductor → Component → Another Component
+```
+
+### Provider Pattern
+```python
+# All providers implement same interface
+class Provider(ABC):
+    async def stream_response(messages, temperature=None):
+        yield chunk
+
+# Wrapped with event awareness
+EventAwareProvider(base_provider, event_bus)
+```
+
+## Database Schema
+
+### Key Tables
+- `experiments` - Metadata and configuration
+- `conversations` - Status, models, parameters
+- `turns` - ~150 metrics per turn
+- `word_frequencies` - Temporal word tracking
+
+### Metrics Captured
+- Lexical: TTR, vocabulary overlap, entropy
+- Structural: Message length, sentence patterns
+- Behavioral: Hedge words, symbols, repetition
+- Everything is 0-indexed
 
 ## Testing
 
 ```bash
-pytest                          # Run all tests
-pytest tests/test_conductor.py  # Single file
-pytest -v --cov=pidgin         # With coverage
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=pidgin
+
+# Run specific test
+pytest tests/test_experiments.py::test_batch_runner
 ```
+
+### Test Philosophy
+- Smoke tests over unit tests
+- Test the full flow, not every function
+- Mock providers for deterministic tests
+- Use real providers for integration tests
 
 ## Common Tasks
 
-### Run Different Models
+### Add New Model
+```python
+# In config/models.py
+MODELS["new-model-id"] = ModelConfig(
+    model_id="new-model-id",
+    shortname="NewModel",
+    aliases=["new", "nm"],
+    provider="openai",  # or anthropic, google, xai
+    context_window=128000,
+    # ... other config
+)
+```
+
+### Add New Metric
+1. Add to database schema
+2. Add calculation in metrics module
+3. Add to dashboard display
+4. Emit in TurnCompleteEvent
+
+### Debug Event Flow
 ```bash
-pidgin chat -a opus -b gpt-4.1 -t 30
-pidgin chat -a haiku -b gemini -t 50
+# Check events.jsonl
+tail -f ./pidgin_output/conversations/*/events.jsonl | jq
+
+# Or use verbose mode
+pidgin chat -a claude -b gpt -v
 ```
 
-### Check Convergence (manual)
-```python
-# In the JSON output, look for structural patterns
-# No automated tools yet - that's what we need built
-```
+## Performance
 
-## Priority Development Areas
+### Targets
+- Conversation start: <1s
+- Message streaming: <100ms latency
+- Dashboard update: <50ms
+- Batch runner: 10+ conversations parallel
 
-### 1. Convergence Threshold System
-```python
-# Simple threshold-based stopping
-if convergence_score >= threshold:
-    stop_conversation("high_convergence")
-```
+### Bottlenecks
+- Rate limits (automatic backoff)
+- Database writes (batched)
+- Terminal rendering (use Rich's Live)
 
-Configuration:
-```yaml
-conversation:
-  convergence_threshold: 0.85  # Stop at 85% similarity
-  convergence_action: "stop"   # or "warn"
-```
-
-### 2. Batch Runner (CRITICAL)
-```python
-# Concept (not built):
-async def run_batch(config, n=100):
-    """Run n identical conversations for statistics"""
-    results = []
-    for i in range(n):
-        conv = await run_conversation(config)
-        results.append(conv)
-    return analyze_patterns(results)
-```
-
-### 3. Display Convergence
-```python
-# Add to display_filter.py
-if convergence > 0:
-    console.print(f"[{NORD_COLORS['nord3']}]Convergence: {convergence:.2f}[/{NORD_COLORS['nord3']}]")
-    if convergence > 0.75:
-        console.print(f"[{NORD_COLORS['nord13']}]⚠ High convergence warning[/{NORD_COLORS['nord13']}]")
-```
-
-## What We've Observed (Not Proven)
-
-- Gratitude spirals in polite models
-- Possible linguistic compression
-- Model-specific conversation styles
-- High sensitivity to initial conditions
-
-These need validation through batch experiments.
-
-## Contributing
-
-We need:
-1. **Batch execution** - Run many conversations
-2. **Pattern detection** - Find what we're missing  
-3. **Statistical tools** - Validate observations
-4. **Skeptical review** - Challenge our assumptions
-
-## Don't Do This
-
-- Don't claim discoveries
-- Don't add philosophy  
-- Don't build frameworks
-- Don't compete with MCP
-
-## Do This
-
-- Run experiments
-- Analyze data
-- Question everything
-- Keep it simple
-
-## Research Ethics
-
-- Label everything "preliminary"
-- No claims without data
-- Open about limitations
-- Invite replication
-
-## File Structure
-```
-pidgin/
-├── cli.py              # Command-line interface
-├── conductor.py        # Main orchestrator (~500 lines)
-├── event_bus.py        # Event publish/subscribe system
-├── events.py           # Event type definitions
-├── event_logger.py     # Event display formatting
-├── display_filter.py   # Human-readable output
-│
-├── providers/          # AI provider integrations
-│   ├── anthropic.py    # Claude models
-│   ├── openai.py       # GPT/O-series
-│   ├── google.py       # Gemini models
-│   └── xai.py          # Grok models
-│
-├── dialogue_components/# Separated display components
-├── convergence.py      # Convergence calculation
-│
-├── config.py           # Configuration management
-├── context_manager.py  # Token/context tracking
-├── convergence.py      # Convergence calculator
-├── dimensional_prompts.py # Prompt generation
-├── intervention_handler.py # Pause/resume handling
-├── metrics.py          # Turn metrics
-├── models.py           # Model configurations
-├── router.py           # Message routing
-├── system_prompts.py   # System prompt templates
-├── transcripts.py      # Transcript generation
-├── types.py            # Type definitions
-└── user_interaction.py # User interaction
-
-./pidgin_output/        # All output here
-└── conversations/      # Organized by date
-```
-
-## Commit Style
+## Git Workflow
 
 ```bash
-# Lowercase, pragmatic
-git commit -m "add batch runner skeleton"
-git commit -m "fix convergence display"
+# Feature branches
+git checkout -b add-metric-x
+
+# Commit style (lowercase, specific)
+git commit -m "add lexical diversity metric"
+git commit -m "fix convergence calculation overflow"
 
 # Not
-git commit -m "Revolutionize AI Communication"
+git commit -m "Revolutionary AI Discovery!!!"
 ```
+
+## What NOT to Build
+
+1. **Intervention systems** - Distraction from research
+2. **Complex frameworks** - Keep it simple
+3. **"AI consciousness" features** - Stay grounded
+4. **Competing protocols** - We observe, not engineer
+
+## Debugging Tips
+
+### Database Issues
+```python
+# Check schema
+sqlite3 experiments.db ".schema turns"
+
+# Query metrics
+sqlite3 experiments.db "SELECT * FROM turns WHERE convergence > 0.8"
+```
+
+### Provider Issues
+- Check API keys are set
+- Watch for rate limits in events
+- Use `--verbose` to see all events
+
+### Display Issues
+- Terminal needs Unicode support
+- Minimum 120×40 for dashboard
+- Use `--quiet` for minimal output
 
 ## Remember
 
-1. We built a tool that works
-2. We saw interesting patterns
-3. We haven't proven anything
-4. Statistical validation is the next step
-
-The interesting part isn't what we've built - it's what we might learn from it. But learning requires rigorous experiments we haven't run yet.
-
-Help us find out what's real.
+- We're studying patterns, not building protocols
+- Every claim needs data
+- Simple code is debuggable code
+- Events tell the whole story
