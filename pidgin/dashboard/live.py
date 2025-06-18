@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from collections import defaultdict, deque
-import statistics
 
 from rich.console import Console
 from rich.layout import Layout
@@ -17,11 +16,11 @@ from rich.table import Table
 from rich.text import Text
 from rich.live import Live
 from rich.align import Align
-from rich.columns import Columns
-from rich.progress import Progress, BarColumn, TextColumn
 from rich.box import ROUNDED
+from rich.prompt import Confirm
 
 from .keyboard_handler import KeyboardHandler
+from ..experiments.storage import ExperimentStore
 
 # Nord color scheme
 NORD_COLORS = {
@@ -44,55 +43,19 @@ NORD_COLORS = {
 }
 
 
-class MetricHistory:
-    """Track metric history for sparklines."""
-    
-    def __init__(self, max_points: int = 20):
-        self.max_points = max_points
-        self.values: deque = deque(maxlen=max_points)
-    
-    def add(self, value: float):
-        """Add a value to the history."""
-        self.values.append(value)
-    
-    def sparkline(self) -> str:
-        """Generate a sparkline from the values."""
-        if not self.values:
-            return ""
-        
-        chars = " ▁▂▃▄▅▆▇█"
-        min_val = min(self.values)
-        max_val = max(self.values)
-        
-        if max_val == min_val:
-            return "▄" * len(self.values)
-        
-        sparkline = ""
-        for v in self.values:
-            index = int((v - min_val) / (max_val - min_val) * (len(chars) - 1))
-            sparkline += chars[index]
-        
-        return sparkline
 
 
 class ExperimentDashboard:
     """Real-time dashboard for monitoring Pidgin experiments."""
     
-    def __init__(self, db_path: Path, refresh_rate: float = 0.25, experiment_name: Optional[str] = None):
+    def __init__(self, db_path: Path, refresh_rate: float = 2.0, experiment_name: Optional[str] = None):
         self.db_path = db_path
         self.refresh_rate = refresh_rate
         self.experiment_name = experiment_name
         self.console = Console()
         
-        # Metric histories for sparklines
-        self.metric_histories: Dict[str, MetricHistory] = defaultdict(lambda: MetricHistory())
-        
-        # Pattern detection
-        self.detected_patterns: List[Dict[str, Any]] = []
-        self.pattern_buffer: deque = deque(maxlen=100)
-        
-        # Live feed
-        self.event_feed: deque = deque(maxlen=50)
+        # Metric histories for sparklines (keep last 10 values)
+        self.metric_histories: Dict[str, deque] = defaultdict(lambda: deque(maxlen=10))
         
         # Statistics
         self.start_time = time.time()
@@ -100,15 +63,16 @@ class ExperimentDashboard:
         self.total_conversations = 0
         
         # Control states
-        self.paused = False
         self.should_exit = False
-        self.force_refresh = False
         self.detached = False  # For detach functionality
         
         # Loading state
         self.conversations_started = False
         self.loading_check_interval = 2.0  # seconds
         self.last_loading_check = 0
+        
+        # Initialize storage
+        self.storage = ExperimentStore(db_path)
         
     def connect_db(self) -> sqlite3.Connection:
         """Connect to the experiments database."""
@@ -162,7 +126,7 @@ class ExperimentDashboard:
             }
     
     def get_active_conversations(self, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
-        """Get currently active conversations."""
+        """Get currently active conversations with latest metrics."""
         cursor = conn.cursor()
         
         try:
@@ -173,12 +137,21 @@ class ExperimentDashboard:
                         c.conversation_id, c.experiment_id, c.agent_a_model, c.agent_b_model, 
                         c.total_turns, c.started_at, c.completed_at, c.status,
                         e.name as experiment_name,
-                        MAX(t.convergence_score) as latest_convergence
+                        tm.vocabulary_overlap,
+                        tm.convergence_score as latest_convergence,
+                        (mm_a.word_count + mm_b.word_count) / 2.0 as avg_message_length
                     FROM conversations c
                     JOIN experiments e ON c.experiment_id = e.experiment_id
-                    LEFT JOIN turns t ON c.conversation_id = t.conversation_id
+                    LEFT JOIN turn_metrics tm ON c.conversation_id = tm.conversation_id
+                        AND tm.turn_number = (
+                            SELECT MAX(turn_number) FROM turn_metrics 
+                            WHERE conversation_id = c.conversation_id
+                        )
+                    LEFT JOIN message_metrics mm_a ON c.conversation_id = mm_a.conversation_id 
+                        AND mm_a.turn_number = tm.turn_number AND mm_a.speaker = 'agent_a'
+                    LEFT JOIN message_metrics mm_b ON c.conversation_id = mm_b.conversation_id 
+                        AND mm_b.turn_number = tm.turn_number AND mm_b.speaker = 'agent_b'
                     WHERE e.name = ? AND c.status IN ('running', 'created')
-                    GROUP BY c.conversation_id
                     ORDER BY c.started_at DESC
                     LIMIT 10
                 """, (self.experiment_name,))
@@ -188,12 +161,21 @@ class ExperimentDashboard:
                         c.conversation_id, c.experiment_id, c.agent_a_model, c.agent_b_model, 
                         c.total_turns, c.started_at, c.completed_at, c.status,
                         e.name as experiment_name,
-                        MAX(t.convergence_score) as latest_convergence
+                        tm.vocabulary_overlap,
+                        tm.convergence_score as latest_convergence,
+                        (mm_a.word_count + mm_b.word_count) / 2.0 as avg_message_length
                     FROM conversations c
                     JOIN experiments e ON c.experiment_id = e.experiment_id
-                    LEFT JOIN turns t ON c.conversation_id = t.conversation_id
+                    LEFT JOIN turn_metrics tm ON c.conversation_id = tm.conversation_id
+                        AND tm.turn_number = (
+                            SELECT MAX(turn_number) FROM turn_metrics 
+                            WHERE conversation_id = c.conversation_id
+                        )
+                    LEFT JOIN message_metrics mm_a ON c.conversation_id = mm_a.conversation_id 
+                        AND mm_a.turn_number = tm.turn_number AND mm_a.speaker = 'agent_a'
+                    LEFT JOIN message_metrics mm_b ON c.conversation_id = mm_b.conversation_id 
+                        AND mm_b.turn_number = tm.turn_number AND mm_b.speaker = 'agent_b'
                     WHERE c.status IN ('running', 'created')
-                    GROUP BY c.conversation_id
                     ORDER BY c.started_at DESC
                     LIMIT 10
                 """)
@@ -201,19 +183,43 @@ class ExperimentDashboard:
         except sqlite3.OperationalError:
             return []
     
-    def get_metrics(self, conn: sqlite3.Connection) -> Dict[str, float]:
-        """Calculate real-time metrics."""
+    def get_sparkline_metrics(self, conn: sqlite3.Connection, conversation_id: str) -> List[Dict[str, float]]:
+        """Get last 10 turns of metrics for sparklines."""
         cursor = conn.cursor()
         
-        metrics = {}
+        try:
+            cursor.execute("""
+                SELECT 
+                    tm.turn_number,
+                    tm.vocabulary_overlap,
+                    tm.convergence_score,
+                    tm.mimicry_score,
+                    AVG(mm.type_token_ratio) as avg_ttr,
+                    AVG(mm.word_count) as avg_message_length
+                FROM turn_metrics tm
+                LEFT JOIN message_metrics mm ON tm.conversation_id = mm.conversation_id 
+                    AND tm.turn_number = mm.turn_number
+                WHERE tm.conversation_id = ?
+                GROUP BY tm.turn_number
+                ORDER BY tm.turn_number DESC
+                LIMIT 10
+            """, (conversation_id,))
+            
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.OperationalError:
+            return []
+    
+    def get_experiment_statistics(self, conn: sqlite3.Connection) -> Dict[str, Any]:
+        """Get experiment statistics for display."""
+        cursor = conn.cursor()
+        stats = {}
         
         try:
-            # Build base query with experiment filter if needed
             experiment_filter = ""
             params = []
             if self.experiment_name:
                 experiment_filter = """
-                    AND conversation_id IN (
+                    AND tm.conversation_id IN (
                         SELECT c.conversation_id FROM conversations c
                         JOIN experiments e ON c.experiment_id = e.experiment_id
                         WHERE e.name = ?
@@ -221,245 +227,110 @@ class ExperimentDashboard:
                 """
                 params.append(self.experiment_name)
             
-            # Convergence metrics
-            query = f"""
-                SELECT AVG(convergence_score) as avg_convergence
-                FROM turns
-                WHERE timestamp > datetime('now', '-1 minute')
-                {experiment_filter}
-            """
-            cursor.execute(query, params)
-            result = cursor.fetchone()
-            metrics["convergence"] = result["avg_convergence"] if result and result["avg_convergence"] else 0.0
-        
-            # Response times
+            # Vocabulary overlap distribution at turn 50
             query = f"""
                 SELECT 
-                    AVG(response_time_ms) as avg_response_time,
-                    MIN(response_time_ms) as min_response_time,
-                    MAX(response_time_ms) as max_response_time
-                FROM turns
-                WHERE timestamp > datetime('now', '-1 minute')
-                {experiment_filter}
+                    COUNT(*) as count,
+                    CASE 
+                        WHEN vocabulary_overlap < 0.2 THEN '0-20'
+                        WHEN vocabulary_overlap < 0.4 THEN '20-40'
+                        WHEN vocabulary_overlap < 0.6 THEN '40-60'
+                        WHEN vocabulary_overlap < 0.8 THEN '60-80'
+                        ELSE '80-100'
+                    END as range
+                FROM turn_metrics tm
+                WHERE tm.turn_number = 50 {experiment_filter}
+                GROUP BY range
             """
             cursor.execute(query, params)
-            result = cursor.fetchone()
-            if result:
-                metrics["avg_response_time"] = result["avg_response_time"] or 0
-                metrics["min_response_time"] = result["min_response_time"] or 0
-                metrics["max_response_time"] = result["max_response_time"] or 0
-        
-            # Token counts (using word count as proxy)
-            query = f"""
-                SELECT 
-                    AVG(word_count) as avg_tokens,
-                    SUM(word_count) as total_tokens
-                FROM turns
-                WHERE timestamp > datetime('now', '-1 minute')
-                {experiment_filter}
-            """
-            cursor.execute(query, params)
-            result = cursor.fetchone()
-            if result:
-                metrics["avg_tokens"] = result["avg_tokens"] or 0
-                metrics["total_tokens"] = result["total_tokens"] or 0
+            overlap_dist = {}
+            for row in cursor.fetchall():
+                overlap_dist[row['range']] = row['count']
+            stats['vocabulary_overlap_distribution'] = overlap_dist
             
-            # Turn rate
+            # Message length distribution
             query = f"""
-                SELECT COUNT(*) as turns_per_minute
-                FROM turns
-                WHERE timestamp > datetime('now', '-1 minute')
-                {experiment_filter}
+                SELECT 
+                    COUNT(*) as count,
+                    CASE 
+                        WHEN word_count < 50 THEN '<50'
+                        WHEN word_count < 100 THEN '50-100'
+                        WHEN word_count < 150 THEN '100-150'
+                        ELSE '>150'
+                    END as range
+                FROM message_metrics mm
+                WHERE mm.conversation_id IN (
+                    SELECT DISTINCT conversation_id FROM turn_metrics tm
+                    WHERE 1=1 {experiment_filter}
+                )
+                GROUP BY range
             """
             cursor.execute(query, params)
-            result = cursor.fetchone()
-            metrics["turns_per_minute"] = result["turns_per_minute"] if result else 0
+            length_dist = {}
+            for row in cursor.fetchall():
+                length_dist[row['range']] = row['count']
+            stats['message_length_distribution'] = length_dist
+            
+            # Word frequency evolution
+            early_params = params + [10] if params else [10]
+            late_params = params + [40] if params else [40]
+            
+            # Early turns word frequency
+            query = f"""
+                SELECT word, SUM(frequency) as total_freq
+                FROM word_frequencies wf
+                WHERE wf.turn_number <= ? {experiment_filter.replace('tm.', 'wf.')}
+                GROUP BY word
+                ORDER BY total_freq DESC
+                LIMIT 20
+            """
+            cursor.execute(query, early_params)
+            early_words = [(row['word'], row['total_freq']) for row in cursor.fetchall()]
+            
+            # Late turns word frequency
+            query = f"""
+                SELECT word, SUM(frequency) as total_freq
+                FROM word_frequencies wf
+                WHERE wf.turn_number >= ? {experiment_filter.replace('tm.', 'wf.')}
+                GROUP BY word
+                ORDER BY total_freq DESC
+                LIMIT 20
+            """
+            cursor.execute(query, late_params)
+            late_words = [(row['word'], row['total_freq']) for row in cursor.fetchall()]
+            
+            stats['word_frequency_evolution'] = {
+                'early_words': [w[0] for w in early_words[:10]],
+                'late_words': [w[0] for w in late_words[:10]]
+            }
             
         except sqlite3.OperationalError:
-            # Return default metrics if tables don't exist yet
-            metrics = {
-                "convergence": 0.0,
-                "avg_response_time": 0,
-                "min_response_time": 0,
-                "max_response_time": 0,
-                "avg_tokens": 0,
-                "total_tokens": 0,
-                "turns_per_minute": 0
+            # Return empty stats if tables don't exist
+            stats = {
+                'vocabulary_overlap_distribution': {},
+                'message_length_distribution': {},
+                'word_frequency_evolution': {'early_words': [], 'late_words': []}
             }
         
-        return metrics
+        return stats
     
-    def detect_patterns(self, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
-        """Detect interesting patterns in conversations."""
-        patterns = []
+    def get_last_message(self, conn: sqlite3.Connection, conversation_id: str) -> Optional[str]:
+        """Get the last message from a conversation."""
         cursor = conn.cursor()
         
-        # High convergence detection
-        cursor.execute("""
-            SELECT 
-                c.conversation_id, c.agent_a_model, c.agent_b_model, 
-                MAX(t.convergence_score) as max_convergence,
-                AVG(t.convergence_score) as avg_convergence,
-                COUNT(t.turn_number) as turn_count
-            FROM conversations c
-            JOIN turns t ON c.conversation_id = t.conversation_id
-            WHERE t.timestamp > datetime('now', '-5 minutes')
-            GROUP BY c.conversation_id
-            HAVING max_convergence > 0.8
-        """)
-        for row in cursor.fetchall():
-            patterns.append({
-                "type": "high_convergence",
-                "severity": "warning" if row["max_convergence"] > 0.9 else "info",
-                "message": f"High convergence ({row['max_convergence']:.2f}) between {row['agent_a_model']} and {row['agent_b_model']}",
-                "data": dict(row)
-            })
-        
-        # Rapid turn exchanges
-        cursor.execute("""
-            SELECT 
-                conversation_id,
-                COUNT(*) as turn_count,
-                AVG(response_time_ms) as avg_response
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-            GROUP BY conversation_id
-            HAVING turn_count > 20
-        """)
-        for row in cursor.fetchall():
-            patterns.append({
-                "type": "rapid_exchange",
-                "severity": "info",
-                "message": f"Rapid turn exchange: {row['turn_count']} turns/min, {row['avg_response']:.0f}ms avg",
-                "data": dict(row)
-            })
-        
-        # Token explosion (using word count)
-        cursor.execute("""
-            SELECT 
-                conversation_id,
-                MAX(word_count) as max_words,
-                AVG(word_count) as avg_words
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-            GROUP BY conversation_id
-            HAVING max_words > 500
-        """)
-        for row in cursor.fetchall():
-            patterns.append({
-                "type": "token_explosion",
-                "severity": "warning",
-                "message": f"High word count: {row['max_words']} words in single turn",
-                "data": dict(row)
-            })
-        
-        # Emoji density pattern
-        cursor.execute("""
-            SELECT 
-                conversation_id,
-                AVG(emoji_density) as avg_emoji_density,
-                MAX(emoji_density) as max_emoji_density
-            FROM turns
-            WHERE timestamp > datetime('now', '-5 minutes')
-            GROUP BY conversation_id
-            HAVING avg_emoji_density > 0.1
-        """)
-        for row in cursor.fetchall():
-            patterns.append({
-                "type": "high_emoji_usage",
-                "severity": "info",
-                "message": f"High emoji density: {row['avg_emoji_density']:.2f} emojis/word average",
-                "data": dict(row)
-            })
-        
-        return patterns
-    
-    def get_recent_events(self, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
-        """Get recent events from the database."""
-        cursor = conn.cursor()
-        
-        events = []
-        
-        # Get recent turns as events
-        cursor.execute("""
-            SELECT 
-                t.conversation_id,
-                t.turn_number,
-                t.speaker,
-                t.word_count,
-                t.timestamp,
-                c.agent_a_model,
-                c.agent_b_model
-            FROM turns t
-            JOIN conversations c ON t.conversation_id = c.conversation_id
-            ORDER BY t.timestamp DESC
-            LIMIT 20
-        """)
-        
-        for row in cursor.fetchall():
-            events.append({
-                "type": "turn_complete",
-                "data": {
-                    "conversation_id": row["conversation_id"],
-                    "speaker": row["speaker"],
-                    "token_count": row["word_count"],
-                    "model_a": row["agent_a_model"],
-                    "model_b": row["agent_b_model"]
-                },
-                "timestamp": row["timestamp"]
-            })
-        
-        # Get recent conversation starts
-        cursor.execute("""
-            SELECT 
-                conversation_id,
-                agent_a_model,
-                agent_b_model,
-                started_at
-            FROM conversations
-            WHERE started_at > datetime('now', '-10 minutes')
-            ORDER BY started_at DESC
-            LIMIT 5
-        """)
-        
-        for row in cursor.fetchall():
-            events.append({
-                "type": "conversation_start",
-                "data": {
-                    "conversation_id": row["conversation_id"],
-                    "model_a": row["agent_a_model"],
-                    "model_b": row["agent_b_model"]
-                },
-                "timestamp": row["started_at"]
-            })
-        
-        # Get recent conversation ends
-        cursor.execute("""
-            SELECT 
-                conversation_id,
-                total_turns,
-                completed_at
-            FROM conversations
-            WHERE completed_at > datetime('now', '-10 minutes')
-                AND completed_at IS NOT NULL
-            ORDER BY completed_at DESC
-            LIMIT 5
-        """)
-        
-        for row in cursor.fetchall():
-            events.append({
-                "type": "conversation_end",
-                "data": {
-                    "conversation_id": row["conversation_id"],
-                    "turn_count": row["total_turns"]
-                },
-                "timestamp": row["completed_at"]
-            })
-        
-        # Sort all events by timestamp
-        events.sort(key=lambda x: x["timestamp"], reverse=True)
-        
-        return events[:20]  # Return top 20 most recent
+        try:
+            cursor.execute("""
+                SELECT mm.message
+                FROM message_metrics mm
+                WHERE mm.conversation_id = ?
+                ORDER BY mm.turn_number DESC, mm.message_index DESC
+                LIMIT 1
+            """, (conversation_id,))
+            
+            result = cursor.fetchone()
+            return result['message'] if result else None
+        except sqlite3.OperationalError:
+            return None
     
     def create_status_panel(self, status: Dict[str, Any]) -> Panel:
         """Create the status panel."""
@@ -487,41 +358,47 @@ class ExperimentDashboard:
     def create_conversations_panel(self, conversations: List[Dict[str, Any]]) -> Panel:
         """Create the active conversations panel."""
         table = Table(show_header=True, box=None)
-        table.add_column("ID", style=NORD_COLORS['nord3'], width=12)
-        table.add_column("Models", style=NORD_COLORS['nord4'])
-        table.add_column("Turns", style=NORD_COLORS['nord13'], width=8)
-        table.add_column("Status", style=NORD_COLORS['nord8'], width=10)
+        table.add_column("ID", style=NORD_COLORS['nord3'], width=6)
+        table.add_column("Model Pair", style=NORD_COLORS['nord4'], width=20)
+        table.add_column("Turn", style=NORD_COLORS['nord13'], width=6)
+        table.add_column("Vocab Overlap%", style=NORD_COLORS['nord8'], width=14)
+        table.add_column("Avg Message Length", style=NORD_COLORS['nord8'], width=18)
+        table.add_column("Last Message", style=NORD_COLORS['nord4'])
         
         if not conversations:
             # No active conversations yet
             table.add_row(
-                "-",
-                "Waiting for conversations to start...",
-                "-",
-                "-"
+                "-", "Waiting for conversations to start...", "-", "-", "-", "-"
             )
         else:
-            for conv in conversations[:8]:
-                # Extract conversation ID suffix
-                conv_id = conv["conversation_id"].split('_')[-1] if conv["conversation_id"] else "N/A"
-                
-                # Format models
-                models = f"{conv['agent_a_model']} ↔ {conv['agent_b_model']}"
-                
-                # Format turns
-                turns = str(conv.get("total_turns", 0))
-                
-                # Format status
-                status = conv.get("status", "unknown")
-                if status == "running":
-                    if conv.get("latest_convergence", 0) > 0.8:
-                        status = f"🔴 {conv['latest_convergence']:.2f}"
+            with self.connect_db() as conn:
+                for conv in conversations[:8]:
+                    # Extract conversation ID suffix
+                    conv_id = conv["conversation_id"].split('_')[-1][:6] if conv["conversation_id"] else "N/A"
+                    
+                    # Format models
+                    models = f"{conv['agent_a_model']} ↔ {conv['agent_b_model']}"
+                    
+                    # Format turns
+                    turns = str(conv.get("total_turns", 0))
+                    
+                    # Format vocabulary overlap
+                    vocab_overlap = conv.get("vocabulary_overlap", 0)
+                    vocab_str = f"{int(vocab_overlap * 100)}%" if vocab_overlap else "-"
+                    
+                    # Format average message length
+                    avg_len = conv.get("avg_message_length", 0)
+                    len_str = f"{int(avg_len)} chars" if avg_len else "-"
+                    
+                    # Get last message
+                    last_msg = self.get_last_message(conn, conv["conversation_id"])
+                    if last_msg:
+                        # Truncate to 50 chars
+                        last_msg = last_msg[:50] + "..." if len(last_msg) > 50 else last_msg
                     else:
-                        status = "● running"
-                elif status == "created":
-                    status = "○ starting"
-                
-                table.add_row(conv_id, models, turns, status)
+                        last_msg = "[dim]waiting...[/dim]"
+                    
+                    table.add_row(conv_id, models, turns, vocab_str, len_str, last_msg)
         
         return Panel(
             table,
@@ -530,167 +407,250 @@ class ExperimentDashboard:
             box=ROUNDED
         )
     
-    def create_metrics_panel(self, metrics: Dict[str, float]) -> Panel:
+    def create_metrics_panel(self, conversations: List[Dict[str, Any]]) -> Panel:
         """Create the metrics panel with sparklines."""
-        grid = Table(show_header=True, box=None)
-        grid.add_column("Metric", style=NORD_COLORS['nord3'], width=20)
-        grid.add_column("Value", style=NORD_COLORS['nord4'], width=15)
-        grid.add_column("Trend", style=NORD_COLORS['nord8'], width=20)
-        
-        # Update histories
-        for key, value in metrics.items():
-            self.metric_histories[key].add(value)
-        
-        # Convergence
-        conv = metrics.get("convergence", 0)
-        conv_color = NORD_COLORS["nord14"] if conv < 0.7 else NORD_COLORS["nord13"] if conv < 0.85 else NORD_COLORS["nord11"]
-        grid.add_row(
-            "◆ Convergence",
-            f"[{conv_color}]{conv:.3f}[/{conv_color}]",
-            self.metric_histories["convergence"].sparkline()
-        )
-        
-        # Response time
-        avg_resp = metrics.get("avg_response_time", 0)
-        resp_color = NORD_COLORS["nord14"] if avg_resp < 1000 else NORD_COLORS["nord13"] if avg_resp < 2000 else NORD_COLORS["nord11"]
-        grid.add_row(
-            "⟐ Avg Response",
-            f"[{resp_color}]{avg_resp:.0f}ms[/{resp_color}]",
-            self.metric_histories["avg_response_time"].sparkline()
-        )
-        
-        # Tokens
-        avg_tokens = metrics.get("avg_tokens", 0)
-        grid.add_row(
-            "◈ Avg Tokens",
-            f"{avg_tokens:.0f}",
-            self.metric_histories["avg_tokens"].sparkline()
-        )
-        
-        # Turn rate
-        turn_rate = metrics.get("turns_per_minute", 0)
-        grid.add_row(
-            "↔ Turns/min",
-            f"{turn_rate}",
-            self.metric_histories["turns_per_minute"].sparkline()
-        )
-        
+        if not conversations:
+            return Panel("No active conversations", title="[bold]○ Metrics", border_style=NORD_COLORS["nord7"])
+            
+        # Get sparkline data for first active conversation
+        with self.connect_db() as conn:
+            # Get aggregated metrics across all conversations
+            lines = []
+            
+            for conv in conversations[:1]:  # Focus on first conversation for sparklines
+                sparkline_data = self.get_sparkline_metrics(conn, conv['conversation_id'])
+                if not sparkline_data:
+                    continue
+                    
+                # Build sparklines for each metric
+                metrics_config = [
+                    ('vocabulary_overlap', 'Vocabulary Overlap', '%'),
+                    ('convergence_score', 'Convergence Score', ''),
+                    ('avg_ttr', 'Type-Token Ratio', ''),
+                    ('avg_message_length', 'Avg Message Length', ' chars')
+                ]
+                
+                for metric_key, label, suffix in metrics_config:
+                    values = [d.get(metric_key, 0) for d in sparkline_data if d.get(metric_key) is not None]
+                    if values:
+                        # Store in history
+                        self.metric_histories[metric_key].extend(values)
+                        # Keep only last 10
+                        while len(self.metric_histories[metric_key]) > 10:
+                            self.metric_histories[metric_key].popleft()
+                        
+                        # Create sparkline
+                        sparkline = self._create_sparkline(list(self.metric_histories[metric_key]))
+                        current_val = values[0]  # Most recent
+                        
+                        if metric_key == 'vocabulary_overlap':
+                            display_val = f"{int(current_val * 100)}{suffix}"
+                        elif metric_key == 'convergence_score':
+                            display_val = f"{current_val:.2f}"
+                        elif metric_key == 'avg_ttr':
+                            display_val = f"{current_val:.2f}"
+                        else:
+                            display_val = f"{int(current_val)}{suffix}"
+                            
+                        lines.append(f"{label:.<25} {sparkline} {display_val:>10}")
+                
+                break  # Only show sparklines for one conversation
+            
+            if not lines:
+                lines = ["Waiting for metrics data..."]
+                
+            content = "\n".join(lines)
+            
         return Panel(
-            grid,
-            title="[bold]○ Real-time Metrics",
+            content,
+            title="[bold]○ Metrics (Last 10 Turns)",
             border_style=NORD_COLORS["nord7"],
             box=ROUNDED
         )
     
-    def create_insights_panel(self, patterns: List[Dict[str, Any]]) -> Panel:
-        """Create the insights panel showing detected patterns."""
-        content = Table(show_header=False, box=None)
-        content.add_column("Icon", width=2)
-        content.add_column("Pattern", style=NORD_COLORS['nord4'])
+    def _create_sparkline(self, values: List[float]) -> str:
+        """Create a sparkline from values."""
+        if not values:
+            return " " * 10
+            
+        chars = " ▁▂▃▄▅▆▇█"
+        min_val = min(values)
+        max_val = max(values)
         
-        if not patterns:
-            content.add_row("◇", "[dim]No patterns detected[/dim]")
+        if max_val == min_val:
+            return "▄" * 10
+            
+        sparkline = ""
+        for v in values[-10:]:  # Last 10 values
+            index = int((v - min_val) / (max_val - min_val) * (len(chars) - 1))
+            sparkline += chars[index]
+            
+        # Pad if needed
+        if len(sparkline) < 10:
+            sparkline = " " * (10 - len(sparkline)) + sparkline
+            
+        return sparkline
+    
+    def _format_duration(self, td: timedelta) -> str:
+        """Format timedelta as human-readable string."""
+        total_seconds = int(td.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
         else:
-            for pattern in patterns[-10:]:  # Show last 10
-                icon = "▲" if pattern["severity"] == "warning" else "◆"
-                color = NORD_COLORS["nord11"] if pattern["severity"] == "warning" else NORD_COLORS["nord8"]
-                content.add_row(
-                    f"[{color}]{icon}[/{color}]",
-                    pattern["message"]
-                )
+            return f"{minutes}m"
+    
+    def create_statistics_panel(self, stats: Dict[str, Any]) -> Panel:
+        """Create the statistics panel."""
+        lines = []
+        
+        # Vocabulary overlap distribution
+        lines.append("Vocabulary Overlap Distribution at Turn 50:")
+        overlap_dist = stats.get('vocabulary_overlap_distribution', {})
+        for range_key in ['0-20', '20-40', '40-60', '60-80', '80-100']:
+            count = overlap_dist.get(range_key, 0)
+            bar_width = 15
+            if overlap_dist:
+                max_count = max(overlap_dist.values()) if overlap_dist.values() else 1
+                bar_len = int((count / max_count) * bar_width) if max_count > 0 else 0
+            else:
+                bar_len = 0
+            bar = "█" * bar_len + "░" * (bar_width - bar_len)
+            lines.append(f"  {range_key:>6}%: {bar} {count:>3}")
+        
+        lines.append("")
+        
+        # Message length distribution
+        lines.append("Message Length Distribution:")
+        length_dist = stats.get('message_length_distribution', {})
+        for range_key, label in [('<50', '<50'), ('50-100', '50-100'), ('100-150', '100-150'), ('>150', '>150')]:
+            count = length_dist.get(range_key, 0)
+            bar_width = 15
+            if length_dist:
+                max_count = max(length_dist.values()) if length_dist.values() else 1
+                bar_len = int((count / max_count) * bar_width) if max_count > 0 else 0
+            else:
+                bar_len = 0
+            bar = "▓" * bar_len + "░" * (bar_width - bar_len)
+            lines.append(f"  {label:>7}: {bar} {count:>3}")
+        
+        lines.append("")
+        
+        # Word frequency evolution
+        word_evolution = stats.get('word_frequency_evolution', {})
+        early_words = word_evolution.get('early_words', [])
+        late_words = word_evolution.get('late_words', [])
+        
+        if early_words or late_words:
+            lines.append("Word Frequency Evolution:")
+            if early_words:
+                lines.append(f"  Early (turns 1-10): {', '.join(early_words[:5])}")
+            if late_words:
+                lines.append(f"  Late (turns 40+): {', '.join(late_words[:5])}")
+        
+        if not lines or all(not line.strip() for line in lines):
+            lines = ["Collecting statistics..."]
         
         return Panel(
-            content,
-            title="[bold]● Pattern Insights",
-            border_style=NORD_COLORS["nord15"],
+            "\n".join(lines),
+            title="[bold]◆ Statistics",
+            border_style=NORD_COLORS["nord14"],
             box=ROUNDED
         )
     
-    def create_feed_panel(self, events: List[Dict[str, Any]]) -> Panel:
-        """Create the live event feed panel."""
-        content = Table(show_header=False, box=None)
-        content.add_column("Time", style=NORD_COLORS['nord3'], width=8)
-        content.add_column("Event", style=NORD_COLORS['nord4'])
-        
-        for event in events[:15]:  # Show last 15
-            timestamp = datetime.fromisoformat(event["timestamp"])
-            time_str = timestamp.strftime("%H:%M:%S")
-            
-            # Format event based on type
-            if event["type"] == "turn_complete":
-                speaker = event["data"].get("speaker", "Unknown")
-                tokens = event["data"].get("token_count", 0)
-                event_str = f"→ {speaker}: {tokens} tokens"
-            elif event["type"] == "conversation_start":
-                models = f"{event['data'].get('model_a', '?')} ↔ {event['data'].get('model_b', '?')}"
-                event_str = f"▶ Started: {models}"
-            elif event["type"] == "conversation_end":
-                event_str = f"■ Ended after {event['data'].get('turn_count', 0)} turns"
-            else:
-                event_str = f"◇ {event['type']}"
-            
-            content.add_row(time_str, event_str)
-        
-        return Panel(
-            content,
-            title="[bold]▶ Live Feed",
-            border_style=NORD_COLORS["nord12"],
-            box=ROUNDED
-        )
     
     def create_layout(self) -> Layout:
         """Create the dashboard layout."""
         layout = Layout()
         
-        # Create the main structure
-        layout.split_column(
-            Layout(name="header", size=3),
-            Layout(name="body"),
-            Layout(name="footer", size=3)
-        )
+        # Determine terminal width
+        width = self.console.width
         
-        # Split body into panels
-        layout["body"].split_row(
-            Layout(name="left", ratio=1),
-            Layout(name="center", ratio=2),
-            Layout(name="right", ratio=1)
-        )
-        
-        # Left column
-        layout["left"].split_column(
-            Layout(name="status", size=8),
-            Layout(name="insights")
-        )
-        
-        # Center column
-        layout["center"].split_column(
-            Layout(name="conversations", ratio=1),
-            Layout(name="metrics", ratio=1)
-        )
-        
-        # Right column stays as feed
+        if width >= 140:
+            # Wide layout with metrics panel
+            layout.split_column(
+                Layout(name="header", size=4),
+                Layout(name="body"),
+                Layout(name="footer", size=1)
+            )
+            
+            # Split body into main and metrics
+            layout["body"].split_row(
+                Layout(name="main", ratio=3),
+                Layout(name="metrics", ratio=1)
+            )
+            
+            # Main has conversations and statistics
+            layout["body"]["main"].split_column(
+                Layout(name="conversations", ratio=1),
+                Layout(name="statistics", ratio=1)
+            )
+        else:
+            # Narrow layout - stack vertically
+            layout.split_column(
+                Layout(name="header", size=4),
+                Layout(name="conversations", size=12),
+                Layout(name="statistics", size=15),
+                Layout(name="footer", size=1)
+            )
         
         return layout
     
-    def create_header(self) -> Panel:
-        """Create the header panel."""
-        if self.experiment_name:
-            title = Text(f"◆ EXPERIMENT: {self.experiment_name} (Running - Attached)", style="bold", justify="center")
+    def create_header(self, status: Dict[str, Any]) -> Panel:
+        """Create the header panel with progress bar."""
+        if not status.get("experiments"):
+            return Panel("No experiment found", border_style=NORD_COLORS["nord11"])
+            
+        exp = status["experiments"][0]
+        
+        # Calculate progress
+        total = exp.get('total_conversations', 0)
+        completed = exp.get('completed_conversations', 0)
+        failed = exp.get('failed_conversations', 0)
+        active = len(self.get_active_conversations(self.connect_db()))
+        queued = max(0, total - completed - failed - active)
+        
+        progress = completed / total if total > 0 else 0
+        
+        # Calculate timing
+        if exp.get('started_at'):
+            started = datetime.fromisoformat(exp['started_at'])
+            runtime = datetime.now() - started
+            runtime_str = self._format_duration(runtime)
+            
+            if completed > 0:
+                avg_time = runtime / completed
+                eta = avg_time * (total - completed)
+                eta_str = self._format_duration(eta)
+            else:
+                eta_str = "calculating..."
         else:
-            title = Text("◆ Pidgin Live Dashboard", style="bold", justify="center")
-        subtitle = Text("Real-time AI Conversation Monitoring", style=NORD_COLORS['nord3'], justify="center")
+            runtime_str = "0m"
+            eta_str = "unknown"
+        
+        # Build progress bar
+        bar_width = 20
+        filled = int(bar_width * progress)
+        bar = "▰" * filled + "▱" * (bar_width - filled)
+        
+        # Build header text
+        lines = [
+            f"Experiment: {exp['name']}                     Started: {runtime_str} ago",
+            f"{bar} {completed}/{total} ({progress*100:.1f}%) | Runtime: {runtime_str} | ETA: {eta_str}",
+            f"◉ Active: {active}   ◎ Complete: {completed}   ⊗ Failed: {failed}   ◇ Queue: {queued}"
+        ]
         
         return Panel(
-            Align.center(title + "\n" + subtitle),
+            "\n".join(lines),
             border_style=NORD_COLORS["nord10"],
             box=ROUNDED
         )
     
     def create_footer(self) -> Panel:
         """Create the footer panel."""
-        shortcuts = "◆ [q]uit  ◇ [e]xport  ○ [r]efresh  ● [p]ause  ◆ [D]etach"
-        if self.paused:
-            shortcuts += f"  [{NORD_COLORS['nord13']}]⏸ PAUSED[/{NORD_COLORS['nord13']}]"
+        shortcuts = "[D]etach the screen            [S]top the experiment"
         return Panel(
             Text(shortcuts, justify="center", style=NORD_COLORS['nord3']),
             border_style=NORD_COLORS["nord2"],
@@ -703,8 +663,8 @@ class ExperimentDashboard:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT COUNT(*) 
-                FROM turns t
-                JOIN conversations c ON t.conversation_id = c.conversation_id
+                FROM turn_metrics tm
+                JOIN conversations c ON tm.conversation_id = c.conversation_id
                 JOIN experiments e ON c.experiment_id = e.experiment_id
                 WHERE e.name = ?
             """, (self.experiment_name,))
@@ -750,11 +710,6 @@ class ExperimentDashboard:
     
     async def update_dashboard(self, layout: Layout):
         """Update all dashboard components."""
-        if self.paused and not self.force_refresh:
-            # Just update the footer to show paused state
-            layout["footer"].update(self.create_footer())
-            return
-            
         # Check if conversations have started
         current_time = time.time()
         if not self.conversations_started and current_time - self.last_loading_check > self.loading_check_interval:
@@ -767,8 +722,10 @@ class ExperimentDashboard:
                 
         # Show loading screen if conversations haven't started
         if not self.conversations_started and time.time() - self.start_time < 30:
-            layout["body"].update(self.create_loading_panel())
-            layout["header"].update(self.create_header())
+            # For layouts with body section
+            if "body" in layout._children:
+                layout["body"].update(self.create_loading_panel())
+            layout["header"].update(self.create_header({"experiments": []}))
             layout["footer"].update(self.create_footer())
             return
             
@@ -777,51 +734,50 @@ class ExperimentDashboard:
                 # Get data
                 status = self.get_experiment_status(conn)
                 conversations = self.get_active_conversations(conn)
-                metrics = self.get_metrics(conn)
-                patterns = self.detect_patterns(conn)
-                events = self.get_recent_events(conn)
-                
-                # Update event counter
-                self.total_events = len(events)
+                stats = self.get_experiment_statistics(conn)
                 
                 # Update panels with individual error handling
                 try:
-                    layout["header"].update(self.create_header())
+                    layout["header"].update(self.create_header(status))
                 except Exception as e:
                     layout["header"].update(Panel(f"Header error: {e}", border_style="red"))
-                
-                try:
-                    layout["status"].update(self.create_status_panel(status))
-                except Exception as e:
-                    layout["status"].update(Panel(f"Status error: {e}", border_style="red"))
                 
                 try:
                     layout["conversations"].update(self.create_conversations_panel(conversations))
                 except Exception as e:
                     layout["conversations"].update(Panel(f"Conversations error: {e}", border_style="red"))
                 
-                try:
-                    layout["metrics"].update(self.create_metrics_panel(metrics))
-                except Exception as e:
-                    layout["metrics"].update(Panel(f"Metrics error: {e}", border_style="red"))
+                # Update metrics panel if wide layout
+                if "metrics" in layout._children or ("body" in layout._children and "metrics" in layout["body"]._children):
+                    try:
+                        metrics_panel = self.create_metrics_panel(conversations)
+                        if "metrics" in layout._children:
+                            layout["metrics"].update(metrics_panel)
+                        else:
+                            layout["body"]["metrics"].update(metrics_panel)
+                    except Exception as e:
+                        if "metrics" in layout._children:
+                            layout["metrics"].update(Panel(f"Metrics error: {e}", border_style="red"))
+                        else:
+                            layout["body"]["metrics"].update(Panel(f"Metrics error: {e}", border_style="red"))
                 
                 try:
-                    layout["insights"].update(self.create_insights_panel(patterns))
+                    stats_panel = self.create_statistics_panel(stats)
+                    if "statistics" in layout._children:
+                        layout["statistics"].update(stats_panel)
+                    elif "body" in layout._children and "main" in layout["body"]._children:
+                        layout["body"]["main"]["statistics"].update(stats_panel)
                 except Exception as e:
-                    layout["insights"].update(Panel(f"Insights error: {e}", border_style="red"))
-                
-                try:
-                    layout["right"].update(self.create_feed_panel(events))
-                except Exception as e:
-                    layout["right"].update(Panel(f"Feed error: {e}", border_style="red"))
+                    error_panel = Panel(f"Statistics error: {e}", border_style="red")
+                    if "statistics" in layout._children:
+                        layout["statistics"].update(error_panel)
+                    elif "body" in layout._children and "main" in layout["body"]._children:
+                        layout["body"]["main"]["statistics"].update(error_panel)
                 
                 try:
                     layout["footer"].update(self.create_footer())
                 except Exception as e:
                     layout["footer"].update(Panel(f"Footer error: {e}", border_style="red"))
-                
-                # Clear force refresh flag
-                self.force_refresh = False
                 
         except sqlite3.OperationalError as e:
             # Database/table might not exist yet
@@ -833,7 +789,11 @@ class ExperimentDashboard:
                 border_style=NORD_COLORS["nord13"],
                 style=NORD_COLORS['nord4']
             )
-            layout["body"].update(Align.center(waiting_panel, vertical="middle"))
+            if "body" in layout._children:
+                layout["body"].update(Align.center(waiting_panel, vertical="middle"))
+            else:
+                # For narrow layout, update conversations panel
+                layout["conversations"].update(waiting_panel)
         except Exception as e:
             # Show error gracefully
             import traceback
@@ -844,84 +804,77 @@ class ExperimentDashboard:
                 title="◆ Dashboard Error",
                 border_style=NORD_COLORS["nord11"]
             )
-            layout["body"].update(error_panel)
+            if "body" in layout._children:
+                layout["body"].update(error_panel)
+            else:
+                layout["conversations"].update(error_panel)
     
-    def export_data(self):
-        """Export dashboard data to file."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        export_path = Path(f"dashboard_export_{timestamp}.json")
-        
-        try:
-            with self.connect_db() as conn:
-                data = {
-                    "timestamp": datetime.now().isoformat(),
-                    "status": self.get_experiment_status(conn),
-                    "conversations": self.get_active_conversations(conn),
-                    "metrics": self.get_metrics(conn),
-                    "patterns": self.detect_patterns(conn),
-                    "events": self.get_recent_events(conn)
-                }
-                
-                with open(export_path, "w") as f:
-                    json.dump(data, f, indent=2)
-                
-                self.console.print(f"[{NORD_COLORS['nord14']}]◆ Data exported to {export_path}[/{NORD_COLORS['nord14']}]")
-        
-        except Exception as e:
-            self.console.print(f"[{NORD_COLORS['nord11']}]◆ Export failed: {e}[/{NORD_COLORS['nord11']}]")
     
-    def handle_quit(self):
-        """Handle quit command."""
-        self.should_exit = True
-        
-    def handle_export(self):
-        """Handle export command."""
-        self.export_data()
-        
-    def handle_pause(self):
-        """Handle pause/unpause command."""
-        self.paused = not self.paused
-        
-    def handle_refresh(self):
-        """Handle force refresh command."""
-        self.force_refresh = True
         
     def handle_detach(self):
         """Handle detach command (like screen's Ctrl+A D)."""
         self.should_exit = True
         self.detached = True
+    
+    async def handle_stop(self):
+        """Handle stop command with confirmation."""
+        # Show confirmation in the console
+        self.console.print("\n[yellow]Stop the experiment? This will terminate all running conversations. (y/N)[/yellow] ", end="")
+        
+        # Wait for user input
+        import sys
+        response = sys.stdin.read(1).lower()
+        
+        if response == 'y':
+            # Get experiment ID from name
+            if self.experiment_name:
+                experiment = self.storage.get_experiment_by_name(self.experiment_name)
+                if experiment:
+                    # Stop the experiment
+                    self.storage.stop_experiment(experiment['experiment_id'])
+                    self.should_exit = True
+                    self.console.print("[red]Experiment stopped.[/red]")
+                else:
+                    self.console.print("[red]Could not find experiment to stop.[/red]")
+            else:
+                self.console.print("[red]No experiment name specified.[/red]")
+        else:
+            self.console.print("[green]Continuing experiment.[/green]")
+            # Force refresh to redraw the dashboard
+            await self.update_dashboard(self.layout)
         
     async def run(self):
         """Run the dashboard."""
-        layout = self.create_layout()
+        self.layout = self.create_layout()
         
         # Initialize with loading message
         loading_panel = Panel(
             f"[{NORD_COLORS['nord8']}]◆ Loading experiment data...[/{NORD_COLORS['nord8']}]",
             border_style=NORD_COLORS["nord10"]
         )
-        layout["body"].update(loading_panel)
+        if "body" in self.layout._children:
+            self.layout["body"].update(loading_panel)
+        else:
+            self.layout["conversations"].update(loading_panel)
         
         # Set up keyboard handler
         keyboard = KeyboardHandler()
-        keyboard.register_handler('q', self.handle_quit)
-        keyboard.register_handler('e', self.handle_export)
-        keyboard.register_handler('p', self.handle_pause)
-        keyboard.register_handler('r', self.handle_refresh)
         keyboard.register_handler('d', self.handle_detach)
         keyboard.register_handler('D', self.handle_detach)
+        keyboard.register_handler('s', lambda: asyncio.create_task(self.handle_stop()))
+        keyboard.register_handler('S', lambda: asyncio.create_task(self.handle_stop()))
         
         with keyboard:
-            with Live(layout, console=self.console, refresh_per_second=4, screen=True) as live:
+            with Live(self.layout, console=self.console, refresh_per_second=0.5, screen=True) as live:
                 try:
                     # Initial update
-                    await self.update_dashboard(layout)
+                    await self.update_dashboard(self.layout)
                     
                     # Start keyboard handler task
                     keyboard_task = asyncio.create_task(keyboard.handle_input())
                     
                     while not self.should_exit:
-                        await self.update_dashboard(layout)
+                        await self.update_dashboard(self.layout)
                         await asyncio.sleep(self.refresh_rate)
                         
                     # Cancel keyboard task
@@ -932,18 +885,12 @@ class ExperimentDashboard:
                         pass
                         
                 except KeyboardInterrupt:
-                    # Treat Ctrl+C as pause, not quit
+                    # Treat Ctrl+C as detach
                     self.should_exit = True
-                    self.detached = False  # Mark as paused, not detached
+                    self.detached = True
                 finally:
                     if self.detached:
-                        # Update dashboard attachment status in database
-                        if self.experiment_name:
-                            from ..experiments import ExperimentStore
-                            store = ExperimentStore()
-                            experiment = store.get_experiment_by_name(self.experiment_name)
-                            if experiment:
-                                store.update_dashboard_attachment(experiment['experiment_id'], False)
+                        self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard detached. Run 'pidgin experiment dashboard' to reattach.[/{NORD_COLORS['nord8']}]")
                     elif not self.detached:
                         self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard stopped[/{NORD_COLORS['nord8']}]")
 
