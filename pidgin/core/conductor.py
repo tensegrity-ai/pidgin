@@ -31,6 +31,8 @@ from .events import (
     InterruptRequestEvent,
     ConversationPausedEvent,
     ConversationResumedEvent,
+    RateLimitPaceEvent,
+    TokenUsageEvent,
 )
 from ..config.models import get_model_config
 from ..io.output_manager import OutputManager
@@ -41,14 +43,15 @@ from .types import Agent, Conversation, Message
 from ..ui.user_interaction import UserInteractionHandler, TimeoutDecision
 from ..analysis.convergence import ConvergenceCalculator
 from ..config.config import get_config
+from .rate_limiter import StreamingRateLimiter
 
 
 class Conductor:
     """Event-driven conversation orchestrator."""
-    
+
     # Nord colors for consistency
     NORD_YELLOW = "#ebcb8b"  # nord13
-    NORD_RED = "#bf616a"     # nord11
+    NORD_RED = "#bf616a"  # nord11
 
     def __init__(
         self,
@@ -69,7 +72,7 @@ class Conductor:
         self.bus = None  # Will be created per conversation
         self.wrapped_providers = None  # Will be created when bus is available
         self.event_logger = None  # Will be created with bus
-        
+
         # User interaction handler
         self.user_interaction = UserInteractionHandler(console)
 
@@ -79,74 +82,85 @@ class Conductor:
         # Name choosing mode
         self.choose_names_mode = False
         self.agent_chosen_names: Dict[str, str] = {}
-        
+
         # Track conversation directory for transcript saving
         self.current_conv_dir: Optional[Path] = None
-        
+
         # Interrupt handling
         self.interrupt_requested = False
         self.paused = False
         self._original_sigint_handler = None
-        
+
         # Convergence tracking
         self.convergence_calculator = ConvergenceCalculator()
         self.config = get_config()
         self.current_turn = 0
 
+        # Rate limiting
+        self.rate_limiter = StreamingRateLimiter()
+
     def _setup_interrupt_handler(self, conversation_id: str):
         """Set up Ctrl+C as interrupt trigger."""
+
         def handle_interrupt(signum, frame):
             if not self.interrupt_requested:  # Prevent multiple interrupts
                 self.interrupt_requested = True
                 # Show immediate feedback
                 if self.console:
-                    self.console.print(f"\n[{self.NORD_YELLOW}]⏸ Interrupt received, pausing after current message...[/{self.NORD_YELLOW}]")
-        
+                    self.console.print(
+                        f"\n[{self.NORD_YELLOW}]⏸ Interrupt received, pausing after current message...[/{self.NORD_YELLOW}]"
+                    )
+
         # Save original handler and set our own
         self._original_sigint_handler = signal.signal(signal.SIGINT, handle_interrupt)
-    
+
     def _restore_interrupt_handler(self):
         """Restore original interrupt handler."""
         if self._original_sigint_handler:
             signal.signal(signal.SIGINT, self._original_sigint_handler)
             self._original_sigint_handler = None
-    
+
     async def _handle_interrupt_request(self, conversation_id: str):
         """Handle interrupt request."""
-        await self.bus.emit(InterruptRequestEvent(
-            conversation_id=conversation_id,
-            turn_number=self.current_turn,
-            interrupt_source="user"
-        ))
-    
+        await self.bus.emit(
+            InterruptRequestEvent(
+                conversation_id=conversation_id,
+                turn_number=self.current_turn,
+                interrupt_source="user",
+            )
+        )
+
     async def _handle_pause(self, conversation: Conversation):
         """Handle conversation pause."""
         # Emit interrupt request event
         await self._handle_interrupt_request(conversation.id)
-        
+
         # Show pause notification
         self.user_interaction.show_pause_notification()
-        
+
         # Emit paused event
-        await self.bus.emit(ConversationPausedEvent(
-            conversation_id=conversation.id,
-            turn_number=self.current_turn,
-            paused_during="between_turns"
-        ))
-        
+        await self.bus.emit(
+            ConversationPausedEvent(
+                conversation_id=conversation.id,
+                turn_number=self.current_turn,
+                paused_during="between_turns",
+            )
+        )
+
         self.paused = True
-    
+
     async def _should_continue(self, conversation: Conversation) -> bool:
         """Check if conversation should continue after pause."""
         # Get user decision
         decision = self.user_interaction.get_pause_decision()
-        
+
         if decision == "continue":
             # Emit resumed event
-            await self.bus.emit(ConversationResumedEvent(
-                conversation_id=conversation.id,
-                turn_number=self.current_turn
-            ))
+            await self.bus.emit(
+                ConversationResumedEvent(
+                    conversation_id=conversation.id, turn_number=self.current_turn
+                )
+            )
             self.interrupt_requested = False
             self.paused = False
             return True
@@ -191,65 +205,82 @@ class Conductor:
         # Initialize name mode
         self._initialize_name_mode(choose_names)
         self._assign_display_names(agent_a, agent_b)
-        
+
         # Create output directory
         conv_id, conv_dir = self.output_manager.create_conversation_dir()
         self.current_conv_dir = conv_dir  # Store for transcript saving
-        
+
         # Initialize event system
-        await self._initialize_event_system(conv_dir, display_mode, show_timing, 
-                                           {"agent_a": agent_a, "agent_b": agent_b})
-        
+        await self._initialize_event_system(
+            conv_dir,
+            display_mode,
+            show_timing,
+            {"agent_a": agent_a, "agent_b": agent_b},
+        )
+
         # Create conversation
-        conversation = self._create_conversation(conv_id, agent_a, agent_b, initial_prompt)
-        
+        conversation = self._create_conversation(
+            conv_id, agent_a, agent_b, initial_prompt
+        )
+
         # Get system prompts and add initial messages
         system_prompts = get_system_prompts(
             awareness_a=awareness_a,
             awareness_b=awareness_b,
             choose_names=choose_names,
             model_a_name=agent_a.model,
-            model_b_name=agent_b.model
+            model_b_name=agent_b.model,
         )
         await self._add_initial_messages(conversation, system_prompts, initial_prompt)
-        
+
         # Set up interrupt handling
         self._setup_interrupt_handler(conversation.id)
         self.interrupt_requested = False  # Reset flag
-        
+
         try:
             # Emit start events
             self.start_time = time.time()
-            await self._emit_start_events(conversation, agent_a, agent_b, 
-                                         initial_prompt, max_turns, system_prompts,
-                                         temperature_a, temperature_b)
-            
+            await self._emit_start_events(
+                conversation,
+                agent_a,
+                agent_b,
+                initial_prompt,
+                max_turns,
+                system_prompts,
+                temperature_a,
+                temperature_b,
+            )
+
             # Run turns
             final_turn = 0
             for turn_num in range(max_turns):
                 self.current_turn = turn_num
-                
+
                 # Check for interrupt before starting turn
                 if self.interrupt_requested:
                     await self._handle_pause(conversation)
                     if not await self._should_continue(conversation):
                         break
-                
-                turn = await self.run_single_turn(conversation, turn_num, agent_a, agent_b)
+
+                turn = await self.run_single_turn(
+                    conversation, turn_num, agent_a, agent_b
+                )
                 if turn is None:
                     break
                 final_turn = turn_num
-            
+
             # Emit end event and cleanup
-            await self._emit_end_event(conversation, final_turn, max_turns, self.start_time)
-        
+            await self._emit_end_event(
+                conversation, final_turn, max_turns, self.start_time
+            )
+
         finally:
             # Always restore original handler
             self._restore_interrupt_handler()
-        
+
         # Save transcripts
         await self._save_transcripts(conversation)
-        
+
         return conversation
 
     async def run_single_turn(
@@ -280,26 +311,20 @@ class Conductor:
 
         # Get Agent A message
         agent_a_message = await self._get_agent_message(
-            conversation.id, 
-            agent_a, 
-            turn_number, 
-            conversation.messages
+            conversation.id, agent_a, turn_number, conversation.messages
         )
         if agent_a_message is None:
             return None
-            
+
         conversation.messages.append(agent_a_message)
 
         # Get Agent B message
         agent_b_message = await self._get_agent_message(
-            conversation.id, 
-            agent_b, 
-            turn_number, 
-            conversation.messages
+            conversation.id, agent_b, turn_number, conversation.messages
         )
         if agent_b_message is None:
             return None
-            
+
         conversation.messages.append(agent_b_message)
 
         # Build turn
@@ -310,9 +335,7 @@ class Conductor:
         )
 
         # Calculate convergence
-        convergence_score = self.convergence_calculator.calculate(
-            conversation.messages
-        )
+        convergence_score = self.convergence_calculator.calculate(conversation.messages)
 
         # Emit turn complete with convergence
         await self.bus.emit(
@@ -328,7 +351,7 @@ class Conductor:
         conv_config = self.config.get_convergence_config()
         threshold = conv_config.get("convergence_threshold", 0.85)
         action = conv_config.get("convergence_action", "stop")
-        
+
         if convergence_score >= threshold:
             if action == "stop":
                 # Stop the conversation
@@ -372,29 +395,60 @@ class Conductor:
                 future.set_result(event.message)
 
     async def _get_agent_message(
-        self, 
+        self,
         conversation_id: str,
-        agent: Agent, 
+        agent: Agent,
         turn_number: int,
         conversation_history: List[Message],
-        timeout: float = 60.0
+        timeout: float = 60.0,
     ) -> Optional[Message]:
         """Get a single agent's message with timeout handling.
-        
+
         Args:
             conversation_id: ID of the current conversation
             agent: The agent to get a message from
             turn_number: Current turn number
             conversation_history: Full conversation history
             timeout: Initial timeout in seconds
-            
+
         Returns:
             The agent's message or None if skipped
         """
+        # Estimate payload size for rate limiting
+        payload_tokens = self._estimate_payload_tokens(
+            conversation_history, agent.model
+        )
+        avg_response_tokens = 500  # Conservative estimate
+        total_estimated = payload_tokens + avg_response_tokens
+
+        # Determine provider for rate limiting
+        provider = self._get_provider_name(agent.model)
+
+        # Acquire rate limit slot (may wait)
+        wait_time = await self.rate_limiter.acquire(provider, total_estimated)
+
+        # Emit rate limit event if we waited
+        if wait_time > 0.1:
+            await self.bus.emit(
+                RateLimitPaceEvent(
+                    conversation_id=conversation_id,
+                    provider=provider,
+                    wait_time=wait_time,
+                    reason="mixed",  # Could be either request or token rate
+                )
+            )
+
+            # Show pacing indicator if we have display
+            if hasattr(self, "display_filter") and self.display_filter:
+                self.display_filter.show_pacing_indicator(provider, wait_time)
+
+        # Track request timing
+        request_start = time.time()
+
         # Create future for this agent's response
         future = asyncio.Future()
         self.pending_messages[agent.id] = future
-        
+
         # Request message
         await self.bus.emit(
             MessageRequestEvent(
@@ -405,37 +459,38 @@ class Conductor:
                 temperature=agent.temperature,
             )
         )
-        
+
         # Create interrupt check task
         async def check_interrupt():
             """Check for interrupt flag."""
             while not self.interrupt_requested:
                 await asyncio.sleep(0.1)  # Check every 100ms
             return True
-        
+
         interrupt_task = asyncio.create_task(check_interrupt())
         message_task = asyncio.create_task(asyncio.wait_for(future, timeout=timeout))
-        
+
         # Wait for response with timeout OR interrupt
         try:
             # Wait for EITHER message completion OR interrupt
             done, pending = await asyncio.wait(
-                [message_task, interrupt_task],
-                return_when=asyncio.FIRST_COMPLETED
+                [message_task, interrupt_task], return_when=asyncio.FIRST_COMPLETED
             )
-            
+
             # Cancel pending tasks
             for task in pending:
                 task.cancel()
-            
+
             if interrupt_task in done and interrupt_task.result():
                 # Interrupted! Handle pause
-                await self.bus.emit(ConversationPausedEvent(
-                    conversation_id=conversation_id,
-                    turn_number=turn_number,
-                    paused_during=f"waiting_for_{agent.id}"
-                ))
-                
+                await self.bus.emit(
+                    ConversationPausedEvent(
+                        conversation_id=conversation_id,
+                        turn_number=turn_number,
+                        paused_during=f"waiting_for_{agent.id}",
+                    )
+                )
+
                 # Wait for the message to complete anyway
                 try:
                     message = await future
@@ -444,8 +499,19 @@ class Conductor:
                     return None
             else:
                 # Message completed normally
-                return await message_task
-                
+                message = await message_task
+
+                # Record request completion for rate limiting
+                request_duration = time.time() - request_start
+                if message:
+                    # Estimate actual tokens (rough)
+                    actual_tokens = len(message.content) // 4 + payload_tokens
+                    self.rate_limiter.record_request_complete(
+                        provider, actual_tokens, request_duration
+                    )
+
+                return message
+
         except asyncio.TimeoutError:
             # Emit timeout event
             await self.bus.emit(
@@ -458,10 +524,10 @@ class Conductor:
                     timeout_seconds=timeout,
                 )
             )
-            
+
             # Get user decision
             decision = self.user_interaction.get_timeout_decision(agent.display_name)
-            
+
             if decision == TimeoutDecision.SKIP:
                 return None
             elif decision == TimeoutDecision.END:
@@ -477,6 +543,51 @@ class Conductor:
                             f"[{self.NORD_RED}]{agent.display_name} still not responding. Skipping turn.[/{self.NORD_RED}]"
                         )
                     return None
+
+    def _estimate_payload_tokens(self, messages: List[Message], model: str) -> int:
+        """Estimate tokens in conversation history.
+
+        Args:
+            messages: Conversation messages
+            model: Model name for provider-specific estimation
+
+        Returns:
+            Estimated token count
+        """
+        total = 0
+        for msg in messages:
+            # Rough estimates by model type
+            if "gpt" in model.lower():
+                total += len(msg.content) // 3.5  # GPT tokenization
+            else:
+                total += len(msg.content) // 3.8  # Claude/others
+        return int(total)
+
+    def _get_provider_name(self, model: str) -> str:
+        """Get provider name from model.
+
+        Args:
+            model: Model name or alias
+
+        Returns:
+            Provider name (anthropic, openai, etc)
+        """
+        config = get_model_config(model)
+        if config:
+            return config.provider
+
+        # Fallback pattern matching
+        model_lower = model.lower()
+        if "claude" in model_lower:
+            return "anthropic"
+        elif model_lower.startswith("gpt") or model_lower.startswith("o"):
+            return "openai"
+        elif "gemini" in model_lower:
+            return "google"
+        elif "grok" in model_lower:
+            return "xai"
+        else:
+            return "openai"  # Default
 
     def _extract_chosen_name(self, message_content: str) -> Optional[str]:
         """Extract self-chosen name from first response"""
@@ -515,17 +626,17 @@ class Conductor:
             return name
 
         # Additional fallback - look for standalone bracketed names
-        bracket_match = re.search(r'\[(\w{2,8})\]', message_content)
+        bracket_match = re.search(r"\[(\w{2,8})\]", message_content)
         if bracket_match:
             return bracket_match.group(1)
 
         return None
-    
+
     def _initialize_name_mode(self, choose_names: bool):
         """Set up name choosing mode."""
         self.choose_names_mode = choose_names
         self.agent_chosen_names = {}
-        
+
     def _assign_display_names(self, agent_a: Agent, agent_b: Agent):
         """Assign display names to agents based on their models."""
         config_a = get_model_config(agent_a.model)
@@ -535,7 +646,7 @@ class Conductor:
             # Store the model shortnames
             agent_a.model_shortname = config_a.shortname
             agent_b.model_shortname = config_b.shortname
-            
+
             if config_a.shortname == config_b.shortname:
                 # Same model - add numbers
                 agent_a.display_name = f"{config_a.shortname}-1"
@@ -550,9 +661,14 @@ class Conductor:
             agent_b.display_name = "Agent B"
             agent_a.model_shortname = None
             agent_b.model_shortname = None
-            
-    async def _initialize_event_system(self, conv_dir: Path, display_mode: str, 
-                                      show_timing: bool, agents: Dict[str, Agent]):
+
+    async def _initialize_event_system(
+        self,
+        conv_dir: Path,
+        display_mode: str,
+        show_timing: bool,
+        agents: Dict[str, Agent],
+    ):
         """Initialize EventBus and display components."""
         # Create event bus with logging
         event_log_path = conv_dir / "events.jsonl"
@@ -575,28 +691,33 @@ class Conductor:
         # Wrap providers with event awareness now that bus exists
         # Create wrapped providers for agent_a and agent_b
         self.wrapped_providers = {}
-        
+
         # Map providers to agents based on model
         agent_a = agents["agent_a"]
         agent_b = agents["agent_b"]
-        
+
         # Find provider for agent_a
         for model_id, provider in self.base_providers.items():
             if model_id == agent_a.model:
-                self.wrapped_providers["agent_a"] = EventAwareProvider(provider, self.bus, "agent_a")
+                self.wrapped_providers["agent_a"] = EventAwareProvider(
+                    provider, self.bus, "agent_a"
+                )
                 break
-                
-        # Find provider for agent_b  
+
+        # Find provider for agent_b
         for model_id, provider in self.base_providers.items():
             if model_id == agent_b.model:
-                self.wrapped_providers["agent_b"] = EventAwareProvider(provider, self.bus, "agent_b")
+                self.wrapped_providers["agent_b"] = EventAwareProvider(
+                    provider, self.bus, "agent_b"
+                )
                 break
 
         # Subscribe to message completions
         self.bus.subscribe(MessageCompleteEvent, self._handle_message_complete)
-        
-    def _create_conversation(self, conv_id: str, agent_a: Agent, agent_b: Agent, 
-                            initial_prompt: str) -> Conversation:
+
+    def _create_conversation(
+        self, conv_id: str, agent_a: Agent, agent_b: Agent, initial_prompt: str
+    ) -> Conversation:
         """Create and initialize conversation object."""
         conversation = Conversation(
             agents=[agent_a, agent_b],
@@ -604,10 +725,13 @@ class Conductor:
         )
         conversation.id = conv_id  # Use our generated ID
         return conversation
-        
-    async def _add_initial_messages(self, conversation: Conversation, 
-                                   system_prompts: Dict[str, str], 
-                                   initial_prompt: str):
+
+    async def _add_initial_messages(
+        self,
+        conversation: Conversation,
+        system_prompts: Dict[str, str],
+        initial_prompt: str,
+    ):
         """Add system prompts and initial message to conversation."""
         system_prompt_a = system_prompts["agent_a"]
         system_prompt_b = system_prompts["agent_b"]
@@ -619,15 +743,24 @@ class Conductor:
                 Message(role="system", content=system_prompt_a, agent_id="system")
             )
         messages_to_add.append(
-            Message(role="user", content=f"[HUMAN]: {initial_prompt}", agent_id="researcher")
+            Message(
+                role="user", content=f"[HUMAN]: {initial_prompt}", agent_id="researcher"
+            )
         )
-        
+
         conversation.messages.extend(messages_to_add)
-        
-    async def _emit_start_events(self, conversation: Conversation, agent_a: Agent, 
-                                agent_b: Agent, initial_prompt: str, max_turns: int,
-                                system_prompts: Dict[str, str], temperature_a: Optional[float],
-                                temperature_b: Optional[float]):
+
+    async def _emit_start_events(
+        self,
+        conversation: Conversation,
+        agent_a: Agent,
+        agent_b: Agent,
+        initial_prompt: str,
+        max_turns: int,
+        system_prompts: Dict[str, str],
+        temperature_a: Optional[float],
+        temperature_b: Optional[float],
+    ):
         """Emit all start-of-conversation events."""
         # Emit conversation start event
         await self.bus.emit(
@@ -647,7 +780,7 @@ class Conductor:
         # Emit system prompt events for both agents
         system_prompt_a = system_prompts["agent_a"]
         system_prompt_b = system_prompts["agent_b"]
-        
+
         if system_prompt_a:  # Only emit if non-empty
             await self.bus.emit(
                 SystemPromptEvent(
@@ -667,13 +800,18 @@ class Conductor:
                     agent_display_name=agent_b.display_name,
                 )
             )
-            
-    async def _emit_end_event(self, conversation: Conversation, final_turn: int, 
-                             max_turns: int, start_time: float):
+
+    async def _emit_end_event(
+        self,
+        conversation: Conversation,
+        final_turn: int,
+        max_turns: int,
+        start_time: float,
+    ):
         """Emit conversation end event and cleanup."""
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Emit end event
         await self.bus.emit(
             ConversationEndEvent(
@@ -686,10 +824,10 @@ class Conductor:
 
         # Stop the event bus to ensure all events are written
         await self.bus.stop()
-        
+
     async def _save_transcripts(self, conversation: Conversation):
         """Save conversation transcripts to output directory.
-        
+
         Args:
             conversation: The completed conversation
         """

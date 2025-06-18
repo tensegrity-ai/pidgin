@@ -35,11 +35,11 @@ class DisplayFilter:
         "nord4": "#d8dee9",  # Light gray
         "nord7": "#8fbcbb",  # Teal - Setup
         "nord8": "#88c0d0",  # Light blue - Human
-        "nord11": "#bf616a", # Red - Errors
-        "nord12": "#d08770", # Orange - Warnings
-        "nord13": "#ebcb8b", # Yellow - Caution/Timeout
-        "nord14": "#a3be8c", # Green - Success/Agent A
-        "nord15": "#5e81ac", # Blue - Agent B
+        "nord11": "#bf616a",  # Red - Errors
+        "nord12": "#d08770",  # Orange - Warnings
+        "nord13": "#ebcb8b",  # Yellow - Caution/Timeout
+        "nord14": "#a3be8c",  # Green - Success/Agent A
+        "nord15": "#5e81ac",  # Blue - Agent B
     }
 
     def __init__(
@@ -144,7 +144,7 @@ class DisplayFilter:
                 display_name = self.agents[event.agent_id].display_name
             else:
                 display_name = event.agent_id.replace("_", " ").title()
-        
+
         # Customize the display based on which agent
         if event.agent_id == "agent_a":
             title = f"⧫ System Context - {display_name}"
@@ -184,7 +184,11 @@ class DisplayFilter:
         # Determine styling based on agent
         if event.agent_id == "agent_a":
             # Build title with name and optional model shortname
-            if model_shortname and agent_name != model_shortname and not agent_name.startswith(model_shortname):
+            if (
+                model_shortname
+                and agent_name != model_shortname
+                and not agent_name.startswith(model_shortname)
+            ):
                 # Show both name and model shortname (e.g., "⬢ Kai (Haiku)")
                 title = f"⬢ {agent_name} ({model_shortname})"
             else:
@@ -193,7 +197,11 @@ class DisplayFilter:
             style = self.COLORS["nord14"]  # Green
         elif event.agent_id == "agent_b":
             # Build title with name and optional model shortname
-            if model_shortname and agent_name != model_shortname and not agent_name.startswith(model_shortname):
+            if (
+                model_shortname
+                and agent_name != model_shortname
+                and not agent_name.startswith(model_shortname)
+            ):
                 # Show both name and model shortname (e.g., "⬡ Zara (Sonnet)")
                 title = f"⬡ {agent_name} ({model_shortname})"
             else:
@@ -218,31 +226,37 @@ class DisplayFilter:
             content += timing_info
 
         self.console.print(
-            Panel(content, title=f" {title}", title_align="left", border_style=style, padding=(1, 2))
+            Panel(
+                content,
+                title=f" {title}",
+                title_align="left",
+                border_style=style,
+                padding=(1, 2),
+            )
         )
         self.console.print()
 
     def _show_turn_complete(self, event: TurnCompleteEvent):
         """Show turn completion marker."""
         self.current_turn = event.turn_number + 1
-        
+
         # Build the turn marker text
         turn_text = f"━━━ Turn {self.current_turn}/{self.max_turns} Complete"
-        
+
         # Add convergence if available
         if event.convergence_score is not None:
             conv_color = self.COLORS["nord3"]  # Dim gray default
             conv_text = f" | Convergence: {event.convergence_score:.2f}"
-            
+
             # Add warning if convergence is high
             if event.convergence_score > 0.75:
                 conv_color = self.COLORS["nord13"]  # Yellow warning
                 conv_text += " !"
-            
+
             turn_text += f" [{conv_color}]{conv_text}[/{conv_color}]"
-        
+
         turn_text += " ━━━"
-        
+
         self.console.print(Rule(turn_text, style=self.COLORS["nord3"]))
         self.console.print()
 
@@ -295,22 +309,23 @@ class DisplayFilter:
 
         # Check for common billing/credit errors
         error_lower = event.error_message.lower()
-        is_billing_error = any(phrase in error_lower for phrase in [
-            "credit", "billing", "payment", "quota", "insufficient"
-        ])
-        
+        is_billing_error = any(
+            phrase in error_lower
+            for phrase in ["credit", "billing", "payment", "quota", "insufficient"]
+        )
+
         if is_billing_error:
             # Special handling for billing errors - less scary, more actionable
             title = "⚠ Billing Issue"
             border_style = self.COLORS["nord13"]  # Yellow instead of red
-            
+
             # Determine which service
             service_url = ""
             if "anthropic" in event.provider.lower():
                 service_url = "console.anthropic.com → Billing"
             elif "openai" in event.provider.lower():
                 service_url = "platform.openai.com → Billing"
-            
+
             content = f"[bold {self.COLORS['nord13']}]{agent_name or event.agent_id} cannot respond[/bold {self.COLORS['nord13']}]\n\n"
             content += f"◇ {event.error_message}\n"
             if service_url:
@@ -319,7 +334,7 @@ class DisplayFilter:
             # Regular API error display
             title = "◆ API Error"
             border_style = self.COLORS["nord11"]
-            
+
             content = f"[bold {self.COLORS['nord11']}]Connection Issue[/bold {self.COLORS['nord11']}]\n\n"
             content += f"◈ Agent: {agent_name or event.agent_id}\n"
             content += f"◈ Provider: {event.provider}\n"
@@ -337,51 +352,103 @@ class DisplayFilter:
                 content += f"\n[{self.COLORS['nord3']}]◇ Cannot retry automatically[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title=title, title_align="left", border_style=border_style, padding=(1, 2))
+            Panel(
+                content,
+                title=title,
+                title_align="left",
+                border_style=border_style,
+                padding=(1, 2),
+            )
         )
         self.console.print()
 
     def _show_error(self, event: ErrorEvent):
         """Show generic error."""
-        content = (
-            f"[bold {self.COLORS['nord11']}]{event.error_type.replace('_', ' ').title()}[/bold {self.COLORS['nord11']}]\n\n"
-        )
+        content = f"[bold {self.COLORS['nord11']}]{event.error_type.replace('_', ' ').title()}[/bold {self.COLORS['nord11']}]\n\n"
         content += f"{event.error_message}"
 
         if event.context:
             content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title=" ! Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(
+                content,
+                title=" ! Error",
+                title_align="left",
+                border_style=self.COLORS["nord11"],
+                padding=(1, 2),
+            )
         )
         self.console.print()
-        
+
     def _show_timeout_error(self, event: ProviderTimeoutEvent):
         """Show timeout error with options."""
         # Get agent's display name if available
         agent_name = None
         if event.agent_id in self.agents:
             agent_name = self.agents[event.agent_id].display_name or event.agent_id
-            
-        content = f"[bold {self.COLORS['nord13']}]Timeout[/bold {self.COLORS['nord13']}]\n\n"
+
+        content = (
+            f"[bold {self.COLORS['nord13']}]Timeout[/bold {self.COLORS['nord13']}]\n\n"
+        )
         content += f"◈ Agent: {agent_name or event.agent_id}\n"
         content += f"◈ Timeout: {event.timeout_seconds}s\n"
         content += f"◈ {event.error_message}\n"
-        
+
         if event.context:
             content += f"\n[dim]Context: {event.context}[/dim]"
-            
+
         self.console.print(
             Panel(
                 content,
                 title=" ⏱ Timeout",
                 title_align="left",
                 border_style=self.COLORS["nord13"],
-                padding=(1, 2)
+                padding=(1, 2),
             )
         )
         self.console.print()
-    
+
     def _show_resumed(self, event: ConversationResumedEvent):
         """Show conversation resumed notification."""
-        self.console.print(f"\n[{self.COLORS['nord14']}]▶ Conversation resumed[/{self.COLORS['nord14']}]\n")
+        self.console.print(
+            f"\n[{self.COLORS['nord14']}]▶ Conversation resumed[/{self.COLORS['nord14']}]\n"
+        )
+
+    def show_pacing_indicator(self, provider: str, wait_time: float):
+        """Show rate limit pacing in UI.
+
+        Args:
+            provider: Provider name being paced
+            wait_time: How long we're waiting in seconds
+        """
+        if wait_time < 1.0:
+            # Brief pause - subtle indicator
+            self.console.print(
+                f"[{self.COLORS['nord3']}]⏱ Pacing for {provider} limits...[/{self.COLORS['nord3']}]",
+                end="\r",  # Overwrite when done
+            )
+        else:
+            # Longer pause - more visible
+            self.console.print(
+                f"[{self.COLORS['nord13']}]⏸ Waiting {wait_time:.1f}s for {provider} rate limits[/{self.COLORS['nord13']}]"
+            )
+
+    def show_token_usage(self, provider: str, used: int, limit: int):
+        """Show current token consumption rate.
+
+        Args:
+            provider: Provider name
+            used: Current tokens per minute
+            limit: Token per minute limit
+        """
+        percentage = (used / limit) * 100 if limit > 0 else 0
+        bar_width = 20
+        filled = int(bar_width * percentage / 100)
+
+        bar = "█" * filled + "░" * (bar_width - filled)
+        color = self.COLORS["nord14"] if percentage < 80 else self.COLORS["nord13"]
+
+        self.console.print(
+            f"[{self.COLORS['nord3']}]Tokens/min:[/{self.COLORS['nord3']}] [{color}]{bar}[/{color}] {percentage:.0f}%"
+        )

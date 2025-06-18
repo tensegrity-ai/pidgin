@@ -39,17 +39,26 @@ class Config:
             "context_management": {
                 "enabled": True,
                 "context_reserve_ratio": 0.25,  # Reserve 25% for response
-                "min_messages_retained": 10,     # Never go below this
+                "min_messages_retained": 10,  # Never go below this
                 "truncation_strategy": "sliding_window",
-                "safety_factor": 0.9,            # Use 90% of limits
+                "safety_factor": 0.9,  # Use 90% of limits
             },
             "rate_limiting": {
                 "enabled": True,
-                "safety_margin": 0.9,            # Use 90% of rate limits
+                "show_pacing_indicators": True,  # Show UI indicators when pacing
+                "conservative_estimates": True,  # Overestimate tokens to be safe
+                "safety_margin": 0.9,  # Use 90% of rate limits
                 "token_estimation_multiplier": 1.1,  # Add 10% buffer
                 "backoff_base_delay": 1.0,
                 "backoff_max_delay": 60.0,
-                "sliding_window_minutes": 1,     # Track over 1 minute
+                "sliding_window_minutes": 1,  # Track over 1 minute
+                "custom_limits": {
+                    # Override default rate limits per provider
+                    # "anthropic": {
+                    #     "requests_per_minute": 45,
+                    #     "tokens_per_minute": 35000,
+                    # },
+                },
             },
             "overrides": {
                 # Per-provider overrides - uncomment to customize
@@ -69,7 +78,7 @@ class Config:
                 #     "tokens_per_minute": 150000,
                 #     "context_limit": 120000,
                 # },
-            }
+            },
         },
     }
 
@@ -169,7 +178,6 @@ class Config:
 
         with open(save_path, "w") as f:
             yaml.dump(self.config, f, default_flow_style=False)
-
 
     def get_convergence_config(self) -> Dict[str, Any]:
         """Get convergence configuration."""

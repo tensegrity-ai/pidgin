@@ -150,7 +150,7 @@ class ProviderTimeoutEvent(Event):
 @dataclass
 class InterruptRequestEvent(Event):
     """User requested to pause the conversation."""
-    
+
     conversation_id: str
     turn_number: int
     interrupt_source: str = "user"  # "user", "convergence", "context_limit"
@@ -159,7 +159,7 @@ class InterruptRequestEvent(Event):
 @dataclass
 class ConversationPausedEvent(Event):
     """Conversation has been paused."""
-    
+
     conversation_id: str
     turn_number: int
     paused_during: str  # "waiting_for_agent_a", "waiting_for_agent_b", "between_turns"
@@ -168,6 +168,27 @@ class ConversationPausedEvent(Event):
 @dataclass
 class ConversationResumedEvent(Event):
     """Conversation has been resumed."""
-    
+
     conversation_id: str
     turn_number: int
+
+
+@dataclass
+class RateLimitPaceEvent(Event):
+    """Emitted when we pause for rate limits."""
+
+    conversation_id: str
+    provider: str
+    wait_time: float
+    reason: str  # "request_rate" or "token_rate"
+
+
+@dataclass
+class TokenUsageEvent(Event):
+    """Track token consumption."""
+
+    conversation_id: str
+    provider: str
+    tokens_used: int
+    tokens_per_minute_limit: int
+    current_usage_rate: float
