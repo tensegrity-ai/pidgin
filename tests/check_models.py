@@ -39,9 +39,9 @@ async def main():
     openai_key = os.getenv("OPENAI_API_KEY")
 
     if not anthropic_key:
-        print("⚠️  ANTHROPIC_API_KEY not set - skipping Anthropic models\n")
+        print("!  ANTHROPIC_API_KEY not set - skipping Anthropic models\n")
     if not openai_key:
-        print("⚠️  OPENAI_API_KEY not set - skipping OpenAI models\n")
+        print("!  OPENAI_API_KEY not set - skipping OpenAI models\n")
 
     # Test each model
     results = {}
@@ -69,7 +69,7 @@ async def main():
             elif available is False:
                 status = "❌"
             else:
-                status = "⚠️ "
+                status = "! "
 
             print(f"  {status} {model_id:<35} {msg}")
 

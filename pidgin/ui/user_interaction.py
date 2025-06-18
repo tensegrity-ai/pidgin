@@ -70,7 +70,7 @@ class UserInteractionHandler:
             return
             
         self.console.print(
-            f"\n[{self.NORD_COLORS['yellow']}]⚠ {agent_display_name} is taking longer than expected.[/{self.NORD_COLORS['yellow']}]"
+            f"\n[{self.NORD_COLORS['yellow']}]! {agent_display_name} is taking longer than expected.[/{self.NORD_COLORS['yellow']}]"
         )
         self.console.print(f"[{self.NORD_COLORS['yellow']}]Options:[/{self.NORD_COLORS['yellow']}]")
         self.console.print("  1. Wait longer (press Enter)")
@@ -80,7 +80,7 @@ class UserInteractionHandler:
     def show_pause_notification(self):
         """Show that conversation is pausing."""
         if self.console:
-            self.console.print(f"\n[{self.NORD_COLORS['yellow']}]⏸ Pausing conversation...[/{self.NORD_COLORS['yellow']}]\n")
+            self.console.print(f"\n[{self.NORD_COLORS['yellow']}]|| Pausing conversation...[/{self.NORD_COLORS['yellow']}]\n")
     
     def get_pause_decision(self) -> str:
         """Get user decision while paused."""

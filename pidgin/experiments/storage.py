@@ -444,3 +444,81 @@ class ExperimentStore:
                 experiments.append(exp)
                 
             return experiments
+    
+    def get_experiment_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get experiment by name.
+        
+        Args:
+            name: Experiment name to search for
+            
+        Returns:
+            Experiment dictionary or None if not found
+        """
+        with self._get_connection() as conn:
+            query = """
+                SELECT 
+                    e.experiment_id,
+                    e.name,
+                    e.status,
+                    e.created_at,
+                    e.started_at,
+                    e.completed_at,
+                    e.total_conversations,
+                    e.completed_conversations,
+                    e.failed_conversations,
+                    e.config,
+                    json_extract(e.config, '$.agent_a_model') as agent_a_model,
+                    json_extract(e.config, '$.agent_b_model') as agent_b_model,
+                    json_extract(e.config, '$.dashboard_attached') as dashboard_attached
+                FROM experiments e
+                WHERE e.name = ?
+                ORDER BY e.created_at DESC
+                LIMIT 1
+            """
+            row = conn.execute(query, (name,)).fetchone()
+            
+            if row:
+                exp = dict(row)
+                # Parse JSON config
+                if 'config' in exp and exp['config']:
+                    try:
+                        exp['config'] = json.loads(exp['config'])
+                        # Extract dashboard_attached from config
+                        exp['dashboard_attached'] = exp['config'].get('dashboard_attached', False)
+                    except:
+                        exp['dashboard_attached'] = False
+                return exp
+            return None
+    
+    def update_dashboard_attachment(self, experiment_id: str, attached: bool) -> None:
+        """Update dashboard attachment status.
+        
+        Args:
+            experiment_id: Experiment ID
+            attached: Whether dashboard is attached
+        """
+        with self._get_connection() as conn:
+            # First get current config
+            config_json = conn.execute(
+                "SELECT config FROM experiments WHERE experiment_id = ?",
+                (experiment_id,)
+            ).fetchone()
+            
+            if config_json and config_json['config']:
+                try:
+                    config = json.loads(config_json['config'])
+                except:
+                    config = {}
+            else:
+                config = {}
+            
+            # Update dashboard_attached in config
+            config['dashboard_attached'] = attached
+            
+            # Save back to database
+            conn.execute("""
+                UPDATE experiments 
+                SET config = ?
+                WHERE experiment_id = ?
+            """, (json.dumps(config), experiment_id))
+            conn.commit()

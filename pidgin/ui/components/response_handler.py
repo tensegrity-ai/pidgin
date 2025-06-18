@@ -53,7 +53,7 @@ class ResponseHandler(Component):
                 
         except Exception as e:
             if "rate limit" in str(e).lower():
-                self.display_manager.console.print(f"\n[red bold]⚠️  Hit rate limit: {e}[/red bold]")
+                self.display_manager.console.print(f"\n[red bold]!  Hit rate limit: {e}[/red bold]")
                 # Let the caller handle the pause
                 return None, False
             else:
@@ -92,7 +92,7 @@ class ResponseHandler(Component):
             # Check if it's a rate limit error
             if "rate limit" in str(e).lower():
                 self.display_manager.console.print(
-                    f"\n[red bold]⚠️  Hit actual rate limit: {e}[/red bold]"
+                    f"\n[red bold]!  Hit actual rate limit: {e}[/red bold]"
                 )
                 self.display_manager.console.print(
                     "[yellow]Conversation paused due to rate limit.[/yellow]"
@@ -100,5 +100,5 @@ class ResponseHandler(Component):
                 raise SystemExit(0)  # Graceful exit
             else:
                 # Other API errors
-                self.display_manager.console.print(f"\n[red]❌ API Error: {e}[/red]")
+                self.display_manager.console.print(f"\n[red]X API Error: {e}[/red]")
                 raise

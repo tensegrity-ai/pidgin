@@ -237,7 +237,7 @@ class DisplayFilter:
             # Add warning if convergence is high
             if event.convergence_score > 0.75:
                 conv_color = self.COLORS["nord13"]  # Yellow warning
-                conv_text += " ⚠"
+                conv_text += " !"
             
             turn_text += f" [{conv_color}]{conv_text}[/{conv_color}]"
         
@@ -311,7 +311,7 @@ class DisplayFilter:
             content += f"\n[{self.COLORS['nord11']}]✗ This error cannot be automatically retried.[/{self.COLORS['nord11']}]"
 
         self.console.print(
-            Panel(content, title=" ⚠ Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(content, title=" ! Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
 
@@ -326,7 +326,7 @@ class DisplayFilter:
             content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title=" ⚠ Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(content, title=" ! Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
         )
         self.console.print()
         

@@ -82,7 +82,7 @@ class DisplayManager(Component):
             # Add metrics if provided
             if metrics:
                 if "convergence" in metrics and metrics["convergence"] > 0:
-                    emoji = " ⚠️" if metrics["convergence"] >= 0.75 else ""
+                    emoji = " !" if metrics["convergence"] >= 0.75 else ""
                     status_parts.append(f"Conv: {metrics['convergence']:.2f}{emoji}")
 
                 if "context_usage" in metrics and metrics["context_usage"] > 50:
@@ -123,7 +123,7 @@ class DisplayManager(Component):
             model: Model name that's constrained
         """
         self.console.print(
-            f"\n[yellow bold]⚠️  Context Warning ({model}): "
+            f"\n[yellow bold]!  Context Warning ({model}): "
             f"{usage:.1f}% used, ~{turns_remaining} turns remaining[/yellow bold]\n"
         )
 

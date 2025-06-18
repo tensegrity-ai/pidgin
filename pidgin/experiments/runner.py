@@ -120,8 +120,8 @@ class ExperimentRunner:
         event_bus.subscribe(MessageCompleteEvent, handler.handle_message_complete)
         event_bus.subscribe(SystemPromptEvent, handler.handle_system_prompt)
         
-        # Get providers
-        providers = await self._get_providers(config)
+        # Get providers and model configs
+        providers, model_configs = await self._get_providers_and_configs(config)
         
         # Create output manager (minimal output for experiments)
         # Check if we're in a daemon context
@@ -151,13 +151,13 @@ class ExperimentRunner:
         # Create agents
         agent_a = Agent(
             id="agent_a",
-            name=config.agent_a_model,
-            model=config.agent_a_model
+            name=model_configs['agent_a'].shortname,
+            model=model_configs['agent_a'].model_id
         )
         agent_b = Agent(
             id="agent_b", 
-            name=config.agent_b_model,
-            model=config.agent_b_model
+            name=model_configs['agent_b'].shortname,
+            model=model_configs['agent_b'].model_id
         )
         
         # Create conductor
@@ -206,7 +206,7 @@ class ExperimentRunner:
             temperature_b=config.temperature_b
         )
     
-    async def _get_providers(self, config: ExperimentConfig) -> Dict[str, Any]:
+    async def _get_providers_and_configs(self, config: ExperimentConfig) -> tuple[Dict[str, Any], Dict[str, Any]]:
         """Get provider instances for the models."""
         providers = {}
         
@@ -219,27 +219,34 @@ class ExperimentRunner:
         if not model_b_config:
             raise ValueError(f"Unknown model: {config.agent_b_model}")
         
-        # Create providers for each agent
+        # Create providers for each agent, keyed by model ID
         if model_a_config.provider == "anthropic":
-            providers['agent_a'] = AnthropicProvider(config.agent_a_model)
+            provider_a = AnthropicProvider(model_a_config.model_id)
         elif model_a_config.provider == "openai":
-            providers['agent_a'] = OpenAIProvider(config.agent_a_model)
+            provider_a = OpenAIProvider(model_a_config.model_id)
         elif model_a_config.provider == "google":
-            providers['agent_a'] = GoogleProvider(config.agent_a_model)
+            provider_a = GoogleProvider(model_a_config.model_id)
         elif model_a_config.provider == "xai":
-            providers['agent_a'] = xAIProvider(config.agent_a_model)
+            provider_a = xAIProvider(model_a_config.model_id)
         else:
             raise ValueError(f"Unknown provider: {model_a_config.provider}")
             
         if model_b_config.provider == "anthropic":
-            providers['agent_b'] = AnthropicProvider(config.agent_b_model)
+            provider_b = AnthropicProvider(model_b_config.model_id)
         elif model_b_config.provider == "openai":
-            providers['agent_b'] = OpenAIProvider(config.agent_b_model)
+            provider_b = OpenAIProvider(model_b_config.model_id)
         elif model_b_config.provider == "google":
-            providers['agent_b'] = GoogleProvider(config.agent_b_model)
+            provider_b = GoogleProvider(model_b_config.model_id)
         elif model_b_config.provider == "xai":
-            providers['agent_b'] = xAIProvider(config.agent_b_model)
+            provider_b = xAIProvider(model_b_config.model_id)
         else:
             raise ValueError(f"Unknown provider: {model_b_config.provider}")
         
-        return providers
+        # Add providers to map, keyed by model ID (matching CLI behavior)
+        providers[model_a_config.model_id] = provider_a
+        providers[model_b_config.model_id] = provider_b
+        
+        return providers, {
+            'agent_a': model_a_config,
+            'agent_b': model_b_config
+        }

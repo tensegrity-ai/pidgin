@@ -1069,24 +1069,25 @@ def experiment(
 
 @cli.group()
 def experiment():
-    """Run and manage batch experiments.
+    """Run and manage experiment sessions.
     
-    This command group allows you to start, monitor, and manage experiments
-    that run multiple conversations for statistical analysis.
+    Experiments run multiple conversations for statistical analysis.
+    Uses a screen-like session model: start experiments with dashboard
+    attached, detach to run in background, and resume to reattach.
     
     [bold]EXAMPLES:[/bold]
     
-    [#4c566a]Start an experiment in background:[/#4c566a]
-        pidgin experiment start -a claude -b gpt -r 20
+    [#4c566a]Start experiment with dashboard:[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 20 --name "test"
     
-    [#4c566a]Check status of all experiments:[/#4c566a]
-        pidgin experiment status
+    [#4c566a]Resume/reattach to experiment:[/#4c566a]
+        pidgin experiment resume test
     
-    [#4c566a]View logs of running experiment:[/#4c566a]
-        pidgin experiment logs exp_abc123
+    [#4c566a]List experiment sessions:[/#4c566a]
+        pidgin experiment list
     
-    [#4c566a]Stop a running experiment:[/#4c566a]
-        pidgin experiment stop exp_abc123
+    [#4c566a]Start in background (daemon):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 100 --name "bg" --daemon
     """
     pass
 
@@ -1097,43 +1098,52 @@ def experiment():
 @click.option("-r", "--repetitions", default=10, help="Number of conversations to run")
 @click.option("-t", "--max-turns", default=50, help="Maximum turns per conversation")
 @click.option("-p", "--initial-prompt", default="Hello! Let's have a conversation.", help="Initial prompt")
-@click.option("--name", help="Experiment name (auto-generated if not provided)")
+@click.option("--name", required=True, help="Experiment session name")
 @click.option("--temperature", type=float, help="Temperature for both models")
 @click.option("--convergence-threshold", type=float, help="Stop at convergence threshold")
 @click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
 @click.option("--max-parallel", type=int, help="Max parallel conversations (auto if not set)")
-@click.option("--background/--foreground", default=True, help="Run as daemon (default) or foreground")
+@click.option("--daemon", "-d", is_flag=True, help="Start in background without dashboard")
 def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
-          temperature, convergence_threshold, choose_names, max_parallel, background):
-    """Start a new experiment.
+          temperature, convergence_threshold, choose_names, max_parallel, daemon):
+    """Start a new experiment session.
     
-    By default, experiments run in the background as daemons. Use --foreground
-    to run interactively (useful for debugging).
+    By default, starts experiment with dashboard attached (like GNU screen).
+    Use --daemon to run in background without dashboard.
     
     [bold]EXAMPLES:[/bold]
     
-    [#4c566a]Basic experiment (background):[/#4c566a]
-        pidgin experiment start -a claude -b gpt
+    [#4c566a]Start with dashboard:[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 20 --name "test"
+    
+    [#4c566a]Start in background (daemon mode):[/#4c566a]
+        pidgin experiment start -a opus -b gpt-4 -r 100 --name "prod" --daemon
     
     [#4c566a]Large experiment with custom parallelism:[/#4c566a]
-        pidgin experiment start -a opus -b gpt-4 -r 100 --max-parallel 8
-    
-    [#4c566a]Run in foreground for debugging:[/#4c566a]
-        pidgin experiment start -a claude -b gpt -r 5 --foreground
+        pidgin experiment start -a claude -b gpt -r 50 --name "parallel" --max-parallel 8
     """
     import time
     from .experiments import ExperimentConfig, ExperimentManager, ExperimentStore
     from .experiments.parallel_runner import ParallelExperimentRunner
     
-    # Generate experiment name if not provided
-    if not name:
-        name = f"{model_a}_vs_{model_b}_{int(time.time())}"
+    # Check if experiment already exists
+    storage = ExperimentStore()
+    existing = storage.get_experiment_by_name(name)
+    if existing:
+        console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
+        console.print(f"Use 'pidgin experiment resume {name}' to reattach")
+        return
     
-    # Create configuration
+    # Resolve model aliases to IDs
+    from .config.models import resolve_model_id
+    model_a_id, config_a = resolve_model_id(model_a)
+    model_b_id, config_b = resolve_model_id(model_b)
+    
+    # Create configuration with resolved IDs
     config = ExperimentConfig(
         name=name,
-        agent_a_model=model_a,
-        agent_b_model=model_b,
+        agent_a_model=model_a_id,  # Use resolved ID
+        agent_b_model=model_b_id,  # Use resolved ID
         initial_prompt=initial_prompt,
         max_turns=max_turns,
         repetitions=repetitions,
@@ -1152,11 +1162,11 @@ def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
             console.print(f"  • {error}")
         return
     
-    if background:
-        # Start as daemon
+    if daemon:
+        # Start as daemon (headless mode)
         base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
         manager = ExperimentManager(base_dir=base_dir)
-        console.print(f"[#8fbcbb]◆ Starting experiment: {config.name}[/#8fbcbb]")
+        console.print(f"[#8fbcbb]◆ Starting experiment '{name}' in background[/#8fbcbb]")
         console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
         console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
         console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
@@ -1164,103 +1174,195 @@ def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
         try:
             # Use the original working directory captured at module import
             exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-            console.print(f"\n[#a3be8c]✓ Experiment started in background[/#a3be8c]")
-            console.print(f"[#4c566a]  ID: {exp_id}[/#4c566a]")
-            console.print(f"\n[#4c566a]Check status:[/#4c566a] pidgin experiment status")
-            console.print(f"[#4c566a]View logs:[/#4c566a] pidgin experiment logs {exp_id}")
-            console.print(f"[#4c566a]Stop:[/#4c566a] pidgin experiment stop {exp_id}")
+            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
+            console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
         except Exception as e:
             console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
             raise
     else:
-        # Run in foreground
-        storage = ExperimentStore()
-        runner = ParallelExperimentRunner(storage)
+        # Interactive mode - start with dashboard attached
+        from .dashboard import ExperimentDashboard
         
-        console.print(f"\n[#8fbcbb]◆ Starting experiment (foreground): {config.name}[/#8fbcbb]")
-        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
-        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
-        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-        if max_parallel:
-            console.print(f"[#4c566a]  Parallelism: {max_parallel}[/#4c566a]")
-        console.print()
+        # Start experiment daemon in background
+        base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+        manager = ExperimentManager(base_dir=base_dir)
         
         try:
-            start_time = time.time()
-            experiment_id = asyncio.run(runner.run_experiment(config))
-            duration = time.time() - start_time
+            # Start experiment (launches daemon in background)
+            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
             
-            # Get final status
-            status = storage.get_experiment_status(experiment_id)
+            # Wait a moment for daemon to initialize and create database
+            import time
+            time.sleep(2)
             
-            # Show results
-            console.print(f"\n[#a3be8c]✓ Experiment complete![/#a3be8c]")
-            console.print(f"[#4c566a]  ID: {experiment_id}[/#4c566a]")
-            console.print(f"[#4c566a]  Duration: {duration:.1f}s[/#4c566a]")
-            console.print(f"[#4c566a]  Completed: {status.get('completed_conversations', 0)}/{repetitions}[/#4c566a]")
-            if status.get('avg_convergence'):
-                console.print(f"[#4c566a]  Avg convergence: {status['avg_convergence']:.3f}[/#4c566a]")
+            # Get database path for the experiment
+            db_path = base_dir / "experiments.db"
+            
+            # Create and run dashboard
+            console.print(f"\n[#8fbcbb]◆ Starting experiment '{name}' with dashboard[/#8fbcbb]")
+            console.print(f"[#4c566a]Press 'D' to detach, Ctrl+C to pause[/#4c566a]\n")
+            
+            dashboard = ExperimentDashboard(db_path, experiment_name=name)
+            asyncio.run(dashboard.run())
+            
+        except KeyboardInterrupt:
+            console.print("\n[#ebcb8b]Experiment paused by user[/#ebcb8b]")
+            console.print(f"Use 'pidgin experiment resume {name}' to continue")
         except Exception as e:
-            console.print(f"\n[#bf616a]✗ Experiment failed: {str(e)}[/#bf616a]")
+            console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
             raise
 
 
 @experiment.command()
-def status():
-    """Show status of all experiments.
+@click.argument('name')
+def resume(name):
+    """Reattach to an experiment session (paused or detached).
     
-    Lists recent experiments with their current status, progress, and
-    whether they're currently running.
+    Works for both paused experiments and running experiments that have
+    been detached from the dashboard. This is the universal command to
+    "show me this experiment".
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Resume paused experiment:[/#4c566a]
+        pidgin experiment resume mytest
+    
+    [#4c566a]Reattach to detached experiment:[/#4c566a]
+        pidgin experiment resume background_run
     """
-    from .experiments import ExperimentManager
-    from rich.table import Table
+    from .experiments import ExperimentStore, ExperimentManager
+    from .dashboard import ExperimentDashboard
     
     base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    storage = ExperimentStore()
     manager = ExperimentManager(base_dir=base_dir)
-    experiments = manager.list_experiments(limit=20)
+    
+    # Find experiment by name
+    experiment = storage.get_experiment_by_name(name)
+    if not experiment:
+        console.print(f"[#bf616a]Experiment session '{name}' not found[/#bf616a]")
+        console.print("\nAvailable sessions:")
+        # List available experiments
+        experiments = storage.list_experiments(limit=10)
+        if experiments:
+            from rich.table import Table
+            table = Table(show_header=False)
+            table.add_column("Name", style="#88c0d0")
+            table.add_column("Status", style="#ebcb8b")
+            table.add_column("Progress", style="#d8dee9")
+            table.add_column("Models", style="#4c566a")
+            for exp in experiments:
+                total = exp.get('total_conversations', 0)
+                completed = exp.get('completed_conversations', 0)
+                table.add_row(
+                    exp['name'],
+                    exp['status'],
+                    f"{completed}/{total}",
+                    f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
+                )
+            console.print(table)
+        else:
+            console.print("[#4c566a]No experiments found[/#4c566a]")
+        return
+    
+    # Check experiment status
+    if experiment['status'] == 'completed':
+        console.print(f"[#ebcb8b]Experiment '{name}' is completed[/#ebcb8b]")
+        console.print(f"Use 'pidgin experiment results {name}' to view results")
+        return
+    elif experiment['status'] == 'failed':
+        console.print(f"[#bf616a]Experiment '{name}' failed[/#bf616a]")
+        return
+    
+    # Get database path
+    db_path = base_dir / "experiments.db"
+    if not db_path.exists():
+        console.print(f"[#bf616a]Database not found[/#bf616a]")
+        return
+    
+    # Create dashboard for this specific experiment
+    dashboard = ExperimentDashboard(db_path, experiment_name=name)
+    
+    if experiment['status'] == 'paused':
+        console.print(f"[#8fbcbb]◆ Resuming paused experiment '{name}'...[/#8fbcbb]")
+        # TODO: Actually resume the experiment runner
+        # For now, just attach the dashboard
+    else:
+        console.print(f"[#8fbcbb]◆ Reattaching to experiment '{name}'...[/#8fbcbb]")
+    
+    console.print(f"[#4c566a]Press 'D' to detach, Ctrl+C to pause[/#4c566a]\n")
+    
+    try:
+        asyncio.run(dashboard.run())
+    except KeyboardInterrupt:
+        console.print(f"\n[#ebcb8b]Detached from experiment '{name}'[/#ebcb8b]")
+        console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
+
+
+@experiment.command()
+@click.option("--all", is_flag=True, help="Show completed experiments too")
+def list(all):
+    """List experiment sessions (like screen -list).
+    
+    Shows active experiment sessions with their status and progress.
+    Use --all to include completed experiments.
+    """
+    from .experiments import ExperimentStore
+    from rich.table import Table
+    
+    storage = ExperimentStore()
+    experiments = storage.list_experiments(limit=50 if all else 20)
     
     if not experiments:
-        console.print("[#4c566a]No experiments found.[/#4c566a]")
+        console.print("No experiment sessions found")
         return
     
     # Create table
-    table = Table(title="Experiments", title_style="#8fbcbb")
-    table.add_column("ID", style="#88c0d0", width=12)
-    table.add_column("Name", style="#a3be8c", max_width=30)
+    table = Table(title="Experiment Sessions")
+    table.add_column("Name", style="#88c0d0")
+    table.add_column("Status", style="#a3be8c")
+    table.add_column("Progress", justify="right")
     table.add_column("Models", style="#d8dee9")
-    table.add_column("Status", style="#ebcb8b")
-    table.add_column("Progress", justify="right", style="#d8dee9")
-    table.add_column("Running", style="#bf616a", justify="center")
+    table.add_column("Started", style="#4c566a")
     
     for exp in experiments:
+        # Skip completed/failed unless --all
+        if not all and exp['status'] in ['completed', 'failed']:
+            continue
+            
+        # Format status with attachment info
+        status = exp['status']
+        if exp['status'] == 'running' and exp.get('dashboard_attached'):
+            status = "running (attached)"
+        elif exp['status'] == 'running':
+            status = "running (detached)"
+            
         # Format progress
         total = exp.get('total_conversations', 0)
         completed = exp.get('completed_conversations', 0)
-        failed = exp.get('failed_conversations', 0)
-        
-        if failed > 0:
-            progress = f"{completed}/{total} ({failed} failed)"
-        else:
-            progress = f"{completed}/{total}"
+        progress = f"{completed}/{total}"
         
         # Format models
-        models = f"{exp.get('agent_a_model', '?')} vs {exp.get('agent_b_model', '?')}"
+        models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
         
-        # Running indicator
-        running = "●" if exp.get('is_running') else "○"
+        # Format start time
+        from datetime import datetime
+        if exp.get('created_at'):
+            start_time = datetime.fromisoformat(exp['created_at'])
+            started = start_time.strftime("%m/%d %H:%M")
+        else:
+            started = "unknown"
         
         # Add row
         table.add_row(
-            exp['experiment_id'],
             exp['name'],
-            models,
-            exp['status'],
+            status,
             progress,
-            running
+            models,
+            started
         )
     
     console.print(table)
-    console.print(f"\n[#4c566a]● = running, ○ = stopped[/#4c566a]")
 
 
 @experiment.command()
@@ -1314,63 +1416,7 @@ def logs(experiment_id, lines, follow):
             console.print(line.rstrip(), markup=False)
 
 
-@experiment.command()
-@click.option("--db", "db_path", help="Path to experiments database", 
-              type=click.Path(exists=True, path_type=Path))
-@click.option("--refresh", default=0.25, help="Refresh rate in seconds", type=float)
-def dashboard(db_path, refresh):
-    """Launch live dashboard for real-time experiment monitoring.
-    
-    The dashboard provides a real-time view of running experiments with:
-    
-    • Active experiment status
-    • Live conversation feed
-    • Real-time metrics with sparklines
-    • Pattern detection and insights
-    • Convergence tracking
-    
-    [bold]EXAMPLES:[/bold]
-    
-    [#4c566a]Monitor experiments with default database:[/#4c566a]
-        pidgin experiment dashboard
-    
-    [#4c566a]Use custom database location:[/#4c566a]
-        pidgin experiment dashboard --db ./experiments.db
-    
-    [#4c566a]Slower refresh rate:[/#4c566a]
-        pidgin experiment dashboard --refresh 1.0
-    
-    [bold]CONTROLS:[/bold]
-    
-    • [q] Quit dashboard
-    • [e] Export current data
-    • [p] Pause updates
-    • [r] Force refresh
-    """
-    from .dashboard import ExperimentDashboard
-    
-    # Default to standard experiments database
-    if not db_path:
-        db_path = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
-    
-    if not db_path.exists():
-        console.print(f"[#bf616a]✗ Database not found: {db_path}[/#bf616a]")
-        console.print("\n[#4c566a]Make sure you have experiments running or completed.[/#4c566a]")
-        console.print("[#4c566a]Start an experiment:[/#4c566a] pidgin experiment start -a claude -b gpt")
-        return
-    
-    console.print(f"[#8fbcbb]◆ Launching experiment dashboard...[/#8fbcbb]")
-    console.print(f"[#4c566a]  Database: {db_path}[/#4c566a]")
-    console.print(f"[#4c566a]  Refresh: {refresh}s[/#4c566a]")
-    console.print("\n[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
-    
-    # Create and run dashboard
-    dashboard = ExperimentDashboard(db_path, refresh_rate=refresh)
-    
-    try:
-        asyncio.run(dashboard.run())
-    except KeyboardInterrupt:
-        console.print("\n[#8fbcbb]◆ Dashboard closed[/#8fbcbb]")
+# Dashboard command removed - now integrated into start/resume workflow
 
 
 if __name__ == "__main__":

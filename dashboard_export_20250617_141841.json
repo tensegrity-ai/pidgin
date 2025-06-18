@@ -1,0 +1,199 @@
+{
+  "timestamp": "2025-06-17T14:18:41.272949",
+  "status": {
+    "experiments": [
+      {
+        "experiment_id": "exp_54b1ae0a",
+        "name": "haiku_vs_gpt4o_mini_test",
+        "status": "running",
+        "created_at": "2025-06-17 21:17:59",
+        "total_conversations": 10,
+        "completed_conversations": 0
+      }
+    ],
+    "stats": {
+      "total_experiments": 1,
+      "total_conversations": 10,
+      "active_experiments": 10
+    }
+  },
+  "conversations": [
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0009",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0008",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0007",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0006",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0005",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0004",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0003",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:18:00",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0002",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:17:59",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0001",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:17:59",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    },
+    {
+      "conversation_id": "exp_54b1ae0a_conv_0000",
+      "experiment_id": "exp_54b1ae0a",
+      "agent_a_model": "haiku",
+      "agent_b_model": "gpt-4o-mini",
+      "total_turns": 0,
+      "started_at": "2025-06-17 21:17:59",
+      "completed_at": null,
+      "status": "running",
+      "experiment_name": "haiku_vs_gpt4o_mini_test",
+      "latest_convergence": null
+    }
+  ],
+  "metrics": {
+    "convergence": 0.0,
+    "avg_response_time": 0,
+    "min_response_time": 0,
+    "max_response_time": 0,
+    "avg_tokens": 0,
+    "total_tokens": 0,
+    "turns_per_minute": 0
+  },
+  "patterns": [],
+  "events": [
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_54b1ae0a_conv_0003",
+        "model_a": "haiku",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-17 21:18:00"
+    },
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_54b1ae0a_conv_0004",
+        "model_a": "haiku",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-17 21:18:00"
+    },
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_54b1ae0a_conv_0005",
+        "model_a": "haiku",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-17 21:18:00"
+    },
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_54b1ae0a_conv_0006",
+        "model_a": "haiku",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-17 21:18:00"
+    },
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_54b1ae0a_conv_0007",
+        "model_a": "haiku",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-17 21:18:00"
+    }
+  ]
+}

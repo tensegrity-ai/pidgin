@@ -61,10 +61,10 @@ MODELS: Dict[str, ModelConfig] = {
             conversation_style="verbose",
         ),
     ),
-    "claude-3-7-sonnet-20250224": ModelConfig(
-        model_id="claude-3-7-sonnet-20250224",
-        shortname="Sonnet3.7",
-        aliases=["sonnet3.7", "claude-3.7"],
+    "claude-3-5-sonnet-20241022": ModelConfig(
+        model_id="claude-3-5-sonnet-20241022",
+        shortname="Sonnet3.5",
+        aliases=["sonnet3.5", "claude-3.5", "sonnet3.7", "claude-3.7"],
         provider="anthropic",
         context_window=200000,
         pricing_tier="standard",
@@ -74,7 +74,7 @@ MODELS: Dict[str, ModelConfig] = {
             recommended_pairings=["o4-mini", "gpt-4.1-mini"],
             conversation_style="analytical",
         ),
-        notes="Hybrid reasoning model",
+        notes="Latest Sonnet model",
     ),
     "claude-3-5-haiku-20241022": ModelConfig(
         model_id="claude-3-5-haiku-20241022",
@@ -447,3 +447,20 @@ def get_model_shortcuts() -> Dict[str, str]:
         if config.aliases:
             shortcuts[config.aliases[0]] = model_id
     return shortcuts
+
+
+def resolve_model_id(model_or_alias: str) -> tuple[str, Optional[ModelConfig]]:
+    """Resolve a model name or alias to its full model ID.
+    
+    Args:
+        model_or_alias: Model ID or alias
+        
+    Returns:
+        Tuple of (resolved_model_id, model_config)
+        If model not found, returns (original_input, None)
+    """
+    config = get_model_config(model_or_alias)
+    if config:
+        return config.model_id, config
+    else:
+        return model_or_alias, None

@@ -78,9 +78,10 @@ class MetricHistory:
 class ExperimentDashboard:
     """Real-time dashboard for monitoring Pidgin experiments."""
     
-    def __init__(self, db_path: Path, refresh_rate: float = 0.25):
+    def __init__(self, db_path: Path, refresh_rate: float = 0.25, experiment_name: Optional[str] = None):
         self.db_path = db_path
         self.refresh_rate = refresh_rate
+        self.experiment_name = experiment_name
         self.console = Console()
         
         # Metric histories for sparklines
@@ -102,6 +103,12 @@ class ExperimentDashboard:
         self.paused = False
         self.should_exit = False
         self.force_refresh = False
+        self.detached = False  # For detach functionality
+        
+        # Loading state
+        self.conversations_started = False
+        self.loading_check_interval = 2.0  # seconds
+        self.last_loading_check = 0
         
     def connect_db(self) -> sqlite3.Connection:
         """Connect to the experiments database."""
@@ -113,46 +120,86 @@ class ExperimentDashboard:
         """Get current experiment status."""
         cursor = conn.cursor()
         
-        # Get active experiments
-        cursor.execute("""
-            SELECT experiment_id, name, status, created_at, total_conversations, completed_conversations
-            FROM experiments
-            WHERE status IN ('running', 'created')
-            ORDER BY created_at DESC
-        """)
-        experiments = cursor.fetchall()
-        
-        # Get total counts
-        cursor.execute("""
-            SELECT 
-                COUNT(DISTINCT e.experiment_id) as total_experiments,
-                COUNT(DISTINCT c.conversation_id) as total_conversations,
-                SUM(CASE WHEN e.status = 'running' THEN 1 ELSE 0 END) as active_experiments
-            FROM experiments e
-            LEFT JOIN conversations c ON e.experiment_id = c.experiment_id
-        """)
-        stats = cursor.fetchone()
-        
-        return {
-            "experiments": [dict(exp) for exp in experiments],
-            "stats": dict(stats) if stats else {}
-        }
+        try:
+            # Get active experiments
+            if self.experiment_name:
+                # Filter by specific experiment name
+                cursor.execute("""
+                    SELECT experiment_id, name, status, created_at, total_conversations, completed_conversations
+                    FROM experiments
+                    WHERE name = ? AND status IN ('running', 'created')
+                    ORDER BY created_at DESC
+                """, (self.experiment_name,))
+            else:
+                cursor.execute("""
+                    SELECT experiment_id, name, status, created_at, total_conversations, completed_conversations
+                    FROM experiments
+                    WHERE status IN ('running', 'created')
+                    ORDER BY created_at DESC
+                """)
+            experiments = cursor.fetchall()
+            
+            # Get total counts
+            cursor.execute("""
+                SELECT 
+                    COUNT(DISTINCT e.experiment_id) as total_experiments,
+                    COUNT(DISTINCT c.conversation_id) as total_conversations,
+                    SUM(CASE WHEN e.status = 'running' THEN 1 ELSE 0 END) as active_experiments
+                FROM experiments e
+                LEFT JOIN conversations c ON e.experiment_id = c.experiment_id
+            """)
+            stats = cursor.fetchone()
+            
+            return {
+                "experiments": [dict(exp) for exp in experiments],
+                "stats": dict(stats) if stats else {}
+            }
+        except sqlite3.OperationalError:
+            # Table might not exist yet
+            return {
+                "experiments": [],
+                "stats": {"total_experiments": 0, "total_conversations": 0, "active_experiments": 0}
+            }
     
     def get_active_conversations(self, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
         """Get currently active conversations."""
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-                c.conversation_id, c.experiment_id, c.agent_a_model, c.agent_b_model, 
-                c.total_turns, c.started_at, c.completed_at,
-                e.name as experiment_name
-            FROM conversations c
-            JOIN experiments e ON c.experiment_id = e.experiment_id
-            WHERE c.completed_at IS NULL OR c.completed_at > datetime('now', '-5 minutes')
-            ORDER BY c.started_at DESC
-            LIMIT 10
-        """)
-        return [dict(row) for row in cursor.fetchall()]
+        
+        try:
+            if self.experiment_name:
+                # Filter by specific experiment
+                cursor.execute("""
+                    SELECT 
+                        c.conversation_id, c.experiment_id, c.agent_a_model, c.agent_b_model, 
+                        c.total_turns, c.started_at, c.completed_at, c.status,
+                        e.name as experiment_name,
+                        MAX(t.convergence_score) as latest_convergence
+                    FROM conversations c
+                    JOIN experiments e ON c.experiment_id = e.experiment_id
+                    LEFT JOIN turns t ON c.conversation_id = t.conversation_id
+                    WHERE e.name = ? AND c.status IN ('running', 'created')
+                    GROUP BY c.conversation_id
+                    ORDER BY c.started_at DESC
+                    LIMIT 10
+                """, (self.experiment_name,))
+            else:
+                cursor.execute("""
+                    SELECT 
+                        c.conversation_id, c.experiment_id, c.agent_a_model, c.agent_b_model, 
+                        c.total_turns, c.started_at, c.completed_at, c.status,
+                        e.name as experiment_name,
+                        MAX(t.convergence_score) as latest_convergence
+                    FROM conversations c
+                    JOIN experiments e ON c.experiment_id = e.experiment_id
+                    LEFT JOIN turns t ON c.conversation_id = t.conversation_id
+                    WHERE c.status IN ('running', 'created')
+                    GROUP BY c.conversation_id
+                    ORDER BY c.started_at DESC
+                    LIMIT 10
+                """)
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.OperationalError:
+            return []
     
     def get_metrics(self, conn: sqlite3.Connection) -> Dict[str, float]:
         """Calculate real-time metrics."""
@@ -160,51 +207,85 @@ class ExperimentDashboard:
         
         metrics = {}
         
-        # Convergence metrics
-        cursor.execute("""
-            SELECT AVG(convergence_score) as avg_convergence
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-        """)
-        result = cursor.fetchone()
-        metrics["convergence"] = result["avg_convergence"] if result["avg_convergence"] else 0.0
+        try:
+            # Build base query with experiment filter if needed
+            experiment_filter = ""
+            params = []
+            if self.experiment_name:
+                experiment_filter = """
+                    AND conversation_id IN (
+                        SELECT c.conversation_id FROM conversations c
+                        JOIN experiments e ON c.experiment_id = e.experiment_id
+                        WHERE e.name = ?
+                    )
+                """
+                params.append(self.experiment_name)
+            
+            # Convergence metrics
+            query = f"""
+                SELECT AVG(convergence_score) as avg_convergence
+                FROM turns
+                WHERE timestamp > datetime('now', '-1 minute')
+                {experiment_filter}
+            """
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            metrics["convergence"] = result["avg_convergence"] if result and result["avg_convergence"] else 0.0
         
-        # Response times
-        cursor.execute("""
-            SELECT 
-                AVG(response_time_ms) as avg_response_time,
-                MIN(response_time_ms) as min_response_time,
-                MAX(response_time_ms) as max_response_time
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-        """)
-        result = cursor.fetchone()
-        if result:
-            metrics["avg_response_time"] = result["avg_response_time"] or 0
-            metrics["min_response_time"] = result["min_response_time"] or 0
-            metrics["max_response_time"] = result["max_response_time"] or 0
+            # Response times
+            query = f"""
+                SELECT 
+                    AVG(response_time_ms) as avg_response_time,
+                    MIN(response_time_ms) as min_response_time,
+                    MAX(response_time_ms) as max_response_time
+                FROM turns
+                WHERE timestamp > datetime('now', '-1 minute')
+                {experiment_filter}
+            """
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            if result:
+                metrics["avg_response_time"] = result["avg_response_time"] or 0
+                metrics["min_response_time"] = result["min_response_time"] or 0
+                metrics["max_response_time"] = result["max_response_time"] or 0
         
-        # Token counts (using word count as proxy)
-        cursor.execute("""
-            SELECT 
-                AVG(word_count) as avg_tokens,
-                SUM(word_count) as total_tokens
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-        """)
-        result = cursor.fetchone()
-        if result:
-            metrics["avg_tokens"] = result["avg_tokens"] or 0
-            metrics["total_tokens"] = result["total_tokens"] or 0
-        
-        # Turn rate
-        cursor.execute("""
-            SELECT COUNT(*) as turns_per_minute
-            FROM turns
-            WHERE timestamp > datetime('now', '-1 minute')
-        """)
-        result = cursor.fetchone()
-        metrics["turns_per_minute"] = result["turns_per_minute"] if result else 0
+            # Token counts (using word count as proxy)
+            query = f"""
+                SELECT 
+                    AVG(word_count) as avg_tokens,
+                    SUM(word_count) as total_tokens
+                FROM turns
+                WHERE timestamp > datetime('now', '-1 minute')
+                {experiment_filter}
+            """
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            if result:
+                metrics["avg_tokens"] = result["avg_tokens"] or 0
+                metrics["total_tokens"] = result["total_tokens"] or 0
+            
+            # Turn rate
+            query = f"""
+                SELECT COUNT(*) as turns_per_minute
+                FROM turns
+                WHERE timestamp > datetime('now', '-1 minute')
+                {experiment_filter}
+            """
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            metrics["turns_per_minute"] = result["turns_per_minute"] if result else 0
+            
+        except sqlite3.OperationalError:
+            # Return default metrics if tables don't exist yet
+            metrics = {
+                "convergence": 0.0,
+                "avg_response_time": 0,
+                "min_response_time": 0,
+                "max_response_time": 0,
+                "avg_tokens": 0,
+                "total_tokens": 0,
+                "turns_per_minute": 0
+            }
         
         return metrics
     
@@ -385,8 +466,8 @@ class ExperimentDashboard:
         stats = status.get("stats", {})
         
         content = Table(show_header=False, box=None, padding=(0, 1))
-        content.add_column("Label", style=f"[{NORD_COLORS['nord3']}]")
-        content.add_column("Value", style=f"[{NORD_COLORS['nord4']}]")
+        content.add_column("Label", style=NORD_COLORS['nord3'])
+        content.add_column("Value", style=NORD_COLORS['nord4'])
         
         runtime = timedelta(seconds=int(time.time() - self.start_time))
         
@@ -406,24 +487,41 @@ class ExperimentDashboard:
     def create_conversations_panel(self, conversations: List[Dict[str, Any]]) -> Panel:
         """Create the active conversations panel."""
         table = Table(show_header=True, box=None)
-        table.add_column("ID", style=f"[{NORD_COLORS['nord3']}]", width=8)
-        table.add_column("Models", style=f"[{NORD_COLORS['nord4']}]")
-        table.add_column("Turns", style=f"[{NORD_COLORS['nord13']}]", width=6)
-        table.add_column("Duration", style=f"[{NORD_COLORS['nord8']}]", width=10)
+        table.add_column("ID", style=NORD_COLORS['nord3'], width=12)
+        table.add_column("Models", style=NORD_COLORS['nord4'])
+        table.add_column("Turns", style=NORD_COLORS['nord13'], width=8)
+        table.add_column("Status", style=NORD_COLORS['nord8'], width=10)
         
-        for conv in conversations[:8]:
-            conv_id = conv["conversation_id"][:8] if conv["conversation_id"] else "N/A"
-            models = f"{conv['agent_a_model']} ↔ {conv['agent_b_model']}"
-            turns = str(conv.get("total_turns", 0))
-            
-            if conv["started_at"]:
-                start = datetime.fromisoformat(conv["started_at"])
-                duration = datetime.now() - start
-                duration_str = f"{duration.seconds//60}m {duration.seconds%60}s"
-            else:
-                duration_str = "N/A"
-            
-            table.add_row(conv_id, models, turns, duration_str)
+        if not conversations:
+            # No active conversations yet
+            table.add_row(
+                "-",
+                "Waiting for conversations to start...",
+                "-",
+                "-"
+            )
+        else:
+            for conv in conversations[:8]:
+                # Extract conversation ID suffix
+                conv_id = conv["conversation_id"].split('_')[-1] if conv["conversation_id"] else "N/A"
+                
+                # Format models
+                models = f"{conv['agent_a_model']} ↔ {conv['agent_b_model']}"
+                
+                # Format turns
+                turns = str(conv.get("total_turns", 0))
+                
+                # Format status
+                status = conv.get("status", "unknown")
+                if status == "running":
+                    if conv.get("latest_convergence", 0) > 0.8:
+                        status = f"🔴 {conv['latest_convergence']:.2f}"
+                    else:
+                        status = "● running"
+                elif status == "created":
+                    status = "○ starting"
+                
+                table.add_row(conv_id, models, turns, status)
         
         return Panel(
             table,
@@ -435,9 +533,9 @@ class ExperimentDashboard:
     def create_metrics_panel(self, metrics: Dict[str, float]) -> Panel:
         """Create the metrics panel with sparklines."""
         grid = Table(show_header=True, box=None)
-        grid.add_column("Metric", style=f"[{NORD_COLORS['nord3']}]", width=20)
-        grid.add_column("Value", style=f"[{NORD_COLORS['nord4']}]", width=15)
-        grid.add_column("Trend", style=f"[{NORD_COLORS['nord8']}]", width=20)
+        grid.add_column("Metric", style=NORD_COLORS['nord3'], width=20)
+        grid.add_column("Value", style=NORD_COLORS['nord4'], width=15)
+        grid.add_column("Trend", style=NORD_COLORS['nord8'], width=20)
         
         # Update histories
         for key, value in metrics.items():
@@ -488,7 +586,7 @@ class ExperimentDashboard:
         """Create the insights panel showing detected patterns."""
         content = Table(show_header=False, box=None)
         content.add_column("Icon", width=2)
-        content.add_column("Pattern", style=f"[{NORD_COLORS['nord4']}]")
+        content.add_column("Pattern", style=NORD_COLORS['nord4'])
         
         if not patterns:
             content.add_row("◇", "[dim]No patterns detected[/dim]")
@@ -511,8 +609,8 @@ class ExperimentDashboard:
     def create_feed_panel(self, events: List[Dict[str, Any]]) -> Panel:
         """Create the live event feed panel."""
         content = Table(show_header=False, box=None)
-        content.add_column("Time", style=f"[{NORD_COLORS['nord3']}]", width=8)
-        content.add_column("Event", style=f"[{NORD_COLORS['nord4']}]")
+        content.add_column("Time", style=NORD_COLORS['nord3'], width=8)
+        content.add_column("Event", style=NORD_COLORS['nord4'])
         
         for event in events[:15]:  # Show last 15
             timestamp = datetime.fromisoformat(event["timestamp"])
@@ -576,8 +674,11 @@ class ExperimentDashboard:
     
     def create_header(self) -> Panel:
         """Create the header panel."""
-        title = Text("◆ Pidgin Live Dashboard", style="bold", justify="center")
-        subtitle = Text("Real-time AI Conversation Monitoring", style=f"[{NORD_COLORS['nord3']}]", justify="center")
+        if self.experiment_name:
+            title = Text(f"◆ EXPERIMENT: {self.experiment_name} (Running - Attached)", style="bold", justify="center")
+        else:
+            title = Text("◆ Pidgin Live Dashboard", style="bold", justify="center")
+        subtitle = Text("Real-time AI Conversation Monitoring", style=NORD_COLORS['nord3'], justify="center")
         
         return Panel(
             Align.center(title + "\n" + subtitle),
@@ -587,12 +688,63 @@ class ExperimentDashboard:
     
     def create_footer(self) -> Panel:
         """Create the footer panel."""
-        shortcuts = "◆ [q]uit  ◇ [e]xport  ○ [r]efresh  ● [p]ause"
+        shortcuts = "◆ [q]uit  ◇ [e]xport  ○ [r]efresh  ● [p]ause  ◆ [D]etach"
         if self.paused:
             shortcuts += f"  [{NORD_COLORS['nord13']}]⏸ PAUSED[/{NORD_COLORS['nord13']}]"
         return Panel(
-            Text(shortcuts, justify="center", style=f"[{NORD_COLORS['nord3']}]"),
+            Text(shortcuts, justify="center", style=NORD_COLORS['nord3']),
             border_style=NORD_COLORS["nord2"],
+            box=ROUNDED
+        )
+    
+    def check_conversations_started(self, conn: sqlite3.Connection) -> bool:
+        """Check if any conversations have started producing turns."""
+        if self.experiment_name:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM turns t
+                JOIN conversations c ON t.conversation_id = c.conversation_id
+                JOIN experiments e ON c.experiment_id = e.experiment_id
+                WHERE e.name = ?
+            """, (self.experiment_name,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        return False
+    
+    def create_loading_panel(self) -> Panel:
+        """Create a loading panel while waiting for conversations to start."""
+        elapsed = time.time() - self.start_time
+        
+        # Get experiment info if available
+        experiment_info = ""
+        try:
+            with self.connect_db() as conn:
+                status = self.get_experiment_status(conn)
+                if status["experiments"]:
+                    exp = status["experiments"][0]
+                    experiment_info = f"""
+◇ Experiment: {exp['name']}
+○ Total conversations: {exp['total_conversations']}
+● Status: {exp['status']}
+"""
+        except:
+            pass
+            
+        content = f"""[bold]◆ Initializing Experiment[/bold]
+
+{experiment_info}
+◇ Starting conversations...
+○ Elapsed: {elapsed:.1f}s
+
+[dim]Conversations will appear as they start producing data[/dim]
+[dim]This typically takes 5-10 seconds[/dim]
+"""
+        
+        return Panel(
+            Align.center(content, vertical="middle"),
+            title="[bold]◆ Loading",
+            border_style=NORD_COLORS["nord13"],
             box=ROUNDED
         )
     
@@ -600,6 +752,23 @@ class ExperimentDashboard:
         """Update all dashboard components."""
         if self.paused and not self.force_refresh:
             # Just update the footer to show paused state
+            layout["footer"].update(self.create_footer())
+            return
+            
+        # Check if conversations have started
+        current_time = time.time()
+        if not self.conversations_started and current_time - self.last_loading_check > self.loading_check_interval:
+            self.last_loading_check = current_time
+            try:
+                with self.connect_db() as conn:
+                    self.conversations_started = self.check_conversations_started(conn)
+            except:
+                pass
+                
+        # Show loading screen if conversations haven't started
+        if not self.conversations_started and time.time() - self.start_time < 30:
+            layout["body"].update(self.create_loading_panel())
+            layout["header"].update(self.create_header())
             layout["footer"].update(self.create_footer())
             return
             
@@ -615,23 +784,64 @@ class ExperimentDashboard:
                 # Update event counter
                 self.total_events = len(events)
                 
-                # Update panels
-                layout["header"].update(self.create_header())
-                layout["status"].update(self.create_status_panel(status))
-                layout["conversations"].update(self.create_conversations_panel(conversations))
-                layout["metrics"].update(self.create_metrics_panel(metrics))
-                layout["insights"].update(self.create_insights_panel(patterns))
-                layout["right"].update(self.create_feed_panel(events))
-                layout["footer"].update(self.create_footer())
+                # Update panels with individual error handling
+                try:
+                    layout["header"].update(self.create_header())
+                except Exception as e:
+                    layout["header"].update(Panel(f"Header error: {e}", border_style="red"))
+                
+                try:
+                    layout["status"].update(self.create_status_panel(status))
+                except Exception as e:
+                    layout["status"].update(Panel(f"Status error: {e}", border_style="red"))
+                
+                try:
+                    layout["conversations"].update(self.create_conversations_panel(conversations))
+                except Exception as e:
+                    layout["conversations"].update(Panel(f"Conversations error: {e}", border_style="red"))
+                
+                try:
+                    layout["metrics"].update(self.create_metrics_panel(metrics))
+                except Exception as e:
+                    layout["metrics"].update(Panel(f"Metrics error: {e}", border_style="red"))
+                
+                try:
+                    layout["insights"].update(self.create_insights_panel(patterns))
+                except Exception as e:
+                    layout["insights"].update(Panel(f"Insights error: {e}", border_style="red"))
+                
+                try:
+                    layout["right"].update(self.create_feed_panel(events))
+                except Exception as e:
+                    layout["right"].update(Panel(f"Feed error: {e}", border_style="red"))
+                
+                try:
+                    layout["footer"].update(self.create_footer())
+                except Exception as e:
+                    layout["footer"].update(Panel(f"Footer error: {e}", border_style="red"))
                 
                 # Clear force refresh flag
                 self.force_refresh = False
                 
+        except sqlite3.OperationalError as e:
+            # Database/table might not exist yet
+            waiting_panel = Panel(
+                f"[{NORD_COLORS['nord8']}]◆ Waiting for experiment to initialize...\n\n"
+                f"The experiment daemon is starting up.\n"
+                f"Data will appear momentarily.[/{NORD_COLORS['nord8']}]",
+                title="◆ Initializing",
+                border_style=NORD_COLORS["nord13"],
+                style=NORD_COLORS['nord4']
+            )
+            layout["body"].update(Align.center(waiting_panel, vertical="middle"))
         except Exception as e:
             # Show error gracefully
+            import traceback
+            error_detail = traceback.format_exc() if self.console.is_terminal else str(e)
             error_panel = Panel(
-                f"[{NORD_COLORS['nord11']}]Error: {str(e)}[/{NORD_COLORS['nord11']}]",
-                title="◆ Connection Error",
+                f"[{NORD_COLORS['nord11']}]Error: {str(e)}[/{NORD_COLORS['nord11']}]\n\n"
+                f"[{NORD_COLORS['nord3']}]{error_detail}[/{NORD_COLORS['nord3']}]",
+                title="◆ Dashboard Error",
                 border_style=NORD_COLORS["nord11"]
             )
             layout["body"].update(error_panel)
@@ -676,9 +886,21 @@ class ExperimentDashboard:
         """Handle force refresh command."""
         self.force_refresh = True
         
+    def handle_detach(self):
+        """Handle detach command (like screen's Ctrl+A D)."""
+        self.should_exit = True
+        self.detached = True
+        
     async def run(self):
         """Run the dashboard."""
         layout = self.create_layout()
+        
+        # Initialize with loading message
+        loading_panel = Panel(
+            f"[{NORD_COLORS['nord8']}]◆ Loading experiment data...[/{NORD_COLORS['nord8']}]",
+            border_style=NORD_COLORS["nord10"]
+        )
+        layout["body"].update(loading_panel)
         
         # Set up keyboard handler
         keyboard = KeyboardHandler()
@@ -686,10 +908,15 @@ class ExperimentDashboard:
         keyboard.register_handler('e', self.handle_export)
         keyboard.register_handler('p', self.handle_pause)
         keyboard.register_handler('r', self.handle_refresh)
+        keyboard.register_handler('d', self.handle_detach)
+        keyboard.register_handler('D', self.handle_detach)
         
         with keyboard:
             with Live(layout, console=self.console, refresh_per_second=4, screen=True) as live:
                 try:
+                    # Initial update
+                    await self.update_dashboard(layout)
+                    
                     # Start keyboard handler task
                     keyboard_task = asyncio.create_task(keyboard.handle_input())
                     
@@ -705,9 +932,20 @@ class ExperimentDashboard:
                         pass
                         
                 except KeyboardInterrupt:
-                    pass
+                    # Treat Ctrl+C as pause, not quit
+                    self.should_exit = True
+                    self.detached = False  # Mark as paused, not detached
                 finally:
-                    self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard stopped[/{NORD_COLORS['nord8']}]")
+                    if self.detached:
+                        # Update dashboard attachment status in database
+                        if self.experiment_name:
+                            from ..experiments import ExperimentStore
+                            store = ExperimentStore()
+                            experiment = store.get_experiment_by_name(self.experiment_name)
+                            if experiment:
+                                store.update_dashboard_attachment(experiment['experiment_id'], False)
+                    elif not self.detached:
+                        self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard stopped[/{NORD_COLORS['nord8']}]")
 
 
 def main():
