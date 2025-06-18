@@ -2,6 +2,7 @@
 
 import re
 import math
+import zlib
 from collections import Counter, defaultdict
 from typing import Dict, List, Set, Tuple, Any, Optional
 
@@ -87,6 +88,15 @@ class MetricsCalculator:
         # Calculate which words are new
         new_words = vocabulary - self.all_words_seen
         
+        # Calculate additional metrics
+        compression_ratio = self._calculate_compression_ratio(message)
+        lexical_diversity_index = self._calculate_lexical_diversity_index(len(words), vocabulary_size)
+        avg_sentence_length = len(words) / len(sentences) if sentences else 0
+        punctuation_diversity = self._calculate_punctuation_diversity(message)
+        paragraph_count = self._count_paragraphs(message)
+        proper_noun_count = self._count_proper_nouns(words)
+        number_count = self._count_numbers(message)
+        
         # Pattern detection
         questions = len(QUESTION_PATTERN.findall(message))
         exclamations = len(EXCLAMATION_PATTERN.findall(message))
@@ -131,10 +141,15 @@ class MetricsCalculator:
             f'message_length{suffix}': len(message),
             f'word_count{suffix}': len(words),
             f'sentence_count{suffix}': len(sentences),
+            f'paragraph_count{suffix}': paragraph_count,
             f'vocabulary_size{suffix}': vocabulary_size,
             f'type_token_ratio{suffix}': vocabulary_size / len(words) if words else 0,
             f'hapax_legomena_count{suffix}': hapax_count,
             f'hapax_ratio{suffix}': hapax_count / vocabulary_size if vocabulary_size > 0 else 0,
+            f'compression_ratio{suffix}': compression_ratio,
+            f'lexical_diversity_index{suffix}': lexical_diversity_index,
+            f'average_sentence_length{suffix}': avg_sentence_length,
+            f'punctuation_diversity{suffix}': punctuation_diversity,
             f'question_count{suffix}': questions,
             f'exclamation_count{suffix}': exclamations,
             f'hedge_count{suffix}': hedge_count,
@@ -149,6 +164,8 @@ class MetricsCalculator:
             f'first_person_singular_count{suffix}': first_singular,
             f'first_person_plural_count{suffix}': first_plural,
             f'second_person_count{suffix}': second_person,
+            f'number_count{suffix}': number_count,
+            f'proper_noun_count{suffix}': proper_noun_count,
             f'repeated_bigrams{suffix}': bigram_rep,
             f'repeated_trigrams{suffix}': trigram_rep,
             f'self_repetition_score{suffix}': self_rep,
@@ -156,7 +173,7 @@ class MetricsCalculator:
             f'character_entropy{suffix}': char_entropy,
             f'starts_with_acknowledgment{suffix}': starts_ack,
             f'ends_with_question{suffix}': ends_question,
-            f'new_words{suffix}': len(new_words),
+            f'new_words_count{suffix}': len(new_words),
             f'new_words_ratio{suffix}': len(new_words) / len(words) if words else 0
         }
     
@@ -188,12 +205,16 @@ class MetricsCalculator:
         # Cross-agent repetition
         cross_rep = self._calculate_cross_repetition(message_a, message_b)
         
+        # Mimicry score - how much B copies from A
+        mimicry_score = self._calculate_mimicry_score(message_a, message_b)
+        
         # Overall convergence score (weighted average)
         convergence_score = (
-            0.3 * vocab_overlap +
-            0.2 * length_ratio +
-            0.2 * struct_sim +
-            0.3 * cross_rep
+            0.25 * vocab_overlap +
+            0.15 * length_ratio +
+            0.15 * struct_sim +
+            0.25 * cross_rep +
+            0.20 * mimicry_score
         )
         
         return {
@@ -201,7 +222,8 @@ class MetricsCalculator:
             'vocabulary_overlap': vocab_overlap,
             'length_ratio': length_ratio,
             'structural_similarity': struct_sim,
-            'cross_repetition_score': cross_rep
+            'cross_repetition_score': cross_rep,
+            'mimicry_score': mimicry_score
         }
     
     def _tokenize(self, text: str) -> List[str]:
@@ -340,3 +362,76 @@ class MetricsCalculator:
         new_words = set(words) - self.all_words_seen
         
         return dict(word_freq), new_words
+    
+    def _calculate_compression_ratio(self, text: str) -> float:
+        """Calculate compression ratio using zlib."""
+        if not text:
+            return 0.0
+        original_size = len(text.encode('utf-8'))
+        compressed_size = len(zlib.compress(text.encode('utf-8')))
+        return compressed_size / original_size
+    
+    def _calculate_lexical_diversity_index(self, word_count: int, vocabulary_size: int) -> float:
+        """Calculate lexical diversity index (unique words / sqrt(total words))."""
+        if word_count == 0:
+            return 0.0
+        return vocabulary_size / math.sqrt(word_count)
+    
+    def _calculate_punctuation_diversity(self, text: str) -> int:
+        """Count unique punctuation marks used."""
+        punct_pattern = r'[.,;:!?\'"()\[\]{}\-–—…]'
+        punctuation = set(re.findall(punct_pattern, text))
+        return len(punctuation)
+    
+    def _count_paragraphs(self, text: str) -> int:
+        """Count paragraphs (separated by double newlines)."""
+        paragraphs = re.split(r'\n\s*\n', text.strip())
+        return len([p for p in paragraphs if p.strip()])
+    
+    def _count_proper_nouns(self, words: List[str]) -> int:
+        """Count likely proper nouns (capitalized words not at sentence start)."""
+        if len(words) < 2:
+            return 0
+        
+        proper_count = 0
+        for i, word in enumerate(words[1:], 1):
+            # Check if capitalized and previous word doesn't end sentence
+            if word and word[0].isupper() and words[i-1][-1] not in '.!?':
+                proper_count += 1
+        
+        return proper_count
+    
+    def _count_numbers(self, text: str) -> int:
+        """Count numeric tokens in text."""
+        # Match integers, decimals, and formatted numbers
+        number_pattern = r'\b\d+(?:[.,]\d+)*\b'
+        return len(re.findall(number_pattern, text))
+    
+    def _calculate_mimicry_score(self, message_a: str, message_b: str) -> float:
+        """Calculate how much message_b mimics phrases from message_a."""
+        words_a = self._tokenize(message_a.lower())
+        words_b = self._tokenize(message_b.lower())
+        
+        if not words_a or not words_b:
+            return 0.0
+        
+        mimicry_score = 0.0
+        
+        # Check for copied phrases of different lengths
+        for n in range(2, min(6, len(words_a), len(words_b)) + 1):
+            ngrams_a = set(zip(*[words_a[i:] for i in range(n)]))
+            ngrams_b = set(zip(*[words_b[i:] for i in range(n)]))
+            
+            if ngrams_a:
+                overlap = len(ngrams_a & ngrams_b) / len(ngrams_a)
+                # Weight longer phrases more heavily
+                mimicry_score += overlap * (n - 1)
+        
+        # Normalize by maximum possible score
+        max_n = min(6, len(words_a), len(words_b))
+        if max_n > 1:
+            max_score = sum(range(1, max_n))
+            if max_score > 0:
+                mimicry_score /= max_score
+        
+        return min(mimicry_score, 1.0)

@@ -33,6 +33,7 @@ class ExperimentEventHandler:
         self.conversation_configs: Dict[str, Dict[str, Any]] = {}
         self.message_timings: Dict[str, Dict[str, int]] = {}
         self.turn_messages: Dict[str, Dict[int, Dict[str, Message]]] = {}
+        self.turn_start_times: Dict[str, Dict[int, datetime]] = {}
     
     async def handle_conversation_start(self, event: ConversationStartEvent):
         """Initialize tracking for new conversation."""
@@ -55,6 +56,7 @@ class ExperimentEventHandler:
         # Initialize message tracking
         self.turn_messages[conv_id] = {}
         self.message_timings[conv_id] = {}
+        self.turn_start_times[conv_id] = {}
         
         # Update conversation status to running
         self.storage.update_conversation_status(conv_id, 'running')
@@ -90,6 +92,18 @@ class ExperimentEventHandler:
         turn_number = event.turn_number
         turn = event.turn
         
+        # Track turn timing
+        if conv_id not in self.turn_start_times:
+            self.turn_start_times[conv_id] = {}
+        
+        # Set turn start time if not already set
+        if turn_number not in self.turn_start_times[conv_id]:
+            self.turn_start_times[conv_id][turn_number] = datetime.now()
+        
+        # Calculate turn duration
+        turn_start = self.turn_start_times[conv_id].get(turn_number, datetime.now())
+        turn_duration_ms = int((datetime.now() - turn_start).total_seconds() * 1000)
+        
         # Get metrics calculator
         calculator = self.metrics_calculators.get(conv_id)
         if not calculator:
@@ -102,52 +116,64 @@ class ExperimentEventHandler:
         # Calculate all metrics
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
         
-        # Extract agent-specific metrics and strip suffixes
+        # Separate turn-level and message-level metrics
+        turn_metrics = {}
         agent_a_metrics = {}
         agent_b_metrics = {}
         
+        # Extract convergence and turn-level metrics
+        convergence_keys = ['convergence_score', 'vocabulary_overlap', 'length_ratio', 
+                          'structural_similarity', 'cross_repetition_score', 'mimicry_score']
+        
+        for key in convergence_keys:
+            if key in metrics:
+                turn_metrics[key] = metrics[key]
+        
+        # Extract agent-specific metrics
         for k, v in metrics.items():
             if k.endswith('_a'):
-                # Remove _a suffix
+                # Remove _a suffix for storage
                 agent_a_metrics[k[:-2]] = v
             elif k.endswith('_b'):
-                # Remove _b suffix
+                # Remove _b suffix for storage
                 agent_b_metrics[k[:-2]] = v
         
-        # Add speaker information for each message
-        metrics_a = {
-            'speaker': 'agent_a',
-            'message': msg_a,
-            'message_length': len(msg_a),  # Add message length
-            **agent_a_metrics
-        }
+        # Calculate turn-level aggregates
+        total_words = agent_a_metrics.get('word_count', 0) + agent_b_metrics.get('word_count', 0)
+        total_sentences = agent_a_metrics.get('sentence_count', 0) + agent_b_metrics.get('sentence_count', 0)
+        vocab_a = set(calculator._tokenize(msg_a.lower()))
+        vocab_b = set(calculator._tokenize(msg_b.lower()))
+        combined_vocabulary_size = len(vocab_a | vocab_b)
         
-        metrics_b = {
-            'speaker': 'agent_b', 
-            'message': msg_b,
-            'message_length': len(msg_b),  # Add message length
-            **agent_b_metrics
-        }
-        
-        # Add convergence metrics to both (they're shared)
-        for key in ['convergence_score', 'vocabulary_overlap', 'length_ratio', 
-                   'structural_similarity', 'cross_repetition_score']:
-            if key in metrics:
-                metrics_a[key] = metrics[key]
-                metrics_b[key] = metrics[key]
-        
-        # Add timing information if available
+        # Add timing information
         timings = self.message_timings.get(conv_id, {})
-        if 'agent_a' in timings:
-            metrics_a['response_time_ms'] = timings['agent_a']
-        if 'agent_b' in timings:
-            metrics_b['response_time_ms'] = timings['agent_b']
+        agent_a_response_time = timings.get('agent_a', 0)
+        agent_b_response_time = timings.get('agent_b', 0)
         
-        # Store metrics for agent A's message
-        self.storage.log_turn_metrics(conv_id, turn_number * 2, metrics_a)
+        # Complete turn metrics
+        turn_metrics.update({
+            'total_words': total_words,
+            'total_sentences': total_sentences,
+            'combined_vocabulary_size': combined_vocabulary_size,
+            'turn_duration_ms': turn_duration_ms,
+            'agent_a_response_time_ms': agent_a_response_time,
+            'agent_b_response_time_ms': agent_b_response_time
+        })
         
-        # Store metrics for agent B's message
-        self.storage.log_turn_metrics(conv_id, turn_number * 2 + 1, metrics_b)
+        # Store turn-level metrics
+        self.storage.log_turn_metrics(conv_id, turn_number, turn_metrics)
+        
+        # Store message metrics for agent A
+        agent_a_metrics['response_time_ms'] = agent_a_response_time
+        self.storage.log_message_metrics(
+            conv_id, 0, turn_number, 'agent_a', agent_a_metrics
+        )
+        
+        # Store message metrics for agent B
+        agent_b_metrics['response_time_ms'] = agent_b_response_time
+        self.storage.log_message_metrics(
+            conv_id, 1, turn_number, 'agent_b', agent_b_metrics
+        )
         
         # Log word frequencies
         word_freq_a, new_words_a = calculator.get_word_frequencies(msg_a, 'agent_a')
@@ -201,3 +227,5 @@ class ExperimentEventHandler:
             del self.message_timings[conv_id]
         if conv_id in self.turn_messages:
             del self.turn_messages[conv_id]
+        if conv_id in self.turn_start_times:
+            del self.turn_start_times[conv_id]

@@ -1271,7 +1271,6 @@ def resume(name):
         pidgin experiment resume background_run
     """
     from .experiments import ExperimentStore, ExperimentManager
-    from .dashboard import ExperimentDashboard
     
     base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
     storage = ExperimentStore()
@@ -1330,13 +1329,69 @@ def resume(name):
     else:
         console.print(f"[#8fbcbb]◆ Reattaching to experiment '{name}'...[/#8fbcbb]")
     
-    console.print(f"[#4c566a]Press 'D' to detach, Ctrl+C to pause[/#4c566a]\n")
+    console.print(f"[#4c566a]Press [D] to detach, [S] to stop experiment[/#4c566a]\n")
     
     try:
-        asyncio.run(dashboard.run())
+        from .experiments.dashboard import run_dashboard
+        result = asyncio.run(run_dashboard(experiment['experiment_id']))
+        
+        if result['detached']:
+            console.print(f"\n[#4c566a]Detached from experiment '{name}'[/#4c566a]")
+            console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
+        elif result['stopped']:
+            console.print(f"\n[#bf616a]Experiment '{name}' stopped[/#bf616a]")
     except KeyboardInterrupt:
-        console.print(f"\n[#ebcb8b]Detached from experiment '{name}'[/#ebcb8b]")
-        console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
+        console.print(f"\n[#4c566a]Dashboard interrupted[/#4c566a]")
+
+
+@experiment.command()
+@click.argument('experiment_name_or_id')
+def dashboard(experiment_name_or_id):
+    """Open live dashboard for an experiment.
+    
+    Shows real-time metrics and progress for a running experiment.
+    Press 'Q' to quit the dashboard.
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Monitor by name:[/#4c566a]
+        pidgin experiment dashboard mytest
+    
+    [#4c566a]Monitor by ID:[/#4c566a]
+        pidgin experiment dashboard exp_a1b2c3d4
+    """
+    from .experiments.storage import ExperimentStore
+    from .experiments.dashboard import run_dashboard
+    import asyncio
+    
+    storage = ExperimentStore()
+    
+    # Try to find by name first, then by ID
+    experiment = storage.get_experiment_by_name(experiment_name_or_id)
+    if not experiment:
+        # Try as ID
+        experiment = storage.get_experiment(experiment_name_or_id)
+    
+    if not experiment:
+        console.print(f"[#bf616a]Experiment '{experiment_name_or_id}' not found[/#bf616a]")
+        console.print("\n[#4c566a]Use 'pidgin experiment list' to see available experiments[/#4c566a]")
+        return
+    
+    experiment_id = experiment['experiment_id']
+    
+    console.print(f"[#88c0d0]◆ Opening dashboard for: {experiment['name']}[/#88c0d0]")
+    console.print("[#4c566a]Press [D] to detach, [S] to stop experiment[/#4c566a]\n")
+    
+    try:
+        result = asyncio.run(run_dashboard(experiment_id))
+        
+        if result['detached']:
+            console.print(f"\n[#4c566a]Detached from experiment '{experiment['name']}'[/#4c566a]")
+            console.print(f"[#4c566a]Use 'pidgin experiment dashboard {experiment['name']}' to reattach[/#4c566a]")
+        elif result['stopped']:
+            console.print(f"\n[#bf616a]Experiment '{experiment['name']}' stopped[/#bf616a]")
+    except KeyboardInterrupt:
+        console.print(f"\n[#4c566a]Dashboard interrupted[/#4c566a]")
 
 
 @experiment.command()
