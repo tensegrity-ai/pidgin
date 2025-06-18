@@ -359,11 +359,11 @@ class ExperimentDashboard:
         """Create the active conversations panel."""
         table = Table(show_header=True, box=None)
         table.add_column("ID", style=NORD_COLORS['nord3'], width=6)
-        table.add_column("Model Pair", style=NORD_COLORS['nord4'], width=20)
+        table.add_column("Models", style=NORD_COLORS['nord4'], width=14)
         table.add_column("Turn", style=NORD_COLORS['nord13'], width=6)
-        table.add_column("Vocab Overlap%", style=NORD_COLORS['nord8'], width=14)
-        table.add_column("Avg Message Length", style=NORD_COLORS['nord8'], width=18)
-        table.add_column("Last Message", style=NORD_COLORS['nord4'])
+        table.add_column("VOv%", style=NORD_COLORS['nord8'], width=5)
+        table.add_column("Len", style=NORD_COLORS['nord8'], width=4)
+        table.add_column("Last Message", style=NORD_COLORS['nord4'], no_wrap=False)
         
         if not conversations:
             # No active conversations yet
@@ -376,19 +376,23 @@ class ExperimentDashboard:
                     # Extract conversation ID suffix
                     conv_id = conv["conversation_id"].split('_')[-1][:6] if conv["conversation_id"] else "N/A"
                     
-                    # Format models
-                    models = f"{conv['agent_a_model']} ↔ {conv['agent_b_model']}"
+                    # Format models - abbreviated
+                    model_a = conv['agent_a_model'][:6] if len(conv['agent_a_model']) > 6 else conv['agent_a_model']
+                    model_b = conv['agent_b_model'][:6] if len(conv['agent_b_model']) > 6 else conv['agent_b_model']
+                    models = f"{model_a}↔{model_b}"
                     
-                    # Format turns
-                    turns = str(conv.get("total_turns", 0))
+                    # Format turns as X/Y
+                    current_turns = conv.get("total_turns", 0)
+                    max_turns = 50  # Default max turns
+                    turns = f"{current_turns}/{max_turns}"
                     
-                    # Format vocabulary overlap
+                    # Format vocabulary overlap - just percentage
                     vocab_overlap = conv.get("vocabulary_overlap", 0)
-                    vocab_str = f"{int(vocab_overlap * 100)}%" if vocab_overlap else "-"
+                    vocab_str = f"{int(vocab_overlap * 100)}" if vocab_overlap else "-"
                     
-                    # Format average message length
+                    # Format average message length - just number
                     avg_len = conv.get("avg_message_length", 0)
-                    len_str = f"{int(avg_len)} chars" if avg_len else "-"
+                    len_str = f"{int(avg_len)}" if avg_len else "-"
                     
                     # Get last message
                     last_msg = self.get_last_message(conn, conv["conversation_id"])
@@ -521,8 +525,8 @@ class ExperimentDashboard:
     
     def create_loading_panel_with_progress(self, step: int, total: int = 4) -> Panel:
         """Loading panel with progress indicator."""
-        blocks = "▱" * total
-        filled = "▰" * step
+        blocks = "░" * total
+        filled = "█" * step
         progress = filled + blocks[step:]
         
         messages = [
@@ -553,57 +557,72 @@ class ExperimentDashboard:
     
     def create_statistics_panel(self, stats: Dict[str, Any]) -> Panel:
         """Create the statistics panel."""
-        lines = []
+        # Create two columns - distributions and word frequency
+        left_column = Table(show_header=False, box=None)
+        left_column.add_column("Label", style=NORD_COLORS['nord3'])
+        left_column.add_column("Value", style=NORD_COLORS['nord4'])
         
-        # Vocabulary overlap distribution
-        lines.append("Vocabulary Overlap Distribution at Turn 50:")
-        overlap_dist = stats.get('vocabulary_overlap_distribution', {})
-        for range_key in ['0-20', '20-40', '40-60', '60-80', '80-100']:
-            count = overlap_dist.get(range_key, 0)
-            bar_width = 15
+        # Calculate average metrics if we have data
+        if stats:
+            # Vocabulary overlap distribution
+            overlap_dist = stats.get('vocabulary_overlap_distribution', {})
             if overlap_dist:
-                max_count = max(overlap_dist.values()) if overlap_dist.values() else 1
-                bar_len = int((count / max_count) * bar_width) if max_count > 0 else 0
-            else:
-                bar_len = 0
-            bar = "█" * bar_len + "░" * (bar_width - bar_len)
-            lines.append(f"  {range_key:>6}%: {bar} {count:>3}")
-        
-        lines.append("")
-        
-        # Message length distribution
-        lines.append("Message Length Distribution:")
-        length_dist = stats.get('message_length_distribution', {})
-        for range_key, label in [('<50', '<50'), ('50-100', '50-100'), ('100-150', '100-150'), ('>150', '>150')]:
-            count = length_dist.get(range_key, 0)
-            bar_width = 15
+                left_column.add_row("Vocabulary Overlap (Turn 50):", "")
+                for range_key in ['0-20', '20-40', '40-60', '60-80', '80-100']:
+                    count = overlap_dist.get(range_key, 0)
+                    if overlap_dist.values():
+                        max_count = max(overlap_dist.values())
+                        bar_len = int((count / max_count) * 10) if max_count > 0 else 0
+                    else:
+                        bar_len = 0
+                    bar = "█" * bar_len + "░" * (10 - bar_len)
+                    left_column.add_row(f"  {range_key}%:", f"{bar} {count}")
+                left_column.add_row("", "")
+            
+            # Message length stats
+            length_dist = stats.get('message_length_distribution', {})
             if length_dist:
-                max_count = max(length_dist.values()) if length_dist.values() else 1
-                bar_len = int((count / max_count) * bar_width) if max_count > 0 else 0
-            else:
-                bar_len = 0
-            bar = "▓" * bar_len + "░" * (bar_width - bar_len)
-            lines.append(f"  {label:>7}: {bar} {count:>3}")
+                left_column.add_row("Message Length:", "")
+                total_messages = sum(length_dist.values())
+                if total_messages > 0:
+                    avg_under_50 = length_dist.get('<50', 0) / total_messages * 100
+                    avg_50_100 = length_dist.get('50-100', 0) / total_messages * 100
+                    avg_100_150 = length_dist.get('100-150', 0) / total_messages * 100
+                    avg_over_150 = length_dist.get('>150', 0) / total_messages * 100
+                    
+                    left_column.add_row("  Short (<50):", f"{avg_under_50:.0f}%")
+                    left_column.add_row("  Medium (50-100):", f"{avg_50_100:.0f}%")
+                    left_column.add_row("  Long (100-150):", f"{avg_100_150:.0f}%")
+                    left_column.add_row("  Very Long (>150):", f"{avg_over_150:.0f}%")
+        else:
+            left_column.add_row("Collecting statistics...", "")
         
-        lines.append("")
+        # Word frequency column
+        right_column = Table(show_header=False, box=None)
+        right_column.add_column("Early", style=NORD_COLORS['nord3'])
+        right_column.add_column("→", style=NORD_COLORS['nord4'], width=3)
+        right_column.add_column("Late", style=NORD_COLORS['nord8'])
         
-        # Word frequency evolution
-        word_evolution = stats.get('word_frequency_evolution', {})
+        word_evolution = stats.get('word_frequency_evolution', {}) if stats else {}
         early_words = word_evolution.get('early_words', [])
         late_words = word_evolution.get('late_words', [])
         
         if early_words or late_words:
-            lines.append("Word Frequency Evolution:")
-            if early_words:
-                lines.append(f"  Early (turns 1-10): {', '.join(early_words[:5])}")
-            if late_words:
-                lines.append(f"  Late (turns 40+): {', '.join(late_words[:5])}")
+            right_column.add_row("Word Evolution:", "", "")
+            # Show top 5 words from each period
+            for i in range(min(5, max(len(early_words), len(late_words)))):
+                early = early_words[i] if i < len(early_words) else ""
+                late = late_words[i] if i < len(late_words) else ""
+                right_column.add_row(early, "→", late)
+        else:
+            right_column.add_row("No word data yet", "", "")
         
-        if not lines or all(not line.strip() for line in lines):
-            lines = ["Collecting statistics..."]
+        # Combine columns
+        from rich.columns import Columns
+        content = Columns([left_column, right_column], padding=(0, 2))
         
         return Panel(
-            "\n".join(lines),
+            content,
             title="[bold]◆ Statistics",
             border_style=NORD_COLORS["nord14"],
             box=ROUNDED
@@ -679,20 +698,17 @@ class ExperimentDashboard:
             runtime_str = "0m"
             eta_str = "unknown"
         
-        # Build progress bar
+        # Build progress bar with proper block characters
         bar_width = 20
         filled = int(bar_width * progress)
-        bar = "▰" * filled + "▱" * (bar_width - filled)
+        bar = "█" * filled + "░" * (bar_width - filled)
         
-        # Build header text
-        lines = [
-            f"Experiment: {exp['name']}                     Started: {runtime_str} ago",
-            f"{bar} {completed}/{total} ({progress*100:.1f}%) | Runtime: {runtime_str} | ETA: {eta_str}",
-            f"◉ Active: {active}   ◎ Complete: {completed}   ⊗ Failed: {failed}   ◇ Queue: {queued}"
-        ]
+        # Build header text - single line format
+        header = f"Experiment: {exp['name']} | {bar} {completed}/{total} ({progress*100:.1f}%) | Runtime: {runtime_str} | ETA: {eta_str}"
+        status_line = f"◉ Active: {active}   ◎ Complete: {completed}   ⊗ Failed: {failed}   ◇ Queue: {queued}"
         
         return Panel(
-            "\n".join(lines),
+            f"{header}\n{status_line}",
             border_style=NORD_COLORS["nord10"],
             box=ROUNDED
         )
