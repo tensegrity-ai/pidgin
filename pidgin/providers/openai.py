@@ -63,16 +63,24 @@ class OpenAIProvider(Provider):
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
+        # Apply context management
+        from .context_manager import ProviderContextManager
+        context_mgr = ProviderContextManager()
+        truncated_messages = context_mgr.prepare_context(
+            messages,
+            provider="openai",
+            model=self.model
+        )
+        
+        # Log if truncation occurred
+        if len(truncated_messages) < len(messages):
+            logger.info(
+                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
+                f"for {self.model}"
+            )
+        
         # Convert to OpenAI format
-        openai_messages = [{"role": m.role, "content": m.content} for m in messages]
-
-        # Truncate conversation if it's too long
-        # Keep the system message (if any) and recent messages
-        if len(openai_messages) > 20:
-            system_msgs = [m for m in openai_messages if m["role"] == "system"]
-            other_msgs = [m for m in openai_messages if m["role"] != "system"]
-            # Keep system messages and last 19 messages
-            openai_messages = system_msgs + other_msgs[-19:]
+        openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
 
         # Retry logic for overloaded/rate limit errors
         max_retries = 3

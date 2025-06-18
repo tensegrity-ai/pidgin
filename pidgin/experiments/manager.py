@@ -72,29 +72,47 @@ class ExperimentManager:
             "--working-dir", working_dir
         ]
         
+        # Create a temporary error file to capture startup errors
+        error_file = self.logs_dir / f"{exp_id}_startup_error.log"
         
-        # Start the daemon
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL
-        )
+        # Start the daemon with error capture
+        with open(error_file, 'w') as stderr_file:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=stderr_file,
+                stdin=subprocess.DEVNULL
+            )
         
-        # Wait briefly for daemon to start
-        time.sleep(1.0)
+        # Wait for daemon to start with retries
+        max_retries = 10
+        for i in range(max_retries):
+            time.sleep(0.5)
+            if self.is_running(exp_id):
+                # Success!
+                return exp_id
+                
+        # If we get here, daemon failed to start
+        # Read any startup errors
+        error_msg = "Failed to start experiment daemon"
+        if error_file.exists():
+            try:
+                with open(error_file, 'r') as f:
+                    error_content = f.read().strip()
+                    if error_content:
+                        error_msg += f"\nStartup error: {error_content}"
+            except Exception:
+                pass
         
-        # Verify it started
-        if not self.is_running(exp_id):
-            # Check if process failed immediately
-            if process.poll() is not None:
-                raise RuntimeError(
-                    f"Failed to start experiment daemon (exit code: {process.returncode}). "
-                    f"Check logs at: {self.logs_dir / f'{exp_id}.log'}"
-                )
-            raise RuntimeError("Failed to start experiment daemon")
-            
-        return exp_id
+        # Check if process failed immediately
+        if process.poll() is not None:
+            error_msg += f"\nExit code: {process.returncode}"
+            error_msg += f"\nCheck logs at: {self.logs_dir / f'{exp_id}.log'}"
+            error_msg += f"\nStartup errors at: {error_file}"
+            raise RuntimeError(error_msg)
+        
+        error_msg += f"\nPID file not created at: {self.active_dir / f'{exp_id}.pid'}"
+        raise RuntimeError(error_msg)
         
     def stop_experiment(self, experiment_id: str) -> bool:
         """Stop running experiment gracefully.

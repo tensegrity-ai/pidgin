@@ -67,11 +67,27 @@ class AnthropicProvider(Provider):
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
+        # Apply context management
+        from .context_manager import ProviderContextManager
+        context_mgr = ProviderContextManager()
+        truncated_messages = context_mgr.prepare_context(
+            messages,
+            provider="anthropic",
+            model=self.model
+        )
+        
+        # Log if truncation occurred
+        if len(truncated_messages) < len(messages):
+            logger.info(
+                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
+                f"for {self.model}"
+            )
+        
         # Extract system messages and conversation messages
         system_messages = []
         conversation_messages = []
 
-        for m in messages:
+        for m in truncated_messages:
             if m.role == "system":
                 system_messages.append(m.content)
             else:

@@ -1097,15 +1097,23 @@ def experiment():
 @click.option("-b", "--agent-b", "model_b", required=True, help="Second model")
 @click.option("-r", "--repetitions", default=10, help="Number of conversations to run")
 @click.option("-t", "--max-turns", default=50, help="Maximum turns per conversation")
-@click.option("-p", "--initial-prompt", default="Hello! Let's have a conversation.", help="Initial prompt")
+@click.option("-p", "--prompt", help="Custom prompt for conversations")
+@click.option("-d", "--dimensions", help="Dimensional prompt (e.g., peers:philosophy)")
 @click.option("--name", required=True, help="Experiment session name")
-@click.option("--temperature", type=float, help="Temperature for both models")
-@click.option("--convergence-threshold", type=float, help="Stop at convergence threshold")
+@click.option("--temperature", type=click.FloatRange(0.0, 2.0), help="Temperature for both models")
+@click.option("--temp-a", type=click.FloatRange(0.0, 2.0), help="Temperature for model A only")
+@click.option("--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for model B only")
+@click.option("--awareness", type=click.Choice(['none', 'basic', 'firm', 'research']), default='basic', help="Awareness level for both agents")
+@click.option("--awareness-a", type=click.Choice(['none', 'basic', 'firm', 'research']), help="Awareness level for agent A only")
+@click.option("--awareness-b", type=click.Choice(['none', 'basic', 'firm', 'research']), help="Awareness level for agent B only")
+@click.option("--convergence-threshold", type=click.FloatRange(0.0, 1.0), help="Stop at convergence threshold")
 @click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
 @click.option("--max-parallel", type=int, help="Max parallel conversations (auto if not set)")
-@click.option("--daemon", "-d", is_flag=True, help="Start in background without dashboard")
-def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
-          temperature, convergence_threshold, choose_names, max_parallel, daemon):
+@click.option("--daemon", is_flag=True, help="Start in background without dashboard")
+@click.option("--debug", is_flag=True, help="Run in debug mode (no daemonization)")
+def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
+          temperature, temp_a, temp_b, awareness, awareness_a, awareness_b,
+          convergence_threshold, choose_names, max_parallel, daemon, debug):
     """Start a new experiment session.
     
     By default, starts experiment with dashboard attached (like GNU screen).
@@ -1144,11 +1152,16 @@ def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
         name=name,
         agent_a_model=model_a_id,  # Use resolved ID
         agent_b_model=model_b_id,  # Use resolved ID
-        initial_prompt=initial_prompt,
+        custom_prompt=prompt,
+        dimensions=dimensions,
         max_turns=max_turns,
         repetitions=repetitions,
-        temperature_a=temperature,
-        temperature_b=temperature,
+        temperature=temperature,
+        temperature_a=temp_a,
+        temperature_b=temp_b,
+        awareness=awareness,
+        awareness_a=awareness_a,
+        awareness_b=awareness_b,
         convergence_threshold=convergence_threshold,
         choose_names=choose_names,
         max_parallel=max_parallel
@@ -1162,6 +1175,33 @@ def start(model_a, model_b, repetitions, max_turns, initial_prompt, name,
             console.print(f"  • {error}")
         return
     
+    if debug:
+        # Debug mode - run directly without daemonization
+        console.print(f"[#ebcb8b]◆ Starting experiment '{name}' in DEBUG mode[/#ebcb8b]")
+        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+        console.print(f"\n[#bf616a]Running in foreground - press Ctrl+C to stop[/#bf616a]\n")
+        
+        # Run directly without daemon
+        from .experiments import ExperimentStore
+        from .experiments.parallel_runner import ParallelExperimentRunner
+        
+        storage = ExperimentStore()
+        runner = ParallelExperimentRunner(storage)
+        
+        try:
+            # Create experiment and run it
+            exp_id = asyncio.run(runner.run_experiment(config))
+            console.print(f"\n[#a3be8c]✓ Experiment '{name}' completed[/#a3be8c]")
+        except KeyboardInterrupt:
+            console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
+        except Exception as e:
+            console.print(f"\n[#bf616a]✗ Experiment failed: {e}[/#bf616a]")
+            import traceback
+            traceback.print_exc()
+        return
+        
     if daemon:
         # Start as daemon (headless mode)
         base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
@@ -1311,6 +1351,7 @@ def list(all):
     from rich.table import Table
     
     storage = ExperimentStore()
+    
     experiments = storage.list_experiments(limit=50 if all else 20)
     
     if not experiments:
@@ -1366,6 +1407,37 @@ def list(all):
 
 
 @experiment.command()
+def monitor():
+    """Monitor rate limits and active conversations.
+    
+    Real-time debugging dashboard showing:
+    - Active conversations with turn counts and last messages
+    - Provider rate limit usage (maxed/high/ok)
+    - Recent API errors (rate limits, overloaded, token limits)
+    - Live status updates every second
+    
+    Useful for debugging rate limit issues and monitoring experiment health.
+    """
+    from .dashboard.rate_monitor import RateLimitMonitor
+    from pathlib import Path
+    
+    db_path = Path("./pidgin_output/experiments/experiments.db")
+    if not db_path.exists():
+        console.print("[#bf616a]No experiments database found[/#bf616a]")
+        console.print("[#4c566a]Start an experiment first with 'pidgin experiment start'[/#4c566a]")
+        return
+        
+    console.print("[#8fbcbb]◆ Starting rate limit monitor...[/#8fbcbb]")
+    console.print("[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
+    
+    monitor = RateLimitMonitor(db_path)
+    try:
+        asyncio.run(monitor.run())
+    except KeyboardInterrupt:
+        console.print("\n[#4c566a]Monitor stopped[/#4c566a]")
+
+
+@experiment.command()
 @click.argument('experiment_id')
 def stop(experiment_id):
     """Stop a running experiment gracefully."""
@@ -1381,6 +1453,155 @@ def stop(experiment_id):
     else:
         console.print(f"[#bf616a]✗ Failed to stop experiment {experiment_id}[/#bf616a]")
         console.print(f"[#4c566a]  (It may not be running)[/#4c566a]")
+
+
+@experiment.command(name='stop-all')
+@click.option('--force', is_flag=True, help='Force kill all experiment processes')
+def stop_all(force):
+    """KILLSWITCH: Stop ALL running experiments immediately.
+    
+    This command will:
+    - Find all running experiment daemons
+    - Gracefully stop them (or force kill with --force)
+    - Update database to mark experiments as failed
+    - Clean up any orphaned processes
+    
+    [bold red]WARNING:[/bold red] This will terminate all experiments without saving state!
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Graceful stop of all experiments:[/#4c566a]
+        pidgin experiment stop-all
+    
+    [#4c566a]Force kill all experiments:[/#4c566a]
+        pidgin experiment stop-all --force
+    """
+    import signal
+    import subprocess
+    from .experiments import ExperimentStore
+    
+    console.print("[bold red]◆ KILLSWITCH ACTIVATED[/bold red]")
+    console.print("[#ebcb8b]→ Finding all running experiments...[/#ebcb8b]")
+    
+    daemon_pids = []
+    
+    # First check PID files
+    pid_locations = [
+        Path("./pidgin_output/experiments"),
+        Path(ORIGINAL_CWD) / "pidgin_output/experiments",
+        Path.home() / "work/pidgin/pidgin_output/experiments"
+    ]
+    
+    console.print("[#4c566a]  Checking PID files...[/#4c566a]")
+    for pid_dir in pid_locations:
+        if pid_dir.exists():
+            for pid_file in pid_dir.glob("*.pid"):
+                try:
+                    with open(pid_file) as f:
+                        pid = int(f.read().strip())
+                        # Check if process is still running
+                        os.kill(pid, 0)  # Signal 0 doesn't kill, just checks
+                        daemon_pids.append((pid, pid_file))
+                        console.print(f"[#4c566a]  Found PID {pid} from {pid_file.name}[/#4c566a]")
+                except (FileNotFoundError, ValueError, ProcessLookupError):
+                    # PID file exists but process is gone, clean it up
+                    try:
+                        pid_file.unlink()
+                        console.print(f"[#4c566a]  Cleaned up stale PID file: {pid_file.name}[/#4c566a]")
+                    except:
+                        pass
+    
+    # Also check running processes as fallback
+    console.print("[#4c566a]  Scanning processes...[/#4c566a]")
+    try:
+        result = subprocess.run(
+            ["ps", "aux"], 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
+        
+        for line in result.stdout.splitlines():
+            if "pidgin.experiments.daemon_launcher" in line and "grep" not in line:
+                parts = line.split()
+                if len(parts) > 1:
+                    pid = int(parts[1])
+                    # Only add if not already found via PID file
+                    if not any(p[0] == pid for p in daemon_pids):
+                        daemon_pids.append((pid, None))
+                        console.print(f"[#4c566a]  Found daemon process: PID {pid}[/#4c566a]")
+    
+    except subprocess.CalledProcessError as e:
+        console.print(f"[#ebcb8b]  Could not scan processes: {e}[/#ebcb8b]")
+    
+    if not daemon_pids:
+        console.print("[#a3be8c]✓ No running experiment daemons found[/#a3be8c]")
+    else:
+        # Kill the processes
+        kill_signal = signal.SIGKILL if force else signal.SIGTERM
+        signal_name = "SIGKILL" if force else "SIGTERM"
+        
+        console.print(f"\n[#ebcb8b]→ Sending {signal_name} to {len(daemon_pids)} processes...[/#ebcb8b]")
+        
+        for pid, pid_file in daemon_pids:
+            try:
+                os.kill(pid, kill_signal)
+                console.print(f"[#a3be8c]  ✓ Killed PID {pid}[/#a3be8c]")
+                # Clean up PID file if we have it
+                if pid_file and pid_file.exists():
+                    pid_file.unlink()
+                    console.print(f"[#a3be8c]  ✓ Removed PID file {pid_file.name}[/#a3be8c]")
+            except ProcessLookupError:
+                console.print(f"[#4c566a]  - PID {pid} already gone[/#4c566a]")
+                # Clean up stale PID file
+                if pid_file and pid_file.exists():
+                    pid_file.unlink()
+            except PermissionError:
+                console.print(f"[#bf616a]  ✗ Permission denied for PID {pid}[/#bf616a]")
+    
+    # Update database for all running experiments
+    console.print("\n[#ebcb8b]→ Updating experiment database...[/#ebcb8b]")
+    
+    # Check multiple possible database locations
+    db_locations = [
+        Path("./pidgin_output/experiments/experiments.db"),
+        Path(ORIGINAL_CWD) / "pidgin_output/experiments/experiments.db",
+        Path.home() / "work/pidgin/pidgin_output/experiments/experiments.db"
+    ]
+    
+    updated_count = 0
+    for db_path in db_locations:
+        if db_path.exists():
+            console.print(f"[#4c566a]  Checking {db_path}...[/#4c566a]")
+            try:
+                storage = ExperimentStore(db_path.parent)
+                
+                # Get running experiments
+                experiments = storage.list_experiments(status_filter='running')
+                
+                for exp in experiments:
+                    storage.update_experiment_status(exp['experiment_id'], 'failed')
+                    console.print(f"[#a3be8c]  ✓ Marked '{exp['name']}' as failed[/#a3be8c]")
+                    updated_count += 1
+                
+                # Also update any running conversations
+                with storage.get_connection() as conn:
+                    cursor = conn.execute(
+                        "UPDATE conversations SET status = 'failed' WHERE status = 'running'"
+                    )
+                    conv_count = cursor.rowcount
+                    if conv_count > 0:
+                        console.print(f"[#a3be8c]  ✓ Marked {conv_count} conversations as failed[/#a3be8c]")
+            except Exception as e:
+                console.print(f"[#bf616a]  ✗ Error accessing {db_path}: {e}[/#bf616a]")
+    
+    if updated_count == 0 and not daemon_pids:
+        console.print("\n[#4c566a]No active experiments found in any location[/#4c566a]")
+    else:
+        console.print(f"\n[bold green]✓ KILLSWITCH COMPLETE[/bold green]")
+        console.print(f"[#4c566a]  {len(daemon_pids)} processes killed[/#4c566a]")
+        console.print(f"[#4c566a]  {updated_count} experiments marked as failed[/#4c566a]")
+        console.print(f"\n[#ebcb8b]All experiments have been forcefully stopped.[/#ebcb8b]")
 
 
 @experiment.command()

@@ -1,7 +1,10 @@
 import os
+import logging
 from typing import List, AsyncIterator, AsyncGenerator, Optional
 from ..core.types import Message
 from .base import Provider
+
+logger = logging.getLogger(__name__)
 
 try:
     import google.generativeai as genai
@@ -32,10 +35,26 @@ class GoogleProvider(Provider):
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
+        # Apply context management
+        from .context_manager import ProviderContextManager
+        context_mgr = ProviderContextManager()
+        truncated_messages = context_mgr.prepare_context(
+            messages,
+            provider="google",
+            model=self.model.model_name if hasattr(self.model, 'model_name') else None
+        )
+        
+        # Log if truncation occurred
+        if len(truncated_messages) < len(messages):
+            logger.info(
+                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
+                f"for Google model"
+            )
+        
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
         google_messages = []
-        for m in messages:
+        for m in truncated_messages:
             role = "model" if m.role == "assistant" else m.role
             google_messages.append({"role": role, "parts": [m.content]})
 

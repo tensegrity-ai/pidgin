@@ -12,15 +12,24 @@ class ExperimentConfig:
     name: str
     agent_a_model: str
     agent_b_model: str
-    initial_prompt: str = "Hello! Let's have a conversation."
+    
+    # Prompt configuration (matching CLI)
+    custom_prompt: Optional[str] = None  # Custom prompt or path to .md file
+    dimensions: Optional[str] = None  # Dimensional prompt specification
     
     # Experiment parameters
-    max_turns: int = 20
+    max_turns: int = 50  # Match CLI default
     repetitions: int = 10
     
-    # Temperature settings
-    temperature_a: Optional[float] = None
-    temperature_b: Optional[float] = None
+    # Temperature settings (matching CLI)
+    temperature: Optional[float] = None  # Temperature for both models
+    temperature_a: Optional[float] = None  # Override for model A
+    temperature_b: Optional[float] = None  # Override for model B
+    
+    # Awareness levels (matching CLI)
+    awareness: str = 'basic'  # Default for both agents
+    awareness_a: Optional[str] = None  # Override for agent A
+    awareness_b: Optional[str] = None  # Override for agent B
     
     # Parallel execution
     max_parallel: Optional[int] = None  # None = auto-calculate based on providers
@@ -30,16 +39,10 @@ class ExperimentConfig:
     
     # Agent capabilities
     choose_names: bool = False
-    awareness_a: str = 'basic'  # 'basic', 'enhanced', 'full'
-    awareness_b: str = 'basic'
     
     # Convergence settings
     convergence_threshold: Optional[float] = None  # Stop at threshold
     convergence_action: str = 'continue'  # 'stop' or 'warn'
-    
-    # Output control
-    save_transcripts: bool = True
-    save_events: bool = True
     
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -81,11 +84,17 @@ class ExperimentConfig:
         if self.first_speaker not in ('agent_a', 'agent_b'):
             errors.append("first_speaker must be 'agent_a' or 'agent_b'")
         
-        if self.awareness_a not in ('basic', 'enhanced', 'full'):
-            errors.append("awareness_a must be 'basic', 'enhanced', or 'full'")
+        # Validate awareness levels (matching CLI choices)
+        valid_awareness = ('none', 'basic', 'firm', 'research')
         
-        if self.awareness_b not in ('basic', 'enhanced', 'full'):
-            errors.append("awareness_b must be 'basic', 'enhanced', or 'full'")
+        if self.awareness not in valid_awareness:
+            errors.append(f"awareness must be one of: {', '.join(valid_awareness)}")
+        
+        if self.awareness_a and self.awareness_a not in valid_awareness:
+            errors.append(f"awareness_a must be one of: {', '.join(valid_awareness)}")
+        
+        if self.awareness_b and self.awareness_b not in valid_awareness:
+            errors.append(f"awareness_b must be one of: {', '.join(valid_awareness)}")
         
         if self.convergence_action not in ('stop', 'warn', 'continue'):
             errors.append("convergence_action must be 'stop', 'warn', or 'continue'")
@@ -94,6 +103,10 @@ class ExperimentConfig:
             if not 0 <= self.convergence_threshold <= 1:
                 errors.append("convergence_threshold must be between 0 and 1")
         
+        if self.temperature is not None:
+            if not 0 <= self.temperature <= 2:
+                errors.append("temperature must be between 0 and 2")
+                
         if self.temperature_a is not None:
             if not 0 <= self.temperature_a <= 2:
                 errors.append("temperature_a must be between 0 and 2")
@@ -105,27 +118,3 @@ class ExperimentConfig:
         return errors
 
 
-@dataclass
-class BatchExperimentConfig:
-    """Configuration for batch experiments with parameter sweeps."""
-    
-    name: str
-    base_config: ExperimentConfig
-    
-    # Parameter sweeps (Phase 3)
-    model_pairs: Optional[List[tuple]] = None
-    temperature_sweep: Optional[List[float]] = None
-    prompt_variations: Optional[List[str]] = None
-    
-    # Execution settings
-    parallel_conversations: int = 1  # Phase 3: parallelization
-    rate_limit_delay: float = 1.0  # Seconds between conversation starts
-    
-    def generate_experiments(self) -> List[ExperimentConfig]:
-        """Generate individual experiment configs from batch config.
-        
-        For Phase 2, this just returns the base config.
-        Phase 3 will implement parameter sweeps.
-        """
-        # Phase 2: Just return base config
-        return [self.base_config]

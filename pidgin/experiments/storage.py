@@ -24,8 +24,9 @@ class ExperimentStore:
                 # Use the preserved project base path
                 db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.db"
             else:
-                # Normal operation - resolve relative to current directory
-                db_path = Path("./pidgin_output/experiments/experiments.db").resolve()
+                # Normal operation - use actual current working directory
+                cwd = Path(os.getcwd())
+                db_path = cwd / "pidgin_output" / "experiments" / "experiments.db"
         
         self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

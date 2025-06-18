@@ -2,8 +2,7 @@
 
 import asyncio
 import logging
-from typing import List, Dict, Optional, Set, Tuple
-from collections import defaultdict
+from typing import Dict, Optional
 
 from .runner import ExperimentRunner
 from .config import ExperimentConfig
@@ -24,13 +23,14 @@ class ParallelExperimentRunner(ExperimentRunner):
         "xai": 50,        # xAI estimate
     }
     
-    # Conversations per minute we'll actually attempt
-    # More conservative to account for conversation duration
+    # Maximum parallel conversations (not per minute!)
+    # Very conservative to avoid rate limits
+    # Each conversation = many API calls (2 per turn + system prompts)
     SAFE_RATES = {
-        "anthropic": 5,
-        "openai": 8,
-        "google": 5,
-        "xai": 5,
+        "anthropic": 2,    # Anthropic is very strict
+        "openai": 3,       # OpenAI is more lenient
+        "google": 2,       # Conservative estimate
+        "xai": 2,          # Conservative estimate
     }
     
     def __init__(self, storage: ExperimentStore, daemon: Optional[ExperimentDaemon] = None):
@@ -72,15 +72,15 @@ class ParallelExperimentRunner(ExperimentRunner):
             logging.warning("Unknown providers, using conservative parallelism")
             return 2
             
-        # If using multiple different providers, we can be more aggressive
+        # If using multiple different providers, we can be slightly more aggressive
         if len(providers) > 1:
-            # Sum the limits of used providers
-            total_limit = sum(self.SAFE_RATES.get(p, 3) for p in providers)
-            return min(total_limit, 10)  # Cap at 10 for safety
+            # Use the minimum of the two providers (weakest link)
+            limits = [self.SAFE_RATES.get(p, 2) for p in providers]
+            return min(limits)
             
         # Single provider - use its limit
         provider = providers.pop()
-        return self.SAFE_RATES.get(provider, 3)
+        return self.SAFE_RATES.get(provider, 2)
         
     def _get_provider_type(self, model: str) -> str:
         """Determine provider from model name.
@@ -197,14 +197,19 @@ class ParallelExperimentRunner(ExperimentRunner):
                         conv_id, 'failed', error_message=str(e)
                     )
                     
-        # Create all tasks
+        # Create all tasks with staggered start times
         tasks = []
-        for conv_id, conv_config in conversations:
+        for i, (conv_id, conv_config) in enumerate(conversations):
             if self.daemon and self.daemon.is_stopping():
                 break
             task = asyncio.create_task(run_with_semaphore(conv_id, conv_config))
             tasks.append(task)
             self.active_tasks[id(task)] = task
+            
+            # Add delay between task creation to avoid thundering herd
+            # This helps prevent initial bursts of API calls
+            if i < len(conversations) - 1:
+                await asyncio.sleep(2.0)  # 2 second delay between starting conversations
             
         # Wait for all to complete or cancellation
         try:

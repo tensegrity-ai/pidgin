@@ -35,6 +35,42 @@ class Config:
             },
             "baseline": {"convergence_threshold": 1.0},  # Never stop on convergence
         },
+        "providers": {
+            "context_management": {
+                "enabled": True,
+                "context_reserve_ratio": 0.25,  # Reserve 25% for response
+                "min_messages_retained": 10,     # Never go below this
+                "truncation_strategy": "sliding_window",
+                "safety_factor": 0.9,            # Use 90% of limits
+            },
+            "rate_limiting": {
+                "enabled": True,
+                "safety_margin": 0.9,            # Use 90% of rate limits
+                "token_estimation_multiplier": 1.1,  # Add 10% buffer
+                "backoff_base_delay": 1.0,
+                "backoff_max_delay": 60.0,
+                "sliding_window_minutes": 1,     # Track over 1 minute
+            },
+            "overrides": {
+                # Per-provider overrides - uncomment to customize
+                # "anthropic": {
+                #     "tokens_per_minute": 400000,
+                #     "context_limit": 180000,
+                # },
+                # "openai": {
+                #     "tokens_per_minute": 150000,
+                #     "context_limit": 120000,
+                # },
+                # "google": {
+                #     "tokens_per_minute": 360000,
+                #     "context_limit": 900000,
+                # },
+                # "xai": {
+                #     "tokens_per_minute": 150000,
+                #     "context_limit": 120000,
+                # },
+            }
+        },
     }
 
     def __init__(self, config_path: Optional[Path] = None):
@@ -142,6 +178,10 @@ class Config:
     def get_context_config(self) -> Dict[str, Any]:
         """Get context management configuration."""
         return self.get("context_management", {})
+
+    def get_provider_config(self) -> Dict[str, Any]:
+        """Get provider configuration."""
+        return self.get("providers", {})
 
     def apply_experiment_profile(self, profile: str):
         """Apply an experiment profile to current config."""
