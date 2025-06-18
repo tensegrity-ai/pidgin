@@ -502,6 +502,55 @@ class ExperimentDashboard:
         else:
             return f"{minutes}m"
     
+    def create_loading_panel(self, message: str = "Initializing dashboard...") -> Panel:
+        """Create a loading panel with status message."""
+        subtitle = "[dim]Connecting to experiment database...[/dim]"
+        if self.experiment_name:
+            subtitle = f"[dim]Loading experiment: {self.experiment_name}[/dim]"
+            
+        content = Align.center(
+            f"◆ {message}\n\n{subtitle}",
+            vertical="middle"
+        )
+        return Panel(
+            content,
+            title="◆ Pidgin Dashboard",
+            border_style=NORD_COLORS["nord8"],
+            height=10
+        )
+    
+    def create_loading_panel_with_progress(self, step: int, total: int = 4) -> Panel:
+        """Loading panel with progress indicator."""
+        blocks = "▱" * total
+        filled = "▰" * step
+        progress = filled + blocks[step:]
+        
+        messages = [
+            "Connecting to database...",
+            "Loading experiment configuration...",
+            "Checking active conversations...",
+            "Ready! Loading complete."
+        ]
+        
+        message = messages[min(step - 1, len(messages) - 1)] if step > 0 else "Initializing..."
+        
+        content = Align.center(
+            f"◆ Loading Experiment Data\n\n{progress}\n\n[dim]{message}[/dim]\n[dim]Step {step}/{total}[/dim]",
+            vertical="middle"
+        )
+        return Panel(content, border_style=NORD_COLORS["nord8"], height=10)
+    
+    def _check_database(self) -> bool:
+        """Check if database exists and is accessible."""
+        try:
+            with self.connect_db() as conn:
+                # Try a simple query to verify database structure
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM experiments LIMIT 1")
+            return True
+        except:
+            return False
+    
     def create_statistics_panel(self, stats: Dict[str, Any]) -> Panel:
         """Create the statistics panel."""
         lines = []
@@ -672,7 +721,7 @@ class ExperimentDashboard:
             return count > 0
         return False
     
-    def create_loading_panel(self) -> Panel:
+    def create_experiment_loading_panel(self) -> Panel:
         """Create a loading panel while waiting for conversations to start."""
         elapsed = time.time() - self.start_time
         
@@ -691,7 +740,7 @@ class ExperimentDashboard:
         except:
             pass
             
-        content = f"""[bold]◆ Initializing Experiment[/bold]
+        content = f"""[bold]◆ Waiting for Conversations to Start[/bold]
 
 {experiment_info}
 ◇ Starting conversations...
@@ -724,7 +773,7 @@ class ExperimentDashboard:
         if not self.conversations_started and time.time() - self.start_time < 30:
             # For layouts with body section
             if "body" in layout._children:
-                layout["body"].update(self.create_loading_panel())
+                layout["body"].update(self.create_experiment_loading_panel())
             layout["header"].update(self.create_header({"experiments": []}))
             layout["footer"].update(self.create_footer())
             return
@@ -845,34 +894,58 @@ class ExperimentDashboard:
         
     async def run(self):
         """Run the dashboard."""
-        self.layout = self.create_layout()
-        
-        # Initialize with loading message
-        loading_panel = Panel(
-            f"[{NORD_COLORS['nord8']}]◆ Loading experiment data...[/{NORD_COLORS['nord8']}]",
-            border_style=NORD_COLORS["nord10"]
-        )
-        if "body" in self.layout._children:
-            self.layout["body"].update(loading_panel)
-        else:
-            self.layout["conversations"].update(loading_panel)
-        
-        # Set up keyboard handler
-        keyboard = KeyboardHandler()
-        keyboard.register_handler('d', self.handle_detach)
-        keyboard.register_handler('D', self.handle_detach)
-        keyboard.register_handler('s', lambda: asyncio.create_task(self.handle_stop()))
-        keyboard.register_handler('S', lambda: asyncio.create_task(self.handle_stop()))
-        
-        with keyboard:
-            with Live(self.layout, console=self.console, refresh_per_second=0.5, screen=True) as live:
+        # Show loading panel immediately
+        with Live(self.create_loading_panel(), console=self.console, refresh_per_second=2) as live:
+            # Step 1: Check database connection
+            await asyncio.sleep(0.1)  # Let Rich render
+            live.update(self.create_loading_panel_with_progress(1, 4))
+            
+            if not self._check_database():
+                live.update(Panel(
+                    Align.center(
+                        "⊗ Database not found!\n\n[dim]Make sure the experiment is running.[/dim]",
+                        vertical="middle"
+                    ),
+                    border_style=NORD_COLORS["nord11"],
+                    height=10
+                ))
+                await asyncio.sleep(3)
+                return
+            
+            # Step 2: Load experiment configuration
+            await asyncio.sleep(0.1)
+            live.update(self.create_loading_panel_with_progress(2, 4))
+            
+            # Step 3: Check for active conversations
+            await asyncio.sleep(0.1)
+            live.update(self.create_loading_panel_with_progress(3, 4))
+            
+            # Create the actual layout
+            self.layout = self.create_layout()
+            
+            # Step 4: Ready
+            live.update(self.create_loading_panel_with_progress(4, 4))
+            await asyncio.sleep(0.5)
+            
+            # Now switch to the main layout
+            live.update(self.layout)
+            
+            # Set up keyboard handler
+            keyboard = KeyboardHandler()
+            keyboard.register_handler('d', self.handle_detach)
+            keyboard.register_handler('D', self.handle_detach)
+            keyboard.register_handler('s', lambda: asyncio.create_task(self.handle_stop()))
+            keyboard.register_handler('S', lambda: asyncio.create_task(self.handle_stop()))
+            
+            with keyboard:
                 try:
-                    # Initial update
+                    # Initial dashboard update
                     await self.update_dashboard(self.layout)
                     
                     # Start keyboard handler task
                     keyboard_task = asyncio.create_task(keyboard.handle_input())
                     
+                    # Main dashboard loop
                     while not self.should_exit:
                         await self.update_dashboard(self.layout)
                         await asyncio.sleep(self.refresh_rate)
@@ -889,9 +962,11 @@ class ExperimentDashboard:
                     self.should_exit = True
                     self.detached = True
                 finally:
+                    # Clear screen and show exit message
+                    live.stop()
                     if self.detached:
                         self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard detached. Run 'pidgin experiment dashboard' to reattach.[/{NORD_COLORS['nord8']}]")
-                    elif not self.detached:
+                    else:
                         self.console.print(f"\n[{NORD_COLORS['nord8']}]◆ Dashboard stopped[/{NORD_COLORS['nord8']}]")
 
 
