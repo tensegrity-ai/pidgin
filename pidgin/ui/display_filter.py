@@ -293,25 +293,51 @@ class DisplayFilter:
         if event.agent_id in self.agents:
             agent_name = self.agents[event.agent_id].display_name or event.agent_id
 
-        # Build error content
-        content = f"[bold {self.COLORS['nord11']}]API Error[/bold {self.COLORS['nord11']}]\n\n"
-        content += f"◈ Agent: {agent_name or event.agent_id}\n"
-        content += f"◈ Provider: {event.provider}\n"
-
-        # Show error message
-        error_msg = event.error_message
-        if len(error_msg) > 200:
-            error_msg = error_msg[:197] + "..."
-        content += f"◈ Error: {error_msg}\n"
-
-        # Show retry info
-        if event.retryable:
-            content += f"\n[{self.COLORS['nord13']}]⟳ This error is retryable. The system will attempt to recover.[/{self.COLORS['nord13']}]"
+        # Check for common billing/credit errors
+        error_lower = event.error_message.lower()
+        is_billing_error = any(phrase in error_lower for phrase in [
+            "credit", "billing", "payment", "quota", "insufficient"
+        ])
+        
+        if is_billing_error:
+            # Special handling for billing errors - less scary, more actionable
+            title = "⚠ Billing Issue"
+            border_style = self.COLORS["nord13"]  # Yellow instead of red
+            
+            # Determine which service
+            service_url = ""
+            if "anthropic" in event.provider.lower():
+                service_url = "console.anthropic.com → Billing"
+            elif "openai" in event.provider.lower():
+                service_url = "platform.openai.com → Billing"
+            
+            content = f"[bold {self.COLORS['nord13']}]{agent_name or event.agent_id} cannot respond[/bold {self.COLORS['nord13']}]\n\n"
+            content += f"◇ {event.error_message}\n"
+            if service_url:
+                content += f"\n[{self.COLORS['nord4']}]To fix: Visit {service_url}[/{self.COLORS['nord4']}]"
         else:
-            content += f"\n[{self.COLORS['nord11']}]✗ This error cannot be automatically retried.[/{self.COLORS['nord11']}]"
+            # Regular API error display
+            title = "◆ API Error"
+            border_style = self.COLORS["nord11"]
+            
+            content = f"[bold {self.COLORS['nord11']}]Connection Issue[/bold {self.COLORS['nord11']}]\n\n"
+            content += f"◈ Agent: {agent_name or event.agent_id}\n"
+            content += f"◈ Provider: {event.provider}\n"
+
+            # Show error message
+            error_msg = event.error_message
+            if len(error_msg) > 200:
+                error_msg = error_msg[:197] + "..."
+            content += f"◈ Error: {error_msg}\n"
+
+            # Show retry info
+            if event.retryable:
+                content += f"\n[{self.COLORS['nord8']}]◇ Retrying automatically...[/{self.COLORS['nord8']}]"
+            else:
+                content += f"\n[{self.COLORS['nord3']}]◇ Cannot retry automatically[/{self.COLORS['nord3']}]"
 
         self.console.print(
-            Panel(content, title=" ! Error", title_align="left", border_style=self.COLORS["nord11"], padding=(1, 2))
+            Panel(content, title=title, title_align="left", border_style=border_style, padding=(1, 2))
         )
         self.console.print()
 

@@ -1,0 +1,107 @@
+{
+  "timestamp": "2025-06-17T20:54:31.992143",
+  "status": {
+    "experiments": [],
+    "stats": {
+      "total_experiments": 1,
+      "total_conversations": 1,
+      "active_experiments": 0
+    }
+  },
+  "conversations": [],
+  "metrics": {
+    "convergence": 0.3900231868092863,
+    "avg_response_time": 4455.666666666667,
+    "min_response_time": 1328,
+    "max_response_time": 7199,
+    "avg_tokens": 127.83333333333333,
+    "total_tokens": 767,
+    "turns_per_minute": 6
+  },
+  "patterns": [],
+  "events": [
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_a",
+        "token_count": 195,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:54:21"
+    },
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_b",
+        "token_count": 228,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:54:21"
+    },
+    {
+      "type": "conversation_end",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "turn_count": 6
+      },
+      "timestamp": "2025-06-18 03:54:21"
+    },
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_a",
+        "token_count": 131,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:54:09"
+    },
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_b",
+        "token_count": 160,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:54:09"
+    },
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_a",
+        "token_count": 31,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:53:57"
+    },
+    {
+      "type": "turn_complete",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "speaker": "agent_b",
+        "token_count": 22,
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:53:57"
+    },
+    {
+      "type": "conversation_start",
+      "data": {
+        "conversation_id": "exp_eb8cd61e_conv_0000",
+        "model_a": "claude-3-5-haiku-20241022",
+        "model_b": "gpt-4o-mini"
+      },
+      "timestamp": "2025-06-18 03:53:54"
+    }
+  ]
+}

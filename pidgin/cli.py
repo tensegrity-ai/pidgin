@@ -1419,5 +1419,134 @@ def logs(experiment_id, lines, follow):
 # Dashboard command removed - now integrated into start/resume workflow
 
 
+@cli.command(name="check-apis", context_settings={"help_option_names": ["-h", "--help"]})
+def check_apis():
+    """Check status of all configured API providers.
+    
+    Tests connectivity and reports any issues with API keys or quotas.
+    
+    [bold]EXAMPLE:[/bold]
+        [#4c566a]pidgin check-apis[/#4c566a]
+    
+    This will test all configured providers and show:
+    • ✓ Connected APIs with available models
+    • ✗ APIs with errors (auth, billing, etc.)
+    • ⚠ APIs without configured keys
+    """
+    import asyncio
+    import os
+    from .providers.anthropic import AnthropicProvider
+    from .providers.openai import OpenAIProvider
+    from .providers.google import GoogleProvider  
+    from .providers.xai import xAIProvider
+    from .config.models import MODELS
+    
+    console.print(Panel.fit(
+        "[bold]◆ Checking API Status[/bold]", 
+        border_style="#8fbcbb"
+    ))
+    console.print()
+    
+    async def check_provider(provider_name: str, model_id: str) -> tuple[str, str, str]:
+        """Check a single provider."""
+        try:
+            # Create provider instance
+            if provider_name == "anthropic":
+                if not os.getenv("ANTHROPIC_API_KEY"):
+                    return provider_name, "warning", "No API key set (ANTHROPIC_API_KEY)"
+                provider = AnthropicProvider(model_id)
+            elif provider_name == "openai":
+                if not os.getenv("OPENAI_API_KEY"):
+                    return provider_name, "warning", "No API key set (OPENAI_API_KEY)"
+                provider = OpenAIProvider(model_id)
+            elif provider_name == "google":
+                if not os.getenv("GOOGLE_API_KEY"):
+                    return provider_name, "warning", "No API key set (GOOGLE_API_KEY)"
+                provider = GoogleProvider(model_id)
+            elif provider_name == "xai":
+                if not os.getenv("XAI_API_KEY"):
+                    return provider_name, "warning", "No API key set (XAI_API_KEY)"
+                provider = xAIProvider(model_id)
+            else:
+                return provider_name, "error", "Unknown provider"
+            
+            # Test with a simple message
+            from pidgin.core.types import Message
+            messages = [Message(role="user", content="Say 'test' in one word", agent_id="test")]
+            
+            response = ""
+            async for chunk in provider.stream_response(messages):
+                response += chunk
+                if len(response) > 10:  # Got enough response
+                    break
+                    
+            return provider_name, "success", f"Connected ({model_id} available)"
+            
+        except Exception as e:
+            error_msg = str(e)
+            # Clean up error messages
+            if "credit" in error_msg.lower() or "billing" in error_msg.lower():
+                return provider_name, "error", "Credit balance low or billing issue"
+            elif "invalid" in error_msg.lower() and "key" in error_msg.lower():
+                return provider_name, "error", "Invalid API key"
+            elif "authentication" in error_msg.lower():
+                return provider_name, "error", "Authentication failed"
+            else:
+                return provider_name, "error", error_msg[:50] + "..." if len(error_msg) > 50 else error_msg
+    
+    async def check_all():
+        """Check all providers."""
+        # Get unique providers and a sample model for each
+        providers_to_check = {}
+        for model_id, config in MODELS.items():
+            if config.provider not in providers_to_check:
+                providers_to_check[config.provider] = model_id
+        
+        # Check each provider
+        tasks = []
+        for provider, model_id in providers_to_check.items():
+            tasks.append(check_provider(provider, model_id))
+        
+        results = await asyncio.gather(*tasks)
+        
+        # Display results
+        table = Table(show_header=True, box=None)
+        table.add_column("Provider", style="#8fbcbb", width=15)
+        table.add_column("Status", width=10)
+        table.add_column("Details", style="#4c566a")
+        
+        for provider, status, details in sorted(results):
+            if status == "success":
+                status_icon = "[#a3be8c]✓[/#a3be8c]"
+            elif status == "warning":
+                status_icon = "[#ebcb8b]⚠[/#ebcb8b]"
+            else:
+                status_icon = "[#bf616a]✗[/#bf616a]"
+            
+            table.add_row(
+                provider.title(),
+                status_icon,
+                details
+            )
+        
+        console.print(table)
+        console.print()
+        
+        # Summary
+        success_count = sum(1 for _, status, _ in results if status == "success")
+        total_count = len(results)
+        
+        if success_count == total_count:
+            console.print(f"[#a3be8c]◆ All {total_count} providers are working correctly![/#a3be8c]")
+        elif success_count > 0:
+            console.print(f"[#ebcb8b]◆ {success_count}/{total_count} providers are working[/#ebcb8b]")
+        else:
+            console.print(f"[#bf616a]◆ No providers are currently working[/#bf616a]")
+            console.print("\n[#4c566a]Please check your API keys and billing status[/#4c566a]")
+    
+    # Run the check
+    asyncio.run(check_all())
+
+
 if __name__ == "__main__":
     cli()
