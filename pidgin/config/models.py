@@ -21,9 +21,9 @@ class ModelConfig:
     model_id: str
     shortname: str
     aliases: List[str]
-    provider: Literal["anthropic", "openai", "google", "xai"]
+    provider: Literal["anthropic", "openai", "google", "xai", "local"]
     context_window: int
-    pricing_tier: Literal["economy", "standard", "premium"]
+    pricing_tier: Literal["economy", "standard", "premium", "free"]
     characteristics: ModelCharacteristics
     deprecated: bool = False
     deprecation_date: Optional[str] = None
@@ -407,6 +407,22 @@ MODELS: Dict[str, ModelConfig] = {
             conversation_style="analytical",
         ),
         notes="Grok with vision capabilities for multimodal tasks",
+    ),
+    # Local Models
+    "local:test": ModelConfig(
+        model_id="local:test",
+        shortname="TestModel",
+        aliases=["test", "local-test"],
+        provider="local",
+        context_window=8192,
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=5,
+            avg_response_length="medium",
+            recommended_pairings=["local:test", "gpt-4o-mini"],
+            conversation_style="analytical",
+        ),
+        notes="Deterministic test model for offline development",
     ),
 }
 

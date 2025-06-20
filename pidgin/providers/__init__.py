@@ -3,6 +3,7 @@ from .anthropic import AnthropicProvider
 from .openai import OpenAIProvider
 from .google import GoogleProvider
 from .xai import xAIProvider
+from .local import LocalProvider
 from .context_manager import ProviderContextManager
 from .token_tracker import GlobalTokenTracker, get_token_tracker
 
@@ -12,6 +13,7 @@ __all__ = [
     "OpenAIProvider",
     "GoogleProvider",
     "xAIProvider",
+    "LocalProvider",
     "ProviderContextManager",
     "GlobalTokenTracker",
     "get_token_tracker",

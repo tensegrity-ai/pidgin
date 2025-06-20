@@ -170,6 +170,12 @@ def _build_initial_prompt(
 
 def get_provider_for_model(model: str):
     """Determine which provider to use based on the model name"""
+    # Check if it's a local model
+    if model.startswith("local:"):
+        from .providers.local import LocalProvider
+        model_name = model.split(":", 1)[1] if ":" in model else "test"
+        return LocalProvider(model_name)
+    
     # Try to get model config first
     config = get_model_config(model)
     if config:
@@ -181,6 +187,9 @@ def get_provider_for_model(model: str):
             return GoogleProvider(config.model_id)
         elif config.provider == "xai":
             return xAIProvider(config.model_id)
+        elif config.provider == "local":
+            from .providers.local import LocalProvider
+            return LocalProvider(config.model_id.split(":", 1)[1] if ":" in config.model_id else "test")
 
     # Fallback to prefix matching for custom models
     if model.startswith("claude"):

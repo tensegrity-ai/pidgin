@@ -1,26 +1,16 @@
 # Pidgin Development Guide
 
-## Quick Start
+## Philosophy
 
-```bash
-# Install
-poetry install
+**We're studying patterns, not building protocols.**
 
-# Run conversation
-poetry run pidgin chat -a claude -b gpt -t 20
-
-# Run experiment (batch)
-poetry run pidgin experiment start -a claude -b gpt --reps 100
-
-# View dashboard
-poetry run pidgin experiment dashboard my_experiment
-```
+Pidgin records AI conversations to see if interesting patterns are real or artifacts. That's it. No grand visions, no revolutionary claims, just careful observation and measurement.
 
 ## Code Style
 
 ### Visual Design - Nord Theme
 ```python
-# Use Nord colors for all terminal output
+# Use Nord colors for consistency
 NORD_COLORS = {
     "dim": "#4c566a",     # nord3 - subtle text
     "text": "#d8dee9",    # nord4 - main content  
@@ -39,10 +29,62 @@ NORD_COLORS = {
 ◆ ◇ ○ ● □ ■ ▲ ▼ ► ◄ → ← ↔ ≈ ≡
 ```
 
+### Implementation Discipline
+
+**Follow specifications exactly.** When implementing from a prompt:
+
+```python
+# GOOD: Implement exactly what was asked
+def handle_input(self, key: str):
+    if key.lower() == 'd':
+        self.detach()
+    elif key.lower() == 's':
+        self.stop_with_confirmation()
+    # That's it. No extra features.
+
+# BAD: Adding unrequested features
+def handle_input(self, key: str):
+    if key.lower() == 'd':
+        self.detach()
+    elif key.lower() == 's':
+        self.stop_with_confirmation()
+    elif key.lower() == 'e':  # Nobody asked for export
+        self.export()
+    elif key.lower() == 'p':  # Nobody asked for pause
+        self.pause()
+```
+
+**Resist feature creep.** If it's not in the spec, don't add it:
+- Asked for 2 commands? Don't implement 6
+- Asked for simple display? Don't add animations
+- Asked for data view? Don't add interpretations
+
+### Language Discipline
+
+**Present data, not narratives:**
+
+```python
+# GOOD: Just the facts
+"Vocabulary overlap: 73%"
+"Message length: 42 chars"
+"Symbol usage: 8 instances"
+
+# BAD: Interpretive language
+"High convergence detected!"
+"Entering compression phase"
+"Gratitude spiral emerging"
+```
+
+**Use skeptical language:**
+- "observed" not "discovered"
+- "patterns" not "phenomena"  
+- "might indicate" not "proves"
+- "in our tests" not "universally"
+
 ### Code Organization
 
 ```python
-# Everything emits events
+# Everything emits events for observability
 await self.bus.emit(TurnCompleteEvent(...))
 
 # No hidden state
@@ -71,153 +113,44 @@ except RateLimitError as e:
 
 ## Architecture Patterns
 
-### Event-Driven Everything
-```python
-# Conductor orchestrates via events
-# Components subscribe to what they need
-# No direct coupling between components
-
-# Good: Event flows
-Conductor → EventBus → Component
+**Event-driven for complete observability:**
+```
+Conductor → EventBus → Components
          ↓
-      events.jsonl
-
-# Bad: Direct calls
-Conductor → Component → Another Component
+      events.jsonl (complete record)
 ```
 
-### Provider Pattern
+**Provider abstraction for model flexibility:**
 ```python
-# All providers implement same interface
 class Provider(ABC):
     async def stream_response(messages, temperature=None):
         yield chunk
-
-# Wrapped with event awareness
-EventAwareProvider(base_provider, event_bus)
-```
-
-## Database Schema
-
-### Key Tables
-- `experiments` - Metadata and configuration
-- `conversations` - Status, models, parameters
-- `turns` - ~150 metrics per turn
-- `word_frequencies` - Temporal word tracking
-
-### Metrics Captured
-- Lexical: TTR, vocabulary overlap, entropy
-- Structural: Message length, sentence patterns
-- Behavioral: Hedge words, symbols, repetition
-- Everything is 0-indexed
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=pidgin
-
-# Run specific test
-pytest tests/test_experiments.py::test_batch_runner
-```
-
-### Test Philosophy
-- Smoke tests over unit tests
-- Test the full flow, not every function
-- Mock providers for deterministic tests
-- Use real providers for integration tests
-
-## Common Tasks
-
-### Add New Model
-```python
-# In config/models.py
-MODELS["new-model-id"] = ModelConfig(
-    model_id="new-model-id",
-    shortname="NewModel",
-    aliases=["new", "nm"],
-    provider="openai",  # or anthropic, google, xai
-    context_window=128000,
-    # ... other config
-)
-```
-
-### Add New Metric
-1. Add to database schema
-2. Add calculation in metrics module
-3. Add to dashboard display
-4. Emit in TurnCompleteEvent
-
-### Debug Event Flow
-```bash
-# Check events.jsonl
-tail -f ./pidgin_output/conversations/*/events.jsonl | jq
-
-# Or use verbose mode
-pidgin chat -a claude -b gpt -v
-```
-
-## Performance
-
-### Targets
-- Conversation start: <1s
-- Message streaming: <100ms latency
-- Dashboard update: <50ms
-- Batch runner: 10+ conversations parallel
-
-### Bottlenecks
-- Rate limits (automatic backoff)
-- Database writes (batched)
-- Terminal rendering (use Rich's Live)
-
-## Git Workflow
-
-```bash
-# Feature branches
-git checkout -b add-metric-x
-
-# Commit style (lowercase, specific)
-git commit -m "add lexical diversity metric"
-git commit -m "fix convergence calculation overflow"
-
-# Not
-git commit -m "Revolutionary AI Discovery!!!"
 ```
 
 ## What NOT to Build
 
-1. **Intervention systems** - Distraction from research
-2. **Complex frameworks** - Keep it simple
-3. **"AI consciousness" features** - Stay grounded
-4. **Competing protocols** - We observe, not engineer
+1. **Intervention systems** - We observe, not manipulate
+2. **Complex frameworks** - Keep it simple and debuggable
+3. **"AI consciousness" features** - Stay grounded in data
+4. **Protocol competitors** - MCP already exists for that
 
-## Debugging Tips
+## Git Workflow
 
-### Database Issues
-```python
-# Check schema
-sqlite3 experiments.db ".schema turns"
+```bash
+# Clear, specific commits
+git commit -m "add vocabulary overlap metric"
+git commit -m "fix rate limit calculation"
 
-# Query metrics
-sqlite3 experiments.db "SELECT * FROM turns WHERE convergence > 0.8"
+# Not grandiose
+git commit -m "Revolutionary AI Discovery!!!"
 ```
-
-### Provider Issues
-- Check API keys are set
-- Watch for rate limits in events
-- Use `--verbose` to see all events
-
-### Display Issues
-- Terminal needs Unicode support
-- Minimum 120×40 for dashboard
-- Use `--quiet` for minimal output
 
 ## Remember
 
-- We're studying patterns, not building protocols
-- Every claim needs data
-- Simple code is debuggable code
-- Events tell the whole story
+The human has been frustrated by:
+- Previous implementations adding unwanted complexity
+- Grandiose claims about "discoveries"
+- Features that weren't requested
+- Interpretive overlays on raw data
+
+**Keep it simple. Keep it honest. Show the data.**
