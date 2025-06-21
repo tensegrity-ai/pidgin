@@ -208,7 +208,7 @@ class ExperimentDashboard:
                 turn_str = f"{turn}/{max_turns}"
                 
                 # Metrics - now showing convergence!
-                conv_score = conv.get('convergence_score', 0)
+                conv_score = conv.get('convergence_score', 0) or 0
                 conv_str = f"{int(conv_score * 100)}%"
                 
                 # Color code convergence
@@ -217,10 +217,10 @@ class ExperimentDashboard:
                 elif conv_score > 0.7:
                     conv_str = f"[{NORD_COLORS['nord13']}]{conv_str}[/]"
                 
-                vocab_overlap = conv.get('vocabulary_overlap', 0)
+                vocab_overlap = conv.get('vocabulary_overlap', 0) or 0
                 vov_str = f"{int(vocab_overlap * 100)}%"
                 
-                msg_len = int(conv.get('avg_message_length', 0))
+                msg_len = int(conv.get('avg_message_length', 0) or 0)
                 
                 # Last message preview
                 last_msg = conv.get('last_message', '')[:50] + "..." if conv.get('last_message') else "..."
@@ -243,13 +243,13 @@ class ExperimentDashboard:
         lengths = []
         
         for conv in conversations:
-            if 'convergence_score' in conv:
+            if 'convergence_score' in conv and conv['convergence_score'] is not None:
                 conv_scores.append(conv['convergence_score'])
-            if 'vocabulary_overlap' in conv:
+            if 'vocabulary_overlap' in conv and conv['vocabulary_overlap'] is not None:
                 vov_scores.append(conv['vocabulary_overlap'])
-            if 'avg_ttr' in conv:
+            if 'avg_ttr' in conv and conv['avg_ttr'] is not None:
                 ttrs.append(conv['avg_ttr'])
-            if 'avg_message_length' in conv:
+            if 'avg_message_length' in conv and conv['avg_message_length'] is not None:
                 lengths.append(conv['avg_message_length'])
         
         # Update sparkline cache
@@ -289,9 +289,9 @@ class ExperimentDashboard:
         lines.extend([
             "",
             "Current Thresholds:",
-            f"Conv > 80%: {sum(1 for c in conversations if c.get('convergence_score', 0) > 0.8)}",
-            f"Len < 50: {sum(1 for c in conversations if c.get('avg_message_length', 100) < 50)}",
-            f"VOv > 70%: {sum(1 for c in conversations if c.get('vocabulary_overlap', 0) > 0.7)}",
+            f"Conv > 80%: {sum(1 for c in conversations if (c.get('convergence_score') or 0) > 0.8)}",
+            f"Len < 50: {sum(1 for c in conversations if (c.get('avg_message_length') or 100) < 50)}",
+            f"VOv > 70%: {sum(1 for c in conversations if (c.get('vocabulary_overlap') or 0) > 0.7)}",
         ])
         
         return Panel(
@@ -385,7 +385,7 @@ class ExperimentDashboard:
         layout = Layout()
         width = self.console.width
         
-        if width >= 140:
+        if width >= 120:
             # Wide layout with side panel
             layout.split_column(
                 Layout(name="header", size=3),
@@ -466,13 +466,16 @@ class ExperimentDashboard:
                 # Get active conversations with their latest metrics
                 query = """
                     SELECT c.conversation_id, c.agent_a_model, c.agent_b_model,
-                           c.max_turns, c.status,
-                           MAX(tm.turn_index) as turn_number,
+                           json_extract(c.config, '$.max_turns') as max_turns, c.status,
+                           MAX(tm.turn_number) as turn_number,
                            tm.convergence_score, tm.vocabulary_overlap,
-                           tm.avg_message_length, tm.avg_ttr,
+                           AVG(mm2.message_length) as avg_message_length,
+                           AVG(mm2.type_token_ratio) as avg_ttr,
                            mm.message as last_message
                     FROM conversations c
                     LEFT JOIN turn_metrics tm ON c.conversation_id = tm.conversation_id
+                    LEFT JOIN message_metrics mm2 ON c.conversation_id = mm2.conversation_id
+                        AND tm.turn_number = mm2.turn_number
                     LEFT JOIN message_metrics mm ON c.conversation_id = mm.conversation_id
                         AND mm.message_index = (
                             SELECT MAX(message_index) 
@@ -513,7 +516,7 @@ class ExperimentDashboard:
                         END as range_key,
                         COUNT(*) as count
                     FROM turn_metrics
-                    WHERE turn_index = 50
+                    WHERE turn_number = 50
                     GROUP BY range_key
                 """
                 cursor = conn.execute(query)
@@ -530,7 +533,7 @@ class ExperimentDashboard:
                         END as range_key,
                         COUNT(*) as count
                     FROM message_metrics
-                    WHERE turn_index >= 40
+                    WHERE turn_number >= 40
                     GROUP BY range_key
                 """
                 cursor = conn.execute(query)
@@ -540,7 +543,7 @@ class ExperimentDashboard:
                 early_query = """
                     SELECT word, SUM(frequency) as total_freq
                     FROM word_frequencies
-                    WHERE turn_index <= 10
+                    WHERE turn_number <= 10
                     GROUP BY word
                     ORDER BY total_freq DESC
                     LIMIT 20
@@ -548,7 +551,7 @@ class ExperimentDashboard:
                 late_query = """
                     SELECT word, SUM(frequency) as total_freq
                     FROM word_frequencies
-                    WHERE turn_index >= 40
+                    WHERE turn_number >= 40
                     GROUP BY word
                     ORDER BY total_freq DESC
                     LIMIT 20
@@ -660,7 +663,7 @@ class ExperimentDashboard:
                         layout["conversations"].update(self.create_conversations_panel(active_convs))
                         
                         # Update metrics panel if present (wide layout)
-                        if "metrics" in layout._children.get("body", {})._children:
+                        if self.console.width >= 120:
                             layout["body"]["metrics"].update(self.create_metrics_panel(active_convs))
                         
                         layout["statistics"].update(self.create_statistics_panel(exp_data))

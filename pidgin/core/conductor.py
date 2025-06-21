@@ -58,6 +58,8 @@ class Conductor:
         providers: Dict[str, any],
         output_manager: Optional[OutputManager] = None,
         console: Optional[Console] = None,
+        convergence_threshold: Optional[float] = None,
+        convergence_action: Optional[str] = None,
     ):
         """Initialize conductor with providers and output manager.
 
@@ -65,6 +67,8 @@ class Conductor:
             providers: Dict mapping agent_id to provider instances (not wrapped)
             output_manager: Optional output manager for saving conversations
             console: Optional console for output (used by event logger)
+            convergence_threshold: Optional override for convergence threshold
+            convergence_action: Optional override for convergence action ('stop', 'warn', 'continue')
         """
         self.base_providers = providers  # Store unwrapped providers
         self.output_manager = output_manager or OutputManager()
@@ -82,6 +86,10 @@ class Conductor:
         # Name choosing mode
         self.choose_names_mode = False
         self.agent_chosen_names: Dict[str, str] = {}
+        
+        # Convergence overrides (for experiments)
+        self._convergence_threshold_override = convergence_threshold
+        self._convergence_action_override = convergence_action
 
         # Track conversation directory for transcript saving
         self.current_conv_dir: Optional[Path] = None
@@ -347,10 +355,10 @@ class Conductor:
             )
         )
 
-        # Check convergence threshold
+        # Check convergence threshold (with overrides for experiments)
         conv_config = self.config.get_convergence_config()
-        threshold = conv_config.get("convergence_threshold", 0.85)
-        action = conv_config.get("convergence_action", "stop")
+        threshold = self._convergence_threshold_override if self._convergence_threshold_override is not None else conv_config.get("convergence_threshold", 0.85)
+        action = self._convergence_action_override if self._convergence_action_override is not None else conv_config.get("convergence_action", "stop")
 
         if convergence_score >= threshold:
             if action == "stop":

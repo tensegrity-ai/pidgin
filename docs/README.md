@@ -15,7 +15,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 
 ### ◆ What Works
 - **Recording**: Full event-driven system captures every interaction
-- **Models**: 15+ models across Anthropic, OpenAI, Google, xAI
+- **Models**: 15+ API models plus local models via Ollama
 - **Streaming**: Real-time response display
 - **Interrupts**: Ctrl+C to pause/resume conversations
 - **Output**: Clean JSON and markdown transcripts
@@ -31,12 +31,21 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Automated pattern detection**: Statistical validation tools
 - **Report generation**: Publication-ready outputs
 
-## Quick Start
+## Installation
 
 ```bash
-# Install
-pip install -e .
+# Basic install (API providers only)
+pip install pidgin
 
+# With local model support via Ollama
+pip install "pidgin[ollama]"  # adds aiohttp for Ollama communication
+```
+
+## Quick Start
+
+### API Models (Require API Keys)
+
+```bash
 # Set API keys
 export ANTHROPIC_API_KEY="..."
 export OPENAI_API_KEY="..."
@@ -49,108 +58,173 @@ pidgin experiment start -a claude -b gpt -r 10
 
 # Check experiment progress
 pidgin experiment status
-
-# Output saved to ./pidgin_output/
 ```
+
+### Local Models (No API Keys Required)
+
+Pidgin supports local models through Ollama:
+
+```bash
+# Install Ollama (one-time setup)
+curl -fsSL https://ollama.ai/install.sh | sh  # macOS/Linux
+# Windows: Download from https://ollama.ai
+
+# Start Ollama server
+ollama serve
+
+# Use local models
+pidgin chat -a ollama:qwen -b ollama:phi
+
+# Or use the selection menu
+pidgin chat -a ollama -b ollama
+```
+
+When you first use a local model, Pidgin will:
+1. Check if Ollama is installed (offer to help install if not)
+2. Check if Ollama is running (offer to start it)
+3. Download the model if needed (automatic on first use)
+
+Available local models:
+- `qwen2.5:0.5b` - Fast, minimal resources (500MB)
+- `phi3` - Balanced quality/speed (2.8GB)
+- `mistral` - Best quality, needs 8GB+ RAM (4.1GB)
 
 ## API Key Management
 
 ▶ **Why this matters**: API keys are like credit cards for AI services. Exposed keys can lead to unexpected charges if someone else uses them.
 
-For better security, we recommend using a key manager rather than environment variables:
+### Best Practices
 
-### Using 1Password CLI (Recommended)
+#### ◆ Never in Code
 ```bash
-# Install 1Password CLI
-brew install --cask 1password-cli
+# ❌ Bad
+ANTHROPIC_API_KEY = "sk-ant-..."
 
-# Run Pidgin with keys from 1Password
-op run --env-file=.env.1password -- pidgin chat -a claude -b gpt
-
-# Where .env.1password contains:
-# ANTHROPIC_API_KEY="op://Personal/Anthropic API/credential"
-# OPENAI_API_KEY="op://Personal/OpenAI API/credential"
+# ✅ Good
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ```
 
-### Using macOS Keychain
-```bash
-# Store keys securely
-security add-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w "your-key-here"
-security add-generic-password -a "$USER" -s "OPENAI_API_KEY" -w "your-key-here"
-
-# Retrieve in shell profile
-export ANTHROPIC_API_KEY=$(security find-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w)
-export OPENAI_API_KEY=$(security find-generic-password -a "$USER" -s "OPENAI_API_KEY" -w)
+#### ◆ Use Environment Files
+Create `.env` (and add to `.gitignore`):
+```
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-proj-...
 ```
 
-### Using direnv (Project-specific)
-```bash
-# Install direnv
-brew install direnv
+#### ◆ Secure Your Keys
+- Rotate keys regularly
+- Use project-specific keys
+- Monitor usage dashboards
+- Never share keys
 
-# Create .envrc in project root
-echo 'export ANTHROPIC_API_KEY="sk-ant-..."' > .envrc
-echo 'export OPENAI_API_KEY="sk-..."' >> .envrc
+## Supported Models
 
-# Never commit .envrc
-echo ".envrc" >> .gitignore
+Run `pidgin models` to see all available models.
 
-# Allow direnv to load
-direnv allow
-```
+### API Providers (require API keys)
+- **Anthropic**: Claude 3/4 family
+- **OpenAI**: GPT-4, O-series models
+- **Google**: Gemini models
+- **xAI**: Grok models
 
-### Other Options
-- **AWS Secrets Manager** - For cloud deployments
-- **HashiCorp Vault** - For enterprise environments
-- **age** - Modern encryption tool for secrets
+### Local Models (via Ollama, no API keys)
+- **Qwen 2.5 (0.5B)** - Fast experimentation
+- **Phi-3** - Good balance
+- **Mistral 7B** - Best quality
 
-■ **Never commit API keys to git**, even in private repositories.
-
-## Local Models
-
-Pidgin supports running models locally on your machine:
+## Examples
 
 ```bash
-# Quick start - Pidgin handles everything
-pidgin chat -a local -b local
+# API models (requires API keys)
+pidgin chat -a claude -b gpt-4 -t 20
 
-# Or specify models directly
-pidgin chat -a local:qwen -b local:phi
+# Local models (no API keys needed)
+pidgin chat -a ollama:qwen -b ollama:phi -t 30
+
+# Mix local and API
+pidgin chat -a claude -b ollama:mistral -t 25
+
+# Quick local test (always works, no dependencies)
+pidgin chat -a local:test -b local:test -t 10
+
+# Run experiment with local models
+pidgin experiment start -a ollama:qwen -b ollama:phi -r 50
 ```
 
-On first use, Pidgin will:
-1. Offer to install Ollama (~150MB)
-2. Start the Ollama server
-3. Download your chosen model
+## Observations So Far
 
-Available models:
-- `local:qwen` - 500MB, fast responses
-- `local:phi` - 2.8GB, balanced performance
-- `local:mistral` - 4.1GB, best quality (needs 8GB+ RAM)
-- `local:test` - No download, pattern-based responses
-
-Models download automatically on first use.
-
-## Why This Matters
-
-When AIs talk to each other millions of times daily, do they develop more efficient protocols? We don't know. That's what we're trying to find out.
-
-## Examples of What We've Seen
-
+### Gratitude Spirals
 ```
-Turn 1: "Hello! How are you today?"
-Turn 2: "I'm doing well, thank you! How are you?"
+Turn 15: "Thank you for that insight!"
+Turn 16: "Thank you for your thanks!"
+Turn 17: "I appreciate your appreciation!"
+... (accelerating)
+```
+
+### Symbol Emergence
+```
+Turn 20: "That's a great point..."
+Turn 21: "That's a great point! :-)"
+Turn 22: "→ Indeed! :-)"
+Turn 23: "→→ Absolutely! ⭐"
+```
+
+### Convergence
+```
+Turn 1: "I think we should consider multiple perspectives..."
+Turn 2: "I agree that considering various viewpoints..."
 ...
-Turn 30: "Grateful!"
-Turn 31: "Grateful too!"
-Turn 32: "◆"
+Turn 30: "Yes!"
+Turn 31: "Yes!"
+Turn 32: "Agreed!"
+```
+
+**Important**: These are anecdotal observations from ~100 conversations. No statistical validation yet.
+
+## How Experiments Work
+
+```bash
+# Start experiment with 100 conversations
+pidgin experiment start -a claude -b gpt -r 100 -t 50
+
+# Monitor live (new terminal)
+pidgin experiment dashboard
+
+# Query results
+sqlite3 ./pidgin_output/experiments/experiments.db \
+  "SELECT AVG(convergence_score) FROM turns WHERE turn_number > 40"
+```
+
+### Experiment Features
+- Parallel execution with rate limit management
+- Automatic first-speaker alternation
+- ~150 metrics per turn
+- Background daemon operation
+- Live monitoring dashboard
+
+## Pattern Examples
+
+### Vocabulary Compression
+We've observed vocabulary shrinking over long conversations:
+```
+Turn 1: Vocabulary size: 150 unique words
+Turn 20: Vocabulary size: 80 unique words  
+Turn 40: Vocabulary size: 30 unique words
+```
+
+### Linguistic Mirroring
+Models begin copying each other's patterns:
+```
+Agent A: "I'm pondering the implications..."
+Agent B: "I'm pondering these ideas too..."
+Agent A: "Pondering together, then..."
 ```
 
 Is this compression? Attractor dynamics? Random chance? We need data.
 
 ## Running Experiments
 
-Pidgin can run batch experiments for statistical analysis:
+Pidgin can now run batch experiments for statistical analysis:
 
 ```bash
 # Run 100 conversations between Claude and GPT

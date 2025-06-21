@@ -77,8 +77,8 @@ class RateLimitMonitor:
                     c.final_convergence_score,
                     e.name as experiment_name,
                     e.experiment_id,
-                    (SELECT MAX(turn_number) FROM turns WHERE conversation_id = c.conversation_id) as turns,
-                    (SELECT convergence_score FROM turns WHERE conversation_id = c.conversation_id 
+                    (SELECT MAX(turn_number) FROM turn_metrics WHERE conversation_id = c.conversation_id) as turns,
+                    (SELECT convergence_score FROM turn_metrics WHERE conversation_id = c.conversation_id 
                      ORDER BY turn_number DESC LIMIT 1) as current_convergence
                 FROM conversations c
                 JOIN experiments e ON c.experiment_id = e.experiment_id
@@ -165,20 +165,21 @@ class RateLimitMonitor:
     def get_last_messages(self) -> Dict[str, str]:
         """Get last message from each active conversation."""
         with self.get_connection() as conn:
-            # Get last turn from each active conversation
+            # Get last message from each active conversation
             rows = conn.execute("""
                 SELECT DISTINCT
-                    t.conversation_id,
-                    t.message,
-                    t.speaker
-                FROM turns t
+                    mm.conversation_id,
+                    mm.message,
+                    mm.speaker
+                FROM message_metrics mm
                 INNER JOIN (
-                    SELECT conversation_id, MAX(turn_number) as max_turn
-                    FROM turns
-                    GROUP BY conversation_id
-                ) latest ON t.conversation_id = latest.conversation_id 
-                         AND t.turn_number = latest.max_turn
-                WHERE t.conversation_id IN (
+                    SELECT conversation_id, MAX(turn_number) as max_turn, MAX(message_index) as max_msg
+                    FROM message_metrics
+                    GROUP BY conversation_id, turn_number
+                ) latest ON mm.conversation_id = latest.conversation_id 
+                         AND mm.turn_number = latest.max_turn
+                         AND mm.message_index = latest.max_msg
+                WHERE mm.conversation_id IN (
                     SELECT conversation_id 
                     FROM conversations 
                     WHERE status = 'running'

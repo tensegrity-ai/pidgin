@@ -188,17 +188,14 @@ class ExperimentRunner:
             temperature=temperature_b
         )
         
-        # Create conductor
+        # Create conductor with convergence settings
         conductor = Conductor(
             providers=providers_map,
             output_manager=output_manager,
-            console=None  # No console output for experiments
+            console=None,  # No console output for experiments
+            convergence_threshold=config.convergence_threshold,
+            convergence_action=config.convergence_action,
         )
-        
-        # Set convergence threshold if specified
-        if config.convergence_threshold is not None:
-            conductor.convergence_threshold = config.convergence_threshold
-            conductor.convergence_action = config.convergence_action
         
         # Monkey patch the conductor to subscribe our handler to events
         original_init_event_system = conductor._initialize_event_system
