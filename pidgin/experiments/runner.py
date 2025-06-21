@@ -27,13 +27,15 @@ from ..cli import get_provider_for_model, _build_initial_prompt
 class ExperimentRunner:
     """Runs experiments by orchestrating conversations."""
     
-    def __init__(self, storage: Optional[ExperimentStore] = None):
+    def __init__(self, storage: Optional[ExperimentStore] = None, event_bus: Optional[EventBus] = None):
         """Initialize experiment runner.
         
         Args:
             storage: Database storage instance (creates default if None)
+            event_bus: Optional shared EventBus for dashboard integration
         """
         self.storage = storage or ExperimentStore()
+        self.event_bus = event_bus  # Will be None for normal operation
     
     async def run_experiment(self, config: ExperimentConfig) -> str:
         """Run all conversations for an experiment.
@@ -105,8 +107,14 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
-        # Create event bus and handler
-        event_bus = EventBus()
+        # Use shared event bus if available, otherwise create local one
+        if self.event_bus:
+            event_bus = self.event_bus
+            print(f"[DEBUG] Using shared EventBus for conversation {conversation_id}")
+        else:
+            event_bus = EventBus()
+            await event_bus.start()
+            
         handler = ExperimentEventHandler(self.storage, experiment_id)
         
         # Subscribe to events

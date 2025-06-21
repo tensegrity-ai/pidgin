@@ -8,19 +8,21 @@ from .runner import ExperimentRunner
 from .config import ExperimentConfig
 from .storage import ExperimentStore
 from .daemon import ExperimentDaemon
+from ..core.event_bus import EventBus
 
 
 class ParallelExperimentRunner(ExperimentRunner):
     """Runs experiments with parallel conversation execution."""
     
-    def __init__(self, storage: ExperimentStore, daemon: Optional[ExperimentDaemon] = None):
+    def __init__(self, storage: ExperimentStore, daemon: Optional[ExperimentDaemon] = None, event_bus: Optional[EventBus] = None):
         """Initialize parallel runner.
         
         Args:
             storage: Database storage
             daemon: Optional daemon for background execution
+            event_bus: Optional shared EventBus for dashboard integration
         """
-        super().__init__(storage)
+        super().__init__(storage, event_bus)
         self.daemon = daemon
         self.active_tasks: Dict[str, asyncio.Task] = {}
         self.completed_count = 0
