@@ -1477,10 +1477,10 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
             console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
             console.print(f"[#4c566a]  Conversations: {repetitions} (sequential)[/#4c566a]")
             console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-            console.print(f"\n[#ebcb8b]◆ TESTING MINIMAL EVENT DASHBOARD[/#ebcb8b]\n")
+            console.print(f"\n[#ebcb8b]◆ PHASE 3 MULTI-METRIC DASHBOARD[/#ebcb8b]\n")
             
             # Import minimal dashboard for testing
-            from .dashboard.minimal_sequential import MinimalSequentialDashboard
+            from .dashboard.phase3_dashboard import Phase3Dashboard
             from .core.event_bus import EventBus
             
             async def run_with_event_dashboard():
@@ -1501,7 +1501,7 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
                 exp_id = storage.create_experiment(config.name, config.dict())
                 
                 # Create dashboard FIRST so it can subscribe to events
-                dashboard = MinimalSequentialDashboard(event_bus, exp_id)
+                dashboard = Phase3Dashboard(event_bus, exp_id)
                 
                 # Give dashboard a moment to subscribe
                 await asyncio.sleep(0.1)
