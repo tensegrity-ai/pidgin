@@ -8,30 +8,10 @@ from .runner import ExperimentRunner
 from .config import ExperimentConfig
 from .storage import ExperimentStore
 from .daemon import ExperimentDaemon
-from ..config.models import get_model_config
 
 
 class ParallelExperimentRunner(ExperimentRunner):
     """Runs experiments with parallel conversation execution."""
-    
-    # Provider rate limits (requests per minute)
-    # Conservative defaults to avoid rate limiting
-    RATE_LIMITS = {
-        "anthropic": 50,  # Anthropic allows ~50-60 rpm
-        "openai": 60,     # OpenAI allows ~60 rpm for GPT-4
-        "google": 60,     # Google allows ~60 rpm
-        "xai": 50,        # xAI estimate
-    }
-    
-    # Maximum parallel conversations (not per minute!)
-    # Very conservative to avoid rate limits
-    # Each conversation = many API calls (2 per turn + system prompts)
-    SAFE_RATES = {
-        "anthropic": 2,    # Anthropic is very strict
-        "openai": 3,       # OpenAI is more lenient
-        "google": 2,       # Conservative estimate
-        "xai": 2,          # Conservative estimate
-    }
     
     def __init__(self, storage: ExperimentStore, daemon: Optional[ExperimentDaemon] = None):
         """Initialize parallel runner.
@@ -47,66 +27,16 @@ class ParallelExperimentRunner(ExperimentRunner):
         self.failed_count = 0
         
     def calculate_parallelism(self, config: ExperimentConfig) -> int:
-        """Calculate safe parallelism level based on providers.
+        """Return parallelism level from config - no auto-calculation.
         
         Args:
             config: Experiment configuration
             
         Returns:
-            Maximum number of parallel conversations
+            Number of parallel conversations (1 = sequential)
         """
-        # Determine which providers are in use
-        providers = set()
+        return config.max_parallel
         
-        # Get provider for each model
-        provider_a = self._get_provider_type(config.agent_a_model)
-        provider_b = self._get_provider_type(config.agent_b_model)
-        
-        providers.add(provider_a)
-        providers.add(provider_b)
-        
-        # Remove unknown providers
-        providers.discard('unknown')
-        
-        if not providers:
-            logging.warning("Unknown providers, using conservative parallelism")
-            return 2
-            
-        # If using multiple different providers, we can be slightly more aggressive
-        if len(providers) > 1:
-            # Use the minimum of the two providers (weakest link)
-            limits = [self.SAFE_RATES.get(p, 2) for p in providers]
-            return min(limits)
-            
-        # Single provider - use its limit
-        provider = providers.pop()
-        return self.SAFE_RATES.get(provider, 2)
-        
-    def _get_provider_type(self, model: str) -> str:
-        """Determine provider from model name.
-        
-        Args:
-            model: Model name or alias
-            
-        Returns:
-            Provider type string
-        """
-        config = get_model_config(model)
-        if config:
-            return config.provider
-            
-        # Fallback pattern matching
-        model_lower = model.lower()
-        if 'claude' in model_lower or model in ['opus', 'sonnet', 'haiku']:
-            return 'anthropic'
-        elif model_lower.startswith('gpt') or model_lower.startswith('o'):
-            return 'openai'
-        elif 'gemini' in model_lower:
-            return 'google'
-        elif 'grok' in model_lower:
-            return 'xai'
-        else:
-            return 'unknown'
             
     async def run_experiment_with_id(self, experiment_id: str, config: ExperimentConfig) -> str:
         """Run experiment with parallel execution using existing experiment ID.
@@ -151,8 +81,11 @@ class ParallelExperimentRunner(ExperimentRunner):
         """
         
         # Calculate parallelism
-        max_parallel = config.max_parallel or self.calculate_parallelism(config)
-        logging.info(f"Starting experiment {experiment_id} with parallelism: {max_parallel}")
+        max_parallel = self.calculate_parallelism(config)
+        if max_parallel == 1:
+            logging.info(f"Starting experiment {experiment_id} with sequential execution")
+        else:
+            logging.info(f"Starting experiment {experiment_id} with {max_parallel} parallel conversations")
         
         # Create semaphore for rate limiting
         semaphore = asyncio.Semaphore(max_parallel)

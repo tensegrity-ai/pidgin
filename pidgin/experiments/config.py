@@ -32,7 +32,7 @@ class ExperimentConfig:
     awareness_b: Optional[str] = None  # Override for agent B
     
     # Parallel execution
-    max_parallel: Optional[int] = None  # None = auto-calculate based on providers
+    max_parallel: int = 1  # Default to sequential execution (1 conversation at a time)
     
     # Turn control
     first_speaker: str = 'agent_a'  # Alternates per repetition for fairness
@@ -41,8 +41,8 @@ class ExperimentConfig:
     choose_names: bool = False
     
     # Convergence settings
-    convergence_threshold: Optional[float] = None  # Stop at threshold
-    convergence_action: str = 'continue'  # 'stop' or 'warn'
+    convergence_threshold: Optional[float] = None  # Stop at threshold (None = use config default of 0.85)
+    convergence_action: str = 'stop'  # 'stop', 'warn', or 'continue'
     
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)

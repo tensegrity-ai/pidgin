@@ -43,8 +43,10 @@ rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 import rich_click as click
 
 import asyncio
+import subprocess
+import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -170,11 +172,31 @@ def _build_initial_prompt(
 
 def get_provider_for_model(model: str):
     """Determine which provider to use based on the model name"""
-    # Check if it's a local model
+    # Handle local: prefix
     if model.startswith("local:"):
-        from .providers.local import LocalProvider
-        model_name = model.split(":", 1)[1] if ":" in model else "test"
-        return LocalProvider(model_name)
+        model_name = model.split(":", 1)[1]
+        
+        # Test model stays with LocalProvider
+        if model_name == "test":
+            from .providers.local import LocalProvider
+            return LocalProvider("test")
+        
+        # Other local models use Ollama backend
+        from .providers.ollama import OllamaProvider
+        # Map simple names to Ollama model names
+        model_map = {
+            "qwen": "qwen2.5:0.5b",
+            "phi": "phi3",
+            "mistral": "mistral"
+        }
+        ollama_model = model_map.get(model_name, model_name)
+        return OllamaProvider(ollama_model)
+    
+    # Also support direct ollama: syntax for power users
+    elif model.startswith("ollama:"):
+        from .providers.ollama import OllamaProvider
+        model_name = model.split(":", 1)[1]
+        return OllamaProvider(model_name)
     
     # Try to get model config first
     config = get_model_config(model)
@@ -187,9 +209,18 @@ def get_provider_for_model(model: str):
             return GoogleProvider(config.model_id)
         elif config.provider == "xai":
             return xAIProvider(config.model_id)
-        elif config.provider == "local":
-            from .providers.local import LocalProvider
-            return LocalProvider(config.model_id.split(":", 1)[1] if ":" in config.model_id else "test")
+        elif config.provider == "ollama":
+            # Handle models configured with ollama provider
+            from .providers.ollama import OllamaProvider
+            model_name = config.model_id.split(":", 1)[1]
+            # Map simple names to Ollama model names
+            model_map = {
+                "qwen": "qwen2.5:0.5b",
+                "phi": "phi3",
+                "mistral": "mistral"
+            }
+            ollama_model = model_map.get(model_name, model_name)
+            return OllamaProvider(ollama_model)
 
     # Fallback to prefix matching for custom models
     if model.startswith("claude"):
@@ -281,12 +312,12 @@ dimensions:
     
     # Report results
     if created_files:
-        console.print("\n[bold green]✓ Configuration templates created:[/bold green]")
+        console.print("\n[bold #a3be8c]✓ Configuration templates created:[/bold #a3be8c]")
         for file in created_files:
             console.print(f"  • {file.relative_to(Path.cwd())}")
         console.print("\n[#4c566a]Edit these files to add your own content.[/#4c566a]")
     else:
-        console.print("[yellow]All configuration files already exist.[/yellow]")
+        console.print("[#ebcb8b]All configuration files already exist.[/#ebcb8b]")
         console.print(f"[#4c566a]Check {config_dir.relative_to(Path.cwd())}/[/#4c566a]")
 
 
@@ -298,14 +329,14 @@ def models():
     and key characteristics.
     """
     table = Table(title="Available Models", show_header=True, header_style="bold")
-    table.add_column("Provider", style="cyan", width=12)
-    table.add_column("Model ID", style="green")
-    table.add_column("Alias", style="yellow")
-    table.add_column("Context", style="blue", justify="right")
-    table.add_column("Characteristics", style="dim")
+    table.add_column("Provider", style="#88c0d0", width=12)
+    table.add_column("Model ID", style="#a3be8c")
+    table.add_column("Alias", style="#ebcb8b")
+    table.add_column("Context", style="#5e81ac", justify="right")
+    table.add_column("Characteristics", style="#4c566a")
 
     # Group models by provider
-    providers = ["anthropic", "openai", "google", "xai"]
+    providers = ["anthropic", "openai", "google", "xai", "ollama", "local"]
     
     for provider in providers:
         models = get_models_by_provider(provider)
@@ -318,7 +349,7 @@ def models():
                 "",
                 "",
                 "",
-                style="bold cyan"
+                style="bold #88c0d0"
             )
             
             # Add each model
@@ -377,9 +408,9 @@ def dimensions(example, list_only, detailed, dimension):
         [#4c566a]pidgin dimensions --example peers:philosophy[/#4c566a]
     
     [bold]QUICK COMBINATIONS:[/bold]
-        • [green]peers:philosophy[/green] → Collaborative philosophical discussion
-        • [green]debate:science:analytical[/green] → Analytical scientific debate
-        • [green]teaching:language[/green] → Teaching session about language
+        • [#a3be8c]peers:philosophy[/#a3be8c] → Collaborative philosophical discussion
+        • [#a3be8c]debate:science:analytical[/#a3be8c] → Analytical scientific debate
+        • [#a3be8c]teaching:language[/#a3be8c] → Teaching session about language
     """
     generator = DimensionalPromptGenerator()
 
@@ -390,7 +421,7 @@ def dimensions(example, list_only, detailed, dimension):
             console.print(f"\n[bold]Example for '{example}':[/bold]")
             console.print(f'"{prompt}"\n')
         except ValueError as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[#bf616a]Error: {e}[/#bf616a]")
         return
 
     if dimension and detailed:
@@ -417,7 +448,7 @@ def dimensions(example, list_only, detailed, dimension):
     all_dims = generator.get_all_dimensions()
 
     for dim_name, dim in all_dims.items():
-        console.print(f"[bold cyan]{dim_name.upper()}[/bold cyan] - {dim.description}")
+        console.print(f"[bold #88c0d0]{dim_name.upper()}[/bold #88c0d0] - {dim.description}")
         console.print(f"  Required: {'Yes' if dim.required else 'No'}")
         console.print("  Values:")
 
@@ -425,7 +456,7 @@ def dimensions(example, list_only, detailed, dimension):
             # Truncate long descriptions
             if len(desc) > 60:
                 desc = desc[:57] + "..."
-            console.print(f"    • [green]{value}[/green] - {desc}")
+            console.print(f"    • [#a3be8c]{value}[/#a3be8c] - {desc}")
         console.print()
 
     # Show examples
@@ -600,6 +631,205 @@ def chat(
     if quiet and verbose:
         raise click.BadParameter("Cannot use both --quiet and --verbose")
     
+    async def normalize_model_names(model_a, model_b, console):
+        """Handle model shortcuts including local models."""
+        
+        if model_a == "local" or model_b == "local":
+            from pidgin.local.ollama_helper import ensure_ollama_ready
+            
+            # Ensure Ollama is ready (auto-install if needed)
+            if not await ensure_ollama_ready(console):
+                console.print("\n[#4c566a]Using test model instead[/#4c566a]")
+                return "local:test", "local:test"
+            
+            console.print("\n◆ Select local model:")
+            console.print("  1. [#88c0d0]qwen[/] - 500MB, fast")
+            console.print("  2. [#88c0d0]phi[/] - 2.8GB, balanced")
+            console.print("  3. [#88c0d0]mistral[/] - 4.1GB, best, 8GB+ RAM")
+            console.print("  4. [#a3be8c]test[/] - no download, pattern-based")
+            console.print()
+            
+            models = ["qwen", "phi", "mistral", "test"]
+            
+            if model_a == "local":
+                choice = click.prompt("First agent", type=int, default=1)
+                model_a = f"local:{models[choice-1] if 1 <= choice <= 4 else models[0]}"
+                
+            if model_b == "local":
+                choice = click.prompt("Second agent", type=int, default=1)
+                model_b = f"local:{models[choice-1] if 1 <= choice <= 4 else models[0]}"
+        
+        return model_a, model_b
+    
+    # Early normalization to handle 'local' shorthand
+    model_a, model_b = asyncio.run(normalize_model_names(model_a, model_b, console))
+    
+    # Check if we need to start Ollama server (right after model selection)
+    # Check both the raw model names and look up their configs
+    using_ollama = False
+    for model in [model_a, model_b]:
+        if model.startswith("local:") and model != "local:test":
+            # Check if this model uses ollama provider
+            config = get_model_config(model)
+            if config and config.provider == "ollama":
+                using_ollama = True
+                break
+    
+    if using_ollama:
+        from pidgin.local.ollama_helper import check_ollama_running, start_ollama_server
+        if not check_ollama_running():
+            started = asyncio.run(start_ollama_server(console))
+            if not started:
+                console.print("\n[#bf616a]Failed to start Ollama server[/#bf616a]")
+                console.print("Please start manually: [#88c0d0]ollama serve[/#88c0d0]")
+                raise click.Abort()
+        
+        # Check and pull models before starting conversation
+        import subprocess
+        models_to_check = set()
+        
+        # Collect unique Ollama models
+        for model in [model_a, model_b]:
+            if model.startswith("local:") and model != "local:test":
+                config = get_model_config(model)
+                if config and config.provider == "ollama":
+                    # Map to actual Ollama model name
+                    model_name = model.split(":", 1)[1]
+                    model_map = {
+                        "qwen": "qwen2.5:0.5b",
+                        "phi": "phi3",
+                        "mistral": "mistral"
+                    }
+                    ollama_model = model_map.get(model_name, model_name)
+                    models_to_check.add(ollama_model)
+        
+        # Check if models are installed
+        for ollama_model in models_to_check:
+            # Check if model exists
+            result = subprocess.run(
+                f"ollama list | grep -q '{ollama_model}'",
+                shell=True,
+                capture_output=True
+            )
+            
+            if result.returncode != 0:
+                # Model not found, need to download
+                console.print()
+                console.print(Panel(
+                    f"[bold #88c0d0]◆ Model Setup: {ollama_model}[/bold #88c0d0]\n\n"
+                    f"[#d8dee9]Model not found locally. Downloading from Ollama...[/#d8dee9]\n"
+                    f"[#4c566a]This may take a few minutes for the first download[/#4c566a]",
+                    border_style="#5e81ac",
+                    padding=(1, 2)
+                ))
+                console.print()
+                
+                # Pull the model with enhanced progress display
+                from rich.live import Live
+                from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, DownloadColumn, TaskID
+                from rich.table import Table
+                
+                # Create progress instance
+                progress = Progress(
+                    SpinnerColumn(spinner_name="dots"),
+                    TextColumn("[bold #88c0d0]{task.fields[layer]}[/bold #88c0d0]", justify="right", style="#d8dee9"),
+                    BarColumn(bar_width=40, style="#5e81ac", complete_style="#88c0d0"),
+                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                    DownloadColumn(),
+                    expand=False
+                )
+                
+                # Table to hold progress
+                table = Table.grid(padding=1)
+                table.add_row(
+                    Panel(
+                        progress,
+                        title=f"[bold #88c0d0]◆ Downloading {ollama_model}[/bold #88c0d0]",
+                        border_style="#5e81ac",
+                        padding=(1, 2)
+                    )
+                )
+                
+                layer_tasks = {}
+                
+                with Live(table, console=console, refresh_per_second=10):
+                    # Run ollama pull and capture output line by line
+                    process = subprocess.Popen(
+                        f"ollama pull {ollama_model}",
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                        bufsize=1
+                    )
+                    
+                    for line in process.stdout:
+                        line = line.strip()
+                        
+                        # Parse different stages
+                        if "pulling manifest" in line:
+                            if "manifest" not in layer_tasks:
+                                layer_tasks["manifest"] = progress.add_task("", layer="Pulling manifest", total=100)
+                            progress.update(layer_tasks["manifest"], completed=100)
+                        
+                        elif "pulling" in line and ":" in line:
+                            # Extract layer ID and progress
+                            match = re.search(r'pulling (\w+):?\s*(\d+)?%?\s*▕?([█▏▎▍▌▋▊▉]+)?.*?(\d+\s*\w+)?', line)
+                            if match:
+                                layer_id = match.group(1)[:12]
+                                percent = int(match.group(2)) if match.group(2) else 0
+                                
+                                # Create task for this layer if not exists
+                                if layer_id not in layer_tasks:
+                                    layer_tasks[layer_id] = progress.add_task("", layer=f"Layer {layer_id}", total=100)
+                                
+                                progress.update(layer_tasks[layer_id], completed=percent)
+                        
+                        elif "verifying" in line:
+                            if "verify" not in layer_tasks:
+                                layer_tasks["verify"] = progress.add_task("", layer="Verifying sha256", total=100)
+                            progress.update(layer_tasks["verify"], completed=100)
+                        
+                        elif "writing manifest" in line:
+                            if "write" not in layer_tasks:
+                                layer_tasks["write"] = progress.add_task("", layer="Writing manifest", total=100)
+                            progress.update(layer_tasks["write"], completed=100)
+                        
+                        elif "success" in line:
+                            # Mark all tasks as complete
+                            for task_id in layer_tasks.values():
+                                progress.update(task_id, completed=100)
+                    
+                    pull_result = process.wait()
+                
+                if pull_result == 0:
+                    console.print()
+                    console.print(Panel(
+                        f"[bold #a3be8c]✓ Model Ready![/bold #a3be8c]\n\n"
+                        f"[#d8dee9]Successfully downloaded: {ollama_model}[/#d8dee9]",
+                        border_style="#a3be8c",
+                        padding=(1, 2)
+                    ))
+                else:
+                    console.print()
+                    console.print(Panel(
+                        f"[bold #bf616a]✗ Download Failed[/bold #bf616a]\n\n"
+                        f"[#d8dee9]Failed to download model: {ollama_model}[/#d8dee9]\n"
+                        f"[#4c566a]Please check your internet connection and try again[/#4c566a]",
+                        border_style="#bf616a",
+                        padding=(1, 2)
+                    ))
+                    raise click.Abort()
+            else:
+                # Model already installed
+                console.print()
+                console.print(Panel(
+                    f"[bold #a3be8c]✓ Model Available[/bold #a3be8c]\n\n"
+                    f"[#d8dee9]{ollama_model} is already installed[/#d8dee9]",
+                    border_style="#4c566a",
+                    padding=(1, 2)
+                ))
+    
     # Build initial prompt
     initial_prompt = _build_initial_prompt(
         custom_prompt=prompt,
@@ -613,7 +843,7 @@ def chat(
         model_a_id = config_a.model_id if config_a else model_a
         model_b_id = config_b.model_id if config_b else model_b
     except ValueError as e:
-        console.print(f"[red]Model error: {e}[/red]")
+        console.print(f"[#bf616a]Model error: {e}[/#bf616a]")
         console.print("\n[#4c566a]Run 'pidgin models' to see available models.[/#4c566a]")
         raise click.Abort()
     
@@ -625,6 +855,8 @@ def chat(
         # Use individual settings or None
         temperature_a = temp_a
         temperature_b = temp_b
+    
+    # No need for special local model handling anymore - Ollama handles it
     
     # Determine display mode
     if quiet:
@@ -653,12 +885,18 @@ def chat(
             providers_map[provider_b.model] = provider_b
         else:
             providers_map[model_b_id] = provider_b
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
+    except (ValueError, RuntimeError) as e:
+        console.print(f"\n[#bf616a]Error: {e}[/#bf616a]")
         raise click.Abort()
     
-    # Create event-driven CONDUCTOR with output manager
-    conductor = Conductor(providers_map, output_manager, console)
+    # Create event-driven CONDUCTOR with output manager and convergence settings
+    conductor = Conductor(
+        providers_map, 
+        output_manager, 
+        console,
+        convergence_threshold=convergence_threshold,
+        convergence_action='stop' if convergence_threshold else None,
+    )
     
     # Create agents with temperature settings
     agent_a_obj = Agent(id="agent_a", model=model_a_id, temperature=temperature_a)
@@ -680,7 +918,7 @@ def chat(
             model_b_name=model_b_id
         )
         
-        console.print(f"\n[bold cyan]System Prompts:[/bold cyan]")
+        console.print(f"\n[bold #88c0d0]System Prompts:[/bold #88c0d0]")
         console.print(f"Agent A Awareness: {actual_awareness_a}")
         console.print(f"Agent B Awareness: {actual_awareness_b}\n")
         
@@ -688,7 +926,7 @@ def chat(
             console.print(Panel(
                 system_prompts["agent_a"],
                 title="System Prompt - Agent A",
-                border_style="green"
+                border_style="#a3be8c"
             ))
         else:
             console.print("[#4c566a]Agent A: No system prompt (chaos mode)[/#4c566a]")
@@ -697,7 +935,7 @@ def chat(
             console.print(Panel(
                 system_prompts["agent_b"],
                 title="System Prompt - Agent B", 
-                border_style="blue"
+                border_style="#5e81ac"
             ))
         else:
             console.print("[#4c566a]Agent B: No system prompt (chaos mode)[/#4c566a]")
@@ -707,14 +945,14 @@ def chat(
     if verbose:
         console.print(
             Panel(
-                f"[bold green]🎭 EVENT-DRIVEN CONVERSATION[/bold green]\n"
+                f"[bold #a3be8c]◆ EVENT-DRIVEN CONVERSATION[/bold #a3be8c]\n"
                 f"Model A: {model_a_id}\n"
                 f"Model B: {model_b_id}\n"
                 f"Max turns: {turns}\n"
                 f"Initial prompt: {initial_prompt[:50]}...\n\n"
-                f"[yellow]All events will be displayed in real-time![/yellow]",
+                f"[#ebcb8b]All events will be displayed in real-time![/#ebcb8b]",
                 title="Event System Active",
-                border_style="green",
+                border_style="#a3be8c",
             )
         )
 
@@ -738,8 +976,8 @@ def chat(
 
         # Show completion summary
         if not quiet:
-            console.print(f"\n[bold green]Conversation completed![/bold green]")
-            console.print(f"Total messages: [cyan]{len(conversation.messages)}[/cyan]")
+            console.print(f"\n[bold #a3be8c]Conversation completed![/bold #a3be8c]")
+            console.print(f"Total messages: [#88c0d0]{len(conversation.messages)}[/#88c0d0]")
             console.print(f"Conversation ID: {conversation.id}")
 
             # Save transcript
@@ -753,10 +991,10 @@ def chat(
                     )
 
     except KeyboardInterrupt:
-        console.print("\n[yellow]Conversation interrupted by user.[/yellow]")
+        console.print("\n[#ebcb8b]Conversation interrupted by user.[/#ebcb8b]")
         raise click.Abort()
     except Exception as e:
-        console.print(f"\n[red]Error: {e}[/red]")
+        console.print(f"\n[#bf616a]Error: {e}[/#bf616a]")
         if verbose:
             import traceback
             console.print(traceback.format_exc())
@@ -912,7 +1150,7 @@ def experiment(
     experiment_dir = base_output / "experiments" / datetime.now().strftime("%Y-%m-%d") / name
     
     if dry_run:
-        console.print("\n[bold cyan]◆ Experiment Configuration (DRY RUN)[/bold cyan]")
+        console.print("\n[bold #88c0d0]◆ Experiment Configuration (DRY RUN)[/bold #88c0d0]")
         console.print(f"  Models: {model_a_id} ↔ {model_b_id}")
         console.print(f"  Conversations: {count}")
         console.print(f"  Turns per conversation: {turns}")
@@ -946,7 +1184,7 @@ def experiment(
     with open(experiment_dir / "config.json", "w") as f:
         json.dump(config_data, f, indent=2)
     
-    console.print(f"\n[bold cyan]◆ Starting Experiment: {name}[/bold cyan]")
+    console.print(f"\n[bold #88c0d0]◆ Starting Experiment: {name}[/bold #88c0d0]")
     console.print(f"  Output: {experiment_dir}")
     
     # For now, implement sequential execution
@@ -1030,12 +1268,12 @@ def experiment(
             }
     
     # Progress tracking
-    with console.status(f"[bold cyan]Running {count} conversations...[/bold cyan]") as status:
+    with console.status(f"[bold #88c0d0]Running {count} conversations...[/bold #88c0d0]") as status:
         for i in range(count):
             if verbose:
                 console.print(f"\n[#4c566a]→ Starting conversation {i+1}/{count}[/#4c566a]")
             else:
-                status.update(f"[bold cyan]Running conversation {i+1}/{count}...[/bold cyan]")
+                status.update(f"[bold #88c0d0]Running conversation {i+1}/{count}...[/bold #88c0d0]")
             
             result = asyncio.run(run_single_conversation(i))
             if result:
@@ -1065,7 +1303,7 @@ def experiment(
         json.dump(summary, f, indent=2)
     
     # Display results
-    console.print(f"\n[bold green]✓ Experiment Complete[/bold green]")
+    console.print(f"\n[bold #a3be8c]✓ Experiment Complete[/bold #a3be8c]")
     console.print(f"  Successful: {successful}/{count}")
     if failed > 0:
         console.print(f"  Failed: {failed}")
@@ -1117,27 +1355,30 @@ def experiment():
 @click.option("--awareness-b", type=click.Choice(['none', 'basic', 'firm', 'research']), help="Awareness level for agent B only")
 @click.option("--convergence-threshold", type=click.FloatRange(0.0, 1.0), help="Stop at convergence threshold")
 @click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
-@click.option("--max-parallel", type=int, help="Max parallel conversations (auto if not set)")
+@click.option("--max-parallel", type=int, default=1, help="Max parallel conversations (default: 1, sequential)")
 @click.option("--daemon", is_flag=True, help="Start in background without dashboard")
 @click.option("--debug", is_flag=True, help="Run in debug mode (no daemonization)")
 def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
           temperature, temp_a, temp_b, awareness, awareness_a, awareness_b,
           convergence_threshold, choose_names, max_parallel, daemon, debug):
     """Start a new experiment session.
-    
-    By default, starts experiment with dashboard attached (like GNU screen).
-    Use --daemon to run in background without dashboard.
-    
+
+    By default, runs conversations sequentially (one at a time) for reliability.
+    Sequential execution avoids rate limits (API models) and memory issues (local models).
+
     [bold]EXAMPLES:[/bold]
-    
-    [#4c566a]Start with dashboard:[/#4c566a]
+
+    [#4c566a]Sequential execution (default and recommended):[/#4c566a]
         pidgin experiment start -a claude -b gpt -r 20 --name "test"
-    
-    [#4c566a]Start in background (daemon mode):[/#4c566a]
+
+    [#4c566a]Background execution:[/#4c566a] 
         pidgin experiment start -a opus -b gpt-4 -r 100 --name "prod" --daemon
-    
-    [#4c566a]Large experiment with custom parallelism:[/#4c566a]
-        pidgin experiment start -a claude -b gpt -r 50 --name "parallel" --max-parallel 8
+
+    [#4c566a]Parallel execution (use with caution):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 10 --name "parallel" --max-parallel 3
+
+    [bold]WARNING:[/bold] Parallel execution can cause rate limits or memory issues.
+    Most users should stick with sequential execution.
     """
     import time
     from .experiments import ExperimentConfig, ExperimentManager, ExperimentStore
@@ -1329,6 +1570,7 @@ def resume(name):
         return
     
     # Create dashboard for this specific experiment
+    from .dashboard import ExperimentDashboard
     dashboard = ExperimentDashboard(db_path, experiment_name=name)
     
     if experiment['status'] == 'paused':
@@ -1530,7 +1772,7 @@ def stop_all(force):
     - Update database to mark experiments as failed
     - Clean up any orphaned processes
     
-    [bold red]WARNING:[/bold red] This will terminate all experiments without saving state!
+    [bold #bf616a]WARNING:[/bold #bf616a] This will terminate all experiments without saving state!
     
     [bold]EXAMPLES:[/bold]
     
@@ -1544,7 +1786,7 @@ def stop_all(force):
     import subprocess
     from .experiments import ExperimentStore
     
-    console.print("[bold red]◆ KILLSWITCH ACTIVATED[/bold red]")
+    console.print("[bold #bf616a]◆ KILLSWITCH ACTIVATED[/bold #bf616a]")
     console.print("[#ebcb8b]→ Finding all running experiments...[/#ebcb8b]")
     
     daemon_pids = []
@@ -1662,7 +1904,7 @@ def stop_all(force):
     if updated_count == 0 and not daemon_pids:
         console.print("\n[#4c566a]No active experiments found in any location[/#4c566a]")
     else:
-        console.print(f"\n[bold green]✓ KILLSWITCH COMPLETE[/bold green]")
+        console.print(f"\n[bold #a3be8c]✓ KILLSWITCH COMPLETE[/bold #a3be8c]")
         console.print(f"[#4c566a]  {len(daemon_pids)} processes killed[/#4c566a]")
         console.print(f"[#4c566a]  {updated_count} experiments marked as failed[/#4c566a]")
         console.print(f"\n[#ebcb8b]All experiments have been forcefully stopped.[/#ebcb8b]")
