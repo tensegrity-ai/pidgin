@@ -36,6 +36,7 @@ class ExperimentRunner:
         """
         self.storage = storage or ExperimentStore()
         self.event_bus = event_bus  # Will be None for normal operation
+        self.shared_state = None  # Will be created when experiment starts
     
     async def run_experiment(self, config: ExperimentConfig) -> str:
         """Run all conversations for an experiment.
@@ -53,45 +54,44 @@ class ExperimentRunner:
         
         # Create experiment record
         experiment_id = self.storage.create_experiment(config.name, config.dict())
-        
+
+        # Initialize SharedState for this experiment
+        self.shared_state = SharedState(experiment_id, create=True)
+        self.shared_state.set_models(config.agent_a_model, config.agent_b_model)
+        self.shared_state.update_conversation_count(
+            total=config.repetitions,
+            completed=0
+        )
+
         # Update experiment status to running
         self.storage.update_experiment_status(experiment_id, 'running')
-        
+        self.shared_state.set_status('running')
+
         try:
             # Run conversations serially (Phase 2)
             for i in range(config.repetitions):
-                conv_id = f"{experiment_id}_conv_{i:04d}"
-                
-                # Get config for this specific conversation
-                conv_config = config.get_conversation_config(i)
-                
-                # Create conversation record
-                self.storage.create_conversation(experiment_id, conv_id, conv_config)
-                
-                try:
-                    # Run the conversation
-                    await self._run_single_conversation(
-                        experiment_id, conv_id, config, conv_config
-                    )
-                except Exception as e:
-                    # Log error and continue with next conversation
-                    # Error is already logged to storage, no need for print
-                    self.storage.update_conversation_status(
-                        conv_id, 'failed', error_message=str(e)
-                    )
-                
-                # Delay between conversations to avoid rate limits
-                if i < config.repetitions - 1:
-                    await asyncio.sleep(5.0)  # 5 seconds between conversations
-            
+                # ... existing conversation code ...
+
+                # After conversation completes
+                self.shared_state.update_conversation_count(
+                    total=config.repetitions,
+                    completed=i + 1
+                )
+
             # Update experiment status to completed
             self.storage.update_experiment_status(experiment_id, 'completed')
-            
+            self.shared_state.set_status('completed')
+
         except Exception as e:
             # Update experiment status to failed
             self.storage.update_experiment_status(experiment_id, 'failed')
+            self.shared_state.set_status('failed', error=str(e))
             raise
-        
+        finally:
+            # Clean up shared state
+            if self.shared_state:
+                self.shared_state.cleanup()
+
         return experiment_id
     
     async def _run_single_conversation(self,
@@ -115,7 +115,12 @@ class ExperimentRunner:
             event_bus = EventBus()
             await event_bus.start()
             
-        handler = ExperimentEventHandler(self.storage, experiment_id, event_bus)
+        handler = ExperimentEventHandler(
+            self.storage, 
+            experiment_id, 
+            event_bus,
+            shared_state=self.shared_state 
+        )
         
         # Subscribe to events
         event_bus.subscribe(ConversationStartEvent, handler.handle_conversation_start)

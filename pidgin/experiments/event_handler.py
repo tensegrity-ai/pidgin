@@ -15,23 +15,26 @@ from ..core.events import (
 )
 from ..core.types import Message
 from .storage import ExperimentStore
+from .shared_state import SharedState
 from ..metrics import MetricsCalculator
 
 
 class ExperimentEventHandler:
     """Handles events during experiment runs and stores metrics."""
     
-    def __init__(self, storage: ExperimentStore, experiment_id: str, event_bus=None):
+    def __init__(self, storage: ExperimentStore, experiment_id: str, event_bus=None, shared_state: Optional[SharedState] = None):
         """Initialize event handler.
         
         Args:
             storage: Database storage instance
             experiment_id: Parent experiment identifier
             event_bus: Optional EventBus for emitting metrics events
+            shared_state: Optional SharedState for real-time dashboard updates
         """
         self.storage = storage
         self.experiment_id = experiment_id
         self.event_bus = event_bus
+        self.shared_state = shared_state
         self.metrics_calculators: Dict[str, MetricsCalculator] = {}
         self.conversation_configs: Dict[str, Dict[str, Any]] = {}
         self.message_timings: Dict[str, Dict[str, int]] = {}
@@ -219,6 +222,24 @@ class ExperimentEventHandler:
                 metrics=all_metrics,
                 experiment_id=self.experiment_id
             ))
+        
+        # Update shared state for real-time dashboard
+        if self.shared_state:
+            # Get last few messages for display (truncate for display)
+            last_messages = [
+                {"agent": "A", "content": msg_a[:100] + "..." if len(msg_a) > 100 else msg_a},
+                {"agent": "B", "content": msg_b[:100] + "..." if len(msg_b) > 100 else msg_b}
+            ]
+            
+            # Update shared state with key metrics
+            self.shared_state.add_conversation_metrics(
+                turn=turn_number,
+                convergence=turn_metrics.get('convergence_score', 0.0),
+                similarity=turn_metrics.get('structural_similarity', 0.0),
+                vocabulary=turn_metrics.get('vocabulary_overlap', 0.0),
+                last_messages=last_messages,
+                conversation_id=conv_id
+            )
         
         # Clear timing data for next turn
         self.message_timings[conv_id] = {}
