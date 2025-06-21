@@ -60,8 +60,9 @@ class Conductor:
         console: Optional[Console] = None,
         convergence_threshold: Optional[float] = None,
         convergence_action: Optional[str] = None,
+        event_bus: Optional[EventBus] = None,  # NEW PARAMETER
     ):
-        """Initialize conductor with providers and output manager.
+        """Initialize conductor with providers and optional shared event bus.
 
         Args:
             providers: Dict mapping agent_id to provider instances (not wrapped)
@@ -69,11 +70,13 @@ class Conductor:
             console: Optional console for output (used by event logger)
             convergence_threshold: Optional override for convergence threshold
             convergence_action: Optional override for convergence action ('stop', 'warn', 'continue')
+            event_bus: Optional shared EventBus (creates new if None)
         """
         self.base_providers = providers  # Store unwrapped providers
         self.output_manager = output_manager or OutputManager()
         self.console = console or Console()
-        self.bus = None  # Will be created per conversation
+        self.bus = event_bus  # Use provided bus or None
+        self._owns_bus = event_bus is None  # Track if we created it
         self.wrapped_providers = None  # Will be created when bus is available
         self.event_logger = None  # Will be created with bus
 
@@ -680,8 +683,19 @@ class Conductor:
         """Initialize EventBus and display components."""
         # Create event bus with logging
         event_log_path = conv_dir / "events.jsonl"
-        self.bus = EventBus(event_log_path)
-        await self.bus.start()
+        
+        if self.bus is None:
+            # We don't have a bus yet, create one
+            self.bus = EventBus(event_log_path)
+            self._owns_bus = True
+            await self.bus.start()
+            print(f"[DEBUG Conductor] Created new EventBus")
+        else:
+            # Using shared bus - just set the log path if possible
+            # Note: EventBus might not support changing log path
+            print(f"[DEBUG Conductor] Using shared EventBus")
+            if hasattr(self.bus, 'event_log_path'):
+                self.bus.event_log_path = event_log_path
 
         # Create event logger and display filter based on mode
         if display_mode == "verbose":
@@ -830,8 +844,10 @@ class Conductor:
             )
         )
 
-        # Stop the event bus to ensure all events are written
-        await self.bus.stop()
+        # Stop the event bus only if we own it
+        if self._owns_bus and self.bus:
+            await self.bus.stop()
+            print(f"[DEBUG Conductor] Stopped owned EventBus")
 
     async def _save_transcripts(self, conversation: Conversation):
         """Save conversation transcripts to output directory.

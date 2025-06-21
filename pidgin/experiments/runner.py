@@ -196,13 +196,14 @@ class ExperimentRunner:
             temperature=temperature_b
         )
         
-        # Create conductor with convergence settings
+        # Create conductor with convergence settings and shared EventBus
         conductor = Conductor(
             providers=providers_map,
             output_manager=output_manager,
             console=None,  # No console output for experiments
             convergence_threshold=config.convergence_threshold,
             convergence_action=config.convergence_action,
+            event_bus=event_bus if self.event_bus else None,  # PASS THE SHARED BUS!
         )
         
         # Monkey patch the conductor to subscribe our handler to events
