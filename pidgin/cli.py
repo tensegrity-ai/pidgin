@@ -1452,144 +1452,50 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
             traceback.print_exc()
         return
         
-    if daemon:
-        # Start as daemon (headless mode)
-        base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
-        manager = ExperimentManager(base_dir=base_dir)
-        console.print(f"[#8fbcbb]◆ Starting experiment '{name}' in background[/#8fbcbb]")
-        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
-        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
-        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+    # Always start as daemon for non-debug mode
+    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    manager = ExperimentManager(base_dir=base_dir)
+    
+    console.print(f"[#8fbcbb]◆ Starting experiment '{name}'[/#8fbcbb]")
+    console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+    console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+    console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+    
+    try:
+        # Use the original working directory captured at module import
+        exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
         
-        try:
-            # Use the original working directory captured at module import
-            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
-            console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
-        except Exception as e:
-            console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
-            raise
-    else:
-        # Auto-detect dashboard mode based on max_parallel
-        if max_parallel == 1:
-            # Sequential experiment - attach EVENT dashboard
-            console.print(f"[#8fbcbb]◆ Starting sequential experiment '{name}' with EVENT dashboard[/#8fbcbb]")
-            console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
-            console.print(f"[#4c566a]  Conversations: {repetitions} (sequential)[/#4c566a]")
-            console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-            console.print(f"\n[#ebcb8b]◆ PHASE 3 MULTI-METRIC DASHBOARD[/#ebcb8b]\n")
+        # For sequential experiments, auto-attach dashboard unless --daemon specified
+        if max_parallel == 1 and not daemon:
+            console.print(f"\n[#8fbcbb]◆ Attaching dashboard...[/#8fbcbb]")
+            console.print(f"[#4c566a]Press [D] to detach[/#4c566a]\n")
             
-            # Import minimal dashboard for testing
-            from .dashboard.phase3_dashboard import Phase3Dashboard
-            from .core.event_bus import EventBus
+            # Give daemon a moment to start
+            import time
+            time.sleep(2)
             
-            async def run_with_event_dashboard():
-                # Create shared EventBus
-                event_bus = EventBus()
-                await event_bus.start()
-                
-                # Create storage and runner with shared event bus
-                from .experiments import ExperimentStore
-                from .experiments.parallel_runner import ParallelExperimentRunner
-                
-                storage = ExperimentStore()
-                
-                # Pass event_bus to runner - it will use it for all conversations
-                runner = ParallelExperimentRunner(storage, event_bus=event_bus)
-                
-                # Create experiment ID
-                exp_id = storage.create_experiment(config.name, config.dict())
-                
-                # Create dashboard FIRST so it can subscribe to events
-                dashboard = Phase3Dashboard(event_bus, exp_id)
-                
-                # Give dashboard a moment to subscribe
-                await asyncio.sleep(0.1)
-                
-                # NOW emit experiment start event
-                from dataclasses import dataclass
-                from pidgin.core.events import Event
-                
-                @dataclass
-                class ExperimentStartEvent(Event):
-                    """Temporary experiment start event."""
-                    experiment_id: str
-                    config: dict
-                
-                # Emit experiment start event
-                await event_bus.emit(ExperimentStartEvent(exp_id, config.dict()))
-                
-                # Emit a few more test events to verify connection
-                @dataclass
-                class TestEvent(Event):
-                    """Test event."""
-                    message: str
-                    
-                for i in range(3):
-                    await asyncio.sleep(0.5)
-                    # Emit test event
-                    await event_bus.emit(TestEvent(f"Test event {i+1}"))
-                
-                # Run both concurrently
-                experiment_task = asyncio.create_task(
-                    runner.run_experiment_with_id(exp_id, config)
-                )
-                
-                try:
-                    dashboard_result = await dashboard.run()
-                except KeyboardInterrupt:
-                    dashboard_result = {'detached': True, 'stopped': False}
-                
-                # Clean up
-                if dashboard_result.get('stopped'):
-                    experiment_task.cancel()
-                else:
-                    # Wait for experiment to complete
-                    try:
-                        await experiment_task
-                    except asyncio.CancelledError:
-                        pass
-                
-                await event_bus.stop()
-                return dashboard_result
+            # Attach dashboard to running daemon
+            from .dashboard.attach import attach_dashboard_to_experiment
             
-            try:
-                result = asyncio.run(run_with_event_dashboard())
-                
-                if result.get('detached'):
-                    console.print(f"\n[#4c566a]Dashboard detached. Check experiment status.[/#4c566a]")
-                else:
-                    console.print(f"\n[#a3be8c]✓ Experiment completed[/#a3be8c]")
-                    
-            except KeyboardInterrupt:
-                console.print("\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
-            except Exception as e:
-                console.print(f"\n[#bf616a]✗ Failed to run experiment: {str(e)}[/#bf616a]")
-                import traceback
-                traceback.print_exc()
-                
+            result = asyncio.run(attach_dashboard_to_experiment(exp_id, name))
+            
+            if result.get('detached'):
+                console.print(f"\n[#4c566a]Dashboard detached.[/#4c566a]")
+                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
+            else:
+                console.print(f"\n[#a3be8c]✓ Experiment completed[/#a3be8c]")
         else:
-            # Parallel experiment - warn and run as daemon
-            console.print(f"[#ebcb8b]◆ Starting parallel experiment '{name}' (max_parallel={max_parallel})[/#ebcb8b]")
-            console.print(f"[#bf616a]⚠ Warning: Parallel execution may cause rate limits or memory issues[/#bf616a]")
-            console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
-            console.print(f"[#4c566a]  Conversations: {repetitions} (up to {max_parallel} parallel)[/#4c566a]")
-            console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-            console.print(f"[#4c566a]Running as background process...[/#4c566a]")
-            
-            # Run as daemon (same as --daemon flag)
-            base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
-            manager = ExperimentManager(base_dir=base_dir)
-            
-            try:
-                exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-                console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
-                console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
-                console.print(f"[#4c566a]Use 'pidgin experiment logs {name}' to view logs[/#4c566a]")
+            # Parallel or explicit daemon mode
+            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
+            if max_parallel > 1:
+                console.print(f"[#4c566a]No dashboard available for parallel experiments[/#4c566a]")
+            console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
+            if max_parallel == 1:
                 console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
-            except Exception as e:
-                console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
-                raise
+            
+    except Exception as e:
+        console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+        raise
 
 
 @experiment.command()
@@ -1658,27 +1564,23 @@ def resume(name):
         console.print(f"[#bf616a]Database not found[/#bf616a]")
         return
     
-    # Create dashboard for this specific experiment
-    from .dashboard import ExperimentDashboard
-    dashboard = ExperimentDashboard(db_path, experiment_name=name)
-    
+    # Attach dashboard to experiment
     if experiment['status'] == 'paused':
         console.print(f"[#8fbcbb]◆ Resuming paused experiment '{name}'...[/#8fbcbb]")
         # TODO: Actually resume the experiment runner
-        # For now, just attach the dashboard
     else:
         console.print(f"[#8fbcbb]◆ Reattaching to experiment '{name}'...[/#8fbcbb]")
     
     console.print(f"[#4c566a]Press [D] to detach, [S] to stop experiment[/#4c566a]\n")
     
     try:
-        from .experiments.dashboard import run_dashboard
-        result = asyncio.run(run_dashboard(experiment['experiment_id']))
+        from .dashboard.attach import attach_dashboard_to_experiment
+        result = asyncio.run(attach_dashboard_to_experiment(experiment['experiment_id'], name))
         
-        if result['detached']:
+        if result.get('detached'):
             console.print(f"\n[#4c566a]Detached from experiment '{name}'[/#4c566a]")
             console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
-        elif result['stopped']:
+        elif result.get('stopped'):
             console.print(f"\n[#bf616a]Experiment '{name}' stopped[/#bf616a]")
     except KeyboardInterrupt:
         console.print(f"\n[#4c566a]Dashboard interrupted[/#4c566a]")
@@ -1701,7 +1603,7 @@ def dashboard(experiment_name_or_id):
         pidgin experiment dashboard exp_a1b2c3d4
     """
     from .experiments.storage import ExperimentStore
-    from .experiments.dashboard import run_dashboard
+    from .dashboard.attach import attach_dashboard_to_experiment
     import asyncio
     
     storage = ExperimentStore()
@@ -1723,12 +1625,12 @@ def dashboard(experiment_name_or_id):
     console.print("[#4c566a]Press [D] to detach, [S] to stop experiment[/#4c566a]\n")
     
     try:
-        result = asyncio.run(run_dashboard(experiment_id))
+        result = asyncio.run(attach_dashboard_to_experiment(experiment_id, experiment['name']))
         
-        if result['detached']:
+        if result.get('detached'):
             console.print(f"\n[#4c566a]Detached from experiment '{experiment['name']}'[/#4c566a]")
             console.print(f"[#4c566a]Use 'pidgin experiment dashboard {experiment['name']}' to reattach[/#4c566a]")
-        elif result['stopped']:
+        elif result.get('stopped'):
             console.print(f"\n[#bf616a]Experiment '{experiment['name']}' stopped[/#bf616a]")
     except KeyboardInterrupt:
         console.print(f"\n[#4c566a]Dashboard interrupted[/#4c566a]")
