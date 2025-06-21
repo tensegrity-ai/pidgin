@@ -1,27 +1,33 @@
-"""Minimal state manager for testing event flow."""
+"""Enhanced state manager that tracks turns and metrics."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Deque
+from collections import deque
 
 from ..core.events import Event
 
 
-@dataclass
+@dataclass  
 class MinimalDashboardState:
-    """Just track basics to prove events work."""
-    # Start with loading state
+    """Track experiment progress and metrics."""
+    # Experiment info
     experiment_name: str = "Waiting for experiment..."
     total_conversations: int = 0
     started_at: Optional[datetime] = None
     
-    # Debug: count ALL events
-    total_events: int = 0
-    event_types_seen: Dict[str, int] = None
+    # Progress tracking
+    current_conversation: int = 0
+    current_turn: int = 0
+    completed_conversations: int = 0
     
-    def __post_init__(self):
-        if self.event_types_seen is None:
-            self.event_types_seen = {}
+    # Metrics tracking - NEW!
+    convergence_history: Deque[float] = field(default_factory=lambda: deque(maxlen=20))
+    latest_convergence: float = 0.0
+    
+    # Debug
+    total_events: int = 0
+    event_types_seen: Dict[str, int] = field(default_factory=dict)
 
 
 class MinimalStateManager:
@@ -33,12 +39,12 @@ class MinimalStateManager:
         print(f"[DEBUG] StateManager created for experiment {experiment_id}")
         
     def subscribe_to_bus(self, event_bus):
-        """Subscribe to ALL events for debugging."""
-        print("[DEBUG] Subscribing to EventBus...")
+        """Subscribe to ALL events."""
+        print(f"[DEBUG] Subscribing to EventBus...")
         event_bus.subscribe(Event, self.handle_event)
         
     async def handle_event(self, event: Event):
-        """Handle any event - just count for now."""
+        """Handle any event."""
         # Count every event
         self.state.total_events += 1
         event_type = event.__class__.__name__
@@ -46,14 +52,29 @@ class MinimalStateManager:
         
         print(f"[DEBUG] Event #{self.state.total_events}: {event_type}")
         
-        # Look for experiment start
+        # Handle specific events
         if event_type == 'ExperimentStartEvent':
-            print("[DEBUG] Got ExperimentStartEvent!")
-            # The event might not have our expected structure yet
-            # Be defensive about accessing attributes
+            print(f"[DEBUG] Got ExperimentStartEvent!")
             if hasattr(event, 'config'):
                 config = event.config
                 if isinstance(config, dict):
                     self.state.experiment_name = config.get('name', 'Unknown')
                     self.state.total_conversations = config.get('repetitions', 0)
                     self.state.started_at = datetime.now()
+                    
+        elif event_type == 'ConversationStartEvent':
+            self.state.current_conversation += 1
+            self.state.current_turn = 0
+            
+        elif event_type == 'TurnCompleteEvent':
+            self.state.current_turn += 1
+            
+        elif event_type == 'MetricsCalculatedEvent':
+            # Extract convergence score!
+            if hasattr(event, 'metrics') and isinstance(event.metrics, dict):
+                convergence = event.metrics.get('convergence_score', 0.0)
+                self.state.latest_convergence = convergence
+                self.state.convergence_history.append(convergence)
+                
+        elif event_type == 'ConversationEndEvent':
+            self.state.completed_conversations += 1

@@ -1,7 +1,8 @@
-"""Minimal event-driven dashboard to test the connection."""
+"""Enhanced dashboard with turn counter and sparkline."""
 
 import asyncio
 from datetime import datetime, timedelta
+from typing import List
 
 from rich.console import Console
 from rich.layout import Layout
@@ -9,19 +10,22 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.align import Align
 from rich.text import Text
+from rich.table import Table
 
 from ..core.event_bus import EventBus
 from .minimal_state import MinimalStateManager
 
 
 class MinimalSequentialDashboard:
-    """Minimal dashboard that just shows events are flowing."""
+    """Dashboard showing progress and convergence."""
+    
+    # Unicode blocks for sparklines
+    SPARKS = " ▁▂▃▄▅▆▇█"
     
     def __init__(self, event_bus: EventBus, experiment_id: str):
         self.event_bus = event_bus
         self.experiment_id = experiment_id
         
-        # Create state manager and subscribe
         self.state_manager = MinimalStateManager(experiment_id)
         self.state_manager.subscribe_to_bus(event_bus)
         
@@ -29,37 +33,72 @@ class MinimalSequentialDashboard:
         self.running = True
         self.start_time = datetime.now()
         
+    def _make_sparkline(self, values: List[float], width: int = 10) -> str:
+        """Create sparkline from values."""
+        if not values:
+            return "─" * width
+            
+        # Get last 'width' values
+        recent = list(values)[-width:]
+        if len(recent) < 2:
+            return "─" * width
+            
+        min_val = min(recent)
+        max_val = max(recent)
+        
+        if max_val == min_val:
+            return "─" * width
+            
+        sparkline = ""
+        for v in recent:
+            index = int((v - min_val) / (max_val - min_val) * (len(self.SPARKS) - 1))
+            sparkline += self.SPARKS[index]
+            
+        return sparkline.ljust(width)
+    
     def _make_panel(self) -> Panel:
-        """Create a simple panel showing current state."""
+        """Create dashboard panel with metrics."""
         state = self.state_manager.state
         elapsed = datetime.now() - self.start_time
         
-        # Build content
-        lines = [
-            f"Experiment: {state.experiment_name}",
-            f"Total Conversations: {state.total_conversations}",
-            f"",
-            f"Events Received: {state.total_events}",
-            f"Dashboard Running: {self._format_duration(elapsed)}",
-            f"",
-            "Event Types Seen:"
-        ]
+        # Create a table for better layout
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Label", style="cyan")
+        table.add_column("Value", style="white")
         
-        # Show event types
-        for event_type, count in sorted(state.event_types_seen.items()):
-            lines.append(f"  {event_type}: {count}")
+        # Experiment info
+        table.add_row("Experiment:", state.experiment_name)
+        table.add_row("Progress:", f"{state.completed_conversations}/{state.total_conversations} conversations")
         
-        # If no events yet, show loading message
+        # Current status
+        if state.current_conversation > 0:
+            table.add_row("Current:", f"Conversation {state.current_conversation}, Turn {state.current_turn}")
+        
+        table.add_row("", "")  # Spacer
+        
+        # Convergence with sparkline!
+        if state.convergence_history:
+            sparkline = self._make_sparkline(list(state.convergence_history))
+            table.add_row("Convergence:", f"{sparkline} {state.latest_convergence:.3f}")
+        
+        table.add_row("", "")  # Spacer
+        
+        # Debug info
+        table.add_row("Events:", f"{state.total_events} total")
+        table.add_row("Running:", self._format_duration(elapsed))
+        
+        # Status indicator
         if state.total_events == 0:
-            lines.append("")
-            lines.append("[yellow]Waiting for events to start flowing...[/yellow]")
-            lines.append("[dim]If this persists, EventBus may not be connected[/dim]")
-        
-        content = "\n".join(lines)
+            status = "[yellow]Waiting for events...[/yellow]"
+        elif 'MetricsCalculatedEvent' in state.event_types_seen:
+            status = "[green]Metrics flowing! ✓[/green]"
+        else:
+            status = "[yellow]Waiting for metrics...[/yellow]"
         
         return Panel(
-            content,
-            title="◆ MINIMAL EVENT DASHBOARD",
+            Align.center(table, vertical="middle"),
+            title="◆ EXPERIMENT DASHBOARD - PHASE 2",
+            subtitle=status,
             border_style="green" if state.total_events > 0 else "yellow"
         )
     
@@ -71,20 +110,20 @@ class MinimalSequentialDashboard:
         return f"{minutes}m {seconds}s"
     
     async def run(self):
-        """Run the minimal dashboard."""
+        """Run the dashboard."""
         print(f"[DEBUG] Dashboard starting for experiment {self.experiment_id}")
-        
-        # Give events a moment to start
-        await asyncio.sleep(1)
+        await asyncio.sleep(1)  # Let events start
         
         with Live(self._make_panel(), console=self.console, refresh_per_second=2) as live:
             while self.running:
                 try:
-                    # Update display
                     live.update(self._make_panel())
                     
-                    # Exit after 60 seconds for testing
-                    if (datetime.now() - self.start_time).total_seconds() > 60:
+                    # Auto-exit when experiment completes
+                    state = self.state_manager.state
+                    if (state.completed_conversations >= state.total_conversations and 
+                        state.total_conversations > 0):
+                        await asyncio.sleep(2)  # Show final state
                         self.running = False
                     
                     await asyncio.sleep(0.5)
