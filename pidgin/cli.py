@@ -1470,37 +1470,65 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
             console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
             raise
     else:
-        # Interactive mode - start with dashboard attached
-        from .dashboard import ExperimentDashboard
-        
-        # Start experiment daemon in background
-        base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
-        manager = ExperimentManager(base_dir=base_dir)
-        
-        try:
-            # Start experiment (launches daemon in background)
-            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
+        # Auto-detect dashboard mode based on max_parallel
+        if max_parallel == 1:
+            # Sequential experiment - attach dashboard
+            console.print(f"[#8fbcbb]◆ Starting sequential experiment '{name}' with dashboard[/#8fbcbb]")
+            console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+            console.print(f"[#4c566a]  Conversations: {repetitions} (sequential)[/#4c566a]")
+            console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+            console.print(f"\n[#4c566a]Press 'D' to detach, 'S' to stop[/#4c566a]\n")
             
-            # Wait a moment for daemon to initialize and create database
-            import time
-            time.sleep(2)
+            from .dashboard import ExperimentDashboard
             
-            # Get database path for the experiment
-            db_path = base_dir / "experiments.db"
+            # Start experiment daemon in background
+            base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+            manager = ExperimentManager(base_dir=base_dir)
             
-            # Create and run dashboard
-            console.print(f"\n[#8fbcbb]◆ Starting experiment '{name}' with dashboard[/#8fbcbb]")
-            console.print(f"[#4c566a]Press 'D' to detach, Ctrl+C to pause[/#4c566a]\n")
+            try:
+                # Start experiment (launches daemon in background)
+                exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
+                
+                # Wait a moment for daemon to initialize and create database
+                import time
+                time.sleep(2)
+                
+                # Get database path for the experiment
+                db_path = base_dir / "experiments.db"
+                
+                # Create and run dashboard
+                dashboard = ExperimentDashboard(db_path, experiment_name=name)
+                asyncio.run(dashboard.run())
+                
+            except KeyboardInterrupt:
+                console.print("\n[#ebcb8b]Experiment paused by user[/#ebcb8b]")
+                console.print(f"Use 'pidgin experiment resume {name}' to continue")
+            except Exception as e:
+                console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+                raise
+                
+        else:
+            # Parallel experiment - warn and run as daemon
+            console.print(f"[#ebcb8b]◆ Starting parallel experiment '{name}' (max_parallel={max_parallel})[/#ebcb8b]")
+            console.print(f"[#bf616a]⚠ Warning: Parallel execution may cause rate limits or memory issues[/#bf616a]")
+            console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+            console.print(f"[#4c566a]  Conversations: {repetitions} (up to {max_parallel} parallel)[/#4c566a]")
+            console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+            console.print(f"[#4c566a]Running as background process...[/#4c566a]")
             
-            dashboard = ExperimentDashboard(db_path, experiment_name=name)
-            asyncio.run(dashboard.run())
+            # Run as daemon (same as --daemon flag)
+            base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+            manager = ExperimentManager(base_dir=base_dir)
             
-        except KeyboardInterrupt:
-            console.print("\n[#ebcb8b]Experiment paused by user[/#ebcb8b]")
-            console.print(f"Use 'pidgin experiment resume {name}' to continue")
-        except Exception as e:
-            console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
-            raise
+            try:
+                exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
+                console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
+                console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
+                console.print(f"[#4c566a]Use 'pidgin experiment logs {name}' to view logs[/#4c566a]")
+                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
+            except Exception as e:
+                console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+                raise
 
 
 @experiment.command()
