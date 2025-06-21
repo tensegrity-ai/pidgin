@@ -49,22 +49,30 @@ class DashboardStateManager:
     def __init__(self, experiment_id: str):
         self.experiment_id = experiment_id
         self.state = DashboardState()
-        print(f"[DEBUG] StateManager created for experiment {experiment_id}")
         
     def subscribe_to_bus(self, event_bus):
         """Subscribe to events."""
-        print(f"[DEBUG] Subscribing to EventBus...")
         event_bus.subscribe(Event, self.handle_event)
         
     async def handle_event(self, event: Event):
         """Handle events and update state."""
-        self.state.total_events += 1
         event_type = event.__class__.__name__
         
-        print(f"[DEBUG] Event #{self.state.total_events}: {event_type}")
+        # Skip high-frequency events we don't need for display
+        SKIP_EVENTS = {
+            'MessageChunkEvent',      # One per token - too many!
+            'TokenUsageEvent',        # Not needed for display
+            'RateLimitPaceEvent',     # Internal rate limiting
+            'APIErrorEvent',          # Unless we want to show errors
+        }
+        
+        if event_type in SKIP_EVENTS:
+            return
+        
+        # Count other events
+        self.state.total_events += 1
         
         if event_type == 'ExperimentStartEvent':
-            print(f"[DEBUG] Got ExperimentStartEvent!")
             if hasattr(event, 'config') and isinstance(event.config, dict):
                 self.state.experiment_name = event.config.get('name', 'Unknown')
                 self.state.total_conversations = event.config.get('repetitions', 0)

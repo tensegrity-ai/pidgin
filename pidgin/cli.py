@@ -1516,7 +1516,7 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
                     experiment_id: str
                     config: dict
                 
-                print("[DEBUG CLI] Emitting ExperimentStartEvent")
+                # Emit experiment start event
                 await event_bus.emit(ExperimentStartEvent(exp_id, config.dict()))
                 
                 # Emit a few more test events to verify connection
@@ -1527,7 +1527,7 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
                     
                 for i in range(3):
                     await asyncio.sleep(0.5)
-                    print(f"[DEBUG CLI] Emitting TestEvent {i+1}")
+                    # Emit test event
                     await event_bus.emit(TestEvent(f"Test event {i+1}"))
                 
                 # Run both concurrently

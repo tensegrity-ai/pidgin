@@ -689,11 +689,11 @@ class Conductor:
             self.bus = EventBus(event_log_path)
             self._owns_bus = True
             await self.bus.start()
-            print(f"[DEBUG Conductor] Created new EventBus")
+            # Created new EventBus
         else:
             # Using shared bus - just set the log path if possible
             # Note: EventBus might not support changing log path
-            print(f"[DEBUG Conductor] Using shared EventBus")
+            # Using shared EventBus
             if hasattr(self.bus, 'event_log_path'):
                 self.bus.event_log_path = event_log_path
 
@@ -847,7 +847,7 @@ class Conductor:
         # Stop the event bus only if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()
-            print(f"[DEBUG Conductor] Stopped owned EventBus")
+            # Stopped owned EventBus
 
     async def _save_transcripts(self, conversation: Conversation):
         """Save conversation transcripts to output directory.

@@ -95,6 +95,17 @@ class ExperimentEventHandler:
         turn_number = event.turn_number
         turn = event.turn
         
+        # Check if we already processed this turn to avoid duplicates
+        try:
+            # First check if metrics exist for this turn
+            existing_metrics = self.storage.get_turn_metrics(conv_id, turn_number)
+            if existing_metrics:
+                # Already processed, skip silently
+                return
+        except:
+            # No metrics exist, continue processing
+            pass
+        
         # Track turn timing
         if conv_id not in self.turn_start_times:
             self.turn_start_times[conv_id] = {}

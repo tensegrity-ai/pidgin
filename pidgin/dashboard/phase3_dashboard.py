@@ -186,34 +186,50 @@ class Phase3Dashboard:
         )
     
     async def run(self):
-        """Run the dashboard."""
-        print(f"[DEBUG] Phase 3 Dashboard starting for experiment {self.experiment_id}")
+        """Run the dashboard with better interrupt handling."""
         await asyncio.sleep(1)  # Let events start
         
         layout = self._create_layout()
         
-        with Live(layout, console=self.console, refresh_per_second=2) as live:
-            while self.running:
-                try:
-                    # Update all panels
-                    layout["header"].update(self._make_header())
-                    layout["conversation"].update(self._make_conversation_panel())
-                    layout["turn_metrics"].update(self._make_turn_metrics_panel())
-                    layout["message_metrics"].update(self._make_message_metrics_panel())
-                    layout["footer"].update(self._make_footer())
-                    
-                    # Check if complete
-                    state = self.state_manager.state
-                    if (state.completed_conversations >= state.total_conversations and 
-                        state.total_conversations > 0):
-                        await asyncio.sleep(3)
+        try:
+            with Live(
+                layout, 
+                console=self.console, 
+                refresh_per_second=2,
+                screen=True,  # Use alternate screen
+                redirect_stdout=False,
+                redirect_stderr=False
+            ) as live:
+                while self.running:
+                    try:
+                        # Update all panels
+                        layout["header"].update(self._make_header())
+                        layout["conversation"].update(self._make_conversation_panel())
+                        layout["turn_metrics"].update(self._make_turn_metrics_panel())
+                        layout["message_metrics"].update(self._make_message_metrics_panel())
+                        layout["footer"].update(self._make_footer())
+                        
+                        # Check if complete
+                        state = self.state_manager.state
+                        if (state.completed_conversations >= state.total_conversations and 
+                            state.total_conversations > 0):
+                            await asyncio.sleep(3)
+                            self.running = False
+                        
+                        await asyncio.sleep(0.5)
+                        
+                    except asyncio.CancelledError:
+                        # Clean cancellation
                         self.running = False
-                    
-                    await asyncio.sleep(0.5)
-                    
-                except KeyboardInterrupt:
-                    print("\n[DEBUG] Dashboard interrupted")
-                    break
-        
-        print(f"[DEBUG] Dashboard ended. Total events seen: {self.state_manager.state.total_events}")
-        return {'detached': True, 'stopped': False}
+                        break
+                    except Exception:
+                        # Log error but keep running
+                        # Don't print to console - it interferes with Live
+                        pass
+                        
+        except KeyboardInterrupt:
+            # Clean exit on Ctrl+C
+            self.running = False
+        finally:
+            # Ensure we return a result
+            return {'detached': True, 'stopped': False}

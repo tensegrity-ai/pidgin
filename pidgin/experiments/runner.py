@@ -110,7 +110,7 @@ class ExperimentRunner:
         # Use shared event bus if available, otherwise create local one
         if self.event_bus:
             event_bus = self.event_bus
-            print(f"[DEBUG] Using shared EventBus for conversation {conversation_id}")
+            # Using shared EventBus for conversation
         else:
             event_bus = EventBus()
             await event_bus.start()
