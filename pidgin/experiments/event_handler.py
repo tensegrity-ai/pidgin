@@ -10,6 +10,7 @@ from ..core.events import (
     ConversationEndEvent,
     MessageCompleteEvent,
     SystemPromptEvent,
+    MetricsCalculatedEvent,
     Turn
 )
 from ..core.types import Message
@@ -20,15 +21,17 @@ from ..metrics import MetricsCalculator
 class ExperimentEventHandler:
     """Handles events during experiment runs and stores metrics."""
     
-    def __init__(self, storage: ExperimentStore, experiment_id: str):
+    def __init__(self, storage: ExperimentStore, experiment_id: str, event_bus=None):
         """Initialize event handler.
         
         Args:
             storage: Database storage instance
             experiment_id: Parent experiment identifier
+            event_bus: Optional EventBus for emitting metrics events
         """
         self.storage = storage
         self.experiment_id = experiment_id
+        self.event_bus = event_bus
         self.metrics_calculators: Dict[str, MetricsCalculator] = {}
         self.conversation_configs: Dict[str, Dict[str, Any]] = {}
         self.message_timings: Dict[str, Dict[str, int]] = {}
@@ -185,6 +188,26 @@ class ExperimentEventHandler:
         self.storage.log_word_frequencies(
             conv_id, turn_number, 'agent_b', word_freq_b, new_words_b
         )
+        
+        # Emit metrics event if we have an EventBus
+        if self.event_bus:
+            # Combine all metrics for the event
+            all_metrics = {
+                **turn_metrics,
+                'agent_a': agent_a_metrics,
+                'agent_b': agent_b_metrics,
+                'word_frequencies': {
+                    'agent_a': {'frequencies': word_freq_a, 'new_words': new_words_a},
+                    'agent_b': {'frequencies': word_freq_b, 'new_words': new_words_b}
+                }
+            }
+            
+            await self.event_bus.emit(MetricsCalculatedEvent(
+                conversation_id=conv_id,
+                turn_number=turn_number,
+                metrics=all_metrics,
+                experiment_id=self.experiment_id
+            ))
         
         # Clear timing data for next turn
         self.message_timings[conv_id] = {}

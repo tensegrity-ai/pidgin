@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import uuid4
 
 from .types import Message
@@ -192,3 +192,13 @@ class TokenUsageEvent(Event):
     tokens_used: int
     tokens_per_minute_limit: int
     current_usage_rate: float
+
+
+@dataclass
+class MetricsCalculatedEvent(Event):
+    """Metrics have been calculated for a turn."""
+
+    conversation_id: str
+    turn_number: int
+    metrics: Dict[str, Any]
+    experiment_id: Optional[str] = None

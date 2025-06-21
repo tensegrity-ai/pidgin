@@ -115,7 +115,7 @@ class ExperimentRunner:
             event_bus = EventBus()
             await event_bus.start()
             
-        handler = ExperimentEventHandler(self.storage, experiment_id)
+        handler = ExperimentEventHandler(self.storage, experiment_id, event_bus)
         
         # Subscribe to events
         event_bus.subscribe(ConversationStartEvent, handler.handle_conversation_start)
