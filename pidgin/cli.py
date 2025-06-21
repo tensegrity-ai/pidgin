@@ -209,6 +209,9 @@ def get_provider_for_model(model: str):
             return GoogleProvider(config.model_id)
         elif config.provider == "xai":
             return xAIProvider(config.model_id)
+        elif config.provider == "silent":  # <-- ADD THIS
+            from .providers.silent import SilentProvider
+            return SilentProvider(config.model_id)
         elif config.provider == "ollama":
             # Handle models configured with ollama provider
             from .providers.ollama import OllamaProvider
@@ -571,6 +574,12 @@ def dimensions(example, list_only, detailed, dimension):
     type=click.FloatRange(0.0, 2.0),
     help="Temperature for model B only",
 )
+@click.option(
+    '--meditation', 
+    is_flag=True, 
+    help='One agent contemplates while the other remains silent')
+
+
 def chat(
     model_a,
     model_b,
@@ -593,6 +602,7 @@ def chat(
     temperature,
     temp_a,
     temp_b,
+    meditation,
 ):
     """Run a conversation between two AI agents.
 
@@ -620,13 +630,17 @@ def chat(
     [#4c566a]Different awareness levels:[/#4c566a]
         pidgin chat -a claude -b gpt --awareness research
         pidgin chat -a claude -b gpt --awareness-a firm --awareness-b none
+
+    [#4c566a]Meditation mode (one agent contemplates in silence):[/#4c566a]
+        pidgin chat -a claude --meditation
     """
     # Import here to avoid circular imports
     from .core.conductor import Conductor
     from .core.event_bus import EventBus
     from .io.output_manager import OutputManager
     from .config.system_prompts import get_system_prompts, get_awareness_info
-    
+
+
     # Validate exclusive options
     if quiet and verbose:
         raise click.BadParameter("Cannot use both --quiet and --verbose")
@@ -663,6 +677,12 @@ def chat(
     
     # Early normalization to handle 'local' shorthand
     model_a, model_b = asyncio.run(normalize_model_names(model_a, model_b, console))
+    
+    # Override model_b if meditation mode
+    if meditation:
+        model_b = "silent"  # We'll add this to MODELS config
+        console.print(f"\n[#ebcb8b]◆ Meditation Mode[/#ebcb8b]")
+        console.print(f"[#4c566a]  {model_a} contemplates in the presence of Silence[/#4c566a]\n")
     
     # Check if we need to start Ollama server (right after model selection)
     # Check both the raw model names and look up their configs
@@ -1705,29 +1725,32 @@ def list(all):
 
 @experiment.command()
 def monitor():
-    """Monitor rate limits and active conversations.
+    """System-wide monitor for experiments and API usage.
     
-    Real-time debugging dashboard showing:
-    - Active conversations with turn counts and last messages
-    - Provider rate limit usage (maxed/high/ok)
-    - Recent API errors (rate limits, overloaded, token limits)
-    - Live status updates every second
+    Shows a real-time overview of:
+    - API usage and rate limits for all providers
+    - Active experiments with live metrics
+    - System statistics and health
+    - Estimated costs
     
-    Useful for debugging rate limit issues and monitoring experiment health.
+    This gives you a bird's eye view of your Pidgin system,
+    helping you manage rate limits and track experiment progress.
+    
+    [bold]FEATURES:[/bold]
+    • Live updates from SharedState
+    • Rate limit warnings with visual bars
+    • Convergence alerts
+    • Cost tracking (coming soon)
+    
+    Press 'q' to quit, 'r' to refresh, 'e' to export stats.
     """
-    from .dashboard.rate_monitor import RateLimitMonitor
-    from pathlib import Path
+    from .monitor.system_monitor import SystemMonitor
+    import asyncio
     
-    db_path = Path("./pidgin_output/experiments/experiments.db")
-    if not db_path.exists():
-        console.print("[#bf616a]No experiments database found[/#bf616a]")
-        console.print("[#4c566a]Start an experiment first with 'pidgin experiment start'[/#4c566a]")
-        return
-        
-    console.print("[#8fbcbb]◆ Starting rate limit monitor...[/#8fbcbb]")
-    console.print("[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
+    console.print("[#8fbcbb]◆ Starting system monitor...[/#8fbcbb]")
+    console.print("[#4c566a]Press 'q' to exit[/#4c566a]\n")
     
-    monitor = RateLimitMonitor(db_path)
+    monitor = SystemMonitor()
     try:
         asyncio.run(monitor.run())
     except KeyboardInterrupt:

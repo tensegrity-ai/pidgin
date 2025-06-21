@@ -416,23 +416,36 @@ class DisplayFilter:
         )
 
     def show_pacing_indicator(self, provider: str, wait_time: float):
-        """Show rate limit pacing in UI.
+        """Show rate limit pacing in a nice panel.
 
         Args:
             provider: Provider name being paced
             wait_time: How long we're waiting in seconds
         """
+        if wait_time < 0.5:
+            # Very brief pause - don't show anything
+            return
+            
+        # Format the wait time nicely
         if wait_time < 1.0:
-            # Brief pause - subtle indicator
-            self.console.print(
-                f"[{self.COLORS['nord3']}]⏱ Pacing for {provider} limits...[/{self.COLORS['nord3']}]",
-                end="\r",  # Overwrite when done
-            )
+            time_str = f"{wait_time:.1f}s"
         else:
-            # Longer pause - more visible
-            self.console.print(
-                f"[{self.COLORS['nord13']}]⏸ Waiting {wait_time:.1f}s for {provider} rate limits[/{self.COLORS['nord13']}]"
+            time_str = f"{wait_time:.1f}s"
+        
+        # Create a subtle panel
+        content = f"⏸ Waiting {time_str} for {provider} rate limits"
+        
+        self.console.print()  # Leading newline
+        self.console.print(
+            Panel(
+                content,
+                style=self.COLORS['nord13'],  # Yellow
+                border_style=self.COLORS['nord3'],  # Dim border
+                padding=(0, 1),
+                expand=False,
             )
+        )
+        self.console.print()  # Trailing newline
 
     def show_token_usage(self, provider: str, used: int, limit: int):
         """Show current token consumption rate.

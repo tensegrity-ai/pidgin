@@ -40,7 +40,6 @@ from ..providers.event_wrapper import EventAwareProvider
 from ..config.system_prompts import get_system_prompts
 from ..io.transcripts import TranscriptManager
 from .types import Agent, Conversation, Message
-from ..ui.user_interaction import UserInteractionHandler, TimeoutDecision
 from ..analysis.convergence import ConvergenceCalculator
 from ..config.config import get_config
 from .rate_limiter import StreamingRateLimiter
@@ -81,7 +80,6 @@ class Conductor:
         self.event_logger = None  # Will be created with bus
 
         # User interaction handler
-        self.user_interaction = UserInteractionHandler(console)
 
         # Track message completion
         self.pending_messages: Dict[str, asyncio.Future] = {}
@@ -147,7 +145,7 @@ class Conductor:
         await self._handle_interrupt_request(conversation.id)
 
         # Show pause notification
-        self.user_interaction.show_pause_notification()
+        # Pause notification removed
 
         # Emit paused event
         await self.bus.emit(
@@ -163,7 +161,7 @@ class Conductor:
     async def _should_continue(self, conversation: Conversation) -> bool:
         """Check if conversation should continue after pause."""
         # Get user decision
-        decision = self.user_interaction.get_pause_decision()
+        decision = "exit"  # Always exit on pause
 
         if decision == "continue":
             # Emit resumed event
@@ -537,11 +535,11 @@ class Conductor:
             )
 
             # Get user decision
-            decision = self.user_interaction.get_timeout_decision(agent.display_name)
+            decision = "skip"  # Always skip on timeout
 
-            if decision == TimeoutDecision.SKIP:
+            if decision == "skip":
                 return None
-            elif decision == TimeoutDecision.END:
+            elif decision == "end":
                 raise KeyboardInterrupt("User requested end")
             else:  # WAIT
                 try:

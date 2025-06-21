@@ -1,6 +1,7 @@
+# pidgin/dashboard/__init__.py
 """Dashboard module for real-time experiment monitoring."""
 
-from .live import ExperimentDashboard
-from .keyboard_handler import KeyboardHandler
+from .dashboard import Dashboard
+from .attach import attach_dashboard_to_experiment
 
-__all__ = ["ExperimentDashboard", "KeyboardHandler"]
+__all__ = ["Dashboard", "attach_dashboard_to_experiment"]

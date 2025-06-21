@@ -21,9 +21,19 @@ async def attach_dashboard_to_experiment(experiment_id: str, experiment_name: st
     """
     console = Console()
     
+    # Wait a moment for the daemon to create SharedState
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        if SharedState.exists(experiment_id):
+            break
+        if attempt == 0:
+            console.print(f"[yellow]Waiting for experiment to initialize...[/yellow]")
+        await asyncio.sleep(0.5)
+    
     # Check if experiment exists
     if not SharedState.exists(experiment_id):
         console.print(f"[red]No running experiment found: {experiment_name}[/red]")
+        console.print(f"[dim]Experiment ID: {experiment_id}[/dim]")
         return {"error": "not_found"}
     
     # Connect to shared state

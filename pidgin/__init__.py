@@ -15,7 +15,6 @@ from .core import (
 # Analysis exports
 from .analysis import (
     ConvergenceCalculator,
-    ContextWindowManager,
 )
 
 # Metrics exports
@@ -29,8 +28,6 @@ from .metrics import (
 from .ui import (
     DisplayFilter,
     EventLogger,
-    UserInteractionHandler,
-    InterventionHandler,
 )
 
 # Config exports
@@ -64,7 +61,6 @@ __all__ = [
     
     # Analysis
     'ConvergenceCalculator',
-    'ContextWindowManager',
     
     # Metrics
     'calculate_turn_metrics',
@@ -74,8 +70,6 @@ __all__ = [
     # UI
     'DisplayFilter',
     'EventLogger',
-    'UserInteractionHandler',
-    'InterventionHandler',
     
     # Config
     'Config',
