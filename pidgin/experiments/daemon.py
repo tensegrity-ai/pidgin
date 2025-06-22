@@ -1,3 +1,4 @@
+# pidgin/experiments/daemon.py
 """Unix daemon for running experiments in background."""
 
 import os
@@ -98,10 +99,46 @@ class ExperimentDaemon:
             pass
             
     def cleanup(self):
-        """Remove PID file on exit."""
+        """Clean up resources on exit."""
+        # Import here to avoid circular imports
+        from .storage import ExperimentStore
+        
+        # Update experiment status if still running
+        try:
+            # Get storage with proper path resolution
+            project_base = os.environ.get('PIDGIN_PROJECT_BASE', '.')
+            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.db"
+            storage = ExperimentStore(db_path=db_path)
+            
+            # Check current status
+            exp = storage.get_experiment(self.experiment_id)
+            if exp and exp['status'] == 'running':
+                # Mark as failed since we're cleaning up unexpectedly
+                storage.update_experiment_status(self.experiment_id, 'failed')
+                logging.info(f"Marked experiment {self.experiment_id} as failed on cleanup")
+                
+                # Also mark any running conversations as failed
+                storage.mark_running_conversations_failed(self.experiment_id)
+                
+        except Exception as e:
+            logging.error(f"Failed to update experiment status during cleanup: {e}")
+        
+        # Remove PID file
         if self.pid_file.exists():
-            self.pid_file.unlink()
-            logging.info(f"Removed PID file: {self.pid_file}")
+            try:
+                self.pid_file.unlink()
+                logging.info(f"Removed PID file: {self.pid_file}")
+            except Exception as e:
+                logging.error(f"Failed to remove PID file: {e}")
+                
+        # Clean up SharedState if it exists
+        shm_path = Path(f"/dev/shm/pidgin_{self.experiment_id}")
+        if shm_path.exists():
+            try:
+                shm_path.unlink()
+                logging.info(f"Removed shared memory: {shm_path}")
+            except Exception as e:
+                logging.error(f"Failed to remove shared memory: {e}")
             
     def is_stopping(self) -> bool:
         """Check if daemon should stop."""

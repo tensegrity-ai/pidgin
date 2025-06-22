@@ -21,7 +21,7 @@ from .config import ExperimentConfig
 from .event_handler import ExperimentEventHandler
 
 # Import CLI functions for consistency
-from ..cli import get_provider_for_model, _build_initial_prompt
+from ..cli.helpers import get_provider_for_model, build_initial_prompt
 
 
 class ExperimentRunner:
@@ -130,7 +130,7 @@ class ExperimentRunner:
         event_bus.subscribe(SystemPromptEvent, handler.handle_system_prompt)
         
         # Build initial prompt using CLI logic
-        initial_prompt = _build_initial_prompt(
+        initial_prompt = build_initial_prompt(
             custom_prompt=config.custom_prompt,
             dimensions=config.dimensions,
         )

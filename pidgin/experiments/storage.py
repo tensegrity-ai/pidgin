@@ -1,3 +1,4 @@
+# pidgin/experiments/storage.py
 """Storage layer for Pidgin experiments using SQLite."""
 
 import os
@@ -18,15 +19,9 @@ class ExperimentStore:
             db_path: Path to SQLite database. Defaults to ./pidgin_output/experiments/experiments.db
         """
         if db_path is None:
-            # Check if we're in a daemon context
-            project_base = os.environ.get('PIDGIN_PROJECT_BASE')
-            if project_base:
-                # Use the preserved project base path
-                db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.db"
-            else:
-                # Normal operation - use actual current working directory
-                cwd = Path(os.getcwd())
-                db_path = cwd / "pidgin_output" / "experiments" / "experiments.db"
+            # Always resolve to absolute path for consistency
+            project_base = os.environ.get('PIDGIN_PROJECT_BASE', os.getcwd())
+            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.db"
         
         self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,10 +39,6 @@ class ExperimentStore:
     
     def _create_tables(self, conn):
         """Create all experiment tables with clean schema."""
-        
-        # Drop old mixed table if it exists
-        conn.execute("DROP TABLE IF EXISTS turns")
-        
         # Experiments table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS experiments (
@@ -56,7 +47,7 @@ class ExperimentStore:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 started_at TIMESTAMP,
                 completed_at TIMESTAMP,
-                status TEXT DEFAULT 'created' CHECK (status IN ('created', 'running', 'completed', 'failed')),
+                status TEXT DEFAULT 'created',
                 config JSON NOT NULL,
                 total_conversations INTEGER NOT NULL,
                 completed_conversations INTEGER DEFAULT 0,
@@ -65,7 +56,7 @@ class ExperimentStore:
             )
         """)
         
-        # Conversations table
+        # Conversations table with foreign key
         conn.execute("""
             CREATE TABLE IF NOT EXISTS conversations (
                 conversation_id TEXT PRIMARY KEY,
@@ -73,9 +64,9 @@ class ExperimentStore:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 started_at TIMESTAMP,
                 completed_at TIMESTAMP,
-                status TEXT DEFAULT 'created' CHECK (status IN ('created', 'running', 'completed', 'failed', 'interrupted')),
+                status TEXT DEFAULT 'created',
                 config JSON NOT NULL,
-                first_speaker TEXT DEFAULT 'agent_a' CHECK (first_speaker IN ('agent_a', 'agent_b')),
+                first_speaker TEXT DEFAULT 'agent_a',
                 agent_a_model TEXT NOT NULL,
                 agent_b_model TEXT NOT NULL,
                 agent_a_chosen_name TEXT,
@@ -84,223 +75,90 @@ class ExperimentStore:
                 convergence_reason TEXT,
                 final_convergence_score REAL,
                 error_message TEXT,
-                metadata JSON,
                 FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
             )
         """)
         
-        # Turn metrics table (one row per turn)
+        # Turn metrics table 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS turn_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                -- Convergence metrics
                 convergence_score REAL,
                 vocabulary_overlap REAL,
-                length_ratio REAL,
                 structural_similarity REAL,
-                cross_repetition_score REAL,
-                mimicry_score REAL,
-                
-                -- Turn-level aggregates
-                total_words INTEGER,
-                total_sentences INTEGER,
-                combined_vocabulary_size INTEGER,
-                
-                -- Timing
-                turn_duration_ms INTEGER,
-                agent_a_response_time_ms INTEGER,
-                agent_b_response_time_ms INTEGER,
-                
-                -- Additional metrics as JSON
-                additional_metrics JSON,
-                
-                PRIMARY KEY (conversation_id, turn_number),
-                FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
+                topic_similarity REAL,
+                style_match REAL,
+                metrics_json JSON,
+                FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id),
+                UNIQUE(conversation_id, turn_number)
             )
         """)
         
-        # Message metrics table (two rows per turn, one per agent)
+        # Message metrics table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS message_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
-                message_index INTEGER NOT NULL,  -- 0 for first speaker, 1 for second
-                speaker TEXT NOT NULL CHECK (speaker IN ('agent_a', 'agent_b')),
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                -- Message content
-                message TEXT NOT NULL,
-                
-                -- Basic metrics
-                message_length INTEGER NOT NULL,
-                word_count INTEGER NOT NULL,
-                sentence_count INTEGER NOT NULL,
-                paragraph_count INTEGER DEFAULT 1,
-                
-                -- Lexical diversity metrics
-                vocabulary_size INTEGER NOT NULL,
-                type_token_ratio REAL NOT NULL,
-                hapax_legomena_count INTEGER NOT NULL,
-                hapax_ratio REAL NOT NULL,
-                lexical_diversity_index REAL,
-                compression_ratio REAL,
-                
-                -- Linguistic markers
-                question_count INTEGER DEFAULT 0,
-                exclamation_count INTEGER DEFAULT 0,
-                hedge_count INTEGER DEFAULT 0,
-                agreement_marker_count INTEGER DEFAULT 0,
-                disagreement_marker_count INTEGER DEFAULT 0,
-                politeness_marker_count INTEGER DEFAULT 0,
-                
-                -- Symbol usage
-                emoji_count INTEGER DEFAULT 0,
-                emoji_density REAL DEFAULT 0.0,
-                arrow_count INTEGER DEFAULT 0,
-                math_symbol_count INTEGER DEFAULT 0,
-                other_symbol_count INTEGER DEFAULT 0,
-                punctuation_diversity INTEGER DEFAULT 0,
-                
-                -- Pronoun usage
-                first_person_singular_count INTEGER DEFAULT 0,
-                first_person_plural_count INTEGER DEFAULT 0,
-                second_person_count INTEGER DEFAULT 0,
-                
-                -- Numeric content
-                number_count INTEGER DEFAULT 0,
-                proper_noun_count INTEGER DEFAULT 0,
-                
-                -- Repetition metrics
-                repeated_bigrams INTEGER DEFAULT 0,
-                repeated_trigrams INTEGER DEFAULT 0,
-                self_repetition_score REAL DEFAULT 0.0,
-                
-                -- Information theory metrics
-                word_entropy REAL,
-                character_entropy REAL,
-                average_sentence_length REAL,
-                
-                -- Response characteristics
+                agent_id TEXT NOT NULL,
+                message_length INTEGER,
+                word_count INTEGER,
+                unique_words INTEGER,
+                type_token_ratio REAL,
+                avg_word_length REAL,
                 response_time_ms INTEGER,
-                starts_with_acknowledgment BOOLEAN DEFAULT FALSE,
-                ends_with_question BOOLEAN DEFAULT FALSE,
-                
-                -- Vocabulary tracking
-                new_words_count INTEGER DEFAULT 0,
-                new_words_ratio REAL DEFAULT 0.0,
-                
-                -- Enrichable fields (NULL until enriched)
-                perplexity REAL,
-                sentiment_score REAL,
-                formality_score REAL,
-                
-                -- Additional metrics as JSON
-                additional_metrics JSON,
-                
-                PRIMARY KEY (conversation_id, turn_number, message_index),
+                metrics_json JSON,
                 FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
             )
         """)
         
-        # Word frequencies table remains the same
+        # Word frequency table for vocabulary analysis
         conn.execute("""
             CREATE TABLE IF NOT EXISTS word_frequencies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
-                speaker TEXT NOT NULL CHECK (speaker IN ('agent_a', 'agent_b')),
+                agent_id TEXT NOT NULL,
                 word TEXT NOT NULL,
-                frequency INTEGER NOT NULL,
-                is_new_word BOOLEAN DEFAULT FALSE,
-                PRIMARY KEY (conversation_id, turn_number, speaker, word),
+                frequency INTEGER,
                 FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
             )
         """)
         
-        # Agent names table remains the same
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_names (
-                conversation_id TEXT NOT NULL,
-                agent_id TEXT NOT NULL CHECK (agent_id IN ('agent_a', 'agent_b')),
-                chosen_name TEXT NOT NULL,
-                turn_chosen INTEGER NOT NULL,
-                name_length INTEGER NOT NULL,
-                contains_numbers BOOLEAN DEFAULT FALSE,
-                contains_symbols BOOLEAN DEFAULT FALSE,
-                contains_spaces BOOLEAN DEFAULT FALSE,
-                is_single_word BOOLEAN DEFAULT TRUE,
-                starts_with_capital BOOLEAN DEFAULT FALSE,
-                all_caps BOOLEAN DEFAULT FALSE,
-                metadata JSON,
-                PRIMARY KEY (conversation_id, agent_id),
-                FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
-            )
-        """)
-        
-        # Create indexes
+        # Create indices for performance
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_experiment ON conversations(experiment_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_turn_metrics_conversation ON turn_metrics(conversation_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_message_metrics_conversation ON message_metrics(conversation_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_message_metrics_speaker ON message_metrics(conversation_id, speaker)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_word_frequencies_conversation ON word_frequencies(conversation_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_names_model ON conversations(agent_a_model, agent_b_model)")
-        
-        # Create views
-        conn.execute("""
-            CREATE VIEW IF NOT EXISTS experiment_summary AS
-            SELECT 
-                e.experiment_id,
-                e.name,
-                e.status,
-                e.total_conversations,
-                e.completed_conversations,
-                e.failed_conversations,
-                e.created_at,
-                e.completed_at,
-                COUNT(DISTINCT c.conversation_id) as actual_conversations,
-                AVG(c.total_turns) as avg_turns,
-                AVG(c.final_convergence_score) as avg_convergence
-            FROM experiments e
-            LEFT JOIN conversations c ON e.experiment_id = c.experiment_id
-            GROUP BY e.experiment_id
-        """)
-        
-        conn.execute("""
-            CREATE VIEW IF NOT EXISTS name_statistics AS
-            SELECT 
-                c.agent_a_model as model,
-                'agent_a' as role,
-                n.chosen_name,
-                n.name_length,
-                n.contains_numbers,
-                n.contains_symbols,
-                COUNT(*) OVER (PARTITION BY c.agent_a_model, n.chosen_name) as name_frequency
-            FROM conversations c
-            JOIN agent_names n ON c.conversation_id = n.conversation_id AND n.agent_id = 'agent_a'
-            UNION ALL
-            SELECT 
-                c.agent_b_model as model,
-                'agent_b' as role,
-                n.chosen_name,
-                n.name_length,
-                n.contains_numbers,
-                n.contains_symbols,
-                COUNT(*) OVER (PARTITION BY c.agent_b_model, n.chosen_name) as name_frequency
-            FROM conversations c
-            JOIN agent_names n ON c.conversation_id = n.conversation_id AND n.agent_id = 'agent_b'
-        """)
-        
-        conn.commit()
     
-    def _get_connection(self) -> sqlite3.Connection:
-        """Get a database connection with row factory enabled."""
+    def _get_connection(self):
+        """Get database connection with row factory."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
+    
+    def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        """Get experiment details by ID.
+        
+        Args:
+            experiment_id: Experiment identifier
+            
+        Returns:
+            Experiment dict or None if not found
+        """
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM experiments WHERE experiment_id = ?",
+                (experiment_id,)
+            ).fetchone()
+            
+            if row:
+                return dict(row)
+            return None
     
     def create_experiment(self, name: str, config: dict) -> str:
         """Create a new experiment.
@@ -324,6 +182,51 @@ class ExperimentStore:
             conn.commit()
         
         return experiment_id
+    
+    def update_experiment_status(self, experiment_id: str, status: str):
+        """Update experiment status.
+        
+        Args:
+            experiment_id: Experiment identifier
+            status: New status (created, running, completed, failed, interrupted)
+        """
+        timestamp_field = {
+            'running': 'started_at',
+            'completed': 'completed_at',
+            'failed': 'completed_at',
+            'interrupted': 'completed_at'
+        }.get(status)
+        
+        with self._get_connection() as conn:
+            if timestamp_field:
+                conn.execute(f"""
+                    UPDATE experiments 
+                    SET status = ?, {timestamp_field} = CURRENT_TIMESTAMP
+                    WHERE experiment_id = ?
+                """, (status, experiment_id))
+            else:
+                conn.execute("""
+                    UPDATE experiments 
+                    SET status = ?
+                    WHERE experiment_id = ?
+                """, (status, experiment_id))
+            conn.commit()
+    
+    def mark_running_conversations_failed(self, experiment_id: str):
+        """Mark all running conversations in an experiment as failed.
+        
+        Args:
+            experiment_id: Experiment identifier
+        """
+        with self._get_connection() as conn:
+            conn.execute("""
+                UPDATE conversations 
+                SET status = 'failed', 
+                    completed_at = CURRENT_TIMESTAMP,
+                    error_message = 'Experiment terminated'
+                WHERE experiment_id = ? AND status = 'running'
+            """, (experiment_id,))
+            conn.commit()
     
     def create_conversation(self, experiment_id: str, conversation_id: str, config: dict):
         """Create a new conversation within an experiment.
@@ -349,875 +252,286 @@ class ExperimentStore:
             ))
             conn.commit()
     
+    def update_conversation_status(self, conversation_id: str, status: str,
+                                 convergence_reason: Optional[str] = None,
+                                 final_convergence_score: Optional[float] = None,
+                                 error_message: Optional[str] = None):
+        """Update conversation status and final metrics.
+        
+        Args:
+            conversation_id: Conversation identifier
+            status: New status
+            convergence_reason: Why conversation ended (if applicable)
+            final_convergence_score: Final convergence score (if applicable)
+            error_message: Error message (if failed)
+        """
+        timestamp_field = {
+            'running': 'started_at',
+            'completed': 'completed_at',
+            'failed': 'completed_at',
+            'interrupted': 'completed_at'
+        }.get(status)
+        
+        with self._get_connection() as conn:
+            # Build dynamic query based on provided fields
+            updates = ["status = ?"]
+            params = [status]
+            
+            if timestamp_field:
+                updates.append(f"{timestamp_field} = CURRENT_TIMESTAMP")
+            
+            if convergence_reason is not None:
+                updates.append("convergence_reason = ?")
+                params.append(convergence_reason)
+                
+            if final_convergence_score is not None:
+                updates.append("final_convergence_score = ?")
+                params.append(final_convergence_score)
+                
+            if error_message is not None:
+                updates.append("error_message = ?")
+                params.append(error_message)
+            
+            # Get total turns for the conversation
+            turn_count = conn.execute(
+                "SELECT COUNT(*) as count FROM turn_metrics WHERE conversation_id = ?",
+                (conversation_id,)
+            ).fetchone()['count']
+            
+            updates.append("total_turns = ?")
+            params.append(turn_count)
+            
+            # Add conversation_id as last parameter
+            params.append(conversation_id)
+            
+            query = f"UPDATE conversations SET {', '.join(updates)} WHERE conversation_id = ?"
+            conn.execute(query, params)
+            
+            # Update experiment conversation counts
+            if status in ['completed', 'failed', 'interrupted']:
+                if status == 'failed':
+                    conn.execute("""
+                        UPDATE experiments 
+                        SET failed_conversations = failed_conversations + 1
+                        WHERE experiment_id = (
+                            SELECT experiment_id FROM conversations 
+                            WHERE conversation_id = ?
+                        )
+                    """, (conversation_id,))
+                else:
+                    conn.execute("""
+                        UPDATE experiments 
+                        SET completed_conversations = completed_conversations + 1
+                        WHERE experiment_id = (
+                            SELECT experiment_id FROM conversations 
+                            WHERE conversation_id = ?
+                        )
+                    """, (conversation_id,))
+            
+            conn.commit()
+    
     def log_turn_metrics(self, conversation_id: str, turn_number: int, metrics: dict):
         """Log turn-level metrics (convergence, aggregates).
         
         Args:
             conversation_id: Conversation identifier
-            turn_number: 0-indexed turn number
-            metrics: Dictionary of turn-level metrics
+            turn_number: Turn number
+            metrics: Dictionary of metrics
         """
-        # Extract turn-level fields
-        turn_fields = {
-            'convergence_score', 'vocabulary_overlap', 'length_ratio', 
-            'structural_similarity', 'cross_repetition_score', 'mimicry_score',
-            'total_words', 'total_sentences', 'combined_vocabulary_size',
-            'turn_duration_ms', 'agent_a_response_time_ms', 'agent_b_response_time_ms'
-        }
-        
-        # Separate known and additional metrics
-        turn_data = {k: metrics.get(k) for k in turn_fields if k in metrics}
-        additional = {k: v for k, v in metrics.items() if k not in turn_fields}
-        
-        # Add required fields
-        turn_data['conversation_id'] = conversation_id
-        turn_data['turn_number'] = turn_number
-        if additional:
-            turn_data['additional_metrics'] = json.dumps(additional)
-        
-        # Build INSERT query dynamically
-        fields = list(turn_data.keys())
-        placeholders = ['?' for _ in fields]
-        
         with self._get_connection() as conn:
-            query = f"""
-                INSERT INTO turn_metrics ({', '.join(fields)})
-                VALUES ({', '.join(placeholders)})
-            """
-            conn.execute(query, list(turn_data.values()))
-            
-            # Update conversation turn count
             conn.execute("""
-                UPDATE conversations 
-                SET total_turns = (
-                    SELECT COUNT(DISTINCT turn_number) 
-                    FROM turn_metrics 
-                    WHERE conversation_id = ?
-                )
-                WHERE conversation_id = ?
-            """, (conversation_id, conversation_id))
-            
+                INSERT OR REPLACE INTO turn_metrics (
+                    conversation_id, turn_number, convergence_score,
+                    vocabulary_overlap, structural_similarity,
+                    topic_similarity, style_match, metrics_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                conversation_id,
+                turn_number,
+                metrics.get('convergence_score'),
+                metrics.get('vocabulary_overlap'),
+                metrics.get('structural_similarity'),
+                metrics.get('topic_similarity'),
+                metrics.get('style_match'),
+                json.dumps(metrics)
+            ))
             conn.commit()
     
-    def log_message_metrics(self, conversation_id: str, message_index: int,
-                           turn_number: int, speaker: str, metrics: dict):
+    def log_message_metrics(self, conversation_id: str, turn_number: int,
+                          agent_id: str, metrics: dict, response_time_ms: Optional[int] = None):
         """Log message-level metrics.
         
         Args:
             conversation_id: Conversation identifier
-            message_index: 0 for first speaker, 1 for second
-            turn_number: 0-indexed turn number
-            speaker: 'agent_a' or 'agent_b'
-            metrics: Dictionary of message metrics
+            turn_number: Turn number
+            agent_id: Agent identifier (agent_a or agent_b)
+            metrics: Message metrics
+            response_time_ms: Response time in milliseconds
         """
-        # Extract message-level fields
-        message_fields = {
-            'message', 'message_length', 'word_count', 'sentence_count', 'paragraph_count',
-            'vocabulary_size', 'type_token_ratio', 'hapax_legomena_count', 'hapax_ratio',
-            'lexical_diversity_index', 'compression_ratio',
-            'question_count', 'exclamation_count', 'hedge_count', 'agreement_marker_count',
-            'disagreement_marker_count', 'politeness_marker_count',
-            'emoji_count', 'emoji_density', 'arrow_count', 'math_symbol_count', 
-            'other_symbol_count', 'punctuation_diversity',
-            'first_person_singular_count', 'first_person_plural_count', 'second_person_count',
-            'number_count', 'proper_noun_count',
-            'repeated_bigrams', 'repeated_trigrams', 'self_repetition_score',
-            'word_entropy', 'character_entropy', 'average_sentence_length',
-            'response_time_ms', 'starts_with_acknowledgment', 'ends_with_question',
-            'new_words_count', 'new_words_ratio',
-            'perplexity', 'sentiment_score', 'formality_score'
-        }
-        
-        # Separate known and additional metrics
-        message_data = {k: metrics.get(k) for k in message_fields if k in metrics}
-        additional = {k: v for k, v in metrics.items() if k not in message_fields}
-        
-        # Add required fields
-        message_data['conversation_id'] = conversation_id
-        message_data['turn_number'] = turn_number
-        message_data['message_index'] = message_index
-        message_data['speaker'] = speaker
-        if additional:
-            message_data['additional_metrics'] = json.dumps(additional)
-        
-        # Build INSERT query dynamically
-        fields = list(message_data.keys())
-        placeholders = ['?' for _ in fields]
-        
-        with self._get_connection() as conn:
-            query = f"""
-                INSERT INTO message_metrics ({', '.join(fields)})
-                VALUES ({', '.join(placeholders)})
-            """
-            conn.execute(query, list(message_data.values()))
-            conn.commit()
-    
-    def log_word_frequencies(self, conversation_id: str, turn_number: int, 
-                           speaker: str, word_freq: Dict[str, int], 
-                           new_words: Optional[set] = None):
-        """Log word frequencies for a turn.
-        
-        Args:
-            conversation_id: Conversation identifier
-            turn_number: 0-indexed turn number
-            speaker: 'agent_a' or 'agent_b'
-            word_freq: Dictionary of word -> frequency
-            new_words: Set of words appearing for first time
-        """
-        new_words = new_words or set()
-        
-        with self._get_connection() as conn:
-            for word, freq in word_freq.items():
-                conn.execute("""
-                    INSERT INTO word_frequencies (
-                        conversation_id, turn_number, speaker, word, frequency, is_new_word
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    conversation_id, turn_number, speaker, word, freq,
-                    word in new_words
-                ))
-            conn.commit()
-    
-    def log_agent_name(self, conversation_id: str, agent_id: str, 
-                      chosen_name: str, turn_number: int):
-        """Log an agent's chosen name.
-        
-        Args:
-            conversation_id: Conversation identifier
-            agent_id: 'agent_a' or 'agent_b'
-            chosen_name: The name chosen by the agent
-            turn_number: Turn when name was chosen
-        """
-        # Calculate name characteristics
-        name_length = len(chosen_name)
-        contains_numbers = any(c.isdigit() for c in chosen_name)
-        contains_symbols = any(not c.isalnum() and not c.isspace() for c in chosen_name)
-        contains_spaces = ' ' in chosen_name
-        is_single_word = ' ' not in chosen_name.strip()
-        starts_with_capital = chosen_name[0].isupper() if chosen_name else False
-        all_caps = chosen_name.isupper()
-        
         with self._get_connection() as conn:
             conn.execute("""
-                INSERT INTO agent_names (
-                    conversation_id, agent_id, chosen_name, turn_chosen,
-                    name_length, contains_numbers, contains_symbols,
-                    contains_spaces, is_single_word, starts_with_capital, all_caps
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO message_metrics (
+                    conversation_id, turn_number, agent_id,
+                    message_length, word_count, unique_words,
+                    type_token_ratio, avg_word_length,
+                    response_time_ms, metrics_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                conversation_id, agent_id, chosen_name, turn_number,
-                name_length, contains_numbers, contains_symbols,
-                contains_spaces, is_single_word, starts_with_capital, all_caps
+                conversation_id,
+                turn_number,
+                agent_id,
+                metrics.get('message_length'),
+                metrics.get('word_count'),
+                metrics.get('unique_words'),
+                metrics.get('type_token_ratio'),
+                metrics.get('avg_word_length'),
+                response_time_ms,
+                json.dumps(metrics)
             ))
-            
-            # Also update conversation table
-            if agent_id == 'agent_a':
-                conn.execute("""
-                    UPDATE conversations 
-                    SET agent_a_chosen_name = ? 
-                    WHERE conversation_id = ?
-                """, (chosen_name, conversation_id))
-            else:
-                conn.execute("""
-                    UPDATE conversations 
-                    SET agent_b_chosen_name = ? 
-                    WHERE conversation_id = ?
-                """, (chosen_name, conversation_id))
-            
             conn.commit()
     
-    def update_conversation_status(self, conversation_id: str, status: str,
-                                 convergence_reason: Optional[str] = None,
-                                 final_convergence_score: Optional[float] = None,
-                                 error_message: Optional[str] = None):
-        """Update conversation status and completion details.
+    def log_word_frequencies(self, conversation_id: str, turn_number: int,
+                           agent_id: str, word_frequencies: Dict[str, int]):
+        """Log word frequencies for vocabulary analysis.
         
         Args:
             conversation_id: Conversation identifier
-            status: New status ('running', 'completed', 'failed', 'interrupted')
-            convergence_reason: Why conversation ended (if completed)
-            final_convergence_score: Final convergence score (if completed)
-            error_message: Error details (if failed)
+            turn_number: Turn number
+            agent_id: Agent identifier
+            word_frequencies: Dict of word -> count
         """
-        updates = ["status = ?"]
-        params = [status]
-        
-        if status == 'running' and 'started_at' not in params:
-            updates.append("started_at = CURRENT_TIMESTAMP")
-        elif status in ('completed', 'failed', 'interrupted'):
-            updates.append("completed_at = CURRENT_TIMESTAMP")
-        
-        if convergence_reason is not None:
-            updates.append("convergence_reason = ?")
-            params.append(convergence_reason)
-        
-        if final_convergence_score is not None:
-            updates.append("final_convergence_score = ?")
-            params.append(final_convergence_score)
-        
-        if error_message is not None:
-            updates.append("error_message = ?")
-            params.append(error_message)
-        
-        params.append(conversation_id)
-        
         with self._get_connection() as conn:
-            conn.execute(f"""
-                UPDATE conversations 
-                SET {', '.join(updates)}
-                WHERE conversation_id = ?
-            """, params)
+            # Use executemany for efficiency
+            data = [
+                (conversation_id, turn_number, agent_id, word, freq)
+                for word, freq in word_frequencies.items()
+            ]
             
-            # Update experiment counters
-            if status == 'completed':
-                conn.execute("""
-                    UPDATE experiments 
-                    SET completed_conversations = completed_conversations + 1
-                    WHERE experiment_id = (
-                        SELECT experiment_id FROM conversations 
-                        WHERE conversation_id = ?
-                    )
-                """, (conversation_id,))
-            elif status == 'failed':
-                conn.execute("""
-                    UPDATE experiments 
-                    SET failed_conversations = failed_conversations + 1
-                    WHERE experiment_id = (
-                        SELECT experiment_id FROM conversations 
-                        WHERE conversation_id = ?
-                    )
-                """, (conversation_id,))
-            
+            conn.executemany("""
+                INSERT INTO word_frequencies (
+                    conversation_id, turn_number, agent_id, word, frequency
+                ) VALUES (?, ?, ?, ?, ?)
+            """, data)
             conn.commit()
     
-    def update_experiment_status(self, experiment_id: str, status: str):
-        """Update experiment status.
+    def list_experiments(self, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all experiments with optional status filter.
         
         Args:
-            experiment_id: Experiment identifier
-            status: New status ('running', 'completed', 'failed')
-        """
-        updates = ["status = ?"]
-        params = [status]
-        
-        if status == 'running':
-            updates.append("started_at = CURRENT_TIMESTAMP")
-        elif status in ('completed', 'failed'):
-            updates.append("completed_at = CURRENT_TIMESTAMP")
-        
-        params.append(experiment_id)
-        
-        with self._get_connection() as conn:
-            conn.execute(f"""
-                UPDATE experiments 
-                SET {', '.join(updates)}
-                WHERE experiment_id = ?
-            """, params)
-            conn.commit()
-    
-    def get_experiment_status(self, experiment_id: str) -> dict:
-        """Get current status of an experiment.
-        
-        Args:
-            experiment_id: Experiment identifier
+            status_filter: Optional status to filter by
             
         Returns:
-            Dictionary with experiment status and progress
+            List of experiment dictionaries
         """
         with self._get_connection() as conn:
-            row = conn.execute("""
-                SELECT * FROM experiment_summary 
-                WHERE experiment_id = ?
-            """, (experiment_id,)).fetchone()
-            
-            if row:
-                return dict(row)
-            return {}
-    
-    def get_name_statistics(self, model: Optional[str] = None) -> dict:
-        """Get statistics about chosen names.
-        
-        Args:
-            model: Optional model name to filter by
-            
-        Returns:
-            Dictionary with name statistics
-        """
-        with self._get_connection() as conn:
-            if model:
-                query = """
-                    SELECT * FROM name_statistics 
-                    WHERE model = ?
-                    ORDER BY name_frequency DESC, chosen_name
-                """
-                rows = conn.execute(query, (model,)).fetchall()
+            if status_filter:
+                rows = conn.execute(
+                    "SELECT * FROM experiments WHERE status = ? ORDER BY created_at DESC",
+                    (status_filter,)
+                ).fetchall()
             else:
-                query = """
-                    SELECT * FROM name_statistics 
-                    ORDER BY model, name_frequency DESC, chosen_name
-                """
-                rows = conn.execute(query).fetchall()
-            
-            # Group by model
-            stats = {}
-            for row in rows:
-                model_name = row['model']
-                if model_name not in stats:
-                    stats[model_name] = []
-                stats[model_name].append(dict(row))
-            
-            return stats
-    
-    def get_conversations(self, experiment_id: str, 
-                         status: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get conversations for an experiment.
-        
-        Args:
-            experiment_id: Experiment identifier
-            status: Optional status filter
-            
-        Returns:
-            List of conversation records
-        """
-        with self._get_connection() as conn:
-            if status:
-                query = """
-                    SELECT * FROM conversations 
-                    WHERE experiment_id = ? AND status = ?
-                    ORDER BY created_at
-                """
-                rows = conn.execute(query, (experiment_id, status)).fetchall()
-            else:
-                query = """
-                    SELECT * FROM conversations 
-                    WHERE experiment_id = ?
-                    ORDER BY created_at
-                """
-                rows = conn.execute(query, (experiment_id,)).fetchall()
+                rows = conn.execute(
+                    "SELECT * FROM experiments ORDER BY created_at DESC"
+                ).fetchall()
             
             return [dict(row) for row in rows]
     
-    def list_experiments(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-        """List experiments with summary information.
-        
-        Args:
-            limit: Maximum number of experiments to return
-            offset: Number of experiments to skip
-            
-        Returns:
-            List of experiment dictionaries with summary info
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT 
-                    e.experiment_id,
-                    e.name,
-                    e.status,
-                    e.created_at,
-                    e.started_at,
-                    e.completed_at,
-                    e.total_conversations,
-                    e.completed_conversations,
-                    e.failed_conversations,
-                    json_extract(e.config, '$.agent_a_model') as agent_a_model,
-                    json_extract(e.config, '$.agent_b_model') as agent_b_model,
-                    json_extract(e.config, '$.max_turns') as max_turns,
-                    json_extract(e.config, '$.repetitions') as repetitions
-                FROM experiments e
-                ORDER BY e.created_at DESC
-                LIMIT ? OFFSET ?
-            """
-            rows = conn.execute(query, (limit, offset)).fetchall()
-            
-            experiments = []
-            for row in rows:
-                exp = dict(row)
-                # Parse JSON config for convenience
-                if 'config' in exp and exp['config']:
-                    try:
-                        exp['config'] = json.loads(exp['config'])
-                    except:
-                        pass
-                experiments.append(exp)
-                
-            return experiments
-    
-    def get_experiment_by_name(self, name: str) -> Optional[Dict[str, Any]]:
-        """Get experiment by name.
-        
-        Args:
-            name: Experiment name to search for
-            
-        Returns:
-            Experiment dictionary or None if not found
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT 
-                    e.experiment_id,
-                    e.name,
-                    e.status,
-                    e.created_at,
-                    e.started_at,
-                    e.completed_at,
-                    e.total_conversations,
-                    e.completed_conversations,
-                    e.failed_conversations,
-                    e.config,
-                    json_extract(e.config, '$.agent_a_model') as agent_a_model,
-                    json_extract(e.config, '$.agent_b_model') as agent_b_model,
-                    json_extract(e.config, '$.dashboard_attached') as dashboard_attached
-                FROM experiments e
-                WHERE e.name = ?
-                ORDER BY e.created_at DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (name,)).fetchone()
-            
-            if row:
-                exp = dict(row)
-                # Parse JSON config
-                if 'config' in exp and exp['config']:
-                    try:
-                        exp['config'] = json.loads(exp['config'])
-                        # Extract dashboard_attached from config
-                        exp['dashboard_attached'] = exp['config'].get('dashboard_attached', False)
-                    except:
-                        exp['dashboard_attached'] = False
-                return exp
-            return None
-    
-    def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """Get experiment details by ID.
+    def get_experiment_metrics(self, experiment_id: str) -> Dict[str, Any]:
+        """Get aggregated metrics for an experiment.
         
         Args:
             experiment_id: Experiment identifier
             
         Returns:
-            Experiment dictionary or None if not found
+            Dictionary of aggregated metrics
         """
         with self._get_connection() as conn:
-            query = """
+            # Get convergence distribution
+            conv_query = """
                 SELECT 
-                    e.*,
-                    json_extract(e.config, '$.agent_a_model') as agent_a_model,
-                    json_extract(e.config, '$.agent_b_model') as agent_b_model
-                FROM experiments e
-                WHERE e.experiment_id = ?
-            """
-            row = conn.execute(query, (experiment_id,)).fetchone()
-            
-            if row:
-                exp = dict(row)
-                # Parse JSON config
-                if 'config' in exp and exp['config']:
-                    try:
-                        exp['config'] = json.loads(exp['config'])
-                    except:
-                        pass
-                return exp
-            return None
-    
-    def update_dashboard_attachment(self, experiment_id: str, attached: bool) -> None:
-        """Update dashboard attachment status.
-        
-        Args:
-            experiment_id: Experiment ID
-            attached: Whether dashboard is attached
-        """
-        with self._get_connection() as conn:
-            # First get current config
-            config_json = conn.execute(
-                "SELECT config FROM experiments WHERE experiment_id = ?",
-                (experiment_id,)
-            ).fetchone()
-            
-            if config_json and config_json['config']:
-                try:
-                    config = json.loads(config_json['config'])
-                except:
-                    config = {}
-            else:
-                config = {}
-            
-            # Update dashboard_attached in config
-            config['dashboard_attached'] = attached
-            
-            # Save back to database
-            conn.execute("""
-                UPDATE experiments 
-                SET config = ?
-                WHERE experiment_id = ?
-            """, (json.dumps(config), experiment_id))
-            conn.commit()
-    
-    def get_turn_metrics(self, conversation_id: str) -> List[Dict[str, Any]]:
-        """Get turn-level metrics for a conversation.
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            List of turn metric dictionaries
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT * FROM turn_metrics 
-                WHERE conversation_id = ?
-                ORDER BY turn_number
-            """
-            rows = conn.execute(query, (conversation_id,)).fetchall()
-            return [dict(row) for row in rows]
-    
-    def get_message_metrics(self, conversation_id: str, 
-                          speaker: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get message-level metrics for a conversation.
-        
-        Args:
-            conversation_id: Conversation identifier
-            speaker: Optional filter by speaker
-            
-        Returns:
-            List of message metric dictionaries
-        """
-        with self._get_connection() as conn:
-            if speaker:
-                query = """
-                    SELECT * FROM message_metrics 
-                    WHERE conversation_id = ? AND speaker = ?
-                    ORDER BY turn_number, message_index
-                """
-                rows = conn.execute(query, (conversation_id, speaker)).fetchall()
-            else:
-                query = """
-                    SELECT * FROM message_metrics 
-                    WHERE conversation_id = ?
-                    ORDER BY turn_number, message_index
-                """
-                rows = conn.execute(query, (conversation_id,)).fetchall()
-            return [dict(row) for row in rows]
-    
-    def get_high_convergence_turns(self, experiment_id: str, 
-                                 threshold: float = 0.8) -> List[Dict[str, Any]]:
-        """Get turns with high convergence scores.
-        
-        Args:
-            experiment_id: Experiment identifier
-            threshold: Minimum convergence score
-            
-        Returns:
-            List of high convergence turn records
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT 
-                    t.conversation_id,
-                    t.turn_number,
-                    t.convergence_score,
-                    t.vocabulary_overlap,
-                    t.structural_similarity,
-                    m1.message as agent_a_message,
-                    m2.message as agent_b_message
-                FROM turn_metrics t
-                JOIN message_metrics m1 ON t.conversation_id = m1.conversation_id 
-                    AND t.turn_number = m1.turn_number AND m1.speaker = 'agent_a'
-                JOIN message_metrics m2 ON t.conversation_id = m2.conversation_id 
-                    AND t.turn_number = m2.turn_number AND m2.speaker = 'agent_b'
-                WHERE t.conversation_id IN (
-                    SELECT conversation_id FROM conversations 
-                    WHERE experiment_id = ?
-                ) AND t.convergence_score >= ?
-                ORDER BY t.convergence_score DESC
-            """
-            rows = conn.execute(query, (experiment_id, threshold)).fetchall()
-            return [dict(row) for row in rows]
-    
-    def get_vocabulary_evolution(self, conversation_id: str) -> Dict[str, Any]:
-        """Get vocabulary evolution metrics over time.
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            Dictionary with vocabulary evolution data
-        """
-        with self._get_connection() as conn:
-            # Get vocabulary size over turns
-            query = """
-                SELECT 
-                    turn_number,
-                    SUM(vocabulary_size) as combined_vocabulary,
-                    AVG(type_token_ratio) as avg_ttr,
-                    AVG(lexical_diversity_index) as avg_ldi
-                FROM message_metrics
-                WHERE conversation_id = ?
-                GROUP BY turn_number
-                ORDER BY turn_number
-            """
-            vocab_rows = conn.execute(query, (conversation_id,)).fetchall()
-            
-            # Get new words introduced per turn
-            query = """
-                SELECT 
-                    turn_number,
-                    speaker,
-                    COUNT(DISTINCT word) as new_words_introduced
-                FROM word_frequencies
-                WHERE conversation_id = ? AND is_new_word = 1
-                GROUP BY turn_number, speaker
-                ORDER BY turn_number, speaker
-            """
-            new_words_rows = conn.execute(query, (conversation_id,)).fetchall()
-            
-            return {
-                'vocabulary_by_turn': [dict(row) for row in vocab_rows],
-                'new_words_by_turn': [dict(row) for row in new_words_rows]
-            }
-    
-    def get_active_conversations(self, experiment_id: str) -> List[Dict[str, Any]]:
-        """Get active conversations for dashboard display.
-        
-        Args:
-            experiment_id: Experiment identifier
-            
-        Returns:
-            List of active conversation dictionaries with metrics
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT 
-                    c.conversation_id,
-                    c.status,
-                    c.agent_a_model,
-                    c.agent_b_model,
-                    c.total_turns as turn_number,
-                    json_extract(c.config, '$.max_turns') as max_turns,
-                    c.started_at,
-                    tm.vocabulary_overlap,
-                    tm.convergence_score,
-                    CASE 
-                        WHEN (julianday('now') - julianday(mm.timestamp)) * 86400 < 60 
-                        THEN 0
-                        ELSE 1
-                    END as rate_limited,
-                    (julianday('now') - julianday(mm.timestamp)) * 86400 as rate_limit_wait
-                FROM conversations c
-                LEFT JOIN turn_metrics tm ON c.conversation_id = tm.conversation_id
-                    AND tm.turn_number = (
-                        SELECT MAX(turn_number) FROM turn_metrics 
-                        WHERE conversation_id = c.conversation_id
-                    )
-                LEFT JOIN message_metrics mm ON c.conversation_id = mm.conversation_id
-                    AND mm.turn_number = (
-                        SELECT MAX(turn_number) FROM message_metrics
-                        WHERE conversation_id = c.conversation_id
-                    )
-                WHERE c.experiment_id = ? 
-                    AND c.status IN ('running', 'created')
-                ORDER BY c.started_at DESC
-            """
-            rows = conn.execute(query, (experiment_id,)).fetchall()
-            return [dict(row) for row in rows]
-    
-    def get_active_conversation_count(self, experiment_id: str) -> int:
-        """Get count of active conversations.
-        
-        Args:
-            experiment_id: Experiment identifier
-            
-        Returns:
-            Number of active conversations
-        """
-        with self._get_connection() as conn:
-            result = conn.execute("""
-                SELECT COUNT(*) as count
-                FROM conversations 
-                WHERE experiment_id = ? AND status = 'running'
-            """, (experiment_id,)).fetchone()
-            return result['count'] if result else 0
-    
-    def get_latest_turn_metrics(self, conversation_id: str) -> Optional[Dict[str, Any]]:
-        """Get most recent turn metrics for a conversation.
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            Latest turn metrics or None
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT 
-                    tm.*,
-                    AVG(mm.message_length) as avg_message_length
-                FROM turn_metrics tm
-                LEFT JOIN message_metrics mm ON tm.conversation_id = mm.conversation_id
-                    AND tm.turn_number = mm.turn_number
-                WHERE tm.conversation_id = ?
-                GROUP BY tm.conversation_id, tm.turn_number
-                ORDER BY tm.turn_number DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (conversation_id,)).fetchone()
-            return dict(row) if row else None
-    
-    def get_last_message(self, conversation_id: str) -> Optional[str]:
-        """Get the last message from a conversation.
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            Last message text or None
-        """
-        with self._get_connection() as conn:
-            query = """
-                SELECT message 
-                FROM message_metrics
-                WHERE conversation_id = ?
-                ORDER BY turn_number DESC, message_index DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (conversation_id,)).fetchone()
-            return row['message'] if row else None
-    
-    def calculate_experiment_statistics(self, experiment_id: str) -> Dict[str, Any]:
-        """Calculate comprehensive statistics for experiment dashboard.
-        
-        Args:
-            experiment_id: Experiment identifier
-            
-        Returns:
-            Dictionary with various statistical distributions
-        """
-        with self._get_connection() as conn:
-            # Vocabulary overlap distribution
-            overlap_query = """
-                SELECT 
-                    CASE
-                        WHEN vocabulary_overlap < 0.2 THEN '0_20'
-                        WHEN vocabulary_overlap < 0.4 THEN '20_40'
-                        WHEN vocabulary_overlap < 0.6 THEN '40_60'
-                        WHEN vocabulary_overlap < 0.8 THEN '60_80'
-                        ELSE '80_100'
-                    END as bucket,
-                    COUNT(*) as count
+                    MIN(convergence_score) as min_conv,
+                    MAX(convergence_score) as max_conv,
+                    AVG(convergence_score) as avg_conv,
+                    COUNT(DISTINCT conversation_id) as conv_count
                 FROM turn_metrics
                 WHERE conversation_id IN (
                     SELECT conversation_id FROM conversations 
                     WHERE experiment_id = ?
                 )
-                GROUP BY bucket
+            """
+            conv_row = conn.execute(conv_query, (experiment_id,)).fetchone()
+            
+            # Get vocabulary overlap distribution
+            overlap_query = """
+                SELECT 
+                    turn_number,
+                    AVG(vocabulary_overlap) as avg_overlap
+                FROM turn_metrics
+                WHERE conversation_id IN (
+                    SELECT conversation_id FROM conversations 
+                    WHERE experiment_id = ?
+                )
+                GROUP BY turn_number
+                ORDER BY turn_number
             """
             overlap_rows = conn.execute(overlap_query, (experiment_id,)).fetchall()
-            overlap_dist = {row['bucket']: row['count'] for row in overlap_rows}
+            overlap_dist = {row['turn_number']: row['avg_overlap'] 
+                          for row in overlap_rows}
             
-            # Message length distribution
+            # Get message length trends
             length_query = """
                 SELECT 
-                    CASE
-                        WHEN message_length < 50 THEN 'under_50'
-                        WHEN message_length < 100 THEN '50_100'
-                        WHEN message_length < 150 THEN '100_150'
-                        ELSE 'over_150'
-                    END as bucket,
-                    COUNT(*) as count
+                    turn_number,
+                    AVG(message_length) as avg_length
                 FROM message_metrics
                 WHERE conversation_id IN (
                     SELECT conversation_id FROM conversations 
                     WHERE experiment_id = ?
                 )
-                GROUP BY bucket
+                GROUP BY turn_number
+                ORDER BY turn_number
             """
             length_rows = conn.execute(length_query, (experiment_id,)).fetchall()
-            length_dist = {row['bucket']: row['count'] for row in length_rows}
+            length_dist = {row['turn_number']: row['avg_length'] 
+                         for row in length_rows}
             
-            # Word frequency evolution
-            early_words_query = """
-                SELECT word, SUM(frequency) as total_freq
+            # Get most common words across turns
+            word_query = """
+                SELECT 
+                    word,
+                    SUM(frequency) as total_freq,
+                    COUNT(DISTINCT turn_number) as turn_count
                 FROM word_frequencies
                 WHERE conversation_id IN (
                     SELECT conversation_id FROM conversations 
                     WHERE experiment_id = ?
-                ) AND turn_number BETWEEN 0 AND 9
+                )
                 GROUP BY word
                 ORDER BY total_freq DESC
-                LIMIT 10
+                LIMIT 20
             """
-            early_rows = conn.execute(early_words_query, (experiment_id,)).fetchall()
-            early_words = [row['word'] for row in early_rows]
+            word_rows = conn.execute(word_query, (experiment_id,)).fetchall()
             
+            # Get words that emerge in later turns
             late_words_query = """
-                SELECT word, SUM(frequency) as total_freq
+                SELECT word, MIN(turn_number) as first_turn
                 FROM word_frequencies
                 WHERE conversation_id IN (
                     SELECT conversation_id FROM conversations 
                     WHERE experiment_id = ?
-                ) AND turn_number BETWEEN 40 AND 49
+                )
                 GROUP BY word
-                ORDER BY total_freq DESC
+                HAVING first_turn > 5
+                ORDER BY first_turn
                 LIMIT 10
             """
             late_rows = conn.execute(late_words_query, (experiment_id,)).fetchall()
-            late_words = [row['word'] for row in late_rows]
+            late_words = [(row['word'], row['first_turn']) for row in late_rows]
             
-            # Word frequency changes
-            freq_changes_query = """
-                WITH early_freq AS (
-                    SELECT word, SUM(frequency) as early_count
-                    FROM word_frequencies
-                    WHERE conversation_id IN (
-                        SELECT conversation_id FROM conversations 
-                        WHERE experiment_id = ?
-                    ) AND turn_number < 10
-                    GROUP BY word
-                ),
-                late_freq AS (
-                    SELECT word, SUM(frequency) as late_count
-                    FROM word_frequencies
-                    WHERE conversation_id IN (
-                        SELECT conversation_id FROM conversations 
-                        WHERE experiment_id = ?
-                    ) AND turn_number >= 40
-                    GROUP BY word
-                )
-                SELECT 
-                    COALESCE(e.word, l.word) as word,
-                    COALESCE(e.early_count, 0) as start_count,
-                    COALESCE(l.late_count, 0) as end_count,
-                    ABS(COALESCE(l.late_count, 0) - COALESCE(e.early_count, 0)) as change
-                FROM early_freq e
-                FULL OUTER JOIN late_freq l ON e.word = l.word
-                ORDER BY change DESC
-                LIMIT 10
-            """
-            # SQLite doesn't support FULL OUTER JOIN, so we use UNION
-            freq_changes_query = """
-                SELECT word, early_count as start_count, late_count as end_count
-                FROM (
-                    SELECT 
-                        word,
-                        SUM(CASE WHEN turn_number < 10 THEN frequency ELSE 0 END) as early_count,
-                        SUM(CASE WHEN turn_number >= 40 THEN frequency ELSE 0 END) as late_count
-                    FROM word_frequencies
-                    WHERE conversation_id IN (
-                        SELECT conversation_id FROM conversations 
-                        WHERE experiment_id = ?
-                    )
-                    GROUP BY word
-                    HAVING (late_count - early_count) != 0
-                    ORDER BY ABS(late_count - early_count) DESC
-                    LIMIT 10
-                )
-            """
-            change_rows = conn.execute(freq_changes_query, (experiment_id,)).fetchall()
-            top_changes = [(row['word'], (row['start_count'], row['end_count'])) 
-                          for row in change_rows]
-            
-            # Temperature effects if applicable
+            # Get temperature effects if varied
             temp_query = """
                 SELECT 
-                    json_extract(c.config, '$.temperature_a') as temperature,
+                    c.config->>'$.temperature_a' as temperature,
                     AVG(tm.vocabulary_overlap) as avg_overlap
                 FROM conversations c
                 JOIN turn_metrics tm ON c.conversation_id = tm.conversation_id
@@ -1230,20 +544,60 @@ class ExperimentStore:
                           for row in temp_rows} if temp_rows else None
             
             return {
-                'overlap_distribution': overlap_dist,
-                'length_distribution': length_dist,
-                'word_frequency_changes': {
-                    'early_words': early_words,
-                    'late_words': late_words,
-                    'top_changes': top_changes
+                'convergence_stats': {
+                    'min': conv_row['min_conv'],
+                    'max': conv_row['max_conv'],
+                    'avg': conv_row['avg_conv'],
+                    'conversation_count': conv_row['conv_count']
                 },
+                'overlap_by_turn': overlap_dist,
+                'length_by_turn': length_dist,
+                'top_words': [(row['word'], row['total_freq']) for row in word_rows],
+                'emergent_words': late_words,
                 'temperature_effects': temp_effects
             }
     
-    def stop_experiment(self, experiment_id: str):
-        """Stop an experiment by updating its status.
+    def get_conversation_history(self, conversation_id: str) -> List[Dict[str, Any]]:
+        """Get full conversation history with metrics.
         
         Args:
-            experiment_id: Experiment identifier
+            conversation_id: Conversation identifier
+            
+        Returns:
+            List of turns with messages and metrics
         """
-        self.update_experiment_status(experiment_id, 'completed')
+        with self._get_connection() as conn:
+            # Get turn metrics
+            turn_query = """
+                SELECT * FROM turn_metrics
+                WHERE conversation_id = ?
+                ORDER BY turn_number
+            """
+            turn_rows = conn.execute(turn_query, (conversation_id,)).fetchall()
+            
+            # Get message metrics
+            msg_query = """
+                SELECT * FROM message_metrics
+                WHERE conversation_id = ?
+                ORDER BY turn_number, agent_id
+            """
+            msg_rows = conn.execute(msg_query, (conversation_id,)).fetchall()
+            
+            # Organize by turn
+            turns = []
+            for turn_row in turn_rows:
+                turn_num = turn_row['turn_number']
+                
+                # Get messages for this turn
+                turn_messages = [
+                    dict(row) for row in msg_rows 
+                    if row['turn_number'] == turn_num
+                ]
+                
+                turns.append({
+                    'turn_number': turn_num,
+                    'metrics': dict(turn_row),
+                    'messages': turn_messages
+                })
+            
+            return turns

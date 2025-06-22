@@ -14,7 +14,7 @@ __all__ = [
     "GoogleProvider",
     "xAIProvider",
     "LocalProvider",
-    "ProviderContextManager",
+    "SilentProvider",
     "GlobalTokenTracker",
     "get_token_tracker",
 ]

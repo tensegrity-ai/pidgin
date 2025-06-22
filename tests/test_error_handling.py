@@ -3,7 +3,7 @@
 
 import asyncio
 import os
-from pidgin.cli import cli
+from pidgin.cli.helpers import cli
 
 # Force an API error by using an invalid API key
 os.environ['ANTHROPIC_API_KEY'] = 'invalid-key-for-testing'
