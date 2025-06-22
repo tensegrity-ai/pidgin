@@ -8,4 +8,4 @@ PIDGIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CURRENT_DIR="$(pwd)"
 
 # Change to pidgin directory, activate environment, then go back and run
-cd "$PIDGIN_DIR" && poetry run bash -c "cd '$CURRENT_DIR' && python -m pidgin.cli $*"
+cd "$PIDGIN_DIR" && poetry run bash -c "cd '$CURRENT_DIR' && python -m pidgin $*"

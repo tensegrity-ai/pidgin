@@ -54,7 +54,7 @@ def experiment():
 @click.option('--repetitions', '-r', default=10, help='Number of conversations to run')
 @click.option('--turns', '-t', default=DEFAULT_TURNS, help=f'Max turns per conversation (default: {DEFAULT_TURNS})')
 @click.option('--prompt', '-p', help='Initial prompt for conversations')
-@click.option('--dimension', '-d', multiple=True, help='Conversation dimensions')
+@click.option('--dimension', '-d', help='Conversation dimensions')
 @click.option('--temperature', type=float, help='Temperature for both agents')
 @click.option('--temperature-a', type=float, help='Temperature for agent A only')
 @click.option('--temperature-b', type=float, help='Temperature for agent B only')
@@ -108,7 +108,7 @@ def start(agent_a, agent_b, repetitions, turns, prompt, dimension,
         temperature_a=temp_a,
         temperature_b=temp_b,
         custom_prompt=initial_prompt if prompt else None,
-        dimensions=list(dimension) if dimension else None,
+        dimensions=[dimension] if dimension else None,
         parallel_count=parallel,
         convergence_threshold=convergence_threshold,
         convergence_action=convergence_action,

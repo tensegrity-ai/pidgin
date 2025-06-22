@@ -15,7 +15,7 @@ from ..providers import AnthropicProvider, OpenAIProvider, GoogleProvider, xAIPr
 from ..providers.local import LocalProvider
 from ..providers.silent import SilentProvider
 from ..config.models import get_model_config, MODELS
-from ..config.dimensional_prompts import DimensionalPromptGenerator
+from ..config.dimensional_prompts import DIMENSIONS
 from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
 
 console = Console()
@@ -36,7 +36,19 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
         raise ValueError(f"Unknown model: {model_id}")
     
     # Use provided temperature or model default
-    temp = temperature if temperature is not None else model_config.temperature
+    temp = temperature if temperature is not None else None
+    
+    # Validate temperature ranges by provider
+    if temp is not None:
+        if model_config.provider == "anthropic" and temp > 1.0:
+            console.print(f"[{NORD_YELLOW}]Warning: Anthropic temperature capped at 1.0 (was {temp})[/{NORD_YELLOW}]")
+            temp = 1.0
+        elif model_config.provider in ["openai", "google"] and temp > 2.0:
+            console.print(f"[{NORD_YELLOW}]Warning: {model_config.provider.title()} temperature capped at 2.0 (was {temp})[/{NORD_YELLOW}]")
+            temp = 2.0
+        elif temp < 0.0:
+            console.print(f"[{NORD_YELLOW}]Warning: Temperature must be >= 0.0 (was {temp})[/{NORD_YELLOW}]")
+            temp = 0.0
     
     # Create appropriate provider
     if model_config.provider == "openai":
@@ -126,7 +138,7 @@ def validate_model_id(model_id: str) -> Tuple[str, str]:
     # Check if it's a known model
     config = get_model_config(model_id)
     if config:
-        return model_id, config.display_name
+        return model_id, config.shortname
     
     # Try provider:model format
     if ':' in model_id:

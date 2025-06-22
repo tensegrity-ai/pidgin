@@ -29,7 +29,6 @@ from .constants import (
 from ..core import Conductor, Agent, Conversation
 from ..io import OutputManager
 from ..config.models import MODELS
-from ..config.dimensions import DIMENSIONS
 
 console = Console()
 
@@ -350,7 +349,7 @@ def models(provider, format):
             emoji = MODEL_EMOJIS.get(model_id, '🤖')
             table.add_row(
                 f"{emoji} {model_id}",
-                config.display_name,
+                config.shortname,
                 config.provider,
                 str(config.temperature)
             )

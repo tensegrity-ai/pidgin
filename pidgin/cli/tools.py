@@ -4,7 +4,7 @@
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import click
 from rich.console import Console
@@ -21,8 +21,73 @@ from .constants import (
     NORD_CYAN, NORD_GREEN, NORD_YELLOW, NORD_RED, NORD_BLUE,
     TRANSCRIPT_PATTERN, EVENTS_PATTERN, STATE_PATTERN
 )
-from ..analysis import TranscriptAnalyzer, ConvergenceCalculator
+from ..analysis import ConvergenceCalculator
 from ..io.transcripts import TranscriptManager
+
+
+class SimpleTranscriptAnalyzer:
+    """Simple analyzer for conversation transcripts."""
+    
+    def analyze_conversation(self, conv_dir: Path) -> Dict[str, Any]:
+        """Analyze a conversation directory."""
+        result = {
+            'total_turns': 0,
+            'total_messages': 0,
+            'total_words': 0,
+            'unique_words': 0,
+            'avg_message_length': 0,
+            'convergence_scores': [],
+            'agent_a': 'Unknown',
+            'agent_b': 'Unknown'
+        }
+        
+        # Load state.json if exists
+        state_file = conv_dir / "state.json"
+        if state_file.exists():
+            with open(state_file) as f:
+                state = json.load(f)
+                result['total_turns'] = state.get('total_turns', 0)
+                if 'agents' in state and len(state['agents']) >= 2:
+                    result['agent_a'] = state['agents'][0].get('model', 'Unknown')
+                    result['agent_b'] = state['agents'][1].get('model', 'Unknown')
+        
+        # Analyze transcript
+        transcript_file = conv_dir / "transcript.md"
+        if transcript_file.exists():
+            with open(transcript_file) as f:
+                content = f.read()
+                
+            # Count words and messages
+            words = content.split()
+            result['total_words'] = len(words)
+            result['unique_words'] = len(set(word.lower() for word in words))
+            
+            # Count messages (lines starting with **)
+            messages = [line for line in content.split('\n') if line.startswith('**')]
+            result['total_messages'] = len(messages)
+            
+            if result['total_messages'] > 0:
+                result['avg_message_length'] = result['total_words'] / result['total_messages']
+        
+        # Try to load convergence scores from events
+        events_file = conv_dir / "events.jsonl"
+        if events_file.exists():
+            calculator = ConvergenceCalculator()
+            messages = []
+            
+            with open(events_file) as f:
+                for line in f:
+                    try:
+                        event = json.loads(line)
+                        if event.get('type') == 'MessageCompleteEvent':
+                            messages.append(event)
+                            if len(messages) >= 2:
+                                score = calculator.calculate(messages[-2:])
+                                result['convergence_scores'].append(score)
+                    except:
+                        continue
+        
+        return result
 
 console = Console()
 
@@ -424,7 +489,7 @@ def _generate_report(path: str, depth: str) -> str:
 
 def _generate_conversation_report(conv_dir: Path, depth: str) -> str:
     """Generate report for a single conversation."""
-    analyzer = TranscriptAnalyzer()
+    analyzer = SimpleTranscriptAnalyzer()
     
     # Load conversation data
     transcript_file = conv_dir / TRANSCRIPT_PATTERN
@@ -491,7 +556,7 @@ def _generate_batch_report(directory: Path, depth: str) -> str:
     all_convergence = []
     
     for conv_dir in conversations:
-        analyzer = TranscriptAnalyzer()
+        analyzer = SimpleTranscriptAnalyzer()
         analysis = analyzer.analyze_conversation(conv_dir)
         
         total_turns += analysis.get('total_turns', 0)
@@ -582,7 +647,7 @@ def _load_conversation_data(conv_path: str) -> Optional[dict]:
     if not conv_dir.exists() or not conv_dir.is_dir():
         return None
     
-    analyzer = TranscriptAnalyzer()
+    analyzer = SimpleTranscriptAnalyzer()
     
     try:
         analysis = analyzer.analyze_conversation(conv_dir)
