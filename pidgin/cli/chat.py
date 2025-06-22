@@ -7,7 +7,7 @@ import asyncio
 from typing import Optional, List
 from pathlib import Path
 
-import click
+import rich_click as click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -44,13 +44,13 @@ console = Console()
               default=DEFAULT_TURNS, 
               help=f'Maximum number of conversation turns (default: {DEFAULT_TURNS})')
 @click.option('--temperature', 
-              type=float, 
+              type=click.FloatRange(0.0, 2.0), 
               help='Temperature for both agents (0.0-2.0)')
-@click.option('--temperature-a', 
-              type=float, 
+@click.option('--temp-a', 
+              type=click.FloatRange(0.0, 2.0), 
               help='Temperature for agent A only')
-@click.option('--temperature-b', 
-              type=float, 
+@click.option('--temp-b', 
+              type=click.FloatRange(0.0, 2.0), 
               help='Temperature for agent B only')
 @click.option('--output', '-o', 
               help='Custom output directory')
@@ -68,29 +68,58 @@ console = Console()
               type=click.Choice(['a', 'b', 'random']), 
               default='a',
               help='Which agent speaks first')
+@click.option('--choose-names',
+              is_flag=True,
+              help='Let agents choose their own names')
+@click.option('-w', '--awareness',
+              type=click.Choice(['none', 'basic', 'firm', 'research']),
+              default='basic',
+              help='Awareness level for both agents')
+@click.option('--awareness-a',
+              type=click.Choice(['none', 'basic', 'firm', 'research']),
+              help='Awareness level for agent A only')
+@click.option('--awareness-b',
+              type=click.Choice(['none', 'basic', 'firm', 'research']),
+              help='Awareness level for agent B only')
+@click.option('--show-system-prompts',
+              is_flag=True,
+              help='Display system prompts at start')
 @click.option('--meditation', 
               is_flag=True, 
               help='Meditation mode: one agent faces silence')
-def chat(agent_a, agent_b, prompt, turns, temperature, temperature_a, 
-         temperature_b, output, dimension, convergence_threshold,
-         convergence_action, first_speaker, meditation):
-    """Start an AI-to-AI conversation.
-    
-    \b
-    EXAMPLES:
-        pidgin chat -a gpt-4 -b claude -t 10
-        pidgin chat -a gemini-1.5-pro -b gemini-1.5-pro -p "Discuss consciousness"
-        pidgin chat -a local:llama3.1 -b gpt-4 -d peers:creative
-        pidgin chat -a claude -b silent --meditation
-    
-    \b
-    DIMENSIONS:
-        Use -d to add conversation dimensions that shape the initial prompt:
-        - peers: Collaborative peer discussion
-        - debate: Adversarial debate format
-        - teaching: Educational dialogue
-        
-    Run 'pidgin models' to see all available models.
+def chat(agent_a, agent_b, prompt, turns, temperature, temp_a, 
+         temp_b, output, dimension, convergence_threshold,
+         convergence_action, first_speaker, choose_names, awareness,
+         awareness_a, awareness_b, show_system_prompts, meditation):
+    """Run a conversation between two AI agents.
+
+    This command starts a conversation that will run for the specified number of turns.
+    The conversation is saved to ./pidgin_output/ with full event logs and transcripts.
+
+    [bold]EXAMPLES:[/bold]
+
+    [#4c566a]Basic conversation (10 turns):[/#4c566a]
+        pidgin chat -a claude -b gpt
+
+    [#4c566a]Longer philosophical discussion:[/#4c566a]
+        pidgin chat -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
+
+    [#4c566a]Using dimensional prompts:[/#4c566a]
+        pidgin chat -a claude -b gpt -d peers:philosophy
+        pidgin chat -a gpt -b gemini -d debate:language:analytical
+
+    [#4c566a]Let agents name themselves:[/#4c566a]
+        pidgin chat -a claude -b gpt --choose-names
+
+    [#4c566a]High convergence monitoring:[/#4c566a]
+        pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
+
+    [#4c566a]Different awareness levels:[/#4c566a]
+        pidgin chat -a claude -b gpt --awareness research
+        pidgin chat -a claude -b gpt --awareness-a firm --awareness-b none
+
+    [#4c566a]Meditation mode (one agent contemplates in silence):[/#4c566a]
+        pidgin chat -a claude --meditation
     """
     # Handle meditation mode
     if meditation:
@@ -290,9 +319,10 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
               default='table',
               help='Output format')
 def models(provider, format):
-    """List available AI models.
-    
-    Shows all configured models with their providers and capabilities.
+    """Display available AI models organized by provider.
+
+    Shows all supported models with their aliases, context windows,
+    and key characteristics.
     """
     # Filter models by provider
     models_to_show = {}
@@ -351,7 +381,6 @@ def models(provider, format):
                 f"{emoji} {model_id}",
                 config.shortname,
                 config.provider,
-                str(config.temperature)
             )
     
     console.print(table)

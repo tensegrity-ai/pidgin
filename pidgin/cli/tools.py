@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
-import click
+import rich_click as click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel

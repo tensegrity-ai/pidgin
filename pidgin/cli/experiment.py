@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-import click
+import rich_click as click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -34,69 +34,95 @@ from ..experiments import ExperimentManager, ExperimentConfig, ExperimentStore
 
 console = Console()
 
-# Store original working directory
-ORIGINAL_CWD = os.getcwd()
+# Import ORIGINAL_CWD from main module
+from . import ORIGINAL_CWD
 
 
 @click.group()
 def experiment():
-    """Manage batch conversation experiments.
+    """Run and manage experimental AI conversation sessions.
+
+    Uses a screen-like session model: start experiments with dashboard
+    and detach/reattach as needed. Experiments run as daemons in the 
+    background for reliability.
+
+    [bold]EXAMPLES:[/bold]
     
-    Run multiple conversations in parallel with different configurations
-    to study emergent patterns and behaviors.
+    [#4c566a]Start experiment (with dashboard):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 20 --name "test"
+    
+    [#4c566a]Resume/reattach to experiment:[/#4c566a]
+        pidgin experiment resume test
+    
+    [#4c566a]List experiment sessions:[/#4c566a]
+        pidgin experiment list
+    
+    [#4c566a]Start in background (daemon):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 100 --name "bg" --daemon
     """
     pass
 
 
 @experiment.command()
-@click.option('--agent-a', '-a', required=True, help='First agent model')
-@click.option('--agent-b', '-b', required=True, help='Second agent model') 
-@click.option('--repetitions', '-r', default=10, help='Number of conversations to run')
-@click.option('--turns', '-t', default=DEFAULT_TURNS, help=f'Max turns per conversation (default: {DEFAULT_TURNS})')
-@click.option('--prompt', '-p', help='Initial prompt for conversations')
-@click.option('--dimension', '-d', help='Conversation dimensions')
-@click.option('--temperature', type=float, help='Temperature for both agents')
-@click.option('--temperature-a', type=float, help='Temperature for agent A only')
-@click.option('--temperature-b', type=float, help='Temperature for agent B only')
-@click.option('--name', '-n', help='Experiment name')
-@click.option('--parallel', type=int, default=DEFAULT_PARALLEL, help=f'Max parallel conversations (default: {DEFAULT_PARALLEL})')
-@click.option('--convergence-threshold', type=float, help='Convergence threshold (0.0-1.0)')
-@click.option('--convergence-action', type=click.Choice(['notify', 'pause', 'stop']), default='notify')
-@click.option('--first-speaker', type=click.Choice(['a', 'b', 'random']), default='a')
-@click.option('--dry-run', is_flag=True, help='Show configuration without running')
-def start(agent_a, agent_b, repetitions, turns, prompt, dimension,
-          temperature, temperature_a, temperature_b, name, parallel,
-          convergence_threshold, convergence_action, first_speaker, dry_run):
-    """Start a new experiment with multiple conversations.
-    
-    \b
-    EXAMPLES:
-        pidgin experiment start -a gpt-4 -b claude -r 10
-        pidgin experiment start -a gemini -b gemini -r 20 -t 30 -n "gemini-self-talk"
-        pidgin experiment start -a local:llama3.1 -b gpt-4 -r 5 --parallel 2
-    
-    The experiment runs in the background. Use 'pidgin experiment dashboard'
-    to monitor progress in real-time.
+@click.option("-a", "--agent-a", "model_a", required=True, help="First model")
+@click.option("-b", "--agent-b", "model_b", required=True, help="Second model")
+@click.option("-r", "--repetitions", default=10, help="Number of conversations to run")
+@click.option("-t", "--max-turns", default=50, help="Maximum turns per conversation")
+@click.option("-p", "--prompt", help="Custom prompt for conversations")
+@click.option("-d", "--dimensions", help="Dimensional prompt (e.g., peers:philosophy)")
+@click.option("--name", required=True, help="Experiment session name")
+@click.option("--temperature", type=click.FloatRange(0.0, 2.0), help="Temperature for both models")
+@click.option("--temp-a", type=click.FloatRange(0.0, 2.0), help="Temperature for model A only")
+@click.option("--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for model B only")
+@click.option("--awareness", type=click.Choice(['none', 'basic', 'firm', 'research']), default='basic', help="Awareness level for both agents")
+@click.option("--awareness-a", type=click.Choice(['none', 'basic', 'firm', 'research']), help="Awareness level for agent A only")
+@click.option("--awareness-b", type=click.Choice(['none', 'basic', 'firm', 'research']), help="Awareness level for agent B only")
+@click.option("--convergence-threshold", type=click.FloatRange(0.0, 1.0), help="Stop at convergence threshold")
+@click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
+@click.option("--max-parallel", type=int, default=1, help="Max parallel conversations (default: 1, sequential)")
+@click.option("--daemon", is_flag=True, help="Start in background without dashboard")
+@click.option("--debug", is_flag=True, help="Run in debug mode (no daemonization)")
+def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
+          temperature, temp_a, temp_b, awareness, awareness_a, awareness_b,
+          convergence_threshold, choose_names, max_parallel, daemon, debug):
+    """Start a new experiment session.
+
+    By default, runs conversations sequentially (one at a time) for reliability.
+    Sequential execution avoids rate limits (API models) and memory issues (local models).
+
+    [bold]EXAMPLES:[/bold]
+
+    [#4c566a]Sequential execution (default and recommended):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 20 --name "test"
+
+    [#4c566a]Background execution:[/#4c566a] 
+        pidgin experiment start -a opus -b gpt-4 -r 100 --name "prod" --daemon
+
+    [#4c566a]Parallel execution (use with caution):[/#4c566a]
+        pidgin experiment start -a claude -b gpt -r 10 --name "parallel" --max-parallel 3
+
+    [bold]WARNING:[/bold] Parallel execution can cause rate limits or memory issues.
+    Most users should stick with sequential execution.
     """
     # Validate models
     try:
-        agent_a_id, agent_a_name = validate_model_id(agent_a)
-        agent_b_id, agent_b_name = validate_model_id(agent_b)
+        agent_a_id, agent_a_name = validate_model_id(model_a)
+        agent_b_id, agent_b_name = validate_model_id(model_b)
     except ValueError as e:
         console.print(f"[{NORD_RED}]Error: {e}[/{NORD_RED}]")
         return
     
     # Handle temperature settings
-    temp_a = temperature_a if temperature_a is not None else temperature
-    temp_b = temperature_b if temperature_b is not None else temperature
+    temp_a = temp_a if temp_a is not None else temperature
+    temp_b = temp_b if temp_b is not None else temperature
     
     # Build initial prompt
-    initial_prompt = build_initial_prompt(prompt, list(dimension))
+    initial_prompt = build_initial_prompt(prompt, dimensions.split(',') if dimensions else [])
     
     # Generate experiment name if not provided
     if not name:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        name = f"{agent_a}_{agent_b}_{timestamp}"
+        name = f"{model_a}_{model_b}_{timestamp}"
     
     # Create experiment configuration
     config = ExperimentConfig(
@@ -104,15 +130,18 @@ def start(agent_a, agent_b, repetitions, turns, prompt, dimension,
         agent_a_model=agent_a_id,
         agent_b_model=agent_b_id,
         repetitions=repetitions,
-        max_turns=turns,
+        max_turns=max_turns,
         temperature_a=temp_a,
         temperature_b=temp_b,
         custom_prompt=initial_prompt if prompt else None,
-        dimensions=[dimension] if dimension else None,
-        parallel_count=parallel,
+        dimensions=dimensions.split(',') if dimensions else None,
+        max_parallel=max_parallel,
         convergence_threshold=convergence_threshold,
-        convergence_action=convergence_action,
-        first_speaker=first_speaker
+        awareness=awareness,
+        awareness_a=awareness_a,
+        awareness_b=awareness_b,
+        convergence_threshold=convergence_threshold,
+        choose_names=choose_names
     )
     
     # Show configuration
@@ -120,8 +149,8 @@ def start(agent_a, agent_b, repetitions, turns, prompt, dimension,
     console.print(f"  Name: {name}")
     console.print(f"  Models: {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
     console.print(f"  Conversations: {repetitions}")
-    console.print(f"  Turns per conversation: {turns}")
-    console.print(f"  Parallel execution: {parallel}")
+    console.print(f"  Turns per conversation: {max_turns}")
+    console.print(f"  Parallel execution: {max_parallel}")
     
     if initial_prompt != "Hello":
         console.print(f"  Initial prompt: {initial_prompt[:50]}...")
@@ -137,107 +166,154 @@ def start(agent_a, agent_b, repetitions, turns, prompt, dimension,
     if convergence_threshold:
         console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
     
-    if dry_run:
-        console.print(f"\n[{NORD_YELLOW}]Dry run - no experiment will be started[/{NORD_YELLOW}]")
+    # Check if experiment already exists
+    storage = ExperimentStore()
+    existing = storage.get_experiment_by_name(name)
+    if existing:
+        console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
+        console.print(f"Use 'pidgin experiment resume {name}' to reattach")
         return
     
-    # Start the experiment
-    console.print(f"\n[{NORD_GREEN}]Starting experiment...[/{NORD_GREEN}]")
+    # Validate configuration
+    errors = config.validate()
+    if errors:
+        console.print(f"[#bf616a]Configuration errors:[/#bf616a]")
+        for error in errors:
+            console.print(f"  • {error}")
+        return
     
-    manager = ExperimentManager(base_dir=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments")
+    if debug:
+        # Debug mode - run directly without daemonization
+        console.print(f"[#ebcb8b]◆ Starting experiment '{name}' in DEBUG mode[/#ebcb8b]")
+        console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
+        console.print(f"\n[#bf616a]Running in foreground - press Ctrl+C to stop[/#bf616a]\n")
+        
+        # Run directly without daemon
+        from ..experiments.parallel_runner import ParallelExperimentRunner
+        
+        runner = ParallelExperimentRunner(storage)
+        
+        try:
+            # Create experiment and run it
+            exp_id = asyncio.run(runner.run_experiment(config))
+            console.print(f"\n[#a3be8c]✓ Experiment '{name}' completed[/#a3be8c]")
+        except KeyboardInterrupt:
+            console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
+        except Exception as e:
+            console.print(f"\n[#bf616a]✗ Experiment failed: {e}[/#bf616a]")
+            import traceback
+            traceback.print_exc()
+        return
+        
+    # Always start as daemon for non-debug mode
+    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    manager = ExperimentManager(base_dir=base_dir)
+    
+    console.print(f"[#8fbcbb]◆ Starting experiment '{name}'[/#8fbcbb]")
+    console.print(f"[#4c566a]  Models: {model_a} vs {model_b}[/#4c566a]")
+    console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
+    console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
     
     try:
+        # Use the original working directory captured at module import
         exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
         
-        console.print(f"\n[bold {NORD_GREEN}]✓ Experiment started successfully![/bold {NORD_GREEN}]")
-        console.print(f"  ID: {exp_id}")
-        console.print(f"  Name: {name}")
-        console.print(f"\n[{NORD_BLUE}]Monitor progress:[/{NORD_BLUE}]")
-        console.print(f"  pidgin experiment dashboard {exp_id}")
-        console.print(f"\n[{NORD_BLUE}]View logs:[/{NORD_BLUE}]")
-        console.print(f"  pidgin experiment logs {exp_id}")
-        
+        # For sequential experiments, auto-attach dashboard unless --daemon specified
+        if max_parallel == 1 and not daemon:
+            console.print(f"\n[#8fbcbb]◆ Attaching dashboard...[/#8fbcbb]")
+            console.print(f"[#4c566a]Press [D] to detach[/#4c566a]\n")
+            
+            # Give daemon a moment to start
+            import time
+            time.sleep(2)
+            
+            # Attach dashboard to running daemon
+            from ..dashboard.attach import attach_dashboard_to_experiment
+            
+            result = asyncio.run(attach_dashboard_to_experiment(exp_id, name))
+            
+            if result.get('detached'):
+                console.print(f"\n[#4c566a]Dashboard detached.[/#4c566a]")
+                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
+            else:
+                console.print(f"\n[#a3be8c]✓ Experiment completed[/#a3be8c]")
+        else:
+            # Parallel or explicit daemon mode
+            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
+            if max_parallel > 1:
+                console.print(f"[#4c566a]No dashboard available for parallel experiments[/#4c566a]")
+            console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
+            if max_parallel == 1:
+                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
+            
     except Exception as e:
-        console.print(f"\n[{NORD_RED}]Failed to start experiment: {e}[/{NORD_RED}]")
-        if "startup error" in str(e).lower():
-            console.print(f"[{NORD_YELLOW}]Check the logs for more details[/{NORD_YELLOW}]")
+        console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+        raise
 
 
 @experiment.command()
-@click.option('--status', '-s', 
-              type=click.Choice(['all', 'running', 'completed', 'failed']),
-              default='all',
-              help='Filter by status')
-@click.option('--limit', '-n', default=20, help='Number of experiments to show')
-def list(status, limit):
-    """List experiments with their status.
+@click.option("--all", is_flag=True, help="Show completed experiments too")
+def list(all):
+    """List experiment sessions (like screen -list).
     
-    Shows recent experiments with their configuration and progress.
+    Shows active experiment sessions with their status and progress.
+    Use --all to include completed experiments.
     """
-    storage = ExperimentStore(
-        db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
-    )
+    storage = ExperimentStore()
     
-    # Get experiments
-    experiments = storage.list_experiments(
-        status_filter=None if status == 'all' else status
-    )
+    experiments = storage.list_experiments(limit=50 if all else 20)
     
     if not experiments:
-        console.print(f"[{NORD_YELLOW}]No experiments found[/{NORD_YELLOW}]")
+        console.print("No experiment sessions found")
         return
     
     # Create table
-    table = Table(title=f"Experiments ({status})")
-    table.add_column("ID", style="cyan")
-    table.add_column("Name", style="white")
-    table.add_column("Models", style="yellow")
-    table.add_column("Status", style="green")
-    table.add_column("Progress", style="blue")
-    table.add_column("Started", style="magenta")
+    table = Table(title="Experiment Sessions")
+    table.add_column("Name", style="#88c0d0")
+    table.add_column("Status", style="#a3be8c")
+    table.add_column("Progress", justify="right")
+    table.add_column("Models", style="#d8dee9")
+    table.add_column("Started", style="#4c566a")
     
-    # Add experiments
-    for exp in experiments[:limit]:
-        exp_id = exp['experiment_id']
-        config = json.loads(exp['config'])
+    for exp in experiments:
+        # Skip completed/failed unless --all
+        if not all and exp['status'] in ['completed', 'failed']:
+            continue
+            
+        # Format status with attachment info
+        status = exp['status']
+        if exp['status'] == 'running' and exp.get('dashboard_attached'):
+            status = "running (attached)"
+        elif exp['status'] == 'running':
+            status = "running (detached)"
+            
+        # Format progress
+        total = exp.get('total_conversations', 0)
+        completed = exp.get('completed_conversations', 0)
+        progress = f"{completed}/{total}"
         
         # Format models
-        models = f"{config['agent_a_model']} ↔ {config['agent_b_model']}"
+        models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
         
-        # Format status with color
-        status_color = {
-            'running': NORD_GREEN,
-            'completed': NORD_BLUE,
-            'failed': NORD_RED,
-            'created': NORD_YELLOW
-        }.get(exp['status'], 'white')
-        status_text = f"[{status_color}]{exp['status']}[/{status_color}]"
+        # Format start time
+        if exp.get('created_at'):
+            start_time = datetime.fromisoformat(exp['created_at'])
+            started = start_time.strftime("%m/%d %H:%M")
+        else:
+            started = "unknown"
         
-        # Format progress
-        total = exp['total_conversations']
-        completed = exp['completed_conversations']
-        failed = exp['failed_conversations']
-        progress = f"{completed}/{total}"
-        if failed > 0:
-            progress += f" [{NORD_RED}]{failed} failed[/{NORD_RED}]"
-        
-        # Format time
-        created = datetime.fromisoformat(exp['created_at'])
-        time_str = created.strftime("%Y-%m-%d %H:%M")
-        
+        # Add row
         table.add_row(
-            exp_id,
             exp['name'],
-            models,
-            status_text,
+            status,
             progress,
-            time_str
+            models,
+            started
         )
     
     console.print(table)
-    
-    if len(experiments) > limit:
-        console.print(f"\n[{NORD_YELLOW}]Showing {limit} of {len(experiments)} experiments[/{NORD_YELLOW}]")
 
 
 @experiment.command()
@@ -379,6 +455,39 @@ def dashboard(experiment_id):
         console.print(f"[{NORD_RED}]Error: {e}[/{NORD_RED}]")
         if "No module named" in str(e):
             console.print(f"[{NORD_YELLOW}]Make sure all dependencies are installed[/{NORD_YELLOW}]")
+
+
+@experiment.command()
+def monitor():
+    """System-wide monitor for experiments and API usage.
+    
+    Shows a real-time overview of:
+    - API usage and rate limits for all providers
+    - Active experiments with live metrics
+    - System statistics and health
+    - Estimated costs
+    
+    This gives you a bird's eye view of your Pidgin system,
+    helping you manage rate limits and track experiment progress.
+    
+    [bold]FEATURES:[/bold]
+    • Live updates from SharedState
+    • Rate limit warnings with visual bars
+    • Convergence alerts
+    • Cost tracking (coming soon)
+    
+    Press 'q' to quit, 'r' to refresh, 'e' to export stats.
+    """
+    from ..monitor.system_monitor import SystemMonitor
+    
+    console.print("[#8fbcbb]◆ Starting system monitor...[/#8fbcbb]")
+    console.print("[#4c566a]Press 'q' to exit[/#4c566a]\n")
+    
+    monitor = SystemMonitor()
+    try:
+        asyncio.run(monitor.run())
+    except KeyboardInterrupt:
+        console.print("\n[#4c566a]Monitor stopped[/#4c566a]")
 
 
 @experiment.command()
