@@ -15,7 +15,7 @@ from ..providers import AnthropicProvider, OpenAIProvider, GoogleProvider, xAIPr
 from ..providers.local import LocalProvider
 from ..providers.silent import SilentProvider
 from ..config.models import get_model_config, MODELS
-from ..config.dimensional_prompts import DIMENSIONS
+from ..config.dimensional_prompts import DimensionalPromptGenerator
 from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
 
 console = Console()

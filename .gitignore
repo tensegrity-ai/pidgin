@@ -113,7 +113,7 @@ event_logs/
 *.events
 
 # Experimental data
-experiments/
+/experiments/
 experiment_results/
 batch_runs/
 
