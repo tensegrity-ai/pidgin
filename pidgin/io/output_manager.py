@@ -29,23 +29,30 @@ class OutputManager:
         else:
             self.base_dir = Path(base_dir)
         
-    def create_conversation_dir(self) -> Tuple[str, Path]:
+    def create_conversation_dir(self, conversation_id: str = None) -> Tuple[str, Path]:
         """Create directory for new conversation.
-        
+
+        Args:
+            conversation_id: Optional pre-assigned conversation ID
+
         Returns:
             Tuple of (conversation_id, directory_path)
         """
         # Create date directory
         date_str = datetime.now().strftime("%Y-%m-%d")
         date_dir = self.base_dir / "conversations" / date_str
-        
-        # Create unique conversation ID (HHMMSS_xxxxx)
-        time_str = datetime.now().strftime("%H%M%S")
-        hash_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
-        conv_id = f"{time_str}_{hash_suffix}"
-        
+
+        # Use provided ID or create unique conversation ID
+        if conversation_id is None:
+            time_str = datetime.now().strftime("%H%M%S")
+            hash_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+            conv_id = f"{time_str}_{hash_suffix}"
+        else:
+            conv_id = conversation_id
+
         # Create conversation directory
         conv_dir = date_dir / conv_id
         conv_dir.mkdir(parents=True, exist_ok=True)
-        
+
         return conv_id, conv_dir
+    

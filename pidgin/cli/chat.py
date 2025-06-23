@@ -252,7 +252,6 @@ async def _run_conversation(agent_a_id: str, agent_b_id: str,
         agent_b=agent_b,
         initial_prompt=initial_prompt,
         max_turns=max_turns,
-        first_speaker=first_speaker
     )
 
 

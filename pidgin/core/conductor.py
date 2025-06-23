@@ -108,7 +108,7 @@ class Conductor:
         # Rate limiting
         self.rate_limiter = StreamingRateLimiter()
 
-    def _setup_interrupt_handler(self, conversation_id: str):
+    def _setup_interrupt_handler(self):
         """Set up Ctrl+C as interrupt trigger."""
 
         def handle_interrupt(signum, frame):
@@ -192,6 +192,7 @@ class Conductor:
         awareness_b: str = "basic",
         temperature_a: Optional[float] = None,
         temperature_b: Optional[float] = None,
+        conversation_id: Optional[str] = None,
     ) -> Conversation:
         """Run a complete conversation using events.
 
@@ -207,6 +208,8 @@ class Conductor:
             awareness_b: Awareness level for agent B (none, basic, firm, research)
             temperature_a: Temperature setting for agent A (0.0-2.0)
             temperature_b: Temperature setting for agent B (0.0-2.0)
+            conversation_id: Optional pre-assigned conversation ID
+
 
         Returns:
             The completed conversation
@@ -216,7 +219,7 @@ class Conductor:
         self._assign_display_names(agent_a, agent_b)
 
         # Create output directory
-        conv_id, conv_dir = self.output_manager.create_conversation_dir()
+        conv_id, conv_dir = self.output_manager.create_conversation_dir(conversation_id)
         self.current_conv_dir = conv_dir  # Store for transcript saving
 
         # Initialize event system
@@ -243,7 +246,7 @@ class Conductor:
         await self._add_initial_messages(conversation, system_prompts, initial_prompt)
 
         # Set up interrupt handling
-        self._setup_interrupt_handler(conversation.id)
+        self._setup_interrupt_handler()
         self.interrupt_requested = False  # Reset flag
 
         try:
@@ -712,26 +715,16 @@ class Conductor:
         # Create wrapped providers for agent_a and agent_b
         self.wrapped_providers = {}
 
-        # Map providers to agents based on model
-        agent_a = agents["agent_a"]
-        agent_b = agents["agent_b"]
-
-        # Find provider for agent_a
-        for model_id, provider in self.base_providers.items():
-            if model_id == agent_a.model:
-                self.wrapped_providers["agent_a"] = EventAwareProvider(
-                    provider, self.bus, "agent_a"
-                )
-                break
-
-        # Find provider for agent_b
-        for model_id, provider in self.base_providers.items():
-            if model_id == agent_b.model:
-                self.wrapped_providers["agent_b"] = EventAwareProvider(
-                    provider, self.bus, "agent_b"
-                )
-                break
-
+        if "agent_a" in self.base_providers:
+            self.wrapped_providers["agent_a"] = EventAwareProvider(
+                self.base_providers["agent_a"], self.bus, "agent_a"
+            )
+        
+        if "agent_b" in self.base_providers:
+            self.wrapped_providers["agent_b"] = EventAwareProvider(
+                self.base_providers["agent_b"], self.bus, "agent_b"
+            )
+        
         # Subscribe to message completions
         self.bus.subscribe(MessageCompleteEvent, self._handle_message_complete)
 

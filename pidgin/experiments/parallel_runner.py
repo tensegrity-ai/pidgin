@@ -312,7 +312,8 @@ class ParallelExperimentRunner:
                 awareness_a=config.awareness_a or config.awareness,
                 awareness_b=config.awareness_b or config.awareness,
                 temperature_a=config.temperature_a or config.temperature,
-                temperature_b=config.temperature_b or config.temperature
+                temperature_b=config.temperature_b or config.temperature,
+                conversation_id=conversation_id
             )
 
         finally:
