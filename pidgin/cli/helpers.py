@@ -72,14 +72,21 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
             temperature=temp
         )
     elif model_config.provider == "local":
-        if model_config.model == "test":
-            from ..local import TestModel
-            return TestModel()
+        model_name = model_config.model_id.split(":", 1)[1] if ":" in model_config.model_id else model_config.model_id
+        
+        if model_name == "test":
+            from ..providers.local import LocalProvider
+            return LocalProvider("test")
         else:
-            return LocalProvider(
-                model=model_config.model,
-                temperature=temp
-            )
+            # All other local models use Ollama
+            from ..providers.ollama import OllamaProvider
+            model_map = {
+                "qwen": "qwen2.5:0.5b",
+                "phi": "phi3",
+                "mistral": "mistral"
+            }
+            ollama_model = model_map.get(model_name, model_name)
+            return OllamaProvider(ollama_model)
     elif model_config.provider == "silent":
         return SilentProvider()
     else:
@@ -171,7 +178,7 @@ def format_model_display(model_id: str) -> str:
     emoji = MODEL_EMOJIS.get(model_id, "🤖")
     color = PROVIDER_COLORS.get(config.provider, "white")
     
-    return f"{emoji} [{color}]{config.display_name}[/{color}]"
+    return f"{emoji} [{color}]{config.shortname}[/{color}]"
 
 
 def find_conversations(path: Optional[str] = None, pattern: str = "*") -> List[Path]:

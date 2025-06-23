@@ -132,7 +132,10 @@ class ExperimentDaemon:
                 logging.error(f"Failed to remove PID file: {e}")
                 
         # Clean up SharedState if it exists
-        shm_path = Path(f"/dev/shm/pidgin_{self.experiment_id}")
+        if sys.platform == "darwin":  # macOS
+            shm_path = Path(f"/tmp/pidgin_{self.experiment_id}")
+        else:
+            shm_path = Path(f"/dev/shm/pidgin_{self.experiment_id}")
         if shm_path.exists():
             try:
                 shm_path.unlink()

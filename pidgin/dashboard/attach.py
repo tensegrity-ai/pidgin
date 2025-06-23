@@ -113,8 +113,12 @@ def find_running_experiments() -> list:
     """
     running = []
     
-    # Check /dev/shm for pidgin_* files
-    shm_path = Path("/dev/shm")
+    # Check platform-appropriate location for pidgin_* files
+    if sys.platform == "darwin":  # macOS
+        shm_path = Path("/tmp")
+    else:  # Linux
+        shm_path = Path("/dev/shm")
+        
     if shm_path.exists():
         for shm_file in shm_path.glob("pidgin_*"):
             # Extract experiment ID from filename

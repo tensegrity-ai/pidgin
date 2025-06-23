@@ -128,7 +128,7 @@ class ParallelExperimentRunner:
         """
         # Determine parallelism based on rate limits
         # Start conservative, can be tuned based on provider limits
-        max_parallel = min(config.parallel_count, 5)  # Cap at 5 for safety
+        max_parallel = min(config.max_parallel, 5)  # Cap at 5 for safety
         
         logging.info(f"Running {len(conversations)} conversations with parallelism={max_parallel}")
         

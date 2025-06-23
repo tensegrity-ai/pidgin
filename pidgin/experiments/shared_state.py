@@ -5,37 +5,62 @@ import json
 import mmap
 import os
 import struct
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+from dataclasses import dataclass, asdict
+
+
+@dataclass
+class ExperimentMetrics:
+    """Real-time metrics for an experiment."""
+    agent_a_model: str = ""
+    agent_b_model: str = ""
+    total_conversations: int = 0
+    completed_conversations: int = 0
+    failed_conversations: int = 0
+    turn_count: int = 0
+    convergence_scores: List[float] = None
+    token_count: int = 0
+    messages_per_turn: Dict[int, int] = None
+    
+    def __post_init__(self):
+        if self.convergence_scores is None:
+            self.convergence_scores = []
+        if self.messages_per_turn is None:
+            self.messages_per_turn = {}
 
 
 class SharedState:
     """Shared memory state for experiment monitoring.
     
-    Uses a simple fixed-size shared memory region for fast IPC.
-    Structure:
-    - 4 bytes: version number
-    - 4 bytes: last update timestamp
-    - 8192 bytes: JSON data (padded with nulls)
+    Uses /dev/shm for fast inter-process communication between
+    the experiment runner and dashboard.
     """
     
+    HEADER_SIZE = 16  # timestamp (8) + size (4) + version (4)
+    MAX_SIZE = 1024 * 1024  # 1MB max
     VERSION = 1
-    HEADER_SIZE = 8  # version (4) + timestamp (4)
-    DATA_SIZE = 8192
-    TOTAL_SIZE = HEADER_SIZE + DATA_SIZE
     
     def __init__(self, experiment_id: str, create: bool = False):
         """Initialize shared state.
         
         Args:
             experiment_id: Unique experiment identifier
-            create: If True, create new shared memory; if False, attach to existing
+            create: Whether to create new shared memory (True) or attach to existing (False)
         """
         self.experiment_id = experiment_id
-        self.shm_name = f"/dev/shm/pidgin_{experiment_id}"
+        
+        # Use platform-appropriate shared memory location
+        if sys.platform == "darwin":  # macOS
+            # Use /tmp for macOS (or could use ~/Library/Caches/)
+            self.shm_path = Path(f"/tmp/pidgin_{experiment_id}")
+        else:  # Linux
+            self.shm_path = Path(f"/dev/shm/pidgin_{experiment_id}")
+        
         self.fd = None
-        self.mmap = None
+        self.mm = None
         
         if create:
             self._create()
@@ -43,194 +68,187 @@ class SharedState:
             self._attach()
     
     def _create(self):
-        """Create new shared memory region."""
-        # Remove existing file if present
-        if os.path.exists(self.shm_name):
-            os.unlink(self.shm_name)
-            
-        # Create and size the file
-        self.fd = os.open(self.shm_name, os.O_CREAT | os.O_RDWR | os.O_EXCL, 0o644)
-        os.ftruncate(self.fd, self.TOTAL_SIZE)
+        """Create new shared memory segment."""
+        # Remove if exists
+        if self.shm_path.exists():
+            self.shm_path.unlink()
         
-        # Memory map it
-        self.mmap = mmap.mmap(self.fd, self.TOTAL_SIZE)
+        # Create file
+        self.fd = os.open(str(self.shm_path), os.O_CREAT | os.O_RDWR)
+        os.ftruncate(self.fd, self.MAX_SIZE)
+        
+        # Memory map
+        self.mm = mmap.mmap(self.fd, self.MAX_SIZE)
         
         # Initialize with empty data
         self._write_data({
-            "status": "initializing",
-            "status_message": "",
-            "experiment_id": self.experiment_id,
-            "models": {
-                "agent_a": "unknown",
-                "agent_b": "unknown"
-            },
-            "conversation_count": {
-                "total": 0,
-                "completed": 0
-            },
-            "current_conversation": "",
-            "current_turn": 0,
-            "metrics": {
-                "convergence": [],
-                "similarity": [],
-                "vocabulary": [],
-                "last_messages": []
-            }
+            'status': 'initializing',
+            'models': {},
+            'metrics': asdict(ExperimentMetrics()),
+            'messages': [],
+            'events': []
         })
     
     def _attach(self):
-        """Attach to existing shared memory region."""
-        if not os.path.exists(self.shm_name):
-            raise FileNotFoundError(f"Shared memory {self.shm_name} does not exist")
-            
-        self.fd = os.open(self.shm_name, os.O_RDWR)
-        self.mmap = mmap.mmap(self.fd, self.TOTAL_SIZE)
+        """Attach to existing shared memory segment."""
+        if not self.shm_path.exists():
+            raise FileNotFoundError(f"Shared memory {self.shm_path} not found")
+        
+        self.fd = os.open(str(self.shm_path), os.O_RDWR)
+        self.mm = mmap.mmap(self.fd, self.MAX_SIZE)
     
     def _write_data(self, data: Dict[str, Any]):
         """Write data to shared memory."""
         # Serialize to JSON
-        json_bytes = json.dumps(data).encode('utf-8')
+        json_data = json.dumps(data).encode('utf-8')
         
-        # Ensure it fits
-        if len(json_bytes) > self.DATA_SIZE:
-            raise ValueError(f"Data too large: {len(json_bytes)} > {self.DATA_SIZE}")
+        if len(json_data) + self.HEADER_SIZE > self.MAX_SIZE:
+            raise ValueError("Data too large for shared memory")
         
-        # Prepare header
-        version = struct.pack('I', self.VERSION)
-        timestamp = struct.pack('I', int(time.time()))
+        # Write header
+        timestamp = int(time.time() * 1000000)  # microseconds
+        self.mm.seek(0)
+        self.mm.write(struct.pack('<QII', timestamp, len(json_data), self.VERSION))
         
-        # Write to memory
-        self.mmap.seek(0)
-        self.mmap.write(version)
-        self.mmap.write(timestamp)
-        self.mmap.write(json_bytes)
-        
-        # Pad with nulls
-        padding = self.DATA_SIZE - len(json_bytes)
-        if padding > 0:
-            self.mmap.write(b'\x00' * padding)
-        
-        # Ensure written
-        self.mmap.flush()
+        # Write data
+        self.mm.write(json_data)
+        self.mm.flush()
     
     def _read_data(self) -> Dict[str, Any]:
         """Read data from shared memory."""
-        self.mmap.seek(0)
+        self.mm.seek(0)
         
         # Read header
-        version_bytes = self.mmap.read(4)
-        timestamp_bytes = self.mmap.read(4)
+        header = self.mm.read(self.HEADER_SIZE)
+        timestamp, size, version = struct.unpack('<QII', header)
         
-        version = struct.unpack('I', version_bytes)[0]
         if version != self.VERSION:
-            raise ValueError(f"Version mismatch: {version} != {self.VERSION}")
+            raise ValueError(f"Version mismatch: expected {self.VERSION}, got {version}")
         
-        # Read JSON data
-        json_bytes = self.mmap.read(self.DATA_SIZE)
-        
-        # Find null terminator
-        null_pos = json_bytes.find(b'\x00')
-        if null_pos > 0:
-            json_bytes = json_bytes[:null_pos]
-        
-        return json.loads(json_bytes.decode('utf-8'))
+        # Read data
+        json_data = self.mm.read(size)
+        return json.loads(json_data.decode('utf-8'))
+    
+    def set_status(self, status: str, error: Optional[str] = None):
+        """Update experiment status."""
+        data = self._read_data()
+        data['status'] = status
+        if error:
+            data['error'] = error
+        data['last_update'] = time.time()
+        self._write_data(data)
     
     def get_status(self) -> str:
         """Get current experiment status."""
         data = self._read_data()
-        return data.get("status", "unknown")
-    
-    def set_status(self, status: str, error: Optional[str] = None):
-        """Set experiment status.
-        
-        Args:
-            status: One of: initializing, running, completed, failed
-            error: Optional error message if failed
-        """
-        data = self._read_data()
-        data["status"] = status
-        data["status_message"] = error or ""
-        self._write_data(data)
+        return data.get('status', 'unknown')
     
     def set_models(self, agent_a: str, agent_b: str):
-        """Set model names."""
+        """Set the models being used."""
         data = self._read_data()
-        data["models"] = {
-            "agent_a": agent_a,
-            "agent_b": agent_b
+        data['models'] = {
+            'agent_a': agent_a,
+            'agent_b': agent_b
         }
         self._write_data(data)
     
-    def update_conversation_count(self, total: int, completed: int):
+    def update_conversation_count(self, total: int, completed: int, failed: int = 0):
         """Update conversation progress."""
         data = self._read_data()
-        data["conversation_count"] = {
-            "total": total,
-            "completed": completed
-        }
+        if 'metrics' not in data:
+            data['metrics'] = asdict(ExperimentMetrics())
+        
+        data['metrics']['total_conversations'] = total
+        data['metrics']['completed_conversations'] = completed
+        data['metrics']['failed_conversations'] = failed
+        data['last_update'] = time.time()
         self._write_data(data)
     
-    def add_conversation_metrics(self,
-                               turn: int,
-                               convergence: float,
-                               similarity: float,
-                               vocabulary: float,
-                               last_messages: List[Dict[str, str]],
-                               conversation_id: Optional[str] = None):
-        """Add metrics for current turn.
-        
-        Args:
-            turn: Turn number
-            convergence: Convergence score
-            similarity: Structural similarity
-            vocabulary: Vocabulary overlap
-            last_messages: List of recent messages
-            conversation_id: Optional conversation ID
-        """
+    def add_message(self, role: str, content: str, turn: int):
+        """Add a new message to the buffer."""
         data = self._read_data()
+        if 'messages' not in data:
+            data['messages'] = []
         
-        # Update current state
-        if conversation_id:
-            data["current_conversation"] = conversation_id
-        data["current_turn"] = turn
+        # Keep only last 20 messages
+        data['messages'].append({
+            'role': role,
+            'content': content[:200],  # Truncate for space
+            'turn': turn,
+            'timestamp': time.time()
+        })
         
-        # Append to metrics history (keep last 20)
-        metrics = data.get("metrics", {})
+        if len(data['messages']) > 20:
+            data['messages'] = data['messages'][-20:]
         
-        for key, value in [
-            ("convergence", convergence),
-            ("similarity", similarity),
-            ("vocabulary", vocabulary)
-        ]:
-            if key not in metrics:
-                metrics[key] = []
-            metrics[key].append(value)
-            # Keep only last 20
-            metrics[key] = metrics[key][-20:]
+        self._write_data(data)
+    
+    def update_metrics(self, turn_count: int, convergence: Optional[float] = None,
+                      tokens: Optional[int] = None):
+        """Update experiment metrics."""
+        data = self._read_data()
+        if 'metrics' not in data:
+            data['metrics'] = asdict(ExperimentMetrics())
         
-        # Update last messages
-        metrics["last_messages"] = last_messages[-6:]  # Keep last 6
+        data['metrics']['turn_count'] = turn_count
         
-        data["metrics"] = metrics
+        if convergence is not None:
+            if 'convergence_scores' not in data['metrics']:
+                data['metrics']['convergence_scores'] = []
+            data['metrics']['convergence_scores'].append(convergence)
+            # Keep only last 100 scores
+            if len(data['metrics']['convergence_scores']) > 100:
+                data['metrics']['convergence_scores'] = data['metrics']['convergence_scores'][-100:]
+        
+        if tokens is not None:
+            data['metrics']['token_count'] = data['metrics'].get('token_count', 0) + tokens
+        
+        data['last_update'] = time.time()
         self._write_data(data)
     
     def get_all_data(self) -> Dict[str, Any]:
         """Get all shared state data."""
         return self._read_data()
     
+    def get_metrics(self) -> Optional[ExperimentMetrics]:
+        """Get experiment metrics."""
+        data = self._read_data()
+        if 'metrics' in data:
+            metrics_dict = data['metrics']
+            # Handle the models from the top-level data
+            if 'models' in data:
+                metrics_dict['agent_a_model'] = data['models'].get('agent_a', '')
+                metrics_dict['agent_b_model'] = data['models'].get('agent_b', '')
+            return ExperimentMetrics(**metrics_dict)
+        return None
+    
     def cleanup(self):
         """Clean up shared memory."""
-        if self.mmap:
-            self.mmap.close()
-        if self.fd is not None:
+        if self.mm:
+            self.mm.close()
+        if self.fd:
             os.close(self.fd)
-        
-        # Only unlink if we created it
-        if hasattr(self, '_created') and os.path.exists(self.shm_name):
-            os.unlink(self.shm_name)
+        if self.shm_path.exists():
+            self.shm_path.unlink()
+    
+    def close(self):
+        """Close shared memory without removing it."""
+        if self.mm:
+            self.mm.close()
+        if self.fd:
+            os.close(self.fd)
+    
+    @classmethod
+    def exists(cls, experiment_id: str) -> bool:
+        """Check if shared state exists for an experiment."""
+        if sys.platform == "darwin":  # macOS
+            shm_path = Path(f"/tmp/pidgin_{experiment_id}")
+        else:  # Linux
+            shm_path = Path(f"/dev/shm/pidgin_{experiment_id}")
+        return shm_path.exists()
     
     def __enter__(self):
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.cleanup()
+        self.close()

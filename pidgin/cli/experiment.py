@@ -140,7 +140,6 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         awareness=awareness,
         awareness_a=awareness_a,
         awareness_b=awareness_b,
-        convergence_threshold=convergence_threshold,
         choose_names=choose_names
     )
     
@@ -168,7 +167,10 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
     
     # Check if experiment already exists
     storage = ExperimentStore()
-    existing = storage.get_experiment_by_name(name)
+
+    # Check if experiment name already exists
+    existing = next((exp for exp in storage.list_experiments() if exp.get('name') == name), None)
+
     if existing:
         console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
         console.print(f"Use 'pidgin experiment resume {name}' to reattach")
