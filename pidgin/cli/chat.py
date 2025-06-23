@@ -131,8 +131,6 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
             agent_b = "silent"
         console.print(f"\n[{NORD_BLUE}]◆ Meditation mode: {agent_a} → silence[/{NORD_BLUE}]")
     
-    model_a, model_b = asyncio.run(normalize_local_model_names(model_a, model_b, console))
-
     # Interactive model selection if not provided
     if not agent_a:
         agent_a = _prompt_for_model("Select first agent (Agent A)")
@@ -151,13 +149,10 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
     except ValueError as e:
         console.print(f"[{NORD_RED}]Error: {e}[/{NORD_RED}]")
         return
-    
-    if not asyncio.run(ensure_ollama_models_ready(model_a, model_b, console)):
-        raise click.Abort()
 
     # Handle temperature settings
-    temp_a = temperature_a if temperature_a is not None else temperature
-    temp_b = temperature_b if temperature_b is not None else temperature
+    temp_a = temp_a if temp_a is not None else temperature
+    temp_b = temp_b if temp_b is not None else temperature
     
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, list(dimension))

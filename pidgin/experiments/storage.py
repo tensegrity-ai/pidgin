@@ -330,6 +330,27 @@ class ExperimentStore:
             
             conn.commit()
     
+    def log_agent_name(self, conversation_id: str, agent_id: str, chosen_name: str, turn_number: int = 0):
+        """Log a chosen agent name for a conversation.
+        
+        Args:
+            conversation_id: Conversation identifier
+            agent_id: Either 'agent_a' or 'agent_b'
+            chosen_name: The name chosen by the agent
+            turn_number: Turn number when name was chosen (default: 0)
+        """
+        if agent_id not in ['agent_a', 'agent_b']:
+            raise ValueError(f"Invalid agent_id: {agent_id}")
+        
+        column_name = f"{agent_id}_chosen_name"
+        
+        with self._get_connection() as conn:
+            conn.execute(
+                f"UPDATE conversations SET {column_name} = ? WHERE conversation_id = ?",
+                (chosen_name, conversation_id)
+            )
+            conn.commit()
+        
     def log_turn_metrics(self, conversation_id: str, turn_number: int, metrics: dict):
         """Log turn-level metrics (convergence, aggregates).
         

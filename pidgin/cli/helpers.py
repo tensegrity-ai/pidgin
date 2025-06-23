@@ -26,7 +26,7 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
     
     Args:
         model_id: Model identifier (e.g., 'gpt-4', 'claude', 'gemini-1.5-pro')
-        temperature: Optional temperature override
+        temperature: Optional temperature override (not used here, temperature is passed to stream_response)
         
     Returns:
         Provider instance
@@ -35,51 +35,24 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
     if not model_config:
         raise ValueError(f"Unknown model: {model_id}")
     
-    # Use provided temperature or model default
-    temp = temperature if temperature is not None else None
-    
-    # Validate temperature ranges by provider
-    if temp is not None:
-        if model_config.provider == "anthropic" and temp > 1.0:
-            console.print(f"[{NORD_YELLOW}]Warning: Anthropic temperature capped at 1.0 (was {temp})[/{NORD_YELLOW}]")
-            temp = 1.0
-        elif model_config.provider in ["openai", "google"] and temp > 2.0:
-            console.print(f"[{NORD_YELLOW}]Warning: {model_config.provider.title()} temperature capped at 2.0 (was {temp})[/{NORD_YELLOW}]")
-            temp = 2.0
-        elif temp < 0.0:
-            console.print(f"[{NORD_YELLOW}]Warning: Temperature must be >= 0.0 (was {temp})[/{NORD_YELLOW}]")
-            temp = 0.0
-    
-    # Create appropriate provider
+    # Create appropriate provider (without temperature)
     if model_config.provider == "openai":
-        return OpenAIProvider(
-            model=model_config.model,
-            temperature=temp
-        )
+        return OpenAIProvider(model=model_config.model_id)
     elif model_config.provider == "anthropic":
-        return AnthropicProvider(
-            model=model_config.model,
-            temperature=temp
-        )
+        return AnthropicProvider(model=model_config.model_id)
     elif model_config.provider == "google":
-        return GoogleProvider(
-            model=model_config.model,
-            temperature=temp
-        )
+        return GoogleProvider(model=model_config.model_id)
     elif model_config.provider == "xai":
-        return xAIProvider(
-            model=model_config.model,
-            temperature=temp
-        )
+        return xAIProvider(model=model_config.model_id)
     elif model_config.provider == "local":
-        model_name = model_config.model_id.split(":", 1)[1] if ":" in model_config.model_id else model_config.model_id
-        
-        if model_name == "test":
+        if model_config.model_id == "local:test":
             from ..providers.local import LocalProvider
-            return LocalProvider("test")
+            return LocalProvider(model_name="test")
         else:
-            # All other local models use Ollama
+            # For other local models, use OllamaProvider
             from ..providers.ollama import OllamaProvider
+            model_name = model_config.model_id.split(":", 1)[1]
+            # Map simple names to Ollama model names
             model_map = {
                 "qwen": "qwen2.5:0.5b",
                 "phi": "phi3",
@@ -88,7 +61,8 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
             ollama_model = model_map.get(model_name, model_name)
             return OllamaProvider(ollama_model)
     elif model_config.provider == "silent":
-        return SilentProvider()
+        from ..providers.silent import SilentProvider
+        return SilentProvider(model=model_config.model_id)
     else:
         raise ValueError(f"Unknown provider: {model_config.provider}")
 

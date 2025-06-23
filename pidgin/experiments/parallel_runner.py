@@ -269,14 +269,14 @@ class ParallelExperimentRunner:
         # Create agents
         agent_a = Agent(
             id="agent_a",
-            model=model_a_config.model,
+            model=model_a_config.model_id,
             model_shortname=config.agent_a_model,
             temperature=config.temperature_a
         )
         
         agent_b = Agent(
             id="agent_b", 
-            model=model_b_config.model,
+            model=model_b_config.model_id,
             model_shortname=config.agent_b_model,
             temperature=config.temperature_b
         )
@@ -306,9 +306,15 @@ class ParallelExperimentRunner:
                 agent_b=agent_b,
                 initial_prompt=initial_prompt,
                 max_turns=config.max_turns,
-                conversation_id=conversation_id,
-                first_speaker=config.first_speaker
+                display_mode='quiet',  # Minimal output for experiments
+                show_timing=False,
+                choose_names=config.choose_names,
+                awareness_a=config.awareness_a or config.awareness,
+                awareness_b=config.awareness_b or config.awareness,
+                temperature_a=config.temperature_a or config.temperature,
+                temperature_b=config.temperature_b or config.temperature
             )
+
         finally:
             # Stop the event bus
             await event_bus.stop()

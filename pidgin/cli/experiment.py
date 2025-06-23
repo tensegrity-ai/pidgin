@@ -255,68 +255,85 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         raise
 
 
+# In pidgin/cli/experiment.py, update the list command around line 268:
+
 @experiment.command()
 @click.option("--all", is_flag=True, help="Show completed experiments too")
 def list(all):
     """List experiment sessions (like screen -list).
     
     Shows active experiment sessions with their status and progress.
-    Use --all to include completed experiments.
     """
-    storage = ExperimentStore()
+    storage = ExperimentStore(
+        db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
+    )
     
-    experiments = storage.list_experiments(limit=50 if all else 20)
+    # Get experiments - filter by status if not showing all
+    if all:
+        experiments = storage.list_experiments()
+    else:
+        # Only show running experiments by default
+        experiments = storage.list_experiments(status_filter='running')
     
     if not experiments:
-        console.print("No experiment sessions found")
+        if all:
+            console.print(f"[{NORD_YELLOW}]No experiments found.[/{NORD_YELLOW}]")
+        else:
+            console.print(f"[{NORD_YELLOW}]No running experiments.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_CYAN}]Use --all to see completed experiments.[/{NORD_CYAN}]")
         return
     
     # Create table
     table = Table(title="Experiment Sessions")
-    table.add_column("Name", style="#88c0d0")
-    table.add_column("Status", style="#a3be8c")
-    table.add_column("Progress", justify="right")
-    table.add_column("Models", style="#d8dee9")
-    table.add_column("Started", style="#4c566a")
+    table.add_column("ID", style=NORD_CYAN)
+    table.add_column("Name", style=NORD_GREEN)
+    table.add_column("Status", style=NORD_YELLOW)
+    table.add_column("Progress")
+    table.add_column("Models")
+    table.add_column("Started")
     
     for exp in experiments:
-        # Skip completed/failed unless --all
-        if not all and exp['status'] in ['completed', 'failed']:
-            continue
-            
-        # Format status with attachment info
-        status = exp['status']
-        if exp['status'] == 'running' and exp.get('dashboard_attached'):
-            status = "running (attached)"
-        elif exp['status'] == 'running':
-            status = "running (detached)"
-            
+        config = json.loads(exp.get('config', '{}'))
+        
         # Format progress
         total = exp.get('total_conversations', 0)
         completed = exp.get('completed_conversations', 0)
         progress = f"{completed}/{total}"
         
+        # Format status with color
+        status = exp.get('status', 'unknown')
+        status_color = {
+            'running': NORD_GREEN,
+            'completed': NORD_BLUE,
+            'failed': NORD_RED,
+            'interrupted': NORD_YELLOW
+        }.get(status, 'white')
+        status_display = f"[{status_color}]{status}[/{status_color}]"
+        
         # Format models
-        models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
+        models = f"{config.get('agent_a_model', '?')} ↔ {config.get('agent_b_model', '?')}"
         
-        # Format start time
-        if exp.get('created_at'):
-            start_time = datetime.fromisoformat(exp['created_at'])
-            started = start_time.strftime("%m/%d %H:%M")
+        # Format time
+        started = exp.get('started_at', exp.get('created_at', ''))
+        if started:
+            try:
+                dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
+                time_str = dt.strftime("%Y-%m-%d %H:%M")
+            except:
+                time_str = started
         else:
-            started = "unknown"
+            time_str = "-"
         
-        # Add row
         table.add_row(
-            exp['name'],
-            status,
+            exp['experiment_id'],
+            exp.get('name', 'Unnamed'),
+            status_display,
             progress,
             models,
-            started
+            time_str
         )
     
     console.print(table)
-
 
 @experiment.command()
 @click.argument('experiment_id')

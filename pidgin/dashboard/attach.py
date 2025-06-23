@@ -166,3 +166,31 @@ async def wait_for_any_experiment(timeout: float = 30.0) -> Optional[str]:
     
     print("No experiments started within timeout period")
     return None
+
+async def attach_dashboard_to_experiment(experiment_id: str, experiment_name: str = None) -> dict:
+    """Wrapper function for CLI to attach dashboard to experiment.
+    
+    Args:
+        experiment_id: ID of the experiment to attach to
+        experiment_name: Optional name for display (not used, kept for compatibility)
+        
+    Returns:
+        Dict with status information
+    """
+    from .dashboard import run_dashboard
+    
+    try:
+        # Run the dashboard
+        await run_dashboard(experiment_id)
+        
+        # If we get here, dashboard was detached cleanly
+        return {'detached': True}
+        
+    except KeyboardInterrupt:
+        # User pressed Ctrl+C
+        return {'detached': True}
+        
+    except Exception as e:
+        # Some error occurred
+        return {'error': str(e)}
+    
