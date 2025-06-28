@@ -22,7 +22,6 @@ from ..io.output_manager import OutputManager
 from .storage import ExperimentStore
 from .config import ExperimentConfig
 from .event_handler import ExperimentEventHandler
-from .shared_state import SharedState
 from .daemon import ExperimentDaemon
 
 # Import CLI functions for consistency
@@ -45,7 +44,6 @@ class ParallelExperimentRunner:
         self.active_tasks = {}
         self.completed_count = 0
         self.failed_count = 0
-        self.shared_state = None
     
     async def run_experiment_with_id(self, experiment_id: str, config: ExperimentConfig):
         """Run experiment with existing ID.
@@ -56,22 +54,9 @@ class ParallelExperimentRunner:
             experiment_id: Existing experiment ID
             config: Experiment configuration
         """
-        # IMMEDIATE SHARED STATE CREATION - This is the key change!
-        # Create SharedState right away so dashboard can attach
-        self.shared_state = SharedState(experiment_id, create=True)
-        self.shared_state.set_status('initializing')
-        self.shared_state.set_models(config.agent_a_model, config.agent_b_model)
-        self.shared_state.update_conversation_count(
-            total=config.repetitions,
-            completed=0
-        )
-        
         try:
             # Mark experiment as running in database
             self.storage.update_experiment_status(experiment_id, 'running')
-            
-            # Now update SharedState to running
-            self.shared_state.set_status('running')
             
             # Prepare conversation configs
             conversations = []
@@ -100,20 +85,13 @@ class ParallelExperimentRunner:
             # Update final status
             if self.daemon and self.daemon.is_stopping():
                 self.storage.update_experiment_status(experiment_id, 'interrupted')
-                self.shared_state.set_status('interrupted')
             else:
                 self.storage.update_experiment_status(experiment_id, 'completed')
-                self.shared_state.set_status('completed')
                 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
             self.storage.update_experiment_status(experiment_id, 'failed')
-            self.shared_state.set_status('failed', error=str(e))
             raise
-        finally:
-            # Clean up shared state
-            if self.shared_state:
-                self.shared_state.cleanup()
     
     async def _run_parallel_conversations(self,
                                         experiment_id: str,
@@ -152,12 +130,6 @@ class ParallelExperimentRunner:
                     )
                     self.completed_count += 1
                     logging.info(f"Completed {conv_id} ({self.completed_count}/{total})")
-                    
-                    # Update shared state progress
-                    self.shared_state.update_conversation_count(
-                        total=total,
-                        completed=self.completed_count
-                    )
                     
                 except asyncio.CancelledError:
                     # Handle graceful cancellation
@@ -225,12 +197,11 @@ class ParallelExperimentRunner:
         event_bus = EventBus()
         await event_bus.start()
         
-        # Create event handler with shared state
+        # Create event handler
         handler = ExperimentEventHandler(
             self.storage, 
             experiment_id, 
-            event_bus,
-            shared_state=self.shared_state
+            event_bus
         )
         
         # Subscribe to events

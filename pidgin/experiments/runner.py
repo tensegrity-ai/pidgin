@@ -32,11 +32,10 @@ class ExperimentRunner:
         
         Args:
             storage: Database storage instance (creates default if None)
-            event_bus: Optional shared EventBus for dashboard integration
+            event_bus: Optional shared EventBus for metrics integration
         """
         self.storage = storage or ExperimentStore()
         self.event_bus = event_bus  # Will be None for normal operation
-        self.shared_state = None  # Will be created when experiment starts
     
     async def run_experiment(self, config: ExperimentConfig) -> str:
         """Run all conversations for an experiment.
@@ -55,42 +54,22 @@ class ExperimentRunner:
         # Create experiment record
         experiment_id = self.storage.create_experiment(config.name, config.dict())
 
-        # Initialize SharedState for this experiment
-        self.shared_state = SharedState(experiment_id, create=True)
-        self.shared_state.set_models(config.agent_a_model, config.agent_b_model)
-        self.shared_state.update_conversation_count(
-            total=config.repetitions,
-            completed=0
-        )
-
         # Update experiment status to running
         self.storage.update_experiment_status(experiment_id, 'running')
-        self.shared_state.set_status('running')
 
         try:
             # Run conversations serially (Phase 2)
             for i in range(config.repetitions):
                 # ... existing conversation code ...
 
-                # After conversation completes
-                self.shared_state.update_conversation_count(
-                    total=config.repetitions,
-                    completed=i + 1
-                )
 
             # Update experiment status to completed
             self.storage.update_experiment_status(experiment_id, 'completed')
-            self.shared_state.set_status('completed')
 
         except Exception as e:
             # Update experiment status to failed
             self.storage.update_experiment_status(experiment_id, 'failed')
-            self.shared_state.set_status('failed', error=str(e))
             raise
-        finally:
-            # Clean up shared state
-            if self.shared_state:
-                self.shared_state.cleanup()
 
         return experiment_id
     
@@ -118,8 +97,7 @@ class ExperimentRunner:
         handler = ExperimentEventHandler(
             self.storage, 
             experiment_id, 
-            event_bus,
-            shared_state=self.shared_state 
+            event_bus
         )
         
         # Subscribe to events

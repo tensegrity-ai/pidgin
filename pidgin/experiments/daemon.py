@@ -131,17 +131,6 @@ class ExperimentDaemon:
             except Exception as e:
                 logging.error(f"Failed to remove PID file: {e}")
                 
-        # Clean up SharedState if it exists
-        if sys.platform == "darwin":  # macOS
-            shm_path = Path(f"/tmp/pidgin_{self.experiment_id}")
-        else:
-            shm_path = Path(f"/dev/shm/pidgin_{self.experiment_id}")
-        if shm_path.exists():
-            try:
-                shm_path.unlink()
-                logging.info(f"Removed shared memory: {shm_path}")
-            except Exception as e:
-                logging.error(f"Failed to remove shared memory: {e}")
             
     def is_stopping(self) -> bool:
         """Check if daemon should stop."""

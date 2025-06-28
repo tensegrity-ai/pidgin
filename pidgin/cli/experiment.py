@@ -42,17 +42,16 @@ from . import ORIGINAL_CWD
 def experiment():
     """Run and manage experimental AI conversation sessions.
 
-    Uses a screen-like session model: start experiments with dashboard
-    and detach/reattach as needed. Experiments run as daemons in the 
-    background for reliability.
+    Experiments run as daemons in the background for reliability.
+    Use the status command to check progress.
 
     [bold]EXAMPLES:[/bold]
     
-    [#4c566a]Start experiment (with dashboard):[/#4c566a]
+    [#4c566a]Start experiment:[/#4c566a]
         pidgin experiment start -a claude -b gpt -r 20 --name "test"
     
-    [#4c566a]Resume/reattach to experiment:[/#4c566a]
-        pidgin experiment resume test
+    [#4c566a]Check experiment status:[/#4c566a]
+        pidgin experiment status
     
     [#4c566a]List experiment sessions:[/#4c566a]
         pidgin experiment list
@@ -80,7 +79,7 @@ def experiment():
 @click.option("--convergence-threshold", type=click.FloatRange(0.0, 1.0), help="Stop at convergence threshold")
 @click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
 @click.option("--max-parallel", type=int, default=1, help="Max parallel conversations (default: 1, sequential)")
-@click.option("--daemon", is_flag=True, help="Start in background without dashboard")
+@click.option("--daemon", is_flag=True, help="Start in background (detached)")
 @click.option("--debug", is_flag=True, help="Run in debug mode (no daemonization)")
 def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
           temperature, temp_a, temp_b, awareness, awareness_a, awareness_b,
@@ -222,33 +221,13 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         # Use the original working directory captured at module import
         exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
         
-        # For sequential experiments, auto-attach dashboard unless --daemon specified
-        if max_parallel == 1 and not daemon:
-            console.print(f"\n[#8fbcbb]◆ Attaching dashboard...[/#8fbcbb]")
-            console.print(f"[#4c566a]Press [D] to detach[/#4c566a]\n")
-            
-            # Give daemon a moment to start
-            import time
-            time.sleep(2)
-            
-            # Attach dashboard to running daemon
-            from ..dashboard.attach import attach_dashboard_to_experiment
-            
-            result = asyncio.run(attach_dashboard_to_experiment(exp_id, name))
-            
-            if result.get('detached'):
-                console.print(f"\n[#4c566a]Dashboard detached.[/#4c566a]")
-                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to reattach[/#4c566a]")
-            else:
-                console.print(f"\n[#a3be8c]✓ Experiment completed[/#a3be8c]")
+        # Show completion message
+        if not daemon:
+            console.print(f"\n[#8fbcbb]◆ Experiment started successfully[/#8fbcbb]")
+            console.print(f"[#4c566a]Use 'pidgin experiment status {exp_id[:8]}' to check progress[/#4c566a]")
         else:
-            # Parallel or explicit daemon mode
             console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
-            if max_parallel > 1:
-                console.print(f"[#4c566a]No dashboard available for parallel experiments[/#4c566a]")
             console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
-            if max_parallel == 1:
-                console.print(f"[#4c566a]Use 'pidgin experiment resume {name}' to attach dashboard[/#4c566a]")
             
     except Exception as e:
         console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
@@ -442,38 +421,6 @@ def logs(experiment_id, lines, follow):
             console.print(f"[{NORD_RED}]No logs found for experiment {experiment_id}[/{NORD_RED}]")
 
 
-@experiment.command()
-@click.argument('experiment_id', required=False)
-def dashboard(experiment_id):
-    """Attach to a running experiment and show real-time metrics.
-    
-    If EXPERIMENT_ID is not provided, will search for running experiments
-    and let you choose one.
-    
-    \b
-    EXAMPLES:
-        pidgin experiment dashboard
-        pidgin experiment dashboard exp_abc123
-    
-    The dashboard shows:
-    - Conversation progress
-    - Real-time convergence metrics with sparklines
-    - Recent messages from both agents
-    - Experiment status
-    
-    Press Ctrl+C to detach from the dashboard.
-    """
-    from ..dashboard.dashboard import run_dashboard as run_experiment_dashboard
-    
-    try:
-        asyncio.run(run_experiment_dashboard(experiment_id))
-    except KeyboardInterrupt:
-        # Clean exit
-        pass
-    except Exception as e:
-        console.print(f"[{NORD_RED}]Error: {e}[/{NORD_RED}]")
-        if "No module named" in str(e):
-            console.print(f"[{NORD_YELLOW}]Make sure all dependencies are installed[/{NORD_YELLOW}]")
 
 
 @experiment.command()
@@ -490,7 +437,7 @@ def monitor():
     helping you manage rate limits and track experiment progress.
     
     [bold]FEATURES:[/bold]
-    • Live updates from SharedState
+    • Live updates from database
     • Rate limit warnings with visual bars
     • Convergence alerts
     • Cost tracking (coming soon)

@@ -17,7 +17,6 @@ from rich.text import Text
 from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
 
-from ..experiments.shared_state import SharedState
 from ..providers.token_tracker import get_token_tracker
 from ..experiments.storage import ExperimentStore
 
@@ -139,7 +138,7 @@ class SystemMonitor:
         return Panel(table, title="◇ API Usage", border_style=self.COLORS['primary'])
     
     def render_active_experiments(self) -> Panel:
-        """Render active experiments with SharedState data."""
+        """Render active experiments with database data."""
         table = Table(show_header=True, expand=True)
         table.add_column("ID", style=self.COLORS['dim'], width=8)
         table.add_column("Name", style=self.COLORS['info'])
@@ -160,43 +159,11 @@ class SystemMonitor:
             exp_id = exp['experiment_id'][:8]
             name = exp['name'][:20]
             
-            # Try to get SharedState data
-            if SharedState.exists(exp['experiment_id']):
-                try:
-                    state = SharedState(exp['experiment_id'])
-                    metrics = state.get_metrics()
-                    state.close()
-                    
-                    if metrics:
-                        # Use real-time data
-                        progress = f"{metrics.completed_conversations}/{metrics.total_conversations}"
-                        
-                        # Get latest convergence
-                        conv = metrics.convergence_scores[-1] if metrics.convergence_scores else 0
-                        conv_str = f"{conv:.2f}"
-                        if conv > 0.8:
-                            conv_str = f"[{self.COLORS['error']}]{conv_str}![/{self.COLORS['error']}]"
-                        
-                        models = f"{metrics.agent_a_model} ↔ {metrics.agent_b_model}"
-                        status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Turn {metrics.turn_count}"
-                    else:
-                        # Fallback to DB data
-                        progress = f"{exp['completed_conversations']}/{exp['total_conversations']}"
-                        conv_str = "-"
-                        models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
-                        status = f"[{self.COLORS['warning']}]●[/{self.COLORS['warning']}] Active"
-                except:
-                    # Fallback to DB data
-                    progress = f"{exp['completed_conversations']}/{exp['total_conversations']}"
-                    conv_str = "-"
-                    models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
-                    status = f"[{self.COLORS['dim']}]●[/{self.COLORS['dim']}] Unknown"
-            else:
-                # No SharedState - use DB
-                progress = f"{exp['completed_conversations']}/{exp['total_conversations']}"
-                conv_str = "-"
-                models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
-                status = f"[{self.COLORS['dim']}]●[/{self.COLORS['dim']}] No data"
+            # Use database data for all experiments
+            progress = f"{exp['completed_conversations']}/{exp['total_conversations']}"
+            conv_str = "-"
+            models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
+            status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Active"
             
             table.add_row(exp_id, name, models, progress, conv_str, status)
         

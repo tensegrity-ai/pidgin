@@ -2,166 +2,256 @@
 
 ## Overview
 
-Pidgin is an event-driven system for recording and analyzing AI-to-AI conversations. Every action emits an event, creating complete observability of conversation dynamics.
+Pidgin is an event-driven system for recording and analyzing AI-to-AI conversations. Every action emits events, providing complete observability while maintaining clean separation of concerns.
+
+## Core Principles
+
+1. **Event-Driven Everything**: All state changes flow through events
+2. **Provider Agnostic**: Conductors don't know if responses come from APIs or local models
+3. **Observable by Default**: Every interaction can be tracked and analyzed
+4. **Modular Components**: Each module has a single, clear responsibility
+
+## System Architecture
 
 ```
-User → CLI → Conductor → EventBus → Components
-                ↓           ↓
-            Providers   events.jsonl
-                ↓           ↓
-            AI APIs    SQLite DB
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│     CLI     │────▶│   Conductor  │────▶│   EventBus  │
+└─────────────┘     └──────────────┘     └─────────────┘
+                            │                     │
+                    ┌───────▼────────┐           │
+                    │    Providers   │           ▼
+                    ├────────────────┤    ┌─────────────┐
+                    │ • Anthropic    │    │   Storage   │
+                    │ • OpenAI       │    │ • DuckDB    │
+                    │ • Google       │    │ • JSON      │
+                    │ • Ollama       │    │ • Markdown  │
+                    │ • Local (test) │    └─────────────┘
+                    └────────────────┘
 ```
 
-## Core Components
+## Provider Architecture
 
-### EventBus (`core/event_bus.py`)
-Central nervous system. All components communicate through events:
-- Publishers emit events (no direct coupling)
-- Subscribers react to events they care about
-- Every event is logged to `events.jsonl`
-- Complete replay capability (future feature)
+All providers implement the same interface:
+
+```python
+class Provider(ABC):
+    async def stream_response(
+        messages: List[Message],
+        temperature: Optional[float] = None
+    ) -> AsyncGenerator[str, None]
+```
+
+Provider types:
+- **API Providers**: AnthropicProvider, OpenAIProvider, GoogleProvider, xAIProvider
+- **Local Providers**: LocalProvider (test model), OllamaProvider
+
+The Conductor doesn't distinguish between provider types - all implement the same streaming interface.
+
+## Local Model Support
+
+Pidgin supports local models through two mechanisms:
+
+### Test Model
+- Built-in deterministic model for testing
+- No dependencies required
+- Available as `local:test`
+- Provides consistent responses for development
+
+### Ollama Integration
+- External Ollama server handles model management
+- Pidgin communicates via HTTP API
+- Models: qwen2.5:0.5b, phi3, mistral
+- Auto-downloads models on first use
+- Automatic installation support with user consent
+
+```
+┌─────────────┐     HTTP      ┌──────────────┐
+│   Pidgin    │ ──────────▶   │ Ollama Server│
+│OllamaProvider│               │ (port 11434) │
+└─────────────┘               └──────────────┘
+                                     │
+                              ┌──────▼────────┐
+                              │ Local Models  │
+                              │ (GGUF format) │
+                              └───────────────┘
+```
+
+Ollama installation flow:
+1. Detect if Ollama is installed
+2. Offer to install if missing (with user consent)
+3. Start server automatically if not running
+4. Pull models on first use
+
+## Event System
+
+The EventBus is the central nervous system of Pidgin:
+
+```python
+# Core events
+ConversationStartEvent
+TurnStartEvent
+MessageRequestEvent
+MessageChunkEvent
+MessageCompleteEvent
+TurnCompleteEvent
+ConversationEndEvent
+
+# Metrics events  
+ConvergenceCalculatedEvent
+MetricsCalculatedEvent
+
+# Error events
+APIErrorEvent
+RateLimitEvent
+```
+
+## Component Responsibilities
 
 ### Conductor (`core/conductor.py`)
-Orchestrates conversations:
-- Manages conversation flow
-- Handles interrupts (Ctrl+C)
-- Emits events for every action
-- No business logic - just coordination
+- Orchestrates conversations between agents
+- Manages turn-taking and message flow
+- Emits events for all state changes
+- Handles interrupts and pausing
+
+### EventBus (`core/event_bus.py`)
+- Central event distribution
+- Async event handling
+- Type-safe event subscriptions
+- Zero coupling between components
 
 ### Providers (`providers/`)
-Abstractions over AI APIs:
-- `anthropic.py` - Claude models
-- `openai.py` - GPT and O-series models
-- `google.py` - Gemini models
-- `xai.py` - Grok models
+- Implement streaming interface
+- Handle API-specific details
+- Emit token usage events
+- Manage rate limiting
 
-Each wrapped with `EventAwareProvider` for automatic event emission.
+### Metrics Calculator (`metrics/calculator.py`)
+- Subscribes to turn events
+- Calculates ~150 metrics per turn
+- Emits metrics events
+- Single source of truth for all metrics
 
-### Experiment System (`experiments/`)
-Batch execution and analysis:
-- `ExperimentRunner` - Manages parallel conversations
-- `MetricsCalculator` - Computes ~150 linguistic metrics
-- `Database` - SQLite storage for metrics
-- `Dashboard` - Real-time visualization
+### Storage (`io/`)
+- Subscribes to relevant events
+- Persists to DuckDB/JSON/Markdown
+- No direct coupling to other components
 
-## Event Flow Example
+## Experiment System
+
+Experiments run as Unix daemon processes:
 
 ```
-1. User runs: pidgin chat -a claude -b gpt
+┌──────────────┐     ┌───────────────┐     ┌──────────────┐
+│ CLI Command  │────▶│ Daemon Process│────▶│   EventBus   │
+└──────────────┘     └───────────────┘     └──────────────┘
+                             │                      │
+                     ┌───────▼────────┐    ┌───────▼──────┐
+                     │ Sequential     │    │ DuckDB Store │
+                     │ Runner         │    │ • Metrics    │
+                     │ • Rate aware   │    │ • Messages   │
+                     │ • Fault tolerant│   │ • Metadata   │
+                     │ • Progress track│    │ • Analytics  │
+                     └────────────────┘    └──────────────┘
+```
+
+**Important Note**: While the architecture supports parallel execution, experiments run sequentially by default due to:
+- API provider rate limits
+- Local model hardware constraints
+- Better reliability and reproducibility
+
+Users can increase parallelism if their environment supports it, but sequential execution is the sensible default.
+
+## Dependencies
+
+### Core (always required)
+- **click**: CLI framework
+- **rich**: Terminal UI
+- **asyncio**: Async operations (built-in)
+- **duckdb**: Analytical database
+
+### Optional
+- **aiohttp**: For Ollama communication (when using local models)
+- **API provider SDKs**: Only needed for specific providers
+
+This modular approach keeps the base installation minimal while allowing users to add only what they need.
+
+## Data Flow Example
+
+1. User runs: `pidgin chat -a claude -b ollama:qwen`
 2. CLI creates Conductor with providers
-3. Conductor emits ConversationStartEvent
-4. Conductor requests message from Agent A
-   → MessageRequestEvent
-5. Provider streams response
-   → MessageChunkEvent (multiple)
-   → MessageCompleteEvent
-6. Metrics calculated
-   → MetricsCalculatedEvent
-7. Turn completes
-   → TurnCompleteEvent (includes convergence)
-8. Repeat for Agent B
-9. Eventually ConversationEndEvent
-```
+3. Conductor emits `ConversationStartEvent`
+4. Storage components start recording
+5. For each turn:
+   - Conductor emits `TurnStartEvent`
+   - Sends `MessageRequestEvent` to agent
+   - Provider streams response chunks
+   - Each chunk triggers `MessageChunkEvent`
+   - Complete message triggers `MessageCompleteEvent`
+   - Metrics calculator computes metrics
+   - `TurnCompleteEvent` with metrics emitted
+6. Storage components persist all data
+7. `ConversationEndEvent` completes the flow
 
-## Data Flow
+## Extension Points
 
-### Single Conversation
-```
-Conversation
-    ↓
-events.jsonl (every event)
-    ↓
-conversation.json (final state)
-conversation.md (human readable)
-```
+### Adding a New Provider
+1. Implement the `Provider` interface
+2. Add to provider factory
+3. Add model configurations
+4. No other changes needed
 
-### Batch Experiments
-```
-100x Conversations
-    ↓
-SQLite Database
-    ├── experiments table
-    ├── conversations table
-    ├── turns table (~150 metrics)
-    └── word_frequencies table
-    ↓
-Dashboard (real-time view)
-Analysis Tools
-```
+### Adding New Metrics
+1. Add calculation in `metrics/calculator.py`
+2. Add to database schema if needed
+3. Metrics automatically flow through events
 
-## Key Design Principles
+### Adding Analysis Tools
+1. Subscribe to relevant events
+2. Process data as needed
+3. No core system changes required
 
-### 1. Everything Is An Event
-No hidden state. If something happens, it emits an event. This enables:
-- Complete observability
-- Replay capability
-- Loose coupling
-- Easy testing
+## Design Decisions
 
-### 2. Streams Over Batches
-Responses stream token by token:
-- Real-time display
-- Interrupt capability
-- Natural conversation flow
+### Why Event-Driven?
+- Complete decoupling between components
+- Natural audit trail
+- Easy to extend without modifying core
+- Simplifies testing and debugging
 
-### 3. Metrics Not Judgments
-We calculate objective metrics:
-- Type-token ratio
-- Vocabulary overlap
-- Shannon entropy
-- Message lengths
+### Why Providers Are Agnostic
+- Allows mixing local and API models
+- Simplifies testing with deterministic models
+- Future-proof for new model sources
+- Clean abstraction boundary
 
-We don't interpret what they mean.
+### Why DuckDB?
+- Optimized for analytical queries
+- Columnar storage for metrics data
+- Single file, zero configuration
+- Excellent pandas integration
+- Perfect for research workloads
 
-## File Organization
+### Why Sequential Execution?
+- Rate limits make parallel execution problematic
+- Hardware constraints for local models
+- Better reproducibility for research
+- Architecture supports parallel when feasible
 
-```
-pidgin/
-├── core/              # Event system, conductor, types
-├── providers/         # AI provider integrations
-├── experiments/       # Batch execution system
-├── analysis/          # Metrics and convergence
-├── ui/                # Display and interaction
-├── config/            # Models, prompts, settings
-└── io/                # File I/O, transcripts
+## Performance Considerations
 
-./pidgin_output/       # All output goes here
-├── conversations/     # Individual conversations
-└── experiments/       # Batch experiment data
-    └── experiments.db # Metrics database
-```
+- **Streaming**: All providers stream to minimize latency
+- **Async Throughout**: Non-blocking I/O everywhere
+- **Lazy Loading**: Models load only when needed
+- **Sequential Execution**: Avoids rate limit issues
+- **DuckDB**: Fast analytical queries on metrics
 
-## Extensibility Points
+## Security Notes
 
-### Adding a Provider
-1. Implement `Provider` interface
-2. Add to provider registry
-3. Automatic event support via wrapper
+- API keys never logged or stored
+- All file I/O respects system permissions
+- No network access except to configured endpoints
+- Local models run in isolated processes (via Ollama)
 
-### Adding a Metric
-1. Add to `MetricsCalculator`
-2. Add database column
-3. Add to dashboard display
+---
 
-### Adding Event Types
-1. Define event in `events.py`
-2. Emit from relevant component
-3. Subscribe where needed
-
-## Performance Characteristics
-
-- **Startup**: <1 second
-- **Streaming latency**: <100ms
-- **Metric calculation**: <50ms per turn
-- **Dashboard refresh**: 4Hz (250ms)
-- **Parallel conversations**: 10+ (rate limit dependent)
-
-## What Makes This Architecture Interesting
-
-1. **Complete Record**: Every conversation is perfectly recorded via events
-2. **No Hidden State**: Everything observable through event stream
-3. **Natural Parallelism**: Event-driven = easy concurrent execution
-4. **Scientific Reproducibility**: Same inputs → same outputs
-5. **Live Analysis**: Watch patterns emerge in real-time
-
-The architecture is built for research - we're not trying to coordinate AI agents or build protocols. We're trying to understand what happens when they talk.
+This architecture enables Pidgin to be both simple to use and powerful to extend, while maintaining complete observability of AI conversation dynamics without unnecessary complexity.

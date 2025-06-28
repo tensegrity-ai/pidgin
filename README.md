@@ -19,17 +19,19 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Streaming**: Real-time response display
 - **Interrupts**: Ctrl+C to pause/resume conversations
 - **Output**: Clean JSON and markdown transcripts
-- **Experiments**: Run hundreds of conversations in parallel with comprehensive metrics
+- **Experiments**: Run hundreds of conversations with comprehensive metrics (sequential execution by default)
 - **Background Execution**: Experiments run as Unix daemons
 - **Analysis**: ~150 metrics captured per conversation turn
-- **Live Dashboard**: Real-time monitoring of running experiments
+- **Database**: DuckDB for analytical queries
 
 ### ▶ What's Partial
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
+- **Jupyter Integration**: Auto-generated notebooks planned
 
 ### ■ What's Missing
 - **Automated pattern detection**: Statistical validation tools
 - **Report generation**: Publication-ready outputs
+- **GraphQL interface**: Flexible querying for research
 
 ## Quick Start
 
@@ -45,10 +47,10 @@ export OPENAI_API_KEY="..."
 pidgin chat -a claude -b gpt -t 20
 
 # Run an experiment (10 conversations)
-pidgin experiment start -a claude -b gpt -r 10
+pidgin experiment start -a claude -b gpt -r 10 --name my_experiment
 
 # Check experiment progress
-pidgin experiment status
+pidgin experiment status my_experiment
 
 # Output saved to ./pidgin_output/
 ```
@@ -150,41 +152,34 @@ Is this compression? Attractor dynamics? Random chance? We need data.
 
 ## Running Experiments
 
-Pidgin can run batch experiments for statistical analysis:
+Pidgin runs batch experiments for statistical analysis:
 
 ```bash
 # Run 100 conversations between Claude and GPT
-pidgin experiment start -a claude -b gpt -r 100 -t 50
+pidgin experiment start -a claude -b gpt -r 100 -t 50 --name language_study
 
 # Check progress
-pidgin experiment status
+pidgin experiment status language_study
 
-# Follow logs in real-time
-pidgin experiment logs <experiment_id> -f
+# List all experiments
+pidgin experiment list
 
 # Stop an experiment
-pidgin experiment stop <experiment_id>
-
-# Monitor live with dashboard (NEW!)
-pidgin experiment dashboard
+pidgin experiment stop language_study
 ```
 
 ### Experiment Features
 
-- **Parallel execution** with automatic rate limiting
+- **Sequential execution** by default (avoids rate limits and hardware constraints)
 - **Background operation** - experiments continue after disconnect
-- **Live dashboard** - Real-time monitoring with pattern detection:
-  - Visual metrics with sparklines
-  - High convergence warnings
-  - Symbol emergence detection
-  - Export capability for analysis
 - **Comprehensive metrics** - ~150 measurements per turn including:
   - Lexical diversity (TTR, vocabulary overlap)
   - Convergence metrics (structural similarity)
   - Symbol emergence (emoji, arrows, special characters)
   - Linguistic patterns (hedging, agreement, politeness)
   - Information theory metrics (entropy)
-- **Smart defaults** - automatically alternates first speaker, manages parallelism
+- **Smart defaults** - automatically alternates first speaker
+- **Parallel support** - architecture supports parallelism when constraints allow
 
 ### Example Experiment
 
@@ -197,13 +192,11 @@ pidgin experiment start \
   -t 40 \
   --name "economical_model_comparison"
 
-# Data stored in SQLite for analysis
-sqlite3 ./pidgin_output/experiments/experiments.db \
-  "SELECT AVG(convergence_score) FROM turns WHERE turn_number = 30"
+# Check status
+pidgin experiment status economical_model_comparison
 
-# Monitor with live dashboard
-pidgin experiment dashboard
-# Controls: q=quit, e=export, p=pause, r=refresh
+# Data stored in DuckDB for analysis
+# (Coming soon: GraphQL interface for complex queries)
 ```
 
 ## How to Help
@@ -225,8 +218,8 @@ Pidgin is a comprehensive research tool with:
 
 ### Experiment System
 - **Unix daemon processes**: Proper background execution
-- **Parallel orchestration**: Smart rate limiting per provider
-- **SQLite storage**: Comprehensive metrics database
+- **Sequential orchestration**: Rate limit aware execution
+- **DuckDB storage**: Optimized for analytical queries
 - **Fault tolerance**: Graceful handling of API failures
 
 ### Metrics System
@@ -248,8 +241,8 @@ This is early-stage research. We need:
 - Statistical analysis tools
 - Pattern validation methods
 - More observations from different model combinations
-- Dashboard for real-time experiment monitoring
 - Automated report generation
+- GraphQL interface for flexible querying
 
 ## Not a Competition
 
