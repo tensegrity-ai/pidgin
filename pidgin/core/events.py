@@ -22,7 +22,6 @@ class Turn:
 
     agent_a_message: Message
     agent_b_message: Message
-    intervention: Optional[Message] = None
 
 
 @dataclass

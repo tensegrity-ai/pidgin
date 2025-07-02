@@ -95,7 +95,6 @@ class TurnExecutor:
         turn = Turn(
             agent_a_message=agent_a_message,
             agent_b_message=agent_b_message,
-            intervention=None,  # Not handling interventions yet
         )
         
         # Calculate convergence

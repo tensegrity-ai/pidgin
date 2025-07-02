@@ -115,13 +115,6 @@ class DirectRouter:
                                 agent_id=msg.agent_id,
                             )
                         )
-            # Human interventions (anything not from agents or system)
-            elif msg.agent_id not in ["agent_a", "agent_b"]:
-                # Mark ALL non-agent messages as human guidance
-                marked_content = f"[HUMAN NOTE]: {msg.content}"
-                agent_history.append(
-                    Message(role="user", content=marked_content, agent_id=msg.agent_id)
-                )
             # Target agent's own messages
             elif msg.agent_id == target_agent:
                 agent_history.append(
@@ -130,6 +123,11 @@ class DirectRouter:
                     )
                 )
             # Other agent's messages
+            elif msg.agent_id in ["agent_a", "agent_b"]:
+                agent_history.append(
+                    Message(role="user", content=msg.content, agent_id=msg.agent_id)
+                )
+            # Any other message (including initial prompt) passes through as user message
             else:
                 agent_history.append(
                     Message(role="user", content=msg.content, agent_id=msg.agent_id)
