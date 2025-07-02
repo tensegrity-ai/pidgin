@@ -82,7 +82,7 @@ def build_initial_prompt(custom_prompt: Optional[str] = None,
         return custom_prompt
     
     if not dimensions:
-        return "Hello"
+        return "I'm looking forward to your conversation."
     
     # Use the DimensionalPromptGenerator
     generator = DimensionalPromptGenerator()
@@ -95,9 +95,9 @@ def build_initial_prompt(custom_prompt: Optional[str] = None,
             return generator.generate(dimension_spec)
         except ValueError as e:
             console.print(f"[{NORD_YELLOW}]Warning: {e}[/{NORD_YELLOW}]")
-            return "Hello"
+            return "I'm looking forward to your conversation."
     
-    return "Hello"
+    return "I'm looking forward to your conversation."
 
 
 def validate_model_id(model_id: str) -> Tuple[str, str]:
