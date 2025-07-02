@@ -240,10 +240,11 @@ async def _run_conversation(agent_a_id: str, agent_b_id: str,
     
     # Create conductor
     conductor = Conductor(
-        providers=providers,
         output_manager=output_manager,
-        convergence_threshold=convergence_threshold,
-        convergence_action=convergence_action
+        console=console,
+        base_providers=providers,
+        convergence_threshold_override=convergence_threshold,
+        convergence_action_override=convergence_action
     )
     
     # Run conversation

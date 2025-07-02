@@ -49,7 +49,7 @@ import rich_click as click
 from .constants import BANNER
 from .chat import chat, models
 from .experiment import experiment
-from .tools import transcribe, report, compare
+from .monitor import monitor
 
 console = Console()
 
@@ -81,73 +81,27 @@ def cli():
     [bold]CONFIGURATION:[/bold]
 
     • Configuration files: ~/.pidgin/ or ./.pidgin/
-    • Create templates: pidgin init
     """
     pass
 
 
-@cli.command(context_settings={"help_option_names": ["-h", "--help"]})
-def init():
-    """Initialize configuration directory with template files.
-
-    Creates a .pidgin/ directory in your current folder with template
-    configuration files for:
-
-    • Custom dimensions (planned)
-
-    After running this command, edit the YAML files to add your own content.
+@cli.command()
+def analyze():
+    """Launch analysis tools for experiments.
+    
+    Coming soon: Jupyter notebook and GraphQL interfaces for 
+    exploring experiment data.
     """
-    from pathlib import Path
-    from datetime import datetime
-    
-    config_dir = Path.cwd() / ".pidgin"
-    created_files = []
-    
-    # Create directory
-    if not config_dir.exists():
-        config_dir.mkdir(parents=True)
-        console.print(f"Created directory: {config_dir}")
-    
-
-    # Dimensions template
-    dim_path = config_dir / "dimensions.yaml"
-    if not dim_path.exists():
-        dim_content = f"""# Pidgin Custom Dimensions
-# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-#
-# Define custom dimensions for prompt generation.
-# (This feature is planned for future releases)
-#
-# For now, use the built-in dimensions:
-#   Context: peers, teaching, debate, interview, collaboration, neutral
-#   Topic: philosophy, language, science, creativity, meta
-#   Mode: analytical, intuitive, exploratory, focused
-
-dimensions:
-  # Future feature - custom dimensions will go here
-"""
-        with open(dim_path, "w") as f:
-            f.write(dim_content)
-        created_files.append(dim_path)
-    
-    # Report results
-    if created_files:
-        console.print("\n[bold #a3be8c]✓ Configuration templates created:[/bold #a3be8c]")
-        for file in created_files:
-            console.print(f"  • {file.relative_to(Path.cwd())}")
-        console.print("\n[#4c566a]Edit these files to add your own content.[/#4c566a]")
-    else:
-        console.print("[#ebcb8b]All configuration files already exist.[/#ebcb8b]")
-        console.print(f"[#4c566a]Check {config_dir.relative_to(Path.cwd())}/[/#4c566a]")
+    console.print("[bold cyan]Coming soon![/bold cyan]")
+    console.print("This will launch Jupyter notebooks and GraphQL tools for analysis.")
 
 
 # Register commands
 cli.add_command(chat)
 cli.add_command(models)
 cli.add_command(experiment)
-cli.add_command(transcribe)
-cli.add_command(report)
-cli.add_command(compare)
+cli.add_command(monitor)
+cli.add_command(analyze)
 
 def main():
     """Main entry point."""

@@ -138,7 +138,7 @@ class SystemMonitor:
         return Panel(table, title="◇ API Usage", border_style=self.COLORS['primary'])
     
     def render_active_experiments(self) -> Panel:
-        """Render active experiments with database data."""
+        """Render recent experiments with database data."""
         table = Table(show_header=True, expand=True)
         table.add_column("ID", style=self.COLORS['dim'], width=8)
         table.add_column("Name", style=self.COLORS['info'])
@@ -147,39 +147,59 @@ class SystemMonitor:
         table.add_column("Conv", justify="center", style=self.COLORS['warning'])
         table.add_column("Status", justify="center")
         
-        # Get active experiments
-        experiments = self.storage.list_experiments(limit=10)
-        active_count = 0
+        # Get recent experiments (both running and completed)
+        experiments = self.storage.list_experiments()
+        recent_experiments = experiments[:10]  # Show last 10 experiments
         
-        for exp in experiments:
-            if exp['status'] != 'running':
-                continue
-                
-            active_count += 1
+        for exp in recent_experiments:
             exp_id = exp['experiment_id'][:8]
             name = exp['name'][:20]
             
             # Use database data for all experiments
             progress = f"{exp['completed_conversations']}/{exp['total_conversations']}"
+            
+            # Try to get latest convergence score
             conv_str = "-"
+            if exp['completed_conversations'] > 0:
+                # Get the latest convergence from completed conversations
+                latest_conv = self._get_latest_convergence(exp['experiment_id'])
+                if latest_conv is not None:
+                    conv_str = f"{latest_conv:.2f}"
+                    if latest_conv > 0.8:
+                        conv_str = f"[{self.COLORS['error']}]{conv_str}![/{self.COLORS['error']}]"
+                    elif latest_conv > 0.6:
+                        conv_str = f"[{self.COLORS['warning']}]{conv_str}[/{self.COLORS['warning']}]"
+            
             models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
-            status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Active"
+            
+            # Determine status display
+            if exp['status'] == 'running':
+                status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Running"
+            elif exp['status'] == 'completed':
+                status = f"[{self.COLORS['info']}]✓[/{self.COLORS['info']}] Complete"
+            elif exp['status'] == 'failed':
+                status = f"[{self.COLORS['error']}]✗[/{self.COLORS['error']}] Failed"
+            else:
+                status = f"[{self.COLORS['warning']}]●[/{self.COLORS['warning']}] {exp['status'].title()}"
             
             table.add_row(exp_id, name, models, progress, conv_str, status)
         
-        if active_count == 0:
+        if len(recent_experiments) == 0:
             table.add_row(
-                "[dim]No active experiments[/dim]",
+                "[dim]No experiments found[/dim]",
                 "", "", "", "", ""
             )
         
-        return Panel(table, title=f"◇ Active Experiments ({active_count})", 
+        # Count active experiments for title
+        active_count = sum(1 for e in recent_experiments if e['status'] == 'running')
+        
+        return Panel(table, title=f"◇ Recent Experiments (Active: {active_count})", 
                     border_style=self.COLORS['success'])
     
     def render_summary(self) -> Panel:
         """Render experiment summary statistics."""
         # Get overall stats
-        all_experiments = self.storage.list_experiments(limit=1000)
+        all_experiments = self.storage.list_experiments()
         
         total = len(all_experiments)
         running = sum(1 for e in all_experiments if e['status'] == 'running')
@@ -188,6 +208,12 @@ class SystemMonitor:
         
         total_conversations = sum(e.get('total_conversations', 0) for e in all_experiments)
         completed_conversations = sum(e.get('completed_conversations', 0) for e in all_experiments)
+        
+        # Calculate success rate
+        if total_conversations > 0:
+            success_rate = f"{(completed_conversations/total_conversations*100):.1f}%"
+        else:
+            success_rate = "N/A"
         
         # Calculate database size
         db_path = Path("./pidgin_output/experiments/experiments.db")
@@ -204,7 +230,7 @@ Experiments:
 Conversations:
   Total: {total_conversations:,}
   Completed: {completed_conversations:,}
-  Success Rate: {(completed_conversations/total_conversations*100):.1f}%
+  Success Rate: {success_rate}
 
 Storage:
   Database: {db_size:.1f} MB
@@ -234,6 +260,47 @@ Storage:
             
         bar = f"[{color}]{'▓' * filled}[/{color}]{'░' * empty}"
         return f"{bar} {percentage:3.0f}%"
+    
+    def _get_latest_convergence(self, experiment_id: str) -> Optional[float]:
+        """Get the latest convergence score from completed conversations."""
+        try:
+            with sqlite3.connect(self.storage.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                
+                # Get the most recent convergence score from completed conversations
+                query = """
+                    SELECT c.final_convergence_score
+                    FROM conversations c
+                    WHERE c.experiment_id = ? 
+                      AND c.status = 'completed'
+                      AND c.final_convergence_score IS NOT NULL
+                    ORDER BY c.completed_at DESC
+                    LIMIT 1
+                """
+                
+                result = conn.execute(query, (experiment_id,)).fetchone()
+                if result:
+                    return result['final_convergence_score']
+                    
+                # If no completed conversations, try to get latest from turn metrics
+                query = """
+                    SELECT tm.convergence_score
+                    FROM turn_metrics tm
+                    JOIN conversations c ON tm.conversation_id = c.conversation_id
+                    WHERE c.experiment_id = ?
+                      AND tm.convergence_score IS NOT NULL
+                    ORDER BY tm.turn_number DESC
+                    LIMIT 1
+                """
+                
+                result = conn.execute(query, (experiment_id,)).fetchone()
+                if result:
+                    return result['convergence_score']
+                    
+                return None
+        except Exception:
+            # If there's any error, just return None
+            return None
     
     async def run(self):
         """Run the monitor."""

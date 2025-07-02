@@ -1,6 +1,8 @@
 # pidgin/cli/experiment.py
 """Experiment-related CLI commands."""
 
+__all__ = ['experiment']
+
 import os
 import sys
 import json
@@ -316,200 +318,72 @@ def list(all):
 
 @experiment.command()
 @click.argument('experiment_id')
-def stop(experiment_id):
-    """Stop a running experiment gracefully."""
-    manager = ExperimentManager(
-        base_dir=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
-    )
+def stop(experiment_id, all):
+    """Stop a running experiment gracefully.
     
-    console.print(f"[{NORD_YELLOW}]→ Stopping experiment {experiment_id}...[/{NORD_YELLOW}]")
-    
-    if manager.stop_experiment(experiment_id):
-        console.print(f"[{NORD_GREEN}]✓ Stopped experiment {experiment_id}[/{NORD_GREEN}]")
-    else:
-        console.print(f"[{NORD_RED}]✗ Failed to stop experiment {experiment_id}[/{NORD_RED}]")
-        console.print(f"[{NORD_YELLOW}]  (It may not be running)[/{NORD_YELLOW}]")
-
-
-@experiment.command(name='stop-all')
-@click.option('--force', is_flag=True, help='Force kill all experiment processes')
-def stop_all(force):
-    """KILLSWITCH: Stop ALL running experiments immediately.
-    
-    This command will:
-    - Find all running experiment daemons
-    - Gracefully stop them (or force kill with --force)
-    - Update database to mark experiments as failed
-    - Clean up any orphaned processes
-    
-    WARNING: This will terminate all experiments without saving state!
+    Use --all to stop all running experiments at once.
     """
-    console.print(f"[bold {NORD_RED}]⚠️  EXPERIMENT KILLSWITCH ⚠️[/bold {NORD_RED}]")
-    console.print(f"[{NORD_YELLOW}]This will stop ALL running experiments![/{NORD_YELLOW}]\n")
-    
-    # Find all daemon PIDs
-    active_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "active"
-    daemon_pids = []
-    
-    if active_dir.exists():
-        for pid_file in active_dir.glob("*.pid"):
+    if all:
+        # Stop all logic from stop_all command
+        console.print(f"[bold {NORD_RED}]⚠️  Stopping ALL experiments ⚠️[/bold {NORD_RED}]")
+        console.print(f"[{NORD_YELLOW}]This will stop ALL running experiments![/{NORD_YELLOW}]\n")
+        
+        # Find all daemon PIDs
+        active_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "active"
+        daemon_pids = []
+        
+        if active_dir.exists():
+            for pid_file in active_dir.glob("*.pid"):
+                try:
+                    with open(pid_file) as f:
+                        pid = int(f.read().strip())
+                        daemon_pids.append((pid, pid_file.stem))
+                except:
+                    pass
+        
+        console.print(f"[{NORD_CYAN}]Found {len(daemon_pids)} running daemons[/{NORD_CYAN}]")
+        
+        # Kill each daemon
+        for pid, exp_id in daemon_pids:
             try:
-                with open(pid_file) as f:
-                    pid = int(f.read().strip())
-                    daemon_pids.append((pid, pid_file.stem))
-            except:
-                pass
-    
-    console.print(f"[{NORD_CYAN}]Found {len(daemon_pids)} running daemons[/{NORD_CYAN}]")
-    
-    # Kill each daemon
-    for pid, exp_id in daemon_pids:
-        try:
-            if force:
-                os.kill(pid, signal.SIGKILL)
-                console.print(f"[{NORD_RED}]  ✗ Force killed {exp_id} (PID: {pid})[/{NORD_RED}]")
-            else:
                 os.kill(pid, signal.SIGTERM)
                 console.print(f"[{NORD_YELLOW}]  → Stopped {exp_id} (PID: {pid})[/{NORD_YELLOW}]")
-        except ProcessLookupError:
-            console.print(f"[{NORD_YELLOW}]  ! {exp_id} already dead (PID: {pid})[/{NORD_YELLOW}]")
-        except Exception as e:
-            console.print(f"[{NORD_RED}]  ✗ Failed to stop {exp_id}: {e}[/{NORD_RED}]")
-    
-    # Clean up database
-    console.print(f"\n[{NORD_CYAN}]Updating database...[/{NORD_CYAN}]")
-    
-    storage = ExperimentStore(
-        db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
-    )
-    
-    # Mark all running experiments as failed
-    experiments = storage.list_experiments(status_filter='running')
-    for exp in experiments:
-        storage.update_experiment_status(exp['experiment_id'], 'failed')
-        console.print(f"[{NORD_GREEN}]  ✓ Marked '{exp['name']}' as failed[/{NORD_GREEN}]")
-    
-    console.print(f"\n[bold {NORD_GREEN}]✓ KILLSWITCH COMPLETE[/bold {NORD_GREEN}]")
-    console.print(f"[{NORD_YELLOW}]All experiments have been stopped.[/{NORD_YELLOW}]")
-
-
-@experiment.command()
-@click.argument('experiment_id')
-@click.option('--lines', '-n', default=50, help='Number of lines to show')
-@click.option('--follow', '-f', is_flag=True, help='Follow log output')
-def logs(experiment_id, lines, follow):
-    """Show logs from an experiment.
-    
-    By default shows the last 50 lines. Use -f to follow the log
-    in real-time (press Ctrl+C to stop).
-    """
-    manager = ExperimentManager(
-        base_dir=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
-    )
-    
-    if follow:
-        console.print(f"[{NORD_CYAN}]Following logs for {experiment_id} (Ctrl+C to stop)...[/{NORD_CYAN}]\n")
-        try:
-            manager.tail_logs(experiment_id, follow=True)
-        except KeyboardInterrupt:
-            console.print(f"\n[{NORD_YELLOW}]Stopped following logs.[/{NORD_YELLOW}]")
+            except ProcessLookupError:
+                console.print(f"[{NORD_YELLOW}]  ! {exp_id} already dead (PID: {pid})[/{NORD_YELLOW}]")
+            except Exception as e:
+                console.print(f"[{NORD_RED}]  ✗ Failed to stop {exp_id}: {e}[/{NORD_RED}]")
+        
+        # Clean up database
+        console.print(f"\n[{NORD_CYAN}]Updating database...[/{NORD_CYAN}]")
+        
+        storage = ExperimentStore(
+            db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
+        )
+        
+        # Mark all running experiments as failed
+        experiments = storage.list_experiments(status_filter='running')
+        for exp in experiments:
+            storage.update_experiment_status(exp['experiment_id'], 'failed')
+            console.print(f"[{NORD_GREEN}]  ✓ Marked '{exp['name']}' as failed[/{NORD_GREEN}]")
+        
+        console.print(f"\n[bold {NORD_GREEN}]✓ All experiments stopped[/bold {NORD_GREEN}]")
     else:
-        logs = manager.get_logs(experiment_id, lines=lines)
-        if logs:
-            console.print(logs)
+        if not experiment_id:
+            console.print(f"[{NORD_RED}]Error: Either provide an experiment ID or use --all[/{NORD_RED}]")
+            return
+            
+        manager = ExperimentManager(
+            base_dir=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+        )
+        
+        console.print(f"[{NORD_YELLOW}]→ Stopping experiment {experiment_id}...[/{NORD_YELLOW}]")
+        
+        if manager.stop_experiment(experiment_id):
+            console.print(f"[{NORD_GREEN}]✓ Stopped experiment {experiment_id}[/{NORD_GREEN}]")
         else:
-            console.print(f"[{NORD_RED}]No logs found for experiment {experiment_id}[/{NORD_RED}]")
+            console.print(f"[{NORD_RED}]✗ Failed to stop experiment {experiment_id}[/{NORD_RED}]")
+            console.print(f"[{NORD_YELLOW}]  (It may not be running)[/{NORD_YELLOW}]")
 
 
 
 
-@experiment.command()
-def monitor():
-    """System-wide monitor for experiments and API usage.
-    
-    Shows a real-time overview of:
-    - API usage and rate limits for all providers
-    - Active experiments with live metrics
-    - System statistics and health
-    - Estimated costs
-    
-    This gives you a bird's eye view of your Pidgin system,
-    helping you manage rate limits and track experiment progress.
-    
-    [bold]FEATURES:[/bold]
-    • Live updates from database
-    • Rate limit warnings with visual bars
-    • Convergence alerts
-    • Cost tracking (coming soon)
-    
-    Press 'q' to quit, 'r' to refresh, 'e' to export stats.
-    """
-    from ..monitor.system_monitor import SystemMonitor
-    
-    console.print("[#8fbcbb]◆ Starting system monitor...[/#8fbcbb]")
-    console.print("[#4c566a]Press 'q' to exit[/#4c566a]\n")
-    
-    monitor = SystemMonitor()
-    try:
-        asyncio.run(monitor.run())
-    except KeyboardInterrupt:
-        console.print("\n[#4c566a]Monitor stopped[/#4c566a]")
-
-
-@experiment.command()
-@click.argument('experiment_id')
-def analyze(experiment_id):
-    """Analyze completed experiment results.
-    
-    Generates statistical analysis and visualizations for the experiment.
-    """
-    storage = ExperimentStore(
-        db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
-    )
-    
-    # Get experiment
-    exp = storage.get_experiment(experiment_id)
-    if not exp:
-        console.print(f"[{NORD_RED}]Experiment {experiment_id} not found[/{NORD_RED}]")
-        return
-    
-    if exp['status'] not in ['completed', 'failed']:
-        console.print(f"[{NORD_YELLOW}]Experiment is still {exp['status']}[/{NORD_YELLOW}]")
-        return
-    
-    console.print(f"\n[bold {NORD_BLUE}]◆ Analyzing: {exp['name']}[/bold {NORD_BLUE}]")
-    
-    # Get metrics
-    metrics = storage.get_experiment_metrics(experiment_id)
-    
-    # Display convergence stats
-    conv_stats = metrics.get('convergence_stats', {})
-    console.print(f"\n[{NORD_CYAN}]Convergence Statistics:[/{NORD_CYAN}]")
-    console.print(f"  Average: {conv_stats.get('avg', 0):.3f}")
-    console.print(f"  Min: {conv_stats.get('min', 0):.3f}")
-    console.print(f"  Max: {conv_stats.get('max', 0):.3f}")
-    console.print(f"  Conversations: {conv_stats.get('conversation_count', 0)}")
-    
-    # Display vocabulary trends
-    console.print(f"\n[{NORD_CYAN}]Vocabulary Overlap by Turn:[/{NORD_CYAN}]")
-    overlap = metrics.get('overlap_by_turn', {})
-    if overlap:
-        for turn in sorted(overlap.keys())[:10]:
-            bar_width = int(overlap[turn] * 20)
-            bar = "█" * bar_width + "░" * (20 - bar_width)
-            console.print(f"  Turn {turn:2d}: {bar} {overlap[turn]:.3f}")
-    
-    # Display emergent words
-    emergent = metrics.get('emergent_words', [])
-    if emergent:
-        console.print(f"\n[{NORD_CYAN}]Emergent Words (first appeared after turn 5):[/{NORD_CYAN}]")
-        for word, turn in emergent[:10]:
-            console.print(f"  '{word}' - first seen in turn {turn}")
-    
-    # Save full analysis
-    output_file = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / f"{experiment_id}_analysis.json"
-    with open(output_file, 'w') as f:
-        json.dump(metrics, f, indent=2)
-    
-    console.print(f"\n[{NORD_GREEN}]Full analysis saved to:[/{NORD_GREEN}]")
-    console.print(f"  {output_file}")
