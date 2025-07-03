@@ -1,5 +1,7 @@
 # DuckDB Migration Plan for Pidgin
 
+**STATUS: COMPLETED** - This migration has been implemented. See DUCKDB_MIGRATION_GUIDE.md for usage.
+
 ## Overview
 This document outlines the comprehensive plan to migrate Pidgin from SQLite to DuckDB, including architectural improvements that leverage DuckDB's advanced features.
 

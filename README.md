@@ -22,7 +22,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Experiments**: Run hundreds of conversations with comprehensive metrics (sequential execution by default)
 - **Background Execution**: Experiments run as Unix daemons
 - **Analysis**: ~150 metrics captured per conversation turn
-- **Database**: SQLite for storage (DuckDB migration planned)
+- **Database**: DuckDB with async operations and event sourcing
 
 ### ▶ What's Partial
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
@@ -62,6 +62,21 @@ pidgin experiment status my_experiment
 pidgin experiment status my_experiment --watch --notify
 
 # Output saved to ./pidgin_output/
+```
+
+### Database Management
+
+Pidgin uses DuckDB for high-performance analytics:
+
+```bash
+# Check database status
+pidgin db status
+
+# Create fresh database
+pidgin db migrate --fresh
+
+# Reset database (WARNING: deletes all data)
+pidgin db reset --force
 ```
 
 ## API Key Management
@@ -207,8 +222,8 @@ pidgin experiment start \
 # Check status
 pidgin experiment status economical_model_comparison
 
-# Data stored in SQLite currently
-# (Coming soon: DuckDB migration and GraphQL interface)
+# Data stored in DuckDB with event sourcing
+# Run 'pidgin db status' to check database health
 ```
 
 ## How to Help
@@ -231,7 +246,7 @@ Pidgin is a comprehensive research tool with:
 ### Experiment System
 - **Unix daemon processes**: Proper background execution
 - **Sequential orchestration**: Rate limit aware execution
-- **SQLite storage**: Current database (DuckDB migration planned)
+- **DuckDB storage**: Async database with event sourcing
 - **Fault tolerance**: Graceful handling of API failures
 
 ### Metrics System

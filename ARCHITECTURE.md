@@ -22,7 +22,7 @@ Pidgin is an event-driven system for recording and analyzing AI-to-AI conversati
                     │    Providers   │           ▼
                     ├────────────────┤    ┌─────────────┐
                     │ • Anthropic    │    │   Storage   │
-                    │ • OpenAI       │    │ • SQLite    │
+                    │ • OpenAI       │    │ • DuckDB    │
                     │ • Google       │    │ • JSON      │
                     │ • xAI          │    │ • Markdown  │
                     │ • Ollama       │    └─────────────┘

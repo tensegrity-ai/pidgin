@@ -1,6 +1,6 @@
 # Pidgin Project TODO
 
-Last Updated: July 2, 2025
+Last Updated: July 3, 2025
 
 ## Overview
 
@@ -39,6 +39,13 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Panels already removed from regular messages
   - Color/prefixes used for speaker separation
 
+- [x] **Switch from SQLite to DuckDB** *(Completed 2025-07-03)*
+  - Created AsyncDuckDB wrapper with connection pooling
+  - Implemented async storage layer with event sourcing
+  - Added database migration CLI commands (db migrate, status, reset)
+  - Created comprehensive migration guide
+  - Simplified schema to work with current DuckDB limitations
+
 ## 🚧 In Progress
 
 - [ ] **Complete token counting implementation**
@@ -49,13 +56,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 ## 📋 Upcoming Tasks
 
-### 🗄️ Priority 1: Database Migration
-
-- [ ] **Switch from SQLite to DuckDB**
-  - Better analytical query performance
-  - Columnar storage for metrics data
-  - Same single-file simplicity
-  - Excellent pandas integration
 
 ### 🔥 Priority 2: Documentation & CLI Cleanup
 
@@ -68,7 +68,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Remove dashboard references throughout
   - Update command examples
   - Document new architecture
-  - Add note about upcoming DuckDB migration
 
 ### 🛠️ Priority 3: Core Functionality
 

@@ -16,11 +16,11 @@ This guide covers the migration from the basic DuckDB implementation to a fully-
 - Complete audit trail with time-travel queries
 - Rebuild any state from events
 
-### 3. **Native DuckDB Types**
-- `MAP` type for word frequencies (massive space savings)
-- `STRUCT` for grouped metrics (cleaner schema)
-- Native JSON handling
-- Better query performance
+### 3. **Optimized Schema**
+- JSON storage for word frequencies (MAP syntax pending)
+- Flattened columns for core metrics
+- Native JSON handling for complex data
+- Optimized indexes for query performance
 
 ### 4. **Real-time Analytics**
 - Pre-computed views for dashboards
@@ -55,7 +55,7 @@ pidgin db status
 
 You should see:
 - ✓ Event sourcing enabled
-- ✓ Native DuckDB types (STRUCT, MAP)
+- ✗ Using legacy column storage (MAP/STRUCT pending)
 - ✓ Analytics views
 
 ## New Features
@@ -79,8 +79,8 @@ Query convergence trends with window functions:
 ```sql
 SELECT 
     turn_number,
-    convergence.score,
-    AVG(convergence.score) OVER (
+    convergence_score,
+    AVG(convergence_score) OVER (
         ORDER BY turn_number 
         ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
     ) as rolling_avg_5
@@ -89,14 +89,14 @@ FROM turn_metrics;
 
 ### Word Frequency Analysis
 
-Word frequencies are now stored as MAP types:
+Word frequencies are currently stored as JSON:
 
 ```sql
--- Get top shared words
+-- Get vocabulary sizes
 SELECT 
     turn_number,
-    map_top_n(vocabulary.shared, 10) as top_words,
-    cardinality(vocabulary.shared) as shared_vocab_size
+    message_a_unique_words as vocab_size_a,
+    message_b_unique_words as vocab_size_b
 FROM turn_metrics;
 ```
 
