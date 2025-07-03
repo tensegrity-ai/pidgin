@@ -63,6 +63,41 @@ class DisplayFilter:
         self.current_turn = 0
         self.max_turns = 0
         self.agents = agents or {}
+    
+    def _calculate_panel_width(self, content: str, title: str = "", min_width: int = 40, max_width: int = 80) -> int:
+        """Calculate appropriate panel width based on content.
+        
+        Args:
+            content: The panel content
+            title: The panel title
+            min_width: Minimum panel width
+            max_width: Maximum panel width
+            
+        Returns:
+            Calculated panel width
+        """
+        # Split content into lines and strip ANSI codes for accurate length
+        from rich.text import Text
+        lines = content.split('\n')
+        
+        # Find longest line (stripping any rich markup)
+        max_line_length = 0
+        for line in lines:
+            # Use Rich's Text to get actual display length
+            text = Text.from_markup(line)
+            max_line_length = max(max_line_length, len(text.plain))
+        
+        # Consider title length
+        title_text = Text.from_markup(title)
+        title_length = len(title_text.plain) + 4  # Add padding for title formatting
+        
+        # Determine width based on content
+        content_width = max(max_line_length, title_length)
+        
+        # Apply constraints (+6 for panel borders and padding)
+        panel_width = max(min_width, min(content_width + 6, max_width))
+        
+        return panel_width
 
     def handle_event(self, event: Event) -> None:
         """Display events based on mode."""
@@ -124,6 +159,9 @@ class DisplayFilter:
         # Show initial prompt
         content += f"[bold]Initial Prompt:[/bold]\n{event.initial_prompt}"
 
+        # Calculate appropriate width
+        width = self._calculate_panel_width(content, "⬡ Conversation Setup")
+
         self.console.print(
             Panel(
                 content,
@@ -131,6 +169,8 @@ class DisplayFilter:
                 title_align="left",
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
         self.console.print()
@@ -145,6 +185,8 @@ class DisplayFilter:
             else:
                 display_name = event.agent_id.replace("_", " ").title()
 
+        content = f"[{self.COLORS['nord3']}]System instructions:[/{self.COLORS['nord3']}]\n\n{event.prompt}"
+
         # Customize the display based on which agent
         if event.agent_id == "agent_a":
             title = f"⧫ System Context - {display_name}"
@@ -156,13 +198,18 @@ class DisplayFilter:
             title = f"⧫ System Context - {display_name}"
             style = self.COLORS["nord13"]  # Yellow
 
+        # Calculate width - system prompts are usually short
+        width = self._calculate_panel_width(content, title, min_width=50, max_width=70)
+
         self.console.print(
             Panel(
-                f"[{self.COLORS['nord3']}]System instructions:[/{self.COLORS['nord3']}]\n\n{event.prompt}",
+                content,
                 title=f" {title}",
                 title_align="left",
                 border_style=style,
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
         self.console.print()
@@ -266,6 +313,9 @@ class DisplayFilter:
         content += f"◇ Duration: {duration:.1f}s\n"
         content += f"◇ Reason: {event.reason}"
 
+        # Summary panels should be compact
+        width = self._calculate_panel_width(content, "⬟ Summary", min_width=40, max_width=60)
+
         self.console.print(
             Panel(
                 content,
@@ -273,6 +323,8 @@ class DisplayFilter:
                 title_align="left",
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
 
@@ -348,6 +400,9 @@ class DisplayFilter:
             else:
                 content += f"\n[{self.COLORS['nord3']}]◇ Cannot retry automatically[/{self.COLORS['nord3']}]"
 
+        # Calculate appropriate width for error panels
+        width = self._calculate_panel_width(content, title, min_width=40, max_width=80)
+        
         self.console.print(
             Panel(
                 content,
@@ -355,6 +410,8 @@ class DisplayFilter:
                 title_align="left",
                 border_style=border_style,
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
         self.console.print()
@@ -367,6 +424,9 @@ class DisplayFilter:
         if event.context:
             content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
+        # Calculate appropriate width
+        width = self._calculate_panel_width(content, "! Error", min_width=40, max_width=80)
+
         self.console.print(
             Panel(
                 content,
@@ -374,6 +434,8 @@ class DisplayFilter:
                 title_align="left",
                 border_style=self.COLORS["nord11"],
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
         self.console.print()
@@ -395,6 +457,9 @@ class DisplayFilter:
         if event.context:
             content += f"\n[dim]Context: {event.context}[/dim]"
 
+        # Calculate appropriate width
+        width = self._calculate_panel_width(content, "⏱ Timeout", min_width=40, max_width=70)
+
         self.console.print(
             Panel(
                 content,
@@ -402,6 +467,8 @@ class DisplayFilter:
                 title_align="left",
                 border_style=self.COLORS["nord13"],
                 padding=(1, 2),
+                width=width,
+                expand=False
             )
         )
         self.console.print()
@@ -432,6 +499,9 @@ class DisplayFilter:
         # Create a subtle panel
         content = f"⏸ Waiting {time_str} for {provider} rate limits"
         
+        # Calculate width for pacing panel - should be compact
+        width = self._calculate_panel_width(content, "", min_width=35, max_width=50)
+        
         self.console.print()  # Leading newline
         self.console.print(
             Panel(
@@ -439,6 +509,7 @@ class DisplayFilter:
                 style=self.COLORS['nord13'],  # Yellow
                 border_style=self.COLORS['nord3'],  # Dim border
                 padding=(0, 1),
+                width=width,
                 expand=False,
             )
         )
