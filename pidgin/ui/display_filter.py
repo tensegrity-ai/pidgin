@@ -183,37 +183,41 @@ class DisplayFilter:
 
         # Determine styling based on agent
         if event.agent_id == "agent_a":
-            # Build title with name and optional model shortname
+            # Build name with optional model shortname
             if (
                 model_shortname
                 and agent_name != model_shortname
                 and not agent_name.startswith(model_shortname)
             ):
-                # Show both name and model shortname (e.g., "⬢ Kai (Haiku)")
-                title = f"⬢ {agent_name} ({model_shortname})"
+                # Show both name and model shortname (e.g., "Kai (Haiku)")
+                display_name = f"{agent_name} ({model_shortname})"
             else:
-                # Just show the name (e.g., "⬢ Haiku-1" or "⬢ Agent A")
-                title = f"⬢ {agent_name or 'Agent A'}"
-            style = self.COLORS["nord14"]  # Green
+                # Just show the name (e.g., "Haiku-1" or "Agent A")
+                display_name = agent_name or 'Agent A'
+            glyph = "◆"
+            color = self.COLORS["nord14"]  # Green
         elif event.agent_id == "agent_b":
-            # Build title with name and optional model shortname
+            # Build name with optional model shortname
             if (
                 model_shortname
                 and agent_name != model_shortname
                 and not agent_name.startswith(model_shortname)
             ):
-                # Show both name and model shortname (e.g., "⬡ Zara (Sonnet)")
-                title = f"⬡ {agent_name} ({model_shortname})"
+                # Show both name and model shortname (e.g., "Zara (Sonnet)")
+                display_name = f"{agent_name} ({model_shortname})"
             else:
-                # Just show the name (e.g., "⬡ Sonnet-2" or "⬡ Agent B")
-                title = f"⬡ {agent_name or 'Agent B'}"
-            style = self.COLORS["nord15"]  # Blue
+                # Just show the name (e.g., "Sonnet-2" or "Agent B")
+                display_name = agent_name or 'Agent B'
+            glyph = "●"
+            color = self.COLORS["nord15"]  # Blue
         elif "human" in event.agent_id.lower():
-            title = f"◊ Human Intervention"
-            style = self.COLORS["nord8"]  # Light blue
+            display_name = "Human Intervention"
+            glyph = "◊"
+            color = self.COLORS["nord8"]  # Light blue
         else:
-            title = f"⬨ {event.agent_id.title()}"
-            style = self.COLORS["nord3"]  # Gray
+            display_name = event.agent_id.title()
+            glyph = "○"
+            color = self.COLORS["nord3"]  # Gray
 
         # Extract message content
         if hasattr(event.message, "content"):
@@ -221,44 +225,37 @@ class DisplayFilter:
         else:
             content = str(event.message)
 
+        # Show the message without a panel
+        self.console.print(f"\n[{color}]{glyph} {display_name}:[/{color}]")
+        self.console.print(content)
+        
         if self.show_timing:
-            timing_info = f"\n\n[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]"
-            content += timing_info
-
-        self.console.print(
-            Panel(
-                content,
-                title=f" {title}",
-                title_align="left",
-                border_style=style,
-                padding=(1, 2),
-            )
-        )
-        self.console.print()
+            self.console.print(f"[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]")
+        
+        self.console.print()  # Add spacing after message
 
     def _show_turn_complete(self, event: TurnCompleteEvent):
         """Show turn completion marker."""
         self.current_turn = event.turn_number + 1
 
-        # Build the turn marker text
-        turn_text = f"━━━ Turn {self.current_turn}/{self.max_turns} Complete"
-
+        # Simple separator
+        self.console.print(f"\n[{self.COLORS['nord3']}]{'─' * 50}[/{self.COLORS['nord3']}]")
+        
+        # Turn info
+        turn_info = f"Turn {self.current_turn}/{self.max_turns}"
+        
         # Add convergence if available
         if event.convergence_score is not None:
-            conv_color = self.COLORS["nord3"]  # Dim gray default
-            conv_text = f" | Convergence: {event.convergence_score:.2f}"
-
+            conv_text = f"Convergence: {event.convergence_score:.2f}"
             # Add warning if convergence is high
             if event.convergence_score > 0.75:
-                conv_color = self.COLORS["nord13"]  # Yellow warning
                 conv_text += " !"
-
-            turn_text += f" [{conv_color}]{conv_text}[/{conv_color}]"
-
-        turn_text += " ━━━"
-
-        self.console.print(Rule(turn_text, style=self.COLORS["nord3"]))
-        self.console.print()
+                turn_info += f" | [{self.COLORS['nord13']}]{conv_text}[/{self.COLORS['nord13']}]"
+            else:
+                turn_info += f" | {conv_text}"
+        
+        self.console.print(f"[{self.COLORS['nord3']}]{turn_info}[/{self.COLORS['nord3']}]")
+        self.console.print(f"[{self.COLORS['nord3']}]{'─' * 50}[/{self.COLORS['nord3']}]\n")
 
     def _show_conversation_end(self, event: ConversationEndEvent):
         """Show conversation end panel."""

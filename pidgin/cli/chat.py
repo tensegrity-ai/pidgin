@@ -157,31 +157,11 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, list(dimension))
     
-    # Show configuration
-    console.print(f"\n[bold {NORD_BLUE}]◆ Starting Conversation[/bold {NORD_BLUE}]")
-    console.print(f"  {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
-    console.print(f"  Max turns: {turns}")
-    console.print(f"  Initial prompt: {initial_prompt[:100]}{'...' if len(initial_prompt) > 100 else ''}")
-    
-    if temp_a is not None or temp_b is not None:
-        temp_str = []
-        if temp_a is not None:
-            temp_str.append(f"A: {temp_a}")
-        if temp_b is not None:
-            temp_str.append(f"B: {temp_b}")
-        console.print(f"  Temperature: {', '.join(temp_str)}")
-    
-    if convergence_threshold:
-        console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
-    
     # Determine first speaker
     if first_speaker == 'random':
         import random
         first_speaker = random.choice(['a', 'b'])
     first_speaker_id = f"agent_{first_speaker}"
-    
-    console.print(f"  First speaker: Agent {first_speaker.upper()}")
-    console.print()
     
     # Run the conversation
     try:
