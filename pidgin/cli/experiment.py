@@ -226,12 +226,16 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         try:
             success = asyncio.run(run_debug_experiment())
             console.print(f"\n[#a3be8c]✓ Experiment '{name}' completed[/#a3be8c]")
+            # Terminal bell notification
+            print('\a', end='', flush=True)
         except KeyboardInterrupt:
             console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
         except Exception as e:
             console.print(f"\n[#bf616a]✗ Experiment failed: {e}[/#bf616a]")
             import traceback
             traceback.print_exc()
+            # Terminal bell for failure too
+            print('\a', end='', flush=True)
         return
         
     # Always start as daemon for non-debug mode
@@ -339,9 +343,153 @@ def list(all):
         )
     
     console.print(table)
+    
+    if not all:
+        console.print(f"\n[{NORD_CYAN}]Tip: Use 'pidgin experiment status <id> --watch --notify' to monitor completion[/{NORD_CYAN}]")
 
 @experiment.command()
-@click.argument('experiment_id')
+@click.argument('experiment_id', required=False)
+@click.option('--watch', '-w', is_flag=True, help='Watch experiment until completion')
+@click.option('--notify', '-n', is_flag=True, help='Terminal bell when complete')
+def status(experiment_id, watch, notify):
+    """Check status of an experiment.
+    
+    Shows detailed status of a specific experiment or all running experiments.
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Check all running experiments:[/#4c566a]
+        pidgin experiment status
+    
+    [#4c566a]Check specific experiment:[/#4c566a]
+        pidgin experiment status abc123
+    
+    [#4c566a]Watch experiment until completion:[/#4c566a]
+        pidgin experiment status abc123 --watch --notify
+    """
+    storage = ExperimentStore(
+        db_path=get_experiments_dir() / "experiments.db"
+    )
+    
+    if experiment_id:
+        # Show specific experiment
+        exp = storage.get_experiment(experiment_id)
+        if not exp:
+            # Try with partial ID
+            experiments = storage.list_experiments()
+            matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
+            if len(matches) == 1:
+                exp = matches[0]
+            elif len(matches) > 1:
+                console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
+                return
+            else:
+                console.print(f"[{NORD_RED}]No experiment found with ID '{experiment_id}'[/{NORD_RED}]")
+                return
+        
+        # Display experiment details
+        config = json.loads(exp.get('config', '{}'))
+        
+        console.print(f"\n[bold {NORD_BLUE}]◆ Experiment: {exp['name']}[/bold {NORD_BLUE}]")
+        console.print(f"  ID: {exp['experiment_id']}")
+        console.print(f"  Status: {exp['status']}")
+        console.print(f"  Progress: {exp['completed_conversations']}/{exp['total_conversations']}")
+        console.print(f"  Models: {config.get('agent_a_model')} ↔ {config.get('agent_b_model')}")
+        
+        if exp['status'] == 'running':
+            # Calculate estimated time
+            if exp['completed_conversations'] > 0:
+                started = datetime.fromisoformat(exp['started_at'].replace('Z', '+00:00'))
+                elapsed = datetime.now(started.tzinfo) - started
+                avg_time = elapsed / exp['completed_conversations']
+                remaining = (exp['total_conversations'] - exp['completed_conversations']) * avg_time
+                console.print(f"  Estimated time remaining: {str(remaining).split('.')[0]}")
+        
+        if watch and exp['status'] == 'running':
+            console.print(f"\n[{NORD_YELLOW}]Watching experiment... Press Ctrl+C to stop[/{NORD_YELLOW}]")
+            
+            # Watch loop
+            try:
+                while True:
+                    import time
+                    time.sleep(5)  # Check every 5 seconds
+                    
+                    # Refresh experiment data
+                    exp = storage.get_experiment(exp['experiment_id'])
+                    if exp['status'] != 'running':
+                        console.print(f"\n[{NORD_GREEN}]✓ Experiment completed with status: {exp['status']}[/{NORD_GREEN}]")
+                        if notify:
+                            # Try desktop notification
+                            try:
+                                from .notify import notify_experiment_complete
+                                notify_experiment_complete(exp['name'], exp['status'])
+                            except:
+                                # Fallback to terminal bell
+                                print('\a', end='', flush=True)
+                        break
+                    
+                    # Update progress
+                    console.print(f"\r  Progress: {exp['completed_conversations']}/{exp['total_conversations']}", end='')
+                    
+            except KeyboardInterrupt:
+                console.print(f"\n[{NORD_YELLOW}]Stopped watching[/{NORD_YELLOW}]")
+        
+    else:
+        # Show all running experiments
+        experiments = storage.list_experiments(status_filter='running')
+        
+        if not experiments:
+            console.print(f"[{NORD_YELLOW}]No running experiments.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_CYAN}]Use 'pidgin experiment list --all' to see all experiments.[/{NORD_CYAN}]")
+            return
+        
+        # Create summary table
+        table = Table(title="Running Experiments")
+        table.add_column("ID", style=NORD_CYAN)
+        table.add_column("Name", style=NORD_GREEN)
+        table.add_column("Progress")
+        table.add_column("Models")
+        table.add_column("Time Running")
+        
+        for exp in experiments:
+            config = json.loads(exp.get('config', '{}'))
+            
+            # Format progress with percentage
+            total = exp.get('total_conversations', 0)
+            completed = exp.get('completed_conversations', 0)
+            percentage = (completed / total * 100) if total > 0 else 0
+            progress = f"{completed}/{total} ({percentage:.0f}%)"
+            
+            # Format models
+            models = f"{config.get('agent_a_model', '?')} ↔ {config.get('agent_b_model', '?')}"
+            
+            # Calculate time running
+            started = exp.get('started_at', exp.get('created_at', ''))
+            if started:
+                try:
+                    dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
+                    elapsed = datetime.now(dt.tzinfo) - dt
+                    time_str = str(elapsed).split('.')[0]
+                except:
+                    time_str = "-"
+            else:
+                time_str = "-"
+            
+            table.add_row(
+                exp['experiment_id'][:8],
+                exp.get('name', 'Unnamed'),
+                progress,
+                models,
+                time_str
+            )
+        
+        console.print(table)
+        console.print(f"\n[{NORD_CYAN}]Use 'pidgin experiment status <id>' for details[/{NORD_CYAN}]")
+
+
+@experiment.command()
+@click.argument('experiment_id', required=False)
+@click.option('--all', is_flag=True, help='Stop all running experiments')
 def stop(experiment_id, all):
     """Stop a running experiment gracefully.
     

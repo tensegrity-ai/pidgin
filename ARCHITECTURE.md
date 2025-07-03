@@ -22,10 +22,11 @@ Pidgin is an event-driven system for recording and analyzing AI-to-AI conversati
                     │    Providers   │           ▼
                     ├────────────────┤    ┌─────────────┐
                     │ • Anthropic    │    │   Storage   │
-                    │ • OpenAI       │    │ • DuckDB    │
+                    │ • OpenAI       │    │ • SQLite    │
                     │ • Google       │    │ • JSON      │
-                    │ • Ollama       │    │ • Markdown  │
-                    │ • Local (test) │    └─────────────┘
+                    │ • xAI          │    │ • Markdown  │
+                    │ • Ollama       │    └─────────────┘
+                    │ • Local (test) │
                     └────────────────┘
 ```
 
@@ -112,6 +113,12 @@ RateLimitEvent
 - Manages turn-taking and message flow
 - Emits events for all state changes
 - Handles interrupts and pausing
+- Modularized into focused components:
+  - `interrupt_handler.py` - Interrupt management
+  - `name_coordinator.py` - Agent naming logic
+  - `turn_executor.py` - Turn execution
+  - `message_handler.py` - Message processing
+  - `conversation_lifecycle.py` - Lifecycle events
 
 ### EventBus (`core/event_bus.py`)
 - Central event distribution
@@ -133,8 +140,9 @@ RateLimitEvent
 
 ### Storage (`io/`)
 - Subscribes to relevant events
-- Persists to DuckDB/JSON/Markdown
+- Persists to SQLite/JSON/Markdown
 - No direct coupling to other components
+- DuckDB migration planned for better analytics
 
 ## Experiment System
 
@@ -146,11 +154,11 @@ Experiments run as Unix daemon processes:
 └──────────────┘     └───────────────┘     └──────────────┘
                              │                      │
                      ┌───────▼────────┐    ┌───────▼──────┐
-                     │ Sequential     │    │ DuckDB Store │
+                     │ Sequential     │    │ SQLite Store │
                      │ Runner         │    │ • Metrics    │
                      │ • Rate aware   │    │ • Messages   │
                      │ • Fault tolerant│   │ • Metadata   │
-                     │ • Progress track│    │ • Analytics  │
+                     │ • Progress track│    │ • Events     │
                      └────────────────┘    └──────────────┘
 ```
 
@@ -167,7 +175,8 @@ Users can increase parallelism if their environment supports it, but sequential 
 - **click**: CLI framework
 - **rich**: Terminal UI
 - **asyncio**: Async operations (built-in)
-- **duckdb**: Analytical database
+- **aiosqlite**: Async SQLite (current)
+- **duckdb**: Analytical database (planned migration)
 
 ### Optional
 - **aiohttp**: For Ollama communication (when using local models)
@@ -224,7 +233,12 @@ This modular approach keeps the base installation minimal while allowing users t
 - Future-proof for new model sources
 - Clean abstraction boundary
 
-### Why DuckDB?
+### Why SQLite (currently)?
+- Simple, reliable, single-file database
+- Good for transactional workloads
+- Well-tested async support
+
+### Why DuckDB (planned)?
 - Optimized for analytical queries
 - Columnar storage for metrics data
 - Single file, zero configuration
@@ -243,7 +257,8 @@ This modular approach keeps the base installation minimal while allowing users t
 - **Async Throughout**: Non-blocking I/O everywhere
 - **Lazy Loading**: Models load only when needed
 - **Sequential Execution**: Avoids rate limit issues
-- **DuckDB**: Fast analytical queries on metrics
+- **SQLite**: Current storage, adequate for experiments
+- **DuckDB (planned)**: Will enable fast analytical queries
 
 ## Security Notes
 

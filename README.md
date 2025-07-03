@@ -22,7 +22,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Experiments**: Run hundreds of conversations with comprehensive metrics (sequential execution by default)
 - **Background Execution**: Experiments run as Unix daemons
 - **Analysis**: ~150 metrics captured per conversation turn
-- **Database**: DuckDB for analytical queries
+- **Database**: SQLite for storage (DuckDB migration planned)
 
 ### ▶ What's Partial
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
@@ -46,11 +46,20 @@ export OPENAI_API_KEY="..."
 # Run a single conversation
 pidgin chat -a claude -b gpt -t 20
 
+# Run with notification when complete
+pidgin chat -a claude -b gpt -t 20 --notify
+
+# Run in quiet mode (minimal output)
+pidgin chat -a claude -b gpt -t 20 --quiet
+
 # Run an experiment (10 conversations)
 pidgin experiment start -a claude -b gpt -r 10 --name my_experiment
 
 # Check experiment progress
 pidgin experiment status my_experiment
+
+# Watch progress with notifications
+pidgin experiment status my_experiment --watch --notify
 
 # Output saved to ./pidgin_output/
 ```
@@ -161,6 +170,9 @@ pidgin experiment start -a claude -b gpt -r 100 -t 50 --name language_study
 # Check progress
 pidgin experiment status language_study
 
+# Watch progress with notifications
+pidgin experiment status language_study --watch --notify
+
 # List all experiments
 pidgin experiment list
 
@@ -195,8 +207,8 @@ pidgin experiment start \
 # Check status
 pidgin experiment status economical_model_comparison
 
-# Data stored in DuckDB for analysis
-# (Coming soon: GraphQL interface for complex queries)
+# Data stored in SQLite currently
+# (Coming soon: DuckDB migration and GraphQL interface)
 ```
 
 ## How to Help
@@ -219,7 +231,7 @@ Pidgin is a comprehensive research tool with:
 ### Experiment System
 - **Unix daemon processes**: Proper background execution
 - **Sequential orchestration**: Rate limit aware execution
-- **DuckDB storage**: Optimized for analytical queries
+- **SQLite storage**: Current database (DuckDB migration planned)
 - **Fault tolerance**: Graceful handling of API failures
 
 ### Metrics System

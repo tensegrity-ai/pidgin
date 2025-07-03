@@ -9,10 +9,12 @@ from ..core.events import (
     MessageChunkEvent,
     MessageCompleteEvent,
     APIErrorEvent,
+    TokenUsageEvent,
 )
 from ..core.types import Message
 from .base import Provider
 from ..core.router import DirectRouter  # For message transformation
+from .token_utils import estimate_tokens, estimate_messages_tokens
 
 
 class EventAwareProvider:
@@ -56,6 +58,10 @@ class EventAwareProvider:
         agent_messages = self.router._build_agent_history(
             event.conversation_history, self.agent_id
         )
+        
+        # Estimate input tokens
+        model_name = getattr(self.provider, 'model', None)
+        input_tokens = estimate_messages_tokens(agent_messages, model_name)
 
         # Stream response and emit chunk events
         chunks = []
@@ -99,7 +105,7 @@ class EventAwareProvider:
                     agent_id=self.agent_id,
                     provider=provider_name,
                     retryable=retryable,
-                    retry_count=0,  # TODO: Track retry count from provider
+                    retry_count=0,  # TODO: Track retry count from provider retry logic
                 )
             )
 
@@ -116,8 +122,23 @@ class EventAwareProvider:
 
         # Calculate metrics
         duration_ms = int((time.time() - start_time) * 1000)
-        # TODO: Get actual token count from provider
-        tokens_used = len(content.split())  # Rough estimate
+        
+        # Get provider name for model-specific token counting
+        provider_name = self.provider.__class__.__name__.replace("Provider", "").lower()
+        model_name = getattr(self.provider, 'model', None)
+        
+        # Try to get actual token usage from provider
+        tokens_used = 0
+        if hasattr(self.provider, 'get_last_usage'):
+            usage_data = self.provider.get_last_usage()
+            if usage_data and 'completion_tokens' in usage_data:
+                tokens_used = usage_data['completion_tokens']
+            else:
+                # Fall back to estimation
+                tokens_used = estimate_tokens(content, model_name)
+        else:
+            # Provider doesn't support usage tracking, use estimation
+            tokens_used = estimate_tokens(content, model_name)
 
         # Emit completion event
         await self.bus.emit(
@@ -129,3 +150,20 @@ class EventAwareProvider:
                 duration_ms=duration_ms,
             )
         )
+        
+        # Emit token usage event if we have actual usage data
+        if hasattr(self.provider, 'get_last_usage'):
+            usage_data = self.provider.get_last_usage()
+            if usage_data and 'total_tokens' in usage_data:
+                # Extract provider name
+                provider_name = self.provider.__class__.__name__.replace("Provider", "")
+                
+                await self.bus.emit(
+                    TokenUsageEvent(
+                        conversation_id=event.conversation_id,
+                        provider=provider_name,
+                        tokens_used=usage_data['total_tokens'],
+                        tokens_per_minute_limit=0,  # TODO: Get from provider config
+                        current_usage_rate=0.0,  # TODO: Calculate rate
+                    )
+                )

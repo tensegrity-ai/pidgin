@@ -1,5 +1,7 @@
 import os
 import logging
+import time
+import asyncio
 from openai import AsyncOpenAI
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
@@ -82,6 +84,9 @@ class OpenAIProvider(Provider):
         # Convert to OpenAI format
         openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
 
+        # Initialize usage tracking
+        self._last_usage = None
+        
         # Retry logic for overloaded/rate limit errors
         max_retries = 3
         base_delay = 1.0
@@ -94,6 +99,7 @@ class OpenAIProvider(Provider):
                     "messages": openai_messages,
                     "max_tokens": 1000,
                     "stream": True,
+                    "stream_options": {"include_usage": True}  # Request usage data
                 }
                 
                 # Add temperature if specified (OpenAI allows 0-2)
@@ -103,8 +109,18 @@ class OpenAIProvider(Provider):
                 stream = await self.client.chat.completions.create(**params)
 
                 async for chunk in stream:
-                    if chunk.choices[0].delta.content:
+                    # Handle content chunks
+                    if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
                         yield chunk.choices[0].delta.content
+                    
+                    # Check for usage data in the final chunk
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        self._last_usage = {
+                            'prompt_tokens': getattr(chunk.usage, 'prompt_tokens', 0),
+                            'completion_tokens': getattr(chunk.usage, 'completion_tokens', 0),
+                            'total_tokens': getattr(chunk.usage, 'total_tokens', 0)
+                        }
+                        logger.debug(f"OpenAI usage data captured: {self._last_usage}")
                 return  # Success!
 
             except Exception as e:
@@ -138,3 +154,7 @@ class OpenAIProvider(Provider):
                     else:
                         logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
                     raise Exception(friendly_error) from None
+    
+    def get_last_usage(self) -> Optional[Dict[str, int]]:
+        """Get token usage from the last API call."""
+        return self._last_usage

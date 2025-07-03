@@ -121,6 +121,21 @@ class AnthropicProvider(Provider):
             async with self.client.messages.stream(**api_params) as stream:
                 async for text in stream.text_stream:
                     yield text
+                # Capture usage data after stream completes
+                final_message = await stream.get_final_message()
+                if hasattr(final_message, 'usage'):
+                    self._last_usage = {
+                        'input_tokens': getattr(final_message.usage, 'input_tokens', 0),
+                        'output_tokens': getattr(final_message.usage, 'output_tokens', 0),
+                        'total_tokens': 0  # Will be calculated
+                    }
+                    self._last_usage['total_tokens'] = (
+                        self._last_usage['input_tokens'] + 
+                        self._last_usage['output_tokens']
+                    )
+        
+        # Initialize usage tracking
+        self._last_usage = None
         
         # Use retry wrapper with exponential backoff
         try:
@@ -143,3 +158,7 @@ class AnthropicProvider(Provider):
             
             # Create a clean exception with friendly message
             raise Exception(friendly_error) from None
+    
+    def get_last_usage(self) -> Optional[Dict[str, int]]:
+        """Get token usage from the last API call."""
+        return self._last_usage

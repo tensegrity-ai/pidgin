@@ -1,27 +1,27 @@
 # pidgin/experiments/storage.py
-"""Storage layer for Pidgin experiments using SQLite."""
+"""Storage layer for Pidgin experiments using DuckDB."""
 
 import os
 import json
-import sqlite3
+import duckdb
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 class ExperimentStore:
-    """SQLite storage for conversation experiments and metrics."""
+    """DuckDB storage for conversation experiments and metrics."""
     
     def __init__(self, db_path: Optional[Path] = None):
         """Initialize the experiment store.
         
         Args:
-            db_path: Path to SQLite database. Defaults to ./pidgin_output/experiments/experiments.db
+            db_path: Path to DuckDB database. Defaults to ./pidgin_output/experiments/experiments.duckdb
         """
         if db_path is None:
             # Always resolve to absolute path for consistency
             project_base = os.environ.get('PIDGIN_PROJECT_BASE', os.getcwd())
-            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.db"
+            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.duckdb"
         
         self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,12 +30,12 @@ class ExperimentStore:
     
     def _init_database(self):
         """Initialize database with clean schema."""
-        with sqlite3.connect(self.db_path) as conn:
-            # Enable foreign keys
-            conn.execute("PRAGMA foreign_keys = ON")
-            
+        conn = duckdb.connect(str(self.db_path))
+        try:
             # Create tables directly
             self._create_tables(conn)
+        finally:
+            conn.close()
     
     def _create_tables(self, conn):
         """Create all experiment tables with clean schema."""
@@ -82,7 +82,7 @@ class ExperimentStore:
         # Turn metrics table 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS turn_metrics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,10 +97,13 @@ class ExperimentStore:
             )
         """)
         
+        # Create sequence for turn_metrics id
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS turn_metrics_id_seq")
+        
         # Message metrics table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS message_metrics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
                 agent_id TEXT NOT NULL,
@@ -115,10 +118,13 @@ class ExperimentStore:
             )
         """)
         
+        # Create sequence for message_metrics id
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS message_metrics_id_seq")
+        
         # Word frequency table for vocabulary analysis
         conn.execute("""
             CREATE TABLE IF NOT EXISTS word_frequencies (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 conversation_id TEXT NOT NULL,
                 turn_number INTEGER NOT NULL,
                 agent_id TEXT NOT NULL,
@@ -128,6 +134,9 @@ class ExperimentStore:
             )
         """)
         
+        # Create sequence for word_frequencies id
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS word_frequencies_id_seq")
+        
         # Create indices for performance
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_experiment ON conversations(experiment_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_turn_metrics_conversation ON turn_metrics(conversation_id)")
@@ -135,11 +144,17 @@ class ExperimentStore:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_word_frequencies_conversation ON word_frequencies(conversation_id)")
     
     def _get_connection(self):
-        """Get database connection with row factory."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+        """Get database connection."""
+        # DuckDB returns dictionaries by default
+        return duckdb.connect(str(self.db_path))
+    
+    def _row_to_dict(self, result) -> Optional[Dict[str, Any]]:
+        """Convert DuckDB result to dictionary."""
+        if not result:
+            return None
+        # DuckDB fetchone() returns a tuple, fetchall() returns list of tuples
+        # We need to get column names from the result description
+        return result.fetchone()  # DuckDB's fetchone returns dict-like object
     
     def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """Get experiment details by ID.
@@ -157,7 +172,9 @@ class ExperimentStore:
             ).fetchone()
             
             if row:
-                return dict(row)
+                # DuckDB returns tuples, convert to dict
+                columns = [desc[0] for desc in conn.description]
+                return dict(zip(columns, row))
             return None
     
     def create_experiment(self, name: str, config: dict) -> str:

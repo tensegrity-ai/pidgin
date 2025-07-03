@@ -33,6 +33,7 @@ from .constants import (
 from ..core import Conductor, Agent, Conversation
 from ..io import OutputManager
 from ..config.models import MODELS, get_model_config
+from .notify import send_notification
 
 console = Console()
 
@@ -91,10 +92,20 @@ console = Console()
 @click.option('--meditation', 
               is_flag=True, 
               help='Meditation mode: one agent faces silence')
+@click.option('--quiet', '-q',
+              is_flag=True,
+              help='Minimal output (start, turn progress, end)')
+@click.option('--verbose', '-v',
+              is_flag=True,
+              help='Show all events for debugging')
+@click.option('--notify', '-n',
+              is_flag=True,
+              help='Send notification when conversation completes')
 def chat(agent_a, agent_b, prompt, turns, temperature, temp_a, 
          temp_b, output, dimension, convergence_threshold,
          convergence_action, first_speaker, choose_names, awareness,
-         awareness_a, awareness_b, show_system_prompts, meditation):
+         awareness_a, awareness_b, show_system_prompts, meditation,
+         quiet, verbose, notify):
     """Run a conversation between two AI agents.
 
     This command starts a conversation that will run for the specified number of turns.
@@ -125,6 +136,17 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
     [#4c566a]Meditation mode (one agent contemplates in silence):[/#4c566a]
         pidgin chat -a claude --meditation
     """
+    # Handle display mode flags
+    if quiet and verbose:
+        console.print(f"[{NORD_RED}]Error: Cannot use both --quiet and --verbose[/{NORD_RED}]")
+        return
+    
+    display_mode = "normal"
+    if quiet:
+        display_mode = "quiet"
+    elif verbose:
+        display_mode = "verbose"
+    
     # Handle meditation mode
     if meditation:
         if not agent_a:
@@ -182,8 +204,16 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
             initial_prompt, turns,
             temp_a, temp_b,
             output, convergence_threshold, convergence_action,
-            first_speaker_id
+            first_speaker_id, display_mode
         ))
+        
+        # Send notification if requested
+        if notify:
+            send_notification(
+                title="Pidgin Conversation Complete",
+                message=f"Conversation between {agent_a_name} and {agent_b_name} has finished ({turns} turns)"
+            )
+        
     except KeyboardInterrupt:
         console.print(f"\n[{NORD_YELLOW}]Conversation interrupted by user[/{NORD_YELLOW}]")
     except Exception as e:
@@ -199,7 +229,8 @@ async def _run_conversation(agent_a_id: str, agent_b_id: str,
                           output_dir: Optional[str],
                           convergence_threshold: Optional[float],
                           convergence_action: str,
-                          first_speaker: str):
+                          first_speaker: str,
+                          display_mode: str = "normal"):
     """Run the actual conversation."""
     # Create providers
     provider_a = await get_provider_for_model(agent_a_id, temp_a)
@@ -244,6 +275,7 @@ async def _run_conversation(agent_a_id: str, agent_b_id: str,
         agent_b=agent_b,
         initial_prompt=initial_prompt,
         max_turns=max_turns,
+        display_mode=display_mode,
     )
 
 

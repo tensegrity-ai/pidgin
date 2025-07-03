@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, AsyncIterator, AsyncGenerator, Optional
+from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 
@@ -31,6 +31,7 @@ class GoogleProvider(Provider):
             )
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)
+        self._last_usage = None
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
@@ -59,6 +60,9 @@ class GoogleProvider(Provider):
             google_messages.append({"role": role, "parts": [m.content]})
 
         try:
+            # Reset usage tracking
+            self._last_usage = None
+            
             # Create chat session
             chat = self.model.start_chat(history=google_messages[:-1])
             
@@ -74,9 +78,25 @@ class GoogleProvider(Provider):
                 generation_config=generation_config if generation_config else None
             )
 
+            last_chunk = None
             for chunk in response:
                 if chunk.text:
                     yield chunk.text
+                last_chunk = chunk
+            
+            # Try to extract usage data from the last chunk
+            if last_chunk and hasattr(last_chunk, 'usage_metadata'):
+                metadata = last_chunk.usage_metadata
+                if metadata:
+                    self._last_usage = {
+                        'prompt_tokens': getattr(metadata, 'prompt_token_count', 0),
+                        'completion_tokens': getattr(metadata, 'candidates_token_count', 0),
+                        'total_tokens': getattr(metadata, 'total_token_count', 0)
+                    }
         except Exception as e:
             # Basic error handling - just don't crash
             raise Exception(f"Google API error: {str(e)}")
+    
+    def get_last_usage(self) -> Optional[Dict[str, int]]:
+        """Get token usage from the last API call."""
+        return self._last_usage
