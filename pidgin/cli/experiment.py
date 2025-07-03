@@ -207,10 +207,10 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         console.print(f"\n[#bf616a]Running in foreground - press Ctrl+C to stop[/#bf616a]\n")
         
         # Run directly without daemon
-        from ..experiments.parallel_runner import ParallelExperimentRunner
+        from ..experiments import ExperimentRunner
         
         # In debug mode, pass None for daemon (runner will handle it gracefully)
-        runner = ParallelExperimentRunner(storage, daemon=None)
+        runner = ExperimentRunner(storage, daemon=None)
         
         async def run_debug_experiment():
             try:

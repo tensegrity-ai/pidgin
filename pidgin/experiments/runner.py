@@ -1,5 +1,5 @@
-# pidgin/experiments/parallel_runner.py
-"""Parallel experiment runner with shared state handshake."""
+# pidgin/experiments/runner.py
+"""Experiment runner supporting both sequential and parallel execution."""
 
 import os
 import asyncio
@@ -33,12 +33,12 @@ from ..config.resolution import resolve_temperatures, resolve_awareness_levels
 # The functions are now imported above
 
 
-class ParallelExperimentRunner:
-    """Runs experiment conversations in parallel with rate limit awareness."""
+class ExperimentRunner:
+    """Runs experiment conversations with configurable parallelism."""
     
     def __init__(self, storage: Optional[ExperimentStore] = None, 
                  daemon: Optional[ExperimentDaemon] = None):
-        """Initialize parallel runner.
+        """Initialize experiment runner.
         
         Args:
             storage: Database storage instance

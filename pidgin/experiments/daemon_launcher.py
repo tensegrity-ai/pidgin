@@ -10,11 +10,11 @@ from pathlib import Path
 
 from . import ExperimentConfig, ExperimentStore
 from .daemon import ExperimentDaemon
-from .parallel_runner import ParallelExperimentRunner
+from .runner import ExperimentRunner
 
 
 async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: ExperimentDaemon):
-    """Run the experiment with the parallel runner.
+    """Run the experiment with the experiment runner.
     
     Args:
         experiment_id: Existing experiment ID to use
@@ -30,7 +30,7 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
     logging.info(f"Using database at: {db_path}")
     
     storage = ExperimentStore(db_path=db_path)
-    runner = ParallelExperimentRunner(storage, daemon)
+    runner = ExperimentRunner(storage, daemon)
     
     try:
         await runner.run_experiment_with_id(experiment_id, config)
