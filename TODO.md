@@ -87,10 +87,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 ### 🔥 Priority 2: Documentation & CLI Cleanup
 
-- [ ] **Fix documentation about parallelization**
-  - Update README to clarify sequential execution by default
-  - Note architecture supports parallelism but practical constraints require sequential
-  - Remove references to deleted commands
 
 - [ ] **Update all documentation**
   - Remove dashboard references throughout
@@ -103,9 +99,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Implement gratitude spiral detection
   - Add more conversation pattern recognizers
 
-- [ ] **Complete experiment runner**
-  - Implement conversation running logic in runner.py
-  - Handle parallel execution properly
 
 ### 📊 Priority 4: Analysis Infrastructure
 
