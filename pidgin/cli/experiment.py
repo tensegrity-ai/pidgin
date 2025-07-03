@@ -28,6 +28,10 @@ from .helpers import (
     parse_dimensions,
     get_experiment_dir
 )
+from ..config.resolution import resolve_temperatures
+from ..config.defaults import get_smart_convergence_defaults
+from ..io.paths import get_experiments_dir
+from ..config.models import get_model_config
 from .constants import (
     NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN,
     DEFAULT_TURNS, DEFAULT_TEMPERATURE, DEFAULT_PARALLEL
@@ -114,11 +118,19 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         return
     
     # Handle temperature settings
-    temp_a = temp_a if temp_a is not None else temperature
-    temp_b = temp_b if temp_b is not None else temperature
+    temp_a, temp_b = resolve_temperatures(temperature, temp_a, temp_b)
     
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, dimensions.split(',') if dimensions else [])
+    
+    # Add smart convergence defaults for API models
+    convergence_action = 'stop'  # Default action for experiments
+    if convergence_threshold is None:
+        default_threshold, default_action = get_smart_convergence_defaults(agent_a_id, agent_b_id)
+        if default_threshold is not None:
+            convergence_threshold = default_threshold
+            convergence_action = default_action
+            console.print(f"[dim]Using default convergence threshold: {convergence_threshold} → {convergence_action}[/dim]")
     
     # Generate experiment name if not provided
     if not name:
@@ -138,6 +150,7 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         dimensions=dimensions.split(',') if dimensions else None,
         max_parallel=max_parallel,
         convergence_threshold=convergence_threshold,
+        convergence_action=convergence_action,
         awareness=awareness,
         awareness_a=awareness_a,
         awareness_b=awareness_b,
@@ -196,11 +209,22 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         # Run directly without daemon
         from ..experiments.parallel_runner import ParallelExperimentRunner
         
-        runner = ParallelExperimentRunner(storage)
+        # In debug mode, pass None for daemon (runner will handle it gracefully)
+        runner = ParallelExperimentRunner(storage, daemon=None)
+        
+        async def run_debug_experiment():
+            try:
+                # Create experiment record first
+                exp_id = storage.create_experiment(config.name, config.dict())
+                
+                # Run the experiment
+                await runner.run_experiment_with_id(exp_id, config)
+                return True
+            except Exception:
+                raise
         
         try:
-            # Create experiment and run it
-            exp_id = asyncio.run(runner.run_experiment(config))
+            success = asyncio.run(run_debug_experiment())
             console.print(f"\n[#a3be8c]✓ Experiment '{name}' completed[/#a3be8c]")
         except KeyboardInterrupt:
             console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
@@ -211,7 +235,7 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         return
         
     # Always start as daemon for non-debug mode
-    base_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
+    base_dir = get_experiments_dir()
     manager = ExperimentManager(base_dir=base_dir)
     
     console.print(f"[#8fbcbb]◆ Starting experiment '{name}'[/#8fbcbb]")
@@ -246,7 +270,7 @@ def list(all):
     Shows active experiment sessions with their status and progress.
     """
     storage = ExperimentStore(
-        db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
+        db_path=get_experiments_dir() / "experiments.db"
     )
     
     # Get experiments - filter by status if not showing all

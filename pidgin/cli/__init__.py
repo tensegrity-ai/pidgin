@@ -10,6 +10,8 @@ os.environ['CLICOLOR_FORCE'] = '1'
 # Store the original working directory before any imports that might change it
 # When running with python -m, the working directory may be changed
 ORIGINAL_CWD = os.environ.get('PWD', os.getcwd())
+# Set it in environment for other modules to use
+os.environ['PIDGIN_ORIGINAL_CWD'] = ORIGINAL_CWD
 
 # Configure rich-click BEFORE importing
 import rich_click.rich_click as rc

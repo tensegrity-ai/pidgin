@@ -24,8 +24,13 @@ from .config import ExperimentConfig
 from .event_handler import ExperimentEventHandler
 from .daemon import ExperimentDaemon
 
-# Import CLI functions for consistency
-from ..cli.helpers import get_provider_for_model, build_initial_prompt
+# Import provider builder and prompt builder to avoid circular imports
+from ..providers.builder import build_provider as get_provider_for_model
+from ..config.prompts import build_initial_prompt
+from ..config.resolution import resolve_temperatures, resolve_awareness_levels
+
+
+# The functions are now imported above
 
 
 class ParallelExperimentRunner:
@@ -263,11 +268,12 @@ class ParallelExperimentRunner:
         
         # Create conductor with the isolated event bus
         conductor = Conductor(
-            providers=providers,
+            base_providers=providers,
             output_manager=output_manager,
-            convergence_threshold=config.convergence_threshold,
-            convergence_action=config.convergence_action,
-            event_bus=event_bus  # Use conversation-specific bus
+            console=None,  # No console output for experiments
+            convergence_threshold_override=config.convergence_threshold,
+            convergence_action_override=config.convergence_action,
+            bus=event_bus  # Use conversation-specific bus
         )
         
         try:

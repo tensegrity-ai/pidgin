@@ -327,7 +327,13 @@ class DisplayFilter:
         content = f"[bold]Conversation Complete[/bold]\n\n"
         content += f"◇ Total turns: {event.total_turns}\n"
         content += f"◇ Duration: {duration:.1f}s\n"
-        content += f"◇ Reason: {event.reason}"
+        
+        # Enhanced reason display for convergence
+        if event.reason == "high_convergence":
+            content += f"◇ Reason: Convergence threshold reached\n"
+            content += f"[dim]  (Stopped to prevent token waste)[/dim]"
+        else:
+            content += f"◇ Reason: {event.reason}"
 
         # Summary panels should be compact
         width = self._calculate_panel_width(content, "⬟ Summary", min_width=40, max_width=60)

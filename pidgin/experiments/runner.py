@@ -20,8 +20,8 @@ from .storage import ExperimentStore
 from .config import ExperimentConfig
 from .event_handler import ExperimentEventHandler
 
-# Import CLI functions for consistency
-from ..cli.helpers import get_provider_for_model, build_initial_prompt
+# Note: Removed CLI imports to avoid circular dependency
+# The parallel_runner.py has the actual implementation
 
 
 class ExperimentRunner:
@@ -60,8 +60,8 @@ class ExperimentRunner:
         try:
             # Run conversations serially (Phase 2)
             for i in range(config.repetitions):
-                # ... existing conversation code ...
-
+                # TODO: Implement conversation running logic
+                pass
 
             # Update experiment status to completed
             self.storage.update_experiment_status(experiment_id, 'completed')

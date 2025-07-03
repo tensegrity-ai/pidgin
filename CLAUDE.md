@@ -176,16 +176,29 @@ git commit -m "Revolutionary AI Discovery!!!"
 - Enable flexible querying
 - Don't interpret results
 
-## Remember
+## Implementation Examples
 
-The human has been frustrated by:
-- Previous implementations adding unwanted complexity
-- Grandiose claims about "discoveries"
-- Features that weren't requested
-- Interpretive overlays on raw data
-- Complex real-time systems that don't add value
+### Desktop Notifications
 
-**Keep it simple. Keep it honest. Show the data.**
+When implementing desktop notifications, use these platform-specific commands:
+
+```bash
+# macOS
+osascript -e 'display notification "Experiment complete" with title "Pidgin"'
+
+# Linux  
+notify-send "Pidgin" "Experiment complete"
+
+# Terminal bell (cross-platform)
+echo -e "\a"
+```
+
+### Testing Models
+
+Always use local test model to avoid API calls during development:
+```bash
+pidgin chat -a local:test -b local:test -t 5
+```
 
 ## Current Focus
 
@@ -193,3 +206,66 @@ The human has been frustrated by:
 2. **Solid fundamentals** (status command, notifications)
 3. **Better analysis** (DuckDB, GraphQL, Jupyter)
 4. **Clean architecture** (no unnecessary abstractions)
+
+## Running TODO List
+
+### ✅ Completed
+- [x] Remove dashboard entirely
+- [x] Remove SharedState functionality
+
+### 🔥 Priority 1: Documentation & CLI Cleanup
+- [ ] **Remove unnecessary top-level commands**
+  - Delete `init` command entirely
+  - Delete `transcribe` command (should be automatic)
+  - Delete `report` command (belongs in notebooks)
+  - Delete `compare` command (belongs in notebooks)
+- [ ] **Fix documentation about parallelization**
+  - Update README to clarify sequential execution by default
+  - Note architecture supports parallelism but practical constraints
+- [ ] **Streamline experiment commands**
+  - Enhance `list` command with detailed single-experiment view
+  - Move `stop-all` to `stop --all` flag
+  - Remove `logs` command (redundant)
+  - Rename `analyze` to `notebook`
+- [ ] **Simplify chat display**
+  - Remove panels from regular messages
+  - Use color/prefixes for speaker separation
+  - Reserve panels for errors/warnings only
+
+### 🛠️ Priority 2: Core Functionality
+- [ ] **Enhance experiment list/status command**
+  - Show detailed progress and metrics
+  - Add `--watch` flag for auto-refresh
+  - Display recent convergence trends
+  - Show resource usage and cost estimates
+- [ ] **Add experiment completion notifications**
+  - Terminal bell option
+  - Desktop notifications (macOS/Linux)
+  - Optional email for long experiments
+- [ ] **Reorganize model configurations**
+  - Move model definitions to their respective provider files
+  - Keep aggregation and utilities in `/config/models.py`
+  - Makes provider updates self-contained
+
+### 🗄️ Priority 3: Database Migration
+- [ ] **Switch from SQLite to DuckDB**
+  - Better analytical performance
+  - Same single-file simplicity
+  - Optimized for research queries
+
+### 📊 Priority 4: Analysis Infrastructure
+- [ ] **Auto-generated Jupyter notebooks**
+  - For completed experiments AND individual chats
+  - Pre-populated with metrics and visualizations
+- [ ] **Data enrichment pipeline**
+  - CLI command for post-processing
+  - Sentiment analysis and heavy ML models
+- [ ] **Post-hoc corpus creation**
+  - Interactive mode for cherry-picking conversations
+  - GraphQL interface for complex queries
+
+### 📚 Priority 5: Documentation
+- [ ] **Update all docs for new architecture**
+  - Remove dashboard references
+  - Document DuckDB usage
+  - Add analysis workflow guides

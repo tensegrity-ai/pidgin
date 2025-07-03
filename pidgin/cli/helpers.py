@@ -11,11 +11,9 @@ from datetime import datetime
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 
-from ..providers import AnthropicProvider, OpenAIProvider, GoogleProvider, xAIProvider
-from ..providers.local import LocalProvider
-from ..providers.silent import SilentProvider
 from ..config.models import get_model_config, MODELS
-from ..config.dimensional_prompts import DimensionalPromptGenerator
+from ..providers.builder import build_provider
+from ..config.prompts import build_initial_prompt
 from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
 
 console = Console()
@@ -24,6 +22,8 @@ console = Console()
 async def get_provider_for_model(model_id: str, temperature: Optional[float] = None):
     """Create a provider instance for the given model.
     
+    This is a compatibility wrapper that delegates to the new provider builder.
+    
     Args:
         model_id: Model identifier (e.g., 'gpt-4', 'claude', 'gemini-1.5-pro')
         temperature: Optional temperature override (not used here, temperature is passed to stream_response)
@@ -31,40 +31,7 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
     Returns:
         Provider instance
     """
-    model_config = get_model_config(model_id)
-    if not model_config:
-        raise ValueError(f"Unknown model: {model_id}")
-    
-    # Create appropriate provider (without temperature)
-    if model_config.provider == "openai":
-        return OpenAIProvider(model=model_config.model_id)
-    elif model_config.provider == "anthropic":
-        return AnthropicProvider(model=model_config.model_id)
-    elif model_config.provider == "google":
-        return GoogleProvider(model=model_config.model_id)
-    elif model_config.provider == "xai":
-        return xAIProvider(model=model_config.model_id)
-    elif model_config.provider == "local":
-        if model_config.model_id == "local:test":
-            from ..providers.local import LocalProvider
-            return LocalProvider(model_name="test")
-        else:
-            # For other local models, use OllamaProvider
-            from ..providers.ollama import OllamaProvider
-            model_name = model_config.model_id.split(":", 1)[1]
-            # Map simple names to Ollama model names
-            model_map = {
-                "qwen": "qwen2.5:0.5b",
-                "phi": "phi3",
-                "mistral": "mistral"
-            }
-            ollama_model = model_map.get(model_name, model_name)
-            return OllamaProvider(ollama_model)
-    elif model_config.provider == "silent":
-        from ..providers.silent import SilentProvider
-        return SilentProvider(model=model_config.model_id)
-    else:
-        raise ValueError(f"Unknown provider: {model_config.provider}")
+    return await build_provider(model_id, temperature)
 
 
 def build_initial_prompt(custom_prompt: Optional[str] = None, 

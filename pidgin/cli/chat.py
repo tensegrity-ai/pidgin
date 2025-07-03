@@ -23,6 +23,8 @@ from .helpers import (
     parse_temperature,
     parse_dimensions
 )
+from ..config.resolution import resolve_temperatures
+from ..config.defaults import get_smart_convergence_defaults
 from .constants import (
     NORD_BLUE, NORD_YELLOW, NORD_RED, NORD_GREEN,
     DEFAULT_TURNS, DEFAULT_TEMPERATURE,
@@ -30,7 +32,7 @@ from .constants import (
 )
 from ..core import Conductor, Agent, Conversation
 from ..io import OutputManager
-from ..config.models import MODELS
+from ..config.models import MODELS, get_model_config
 
 console = Console()
 
@@ -151,11 +153,20 @@ def chat(agent_a, agent_b, prompt, turns, temperature, temp_a,
         return
 
     # Handle temperature settings
-    temp_a = temp_a if temp_a is not None else temperature
-    temp_b = temp_b if temp_b is not None else temperature
+    temp_a, temp_b = resolve_temperatures(temperature, temp_a, temp_b)
     
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, list(dimension))
+    
+    # Add smart convergence defaults for API models
+    if convergence_threshold is None:
+        default_threshold, default_action = get_smart_convergence_defaults(agent_a_id, agent_b_id)
+        if default_threshold is not None:
+            convergence_threshold = default_threshold
+            if convergence_action == 'notify':  # Only override default notify
+                convergence_action = default_action
+            # Log this default
+            console.print(f"[dim]Using default convergence threshold: {convergence_threshold} → {convergence_action}[/dim]")
     
     # Determine first speaker
     if first_speaker == 'random':
