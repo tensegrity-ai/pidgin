@@ -52,7 +52,6 @@ from .constants import BANNER
 from .chat import chat, models
 from .experiment import experiment
 from .monitor import monitor
-from .migrate import db_cli
 
 console = Console()
 
@@ -105,7 +104,6 @@ cli.add_command(models)
 cli.add_command(experiment)
 cli.add_command(monitor)
 cli.add_command(analyze)
-cli.add_command(db_cli)
 
 def main():
     """Main entry point."""

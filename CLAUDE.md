@@ -212,6 +212,11 @@ pidgin chat -a local:test -b local:test -t 5
 ### ✅ Completed
 - [x] Remove dashboard entirely
 - [x] Remove SharedState functionality
+- [x] Remove db commands and integrate into monitor
+- [x] Implement proper token counting with DuckDB storage
+- [x] Complete documentation audit and cleanup
+- [x] Reorganize model configurations to providers
+- [x] Switch from SQLite to DuckDB
 
 ### 🔥 Priority 1: Documentation & CLI Cleanup
 - [ ] **Remove unnecessary top-level commands**
@@ -242,13 +247,13 @@ pidgin chat -a local:test -b local:test -t 5
   - Terminal bell option
   - Desktop notifications (macOS/Linux)
   - Optional email for long experiments
-- [ ] **Reorganize model configurations**
+- [x] **Reorganize model configurations**
   - Move model definitions to their respective provider files
   - Keep aggregation and utilities in `/config/models.py`
   - Makes provider updates self-contained
 
 ### 🗄️ Priority 3: Database Migration
-- [ ] **Switch from SQLite to DuckDB**
+- [x] **Switch from SQLite to DuckDB**
   - Better analytical performance
   - Same single-file simplicity
   - Optimized for research queries

@@ -5,6 +5,28 @@ from typing import List, Optional, AsyncGenerator
 from ..core.types import Message
 from .base import Provider
 
+# Import model config classes from central location
+from ..config.models import ModelConfig, ModelCharacteristics
+
+# Silent model definitions
+SILENT_MODELS = {
+    "silent": ModelConfig(
+        model_id="silent",
+        shortname="Silence",
+        aliases=["void", "quiet", "meditation"],
+        provider="silent",
+        context_window=999999,  # Infinite patience
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=0,
+            avg_response_length="short",  # Always empty
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1", "o1"],
+            conversation_style="concise",  # The ultimate conciseness
+        ),
+        notes="A special model that returns only silence for meditation mode",
+    ),
+}
+
 
 class SilentProvider(Provider):
     """A provider that returns only silence."""

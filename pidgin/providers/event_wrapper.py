@@ -155,15 +155,28 @@ class EventAwareProvider:
         if hasattr(self.provider, 'get_last_usage'):
             usage_data = self.provider.get_last_usage()
             if usage_data and 'total_tokens' in usage_data:
-                # Extract provider name
+                # Extract provider name and model
                 provider_name = self.provider.__class__.__name__.replace("Provider", "")
+                model_name = getattr(self.provider, 'model', 'unknown')
                 
-                await self.bus.emit(
-                    TokenUsageEvent(
-                        conversation_id=event.conversation_id,
-                        provider=provider_name,
-                        tokens_used=usage_data['total_tokens'],
-                        tokens_per_minute_limit=0,  # TODO: Get from provider config
-                        current_usage_rate=0.0,  # TODO: Calculate rate
-                    )
+                # Get token tracker for rate limits
+                from ..providers.token_tracker import get_token_tracker
+                tracker = get_token_tracker()
+                usage_stats = tracker.get_usage_stats(provider_name.lower())
+                
+                # Create enhanced token usage event
+                token_event = TokenUsageEvent(
+                    conversation_id=event.conversation_id,
+                    provider=provider_name,
+                    tokens_used=usage_data['total_tokens'],
+                    tokens_per_minute_limit=usage_stats['rate_limit'],
+                    current_usage_rate=usage_stats['current_rate'],
                 )
+                # Add model as custom attribute
+                token_event.model = model_name
+                
+                # Handle different naming conventions (Anthropic vs OpenAI)
+                token_event.prompt_tokens = usage_data.get('prompt_tokens', 0) or usage_data.get('input_tokens', 0)
+                token_event.completion_tokens = usage_data.get('completion_tokens', 0) or usage_data.get('output_tokens', 0)
+                
+                await self.bus.emit(token_event)

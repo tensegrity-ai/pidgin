@@ -5,8 +5,89 @@ from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_overloaded_error
+from dataclasses import dataclass
+from typing import Literal
 
 logger = logging.getLogger(__name__)
+
+# Import model config classes from central location
+from ..config.models import ModelConfig, ModelCharacteristics
+
+# Anthropic model definitions
+ANTHROPIC_MODELS = {
+    "claude-4-opus-20250514": ModelConfig(
+        model_id="claude-4-opus-20250514",
+        shortname="Opus",
+        aliases=["opus", "opus4", "claude-opus"],
+        provider="anthropic",
+        context_window=200000,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=8,
+            avg_response_length="long",
+            recommended_pairings=["gpt-4.1", "o3"],
+            conversation_style="analytical",
+        ),
+    ),
+    "claude-4-sonnet-20250514": ModelConfig(
+        model_id="claude-4-sonnet-20250514",
+        shortname="Sonnet",
+        aliases=["sonnet", "sonnet4", "claude-sonnet", "claude"],
+        provider="anthropic",
+        context_window=200000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=6,
+            avg_response_length="medium",
+            recommended_pairings=["gpt-4.1-mini", "claude-4-sonnet-20250514"],
+            conversation_style="verbose",
+        ),
+    ),
+    "claude-3-5-sonnet-20241022": ModelConfig(
+        model_id="claude-3-5-sonnet-20241022",
+        shortname="Sonnet3.5",
+        aliases=["sonnet3.5", "claude-3.5", "sonnet3.7", "claude-3.7"],
+        provider="anthropic",
+        context_window=200000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="medium",
+            recommended_pairings=["o4-mini", "gpt-4.1-mini"],
+            conversation_style="analytical",
+        ),
+        notes="Latest Sonnet model",
+    ),
+    "claude-3-5-haiku-20241022": ModelConfig(
+        model_id="claude-3-5-haiku-20241022",
+        shortname="Haiku",
+        aliases=["haiku", "haiku3.5", "claude-haiku"],
+        provider="anthropic",
+        context_window=200000,
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=3,
+            avg_response_length="short",
+            recommended_pairings=["gpt-4.1-nano", "claude-3-5-haiku-20241022"],
+            conversation_style="concise",
+        ),
+    ),
+    "claude-3-haiku-20240307": ModelConfig(
+        model_id="claude-3-haiku-20240307",
+        shortname="Haiku3",
+        aliases=["haiku3", "claude-3-haiku"],
+        provider="anthropic",
+        context_window=200000,
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=3,
+            avg_response_length="short",
+            recommended_pairings=["gpt-4o-mini", "claude-3-haiku-20240307"],
+            conversation_style="concise",
+        ),
+        notes="Legacy Haiku model",
+    ),
+}
 
 
 class AnthropicProvider(Provider):

@@ -11,12 +11,14 @@ from ..core.events import (
     MessageCompleteEvent,
     SystemPromptEvent,
     MetricsCalculatedEvent,
+    TokenUsageEvent,
     Turn
 )
 from ..core.types import Message
 from .storage import AsyncExperimentStore
 from ..metrics import MetricsCalculator
 from ..io.logger import get_logger
+from .token_handler import TokenUsageHandler
 
 logger = get_logger("async_event_handler")
 
@@ -36,6 +38,9 @@ class AsyncExperimentEventHandler:
         self.storage = storage
         self.experiment_id = experiment_id
         self.event_bus = event_bus
+        
+        # Initialize token handler
+        self.token_handler = TokenUsageHandler(storage)
         
         # Per-conversation state
         self.metrics_calculators: Dict[str, MetricsCalculator] = {}
@@ -106,6 +111,9 @@ class AsyncExperimentEventHandler:
             event.message.content,
             {'count': event.tokens_used, 'model_reported': event.tokens_used}
         )
+        
+        # Also handle token tracking
+        await self.token_handler.handle_message_complete(event)
     
     async def handle_turn_complete(self, event: TurnCompleteEvent):
         """Calculate and store metrics when turn completes."""
@@ -289,3 +297,7 @@ class AsyncExperimentEventHandler:
         )
         
         await self.event_bus.emit(event)
+    
+    async def handle_token_usage(self, event: TokenUsageEvent):
+        """Handle token usage events."""
+        await self.token_handler.handle_token_usage(event)

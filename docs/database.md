@@ -1,0 +1,275 @@
+# Pidgin Database Documentation
+
+## Overview
+
+Pidgin uses DuckDB as its analytical database, storing all conversation data, metrics, and events in a single file at `./pidgin_output/experiments/experiments.duckdb`. The database is automatically created on first use and employs an event-sourcing architecture for complete auditability.
+
+## Why DuckDB?
+
+- **Analytical Optimized**: Columnar storage perfect for metrics analysis
+- **Zero Configuration**: Single file, no server required
+- **Fast Queries**: 10-100x faster than SQLite for analytical workloads
+- **Rich SQL**: Window functions, CTEs, and advanced analytics
+- **Pandas Integration**: Direct DataFrame support for data science
+
+## Database Schema
+
+### Core Tables
+
+#### 1. `events` - Event Sourcing Table
+The foundation of our event-sourcing architecture. Every significant action creates an event.
+
+```sql
+CREATE TABLE events (
+    event_id UUID PRIMARY KEY,
+    timestamp TIMESTAMP,
+    event_type TEXT,              -- e.g., 'ConversationStartEvent', 'TurnCompleteEvent'
+    conversation_id TEXT,
+    experiment_id TEXT,
+    event_data JSON,              -- Full event payload
+    event_date DATE               -- For partitioning
+)
+```
+
+#### 2. `experiments` - Experiment Metadata
+Tracks batch runs of multiple conversations.
+
+```sql
+CREATE TABLE experiments (
+    experiment_id TEXT PRIMARY KEY,   -- e.g., 'exp_a1b2c3d4'
+    name TEXT,                        -- Human-readable name
+    created_at TIMESTAMP,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    status TEXT,                      -- 'created', 'running', 'completed', 'failed'
+    config JSON,                      -- Full experiment configuration
+    total_conversations INTEGER,
+    completed_conversations INTEGER,
+    failed_conversations INTEGER,
+    metadata JSON
+)
+```
+
+#### 3. `conversations` - Individual Conversations
+Each AI-to-AI conversation within an experiment.
+
+```sql
+CREATE TABLE conversations (
+    conversation_id TEXT PRIMARY KEY,  -- e.g., 'conv_e5f6g7h8'
+    experiment_id TEXT REFERENCES experiments,
+    created_at TIMESTAMP,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    status TEXT,
+    
+    -- Agent configuration
+    agent_a_model TEXT,               -- e.g., 'claude-3-5-sonnet'
+    agent_a_provider TEXT,            -- e.g., 'anthropic'
+    agent_a_temperature DOUBLE,
+    agent_a_chosen_name TEXT,         -- Name agent chose for itself
+    
+    agent_b_model TEXT,
+    agent_b_provider TEXT,
+    agent_b_temperature DOUBLE,
+    agent_b_chosen_name TEXT,
+    
+    -- Conversation settings
+    initial_prompt TEXT,
+    max_turns INTEGER,
+    first_speaker TEXT,               -- 'agent_a' or 'agent_b'
+    
+    -- Results
+    total_turns INTEGER,
+    final_convergence_score DOUBLE,
+    convergence_reason TEXT,          -- Why conversation ended
+    duration_ms INTEGER,
+    error_message TEXT
+)
+```
+
+#### 4. `turn_metrics` - Per-Turn Metrics
+Comprehensive metrics calculated after each conversation turn (~150 metrics per turn).
+
+```sql
+CREATE TABLE turn_metrics (
+    conversation_id TEXT,
+    turn_number INTEGER,
+    timestamp TIMESTAMP,
+    
+    -- Core convergence metrics
+    convergence_score DOUBLE,         -- 0.0 to 1.0
+    vocabulary_overlap DOUBLE,
+    structural_similarity DOUBLE,
+    topic_similarity DOUBLE,
+    style_match DOUBLE,
+    
+    -- Word frequencies (stored as JSON)
+    word_frequencies_a JSON,          -- {"hello": 2, "world": 1, ...}
+    word_frequencies_b JSON,
+    shared_vocabulary JSON,
+    
+    -- Message metrics for agent A
+    message_a_length INTEGER,
+    message_a_word_count INTEGER,
+    message_a_unique_words INTEGER,
+    message_a_type_token_ratio DOUBLE,
+    message_a_avg_word_length DOUBLE,
+    message_a_response_time_ms INTEGER,
+    
+    -- Message metrics for agent B (same fields)
+    message_b_length INTEGER,
+    -- ... etc ...
+    
+    -- Extended metrics
+    extended_metrics JSON,            -- Additional calculated metrics
+    
+    PRIMARY KEY (conversation_id, turn_number)
+)
+```
+
+#### 5. `messages` - Raw Message Content
+Stores actual message text for full-text search and analysis.
+
+```sql
+CREATE TABLE messages (
+    conversation_id TEXT,
+    turn_number INTEGER,
+    agent_id TEXT,                    -- 'agent_a' or 'agent_b'
+    content TEXT,                     -- Raw message text
+    timestamp TIMESTAMP,
+    token_count INTEGER,              -- Estimated tokens
+    model_reported_tokens INTEGER,    -- Actual tokens from API
+    
+    PRIMARY KEY (conversation_id, turn_number, agent_id)
+)
+```
+
+#### 6. `token_usage` - Cost Tracking
+Tracks API token usage and costs.
+
+```sql
+CREATE TABLE token_usage (
+    id UUID PRIMARY KEY,
+    timestamp TIMESTAMP,
+    conversation_id TEXT,
+    provider TEXT,                    -- 'anthropic', 'openai', etc.
+    model TEXT,
+    
+    -- Token counts
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    total_tokens INTEGER,
+    
+    -- Rate limit tracking
+    tokens_per_minute INTEGER,
+    current_tpm_usage DOUBLE,
+    
+    -- Cost in cents
+    prompt_cost DOUBLE,
+    completion_cost DOUBLE,
+    total_cost DOUBLE
+)
+```
+
+### Views for Analysis
+
+#### `experiment_dashboard`
+Aggregated view for experiment monitoring.
+
+```sql
+CREATE VIEW experiment_dashboard AS
+SELECT 
+    e.*,
+    COUNT(DISTINCT c.conversation_id) as actual_conversations,
+    AVG(c.final_convergence_score) as avg_convergence,
+    SUM(tu.total_tokens) as total_tokens,
+    SUM(tu.total_cost) / 100.0 as total_cost_usd
+FROM experiments e
+LEFT JOIN conversations c ON e.experiment_id = c.experiment_id
+LEFT JOIN (SELECT conversation_id, SUM(total_tokens) as total_tokens, 
+           SUM(total_cost) as total_cost
+           FROM token_usage GROUP BY conversation_id) tu
+    ON c.conversation_id = tu.conversation_id
+GROUP BY e.experiment_id;
+```
+
+#### `convergence_trends`
+Time-series analysis of convergence patterns.
+
+```sql
+CREATE VIEW convergence_trends AS
+SELECT 
+    conversation_id,
+    turn_number,
+    convergence_score,
+    AVG(convergence_score) OVER (
+        PARTITION BY conversation_id 
+        ORDER BY turn_number 
+        ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
+    ) as rolling_avg_5
+FROM turn_metrics;
+```
+
+## Common Queries
+
+### Get experiment summary
+```sql
+SELECT * FROM experiment_dashboard 
+WHERE experiment_id = 'exp_abc123';
+```
+
+### Find high-convergence moments
+```sql
+SELECT conversation_id, turn_number, convergence_score
+FROM turn_metrics
+WHERE convergence_score > 0.8
+ORDER BY convergence_score DESC;
+```
+
+### Analyze vocabulary compression
+```sql
+SELECT 
+    turn_number,
+    AVG(message_a_word_count) as avg_words,
+    AVG(message_a_unique_words) as avg_unique_words
+FROM turn_metrics
+GROUP BY turn_number
+ORDER BY turn_number;
+```
+
+### Calculate experiment costs
+```sql
+SELECT 
+    provider,
+    model,
+    SUM(total_tokens) as tokens,
+    SUM(total_cost) / 100.0 as cost_usd
+FROM token_usage
+WHERE conversation_id IN (
+    SELECT conversation_id FROM conversations 
+    WHERE experiment_id = 'exp_abc123'
+)
+GROUP BY provider, model;
+```
+
+## Database Location & Access
+
+- **Default location**: `./pidgin_output/experiments/experiments.duckdb`
+- **Auto-creation**: Database and tables created automatically on first use
+- **Direct access**: `duckdb ./pidgin_output/experiments/experiments.duckdb`
+- **Python access**: Use the AsyncDuckDB wrapper in `pidgin.database.async_duckdb`
+
+## Architecture Notes
+
+1. **Event Sourcing**: All state changes flow through the `events` table, providing a complete audit trail
+2. **Async Operations**: Database operations use ThreadPoolExecutor to prevent blocking
+3. **Batch Processing**: Metrics calculations can be batched for performance
+4. **JSON Flexibility**: Complex data stored as JSON for schema flexibility
+5. **Materialized Views**: Pre-computed aggregations for real-time monitoring
+
+## Future Enhancements
+
+- **Partitioning**: Events table partitioned by date for faster queries
+- **Compression**: Automatic compression of historical data
+- **External Tables**: Direct querying of JSON/Parquet files
+- **Streaming Updates**: Real-time materialized view updates

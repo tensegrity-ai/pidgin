@@ -2,7 +2,7 @@
 """System-wide monitor for experiments and API usage."""
 
 import asyncio
-import sqlite3
+import duckdb
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -19,6 +19,9 @@ from rich.progress import Progress, BarColumn, TextColumn
 
 from ..providers.token_tracker import get_token_tracker
 from ..experiments.storage import ExperimentStore
+from ..io.logger import get_logger
+
+logger = get_logger("system_monitor")
 
 
 class SystemMonitor:
@@ -128,9 +131,14 @@ class SystemMonitor:
         
         # Add cost estimate section
         table.add_section()
+        
+        # Calculate actual costs from recent usage
+        total_cost = self._calculate_recent_costs()
+        cost_str = f"[bold]${total_cost:.3f}[/bold]" if total_cost > 0 else "[bold]$0.00[/bold]"
+        
         table.add_row(
-            "[bold]Est. Cost/Hour[/bold]",
-            "[bold]$0.00[/bold]",  # TODO: Calculate from token usage
+            "[bold]Total Cost (1hr)[/bold]",
+            cost_str,
             "",
             ""
         )
@@ -215,9 +223,15 @@ class SystemMonitor:
         else:
             success_rate = "N/A"
         
-        # Calculate database size
-        db_path = Path("./pidgin_output/experiments/experiments.db")
+        # Calculate database size and stats
+        db_path = Path("./pidgin_output/experiments/experiments.duckdb")
         db_size = db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0
+        
+        # Get table counts
+        table_stats = self._get_database_stats()
+        
+        # Get total costs from all experiments
+        total_experiment_costs = self._get_total_experiment_costs()
         
         content = f"""[bold]System Statistics[/bold]
 
@@ -232,9 +246,16 @@ Conversations:
   Completed: {completed_conversations:,}
   Success Rate: {success_rate}
 
-Storage:
-  Database: {db_size:.1f} MB
-  Output Dir: ./pidgin_output/
+Database:
+  Type: DuckDB
+  Size: {db_size:.1f} MB
+  Tables: {table_stats.get('tables', 'N/A')}
+  Events: {table_stats.get('events', 0):,}
+  Turns: {table_stats.get('turns', 0):,}
+  Messages: {table_stats.get('messages', 0):,}
+
+Costs:
+  Total Spent: ${total_experiment_costs:.4f}
 """
         
         return Panel(content, title="◇ Summary", border_style=self.COLORS['dim'])
@@ -264,8 +285,7 @@ Storage:
     def _get_latest_convergence(self, experiment_id: str) -> Optional[float]:
         """Get the latest convergence score from completed conversations."""
         try:
-            with sqlite3.connect(self.storage.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with duckdb.connect(str(self.storage.db_path)) as conn:
                 
                 # Get the most recent convergence score from completed conversations
                 query = """
@@ -280,7 +300,7 @@ Storage:
                 
                 result = conn.execute(query, (experiment_id,)).fetchone()
                 if result:
-                    return result['final_convergence_score']
+                    return result[0]  # DuckDB returns tuples
                     
                 # If no completed conversations, try to get latest from turn metrics
                 query = """
@@ -295,12 +315,104 @@ Storage:
                 
                 result = conn.execute(query, (experiment_id,)).fetchone()
                 if result:
-                    return result['convergence_score']
+                    return result[0]  # DuckDB returns tuples
                     
                 return None
         except Exception:
             # If there's any error, just return None
             return None
+    
+    def _calculate_recent_costs(self) -> float:
+        """Calculate costs from recent token usage (last hour)."""
+        try:
+            import duckdb
+            from datetime import datetime, timedelta
+            
+            db_path = Path("./pidgin_output/experiments/experiments.duckdb")
+            if not db_path.exists():
+                return 0.0
+            
+            with duckdb.connect(str(db_path)) as conn:
+                # Get token usage from last hour
+                one_hour_ago = datetime.now() - timedelta(hours=1)
+                
+                result = conn.execute("""
+                    SELECT SUM(total_cost) as total_cents
+                    FROM token_usage
+                    WHERE timestamp >= ?
+                """, (one_hour_ago,)).fetchone()
+                
+                if result and result[0]:
+                    # Convert cents to dollars
+                    return result[0] / 100.0
+                return 0.0
+        except Exception as e:
+            logger.debug(f"Could not calculate costs: {e}")
+            return 0.0
+    
+    def _get_total_experiment_costs(self) -> float:
+        """Get total costs across all experiments."""
+        try:
+            import duckdb
+            db_path = Path("./pidgin_output/experiments/experiments.duckdb")
+            if not db_path.exists():
+                return 0.0
+            
+            with duckdb.connect(str(db_path)) as conn:
+                # Get total costs from experiment dashboard view
+                result = conn.execute("""
+                    SELECT SUM(total_cost_usd) as total
+                    FROM experiment_dashboard
+                """).fetchone()
+                
+                if result and result[0]:
+                    return result[0]
+                return 0.0
+        except Exception as e:
+            logger.debug(f"Could not get total costs: {e}")
+            return 0.0
+    
+    def _get_database_stats(self) -> Dict[str, Any]:
+        """Get database statistics."""
+        try:
+            import duckdb
+            db_path = Path("./pidgin_output/experiments/experiments.duckdb")
+            if not db_path.exists():
+                return {'tables': 0, 'events': 0, 'turns': 0, 'messages': 0}
+            
+            with duckdb.connect(str(db_path)) as conn:
+                # Count tables
+                tables = conn.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'main'").fetchone()[0]
+                
+                # Count events if table exists
+                events = 0
+                try:
+                    events = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+                except:
+                    pass
+                
+                # Count turn metrics
+                turns = 0
+                try:
+                    turns = conn.execute("SELECT COUNT(*) FROM turn_metrics").fetchone()[0]
+                except:
+                    pass
+                
+                # Count messages
+                messages = 0
+                try:
+                    messages = conn.execute("SELECT COUNT(*) FROM message_metrics").fetchone()[0]
+                except:
+                    pass
+                
+                return {
+                    'tables': tables,
+                    'events': events,
+                    'turns': turns,
+                    'messages': messages
+                }
+        except Exception:
+            return {'tables': 'Error', 'events': 0, 'turns': 0, 'messages': 0}
     
     async def run(self):
         """Run the monitor."""

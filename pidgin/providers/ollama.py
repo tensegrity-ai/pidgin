@@ -6,6 +6,58 @@ import aiohttp
 from .base import Provider
 from ..core.types import Message
 
+# Import model config classes from central location
+from ..config.models import ModelConfig, ModelCharacteristics
+
+# Ollama model definitions
+OLLAMA_MODELS = {
+    "local:qwen": ModelConfig(
+        model_id="local:qwen",
+        shortname="Qwen-0.5B",
+        aliases=["qwen", "qwen-tiny"],
+        provider="local",
+        context_window=32768,
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=4,
+            avg_response_length="short",
+            recommended_pairings=["local:phi", "local:test"],
+            conversation_style="concise",
+        ),
+        notes="Qwen 0.5B via Ollama - requires Ollama running",
+    ),
+    "local:phi": ModelConfig(
+        model_id="local:phi",
+        shortname="Phi-3",
+        aliases=["phi", "phi3"],
+        provider="local",
+        context_window=4096,
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=6,
+            avg_response_length="medium",
+            recommended_pairings=["local:qwen", "local:test"],
+            conversation_style="analytical",
+        ),
+        notes="Phi-3 via Ollama",
+    ),
+    "local:mistral": ModelConfig(
+        model_id="local:mistral",
+        shortname="Mistral-7B",
+        aliases=["mistral", "mistral7b"],
+        provider="local",
+        context_window=32768,
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="verbose",
+        ),
+        notes="Mistral 7B via Ollama - requires 8GB+ RAM",
+    ),
+}
+
 
 class OllamaProvider(Provider):
     """Provider that uses Ollama for local inference."""

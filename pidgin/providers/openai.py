@@ -10,6 +10,178 @@ from .retry_utils import retry_with_exponential_backoff, is_retryable_error
 
 logger = logging.getLogger(__name__)
 
+# Import model config classes from central location
+from ..config.models import ModelConfig, ModelCharacteristics
+
+# OpenAI model definitions
+OPENAI_MODELS = {
+    "gpt-4.1": ModelConfig(
+        model_id="gpt-4.1",
+        shortname="GPT-4.1",
+        aliases=["gpt4.1", "coding", "4.1"],
+        provider="openai",
+        context_window=1000000,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="medium",
+            recommended_pairings=["claude-4-opus-20250514", "o3"],
+            conversation_style="analytical",
+        ),
+        notes="Primary coding-focused model",
+    ),
+    "gpt-4.1-mini": ModelConfig(
+        model_id="gpt-4.1-mini",
+        shortname="GPT-Mini",
+        aliases=["gpt4.1-mini", "coding-mini", "gpt-mini"],
+        provider="openai",
+        context_window=1000000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=5,
+            avg_response_length="medium",
+            recommended_pairings=["claude-4-sonnet-20250514", "gpt-4.1-mini"],
+            conversation_style="verbose",
+        ),
+    ),
+    "gpt-4.1-nano": ModelConfig(
+        model_id="gpt-4.1-nano",
+        shortname="GPT-Nano",
+        aliases=["gpt4.1-nano", "coding-fast", "nano"],
+        provider="openai",
+        context_window=1000000,
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=3,
+            avg_response_length="short",
+            recommended_pairings=["claude-3-5-haiku-20241022", "gpt-4.1-nano"],
+            conversation_style="concise",
+        ),
+    ),
+    "o3": ModelConfig(
+        model_id="o3",
+        shortname="O3",
+        aliases=["reasoning-premium"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=9,
+            avg_response_length="long",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="analytical",
+        ),
+        notes="Premium reasoning model",
+    ),
+    "o3-mini": ModelConfig(
+        model_id="o3-mini",
+        shortname="O3-Mini",
+        aliases=["reasoning-small"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=6,
+            avg_response_length="medium",
+            recommended_pairings=["claude-3-7-sonnet-20250224", "o4-mini"],
+            conversation_style="analytical",
+        ),
+        notes="Small reasoning model",
+    ),
+    "o4-mini": ModelConfig(
+        model_id="o4-mini",
+        shortname="O4",
+        aliases=["reasoning", "o4"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="medium",
+            recommended_pairings=["claude-3-7-sonnet-20250224", "gpt-4.1-mini"],
+            conversation_style="analytical",
+        ),
+        notes="Latest small reasoning model (recommended over o3-mini)",
+    ),
+    "o4-mini-high": ModelConfig(
+        model_id="o4-mini-high",
+        shortname="O4-High",
+        aliases=["reasoning-high", "o4-high"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=8,
+            avg_response_length="long",
+            recommended_pairings=["claude-4-opus-20250514", "o3"],
+            conversation_style="analytical",
+        ),
+        notes="Enhanced reasoning variant",
+    ),
+    "gpt-4.5": ModelConfig(
+        model_id="gpt-4.5",
+        shortname="GPT-4.5",
+        aliases=["gpt4.5", "4.5"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="medium",
+            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
+            conversation_style="analytical",
+        ),
+        deprecated=True,
+        deprecation_date="2025-07",
+        notes="Research preview - being deprecated July 2025",
+    ),
+    "gpt-4o": ModelConfig(
+        model_id="gpt-4o",
+        shortname="GPT-4o",
+        aliases=["gpt4o", "4o", "multimodal", "gpt"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="standard",
+        characteristics=ModelCharacteristics(
+            verbosity_level=6,
+            avg_response_length="medium",
+            recommended_pairings=["claude-4-sonnet-20250514", "gpt-4o-mini"],
+            conversation_style="verbose",
+        ),
+        notes="Multimodal model",
+    ),
+    "gpt-4o-mini": ModelConfig(
+        model_id="gpt-4o-mini",
+        shortname="GPT-4o-Mini",
+        aliases=["gpt4o-mini", "4o-mini"],
+        provider="openai",
+        context_window=128000,
+        pricing_tier="economy",
+        characteristics=ModelCharacteristics(
+            verbosity_level=4,
+            avg_response_length="short",
+            recommended_pairings=["claude-3-haiku-20240307", "gpt-4.1-nano"],
+            conversation_style="concise",
+        ),
+        notes="Fast multimodal model",
+    ),
+    "gpt-image-1": ModelConfig(
+        model_id="gpt-image-1",
+        shortname="DALL-E",
+        aliases=["image", "dalle"],
+        provider="openai",
+        context_window=0,  # Not applicable for image generation
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=0,
+            avg_response_length="short",
+            recommended_pairings=[],
+            conversation_style="creative",
+        ),
+        notes="Latest image generation model - not for conversations",
+    ),
+}
+
 
 class OpenAIProvider(Provider):
     """OpenAI API provider with friendly error handling."""

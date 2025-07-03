@@ -11,7 +11,8 @@ from ..core.events import (
     TurnCompleteEvent,
     ConversationEndEvent,
     MessageCompleteEvent,
-    SystemPromptEvent
+    SystemPromptEvent,
+    TokenUsageEvent
 )
 from ..core.types import Agent
 from ..config.models import get_model_config
@@ -202,6 +203,7 @@ class ExperimentRunner:
             conductor.bus.subscribe(ConversationEndEvent, handler.handle_conversation_end)
             conductor.bus.subscribe(MessageCompleteEvent, handler.handle_message_complete)
             conductor.bus.subscribe(SystemPromptEvent, handler.handle_system_prompt)
+            conductor.bus.subscribe(TokenUsageEvent, handler.handle_token_usage)
             
             # Also set the conversation ID in the handler
             handler.conversation_id = conversation_id

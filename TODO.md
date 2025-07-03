@@ -42,17 +42,33 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [x] **Switch from SQLite to DuckDB** *(Completed 2025-07-03)*
   - Created AsyncDuckDB wrapper with connection pooling
   - Implemented async storage layer with event sourcing
-  - Added database migration CLI commands (db migrate, status, reset)
+  - Database auto-creates with new schema on first use
   - Created comprehensive migration guide
   - Simplified schema to work with current DuckDB limitations
 
+- [x] **Remove unnecessary db commands** *(Completed 2025-07-03)*
+  - Removed `pidgin db` command group entirely
+  - Integrated database stats into `pidgin monitor`
+  - Updated documentation to reflect simpler approach
+
+- [x] **Complete token counting implementation** *(Completed 2025-07-03)*
+  - Added TokenUsageHandler to store token data in DuckDB
+  - Enhanced TokenUsageEvent with prompt/completion token breakdown
+  - Added get_last_usage() to xAI provider (others already had it)
+  - Integrated token costs into system monitor
+  - Added pricing data for all providers
+  - Token usage now properly stored and tracked
+
+- [x] **Documentation cleanup** *(Completed 2025-07-03)*
+  - Removed duplicate README and ARCHITECTURE files from /docs
+  - Deleted outdated migration documentation
+  - Removed historical dashboard documentation
+  - Removed redundant db-schema.txt (schema.py is source of truth)
+  - Updated all references to match current implementation
+
 ## 🚧 In Progress
 
-- [ ] **Complete token counting implementation**
-  - Track retry count from provider retry logic
-  - Get token rate limits from provider config
-  - Calculate actual usage rate over time
-  - Fix OpenAI streaming API usage data capture
+(None currently)
 
 ## 📋 Upcoming Tasks
 

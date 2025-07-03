@@ -4,6 +4,28 @@ from typing import List, Optional, AsyncGenerator
 from .base import Provider
 from ..core.types import Message
 
+# Import model config classes from central location
+from ..config.models import ModelConfig, ModelCharacteristics
+
+# Local model definitions
+LOCAL_MODELS = {
+    "local:test": ModelConfig(
+        model_id="local:test",
+        shortname="TestModel",
+        aliases=["test", "local-test"],
+        provider="local",
+        context_window=8192,
+        pricing_tier="free",
+        characteristics=ModelCharacteristics(
+            verbosity_level=5,
+            avg_response_length="medium",
+            recommended_pairings=["local:test", "gpt-4o-mini"],
+            conversation_style="analytical",
+        ),
+        notes="Deterministic test model for offline development",
+    ),
+}
+
 
 class LocalProvider(Provider):
     """Provider for the local test model."""

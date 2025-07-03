@@ -64,19 +64,18 @@ pidgin experiment status my_experiment --watch --notify
 # Output saved to ./pidgin_output/
 ```
 
-### Database Management
+### Database Information
 
-Pidgin uses DuckDB for high-performance analytics:
+Pidgin uses DuckDB for high-performance analytics. The database is created automatically when you run your first experiment or chat.
 
+To view database statistics, use:
 ```bash
-# Check database status
-pidgin db status
+pidgin monitor
+```
 
-# Create fresh database
-pidgin db migrate --fresh
-
-# Reset database (WARNING: deletes all data)
-pidgin db reset --force
+To reset the database, simply delete the file:
+```bash
+rm pidgin_output/experiments/experiments.duckdb
 ```
 
 ## API Key Management
@@ -223,7 +222,7 @@ pidgin experiment start \
 pidgin experiment status economical_model_comparison
 
 # Data stored in DuckDB with event sourcing
-# Run 'pidgin db status' to check database health
+# Run 'pidgin monitor' to check system and database health
 ```
 
 ## How to Help
