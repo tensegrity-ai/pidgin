@@ -42,6 +42,9 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
     except Exception as e:
         logging.error(f"Experiment failed: {e}", exc_info=True)
         raise
+    finally:
+        # Always close the storage connection
+        await storage.close()
 
 
 def main():
