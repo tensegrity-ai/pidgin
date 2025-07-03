@@ -274,7 +274,12 @@ class DisplayFilter:
 
         # Show the message without a panel
         self.console.print(f"\n[{color}]{glyph} {display_name}:[/{color}]")
-        self.console.print(content)
+        
+        # Wrap the message content at consistent width
+        from rich.text import Text
+        text_width = min(self.console.width - 4, 80)
+        wrapped_text = Text(content)
+        self.console.print(wrapped_text, width=text_width, style="default")
         
         if self.show_timing:
             self.console.print(f"[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]")
@@ -285,10 +290,10 @@ class DisplayFilter:
         """Show turn completion marker."""
         self.current_turn = event.turn_number + 1
 
-        # Simple separator
-        self.console.print(f"\n[{self.COLORS['nord3']}]{'─' * 50}[/{self.COLORS['nord3']}]")
+        # Use consistent width similar to panels
+        separator_width = min(self.console.width - 4, 60)
         
-        # Turn info
+        # Build turn info
         turn_info = f"Turn {self.current_turn}/{self.max_turns}"
         
         # Add convergence if available
@@ -297,12 +302,23 @@ class DisplayFilter:
             # Add warning if convergence is high
             if event.convergence_score > 0.75:
                 conv_text += " !"
+                # Use plain text for centering calculation
+                plain_turn_info = f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
                 turn_info += f" | [{self.COLORS['nord13']}]{conv_text}[/{self.COLORS['nord13']}]"
             else:
+                plain_turn_info = f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
                 turn_info += f" | {conv_text}"
+        else:
+            plain_turn_info = f"Turn {self.current_turn}/{self.max_turns}"
         
-        self.console.print(f"[{self.COLORS['nord3']}]{turn_info}[/{self.COLORS['nord3']}]")
-        self.console.print(f"[{self.COLORS['nord3']}]{'─' * 50}[/{self.COLORS['nord3']}]\n")
+        # Calculate padding for centering
+        padding = max(0, (separator_width - len(plain_turn_info)) // 2)
+        centered_info = " " * padding + turn_info
+        
+        # Print centered separators and info
+        self.console.print(f"\n[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]")
+        self.console.print(f"[{self.COLORS['nord3']}]{centered_info}[/{self.COLORS['nord3']}]")
+        self.console.print(f"[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]\n")
 
     def _show_conversation_end(self, event: ConversationEndEvent):
         """Show conversation end panel."""
