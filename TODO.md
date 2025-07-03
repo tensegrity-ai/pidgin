@@ -1,6 +1,6 @@
 # Pidgin Project TODO
 
-Last Updated: July 3, 2025
+Last Updated: January 3, 2025
 
 ## Overview
 
@@ -66,6 +66,18 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Removed redundant db-schema.txt (schema.py is source of truth)
   - Updated all references to match current implementation
 
+- [x] **Cost calculation & provider pricing** *(Completed 2025-07-03)*
+  - Implemented TokenUsageHandler to store token data in DuckDB
+  - Added pricing data for all providers in token_handler.py
+  - Integrated cost calculation in system monitor
+  - Tracks cumulative costs per experiment
+
+- [x] **Reorganize model configurations** *(Completed 2025-07-03)*
+  - Moved model definitions to their respective provider files
+  - Central config/models.py now aggregates from all providers
+  - Makes provider updates self-contained
+  - No functional changes, just better code organization
+
 ## 🚧 In Progress
 
 (None currently)
@@ -86,16 +98,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Document new architecture
 
 ### 🛠️ Priority 3: Core Functionality
-
-- [ ] **Cost calculation & provider pricing**
-  - Implement cost calculation in system monitor
-  - Add provider pricing configurations
-  - Track cumulative costs per experiment
-
-- [ ] **Reorganize model configurations**
-  - Move model definitions to their respective provider files
-  - Keep aggregation and utilities in `/config/models.py`
-  - Makes provider updates self-contained
 
 - [ ] **Pattern detection enhancements**
   - Implement gratitude spiral detection
