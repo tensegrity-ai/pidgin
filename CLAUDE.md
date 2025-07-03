@@ -43,11 +43,14 @@ These guidelines ensure consistent, grounded development of the Pidgin research 
 ### Event-Driven for Complete Observability
 ```
 Conductor → EventBus → Components
-         ↓
-      events.jsonl (complete record)
+         ↓         ↓
+   events.jsonl   DuckDB
+   (legacy)      (metrics only)
 ```
 
 Everything emits events. No hidden state. Complete audit trail.
+
+**Note**: Currently in transition - events are double-written to both jsonl files and intended for DuckDB. Priority #1 is consolidating to DuckDB only.
 
 ### Provider Abstraction for Model Flexibility
 ```python
@@ -200,12 +203,14 @@ Always use local test model to avoid API calls during development:
 pidgin chat -a local:test -b local:test -t 5
 ```
 
-## Current Focus
+## Current State
 
-1. **Remove complexity** (dashboard, SharedState)
-2. **Solid fundamentals** (status command, notifications)
-3. **Better analysis** (DuckDB, GraphQL, Jupyter)
-4. **Clean architecture** (no unnecessary abstractions)
+The core architecture is complete and functional. We're now focused on:
+
+1. **Data flow cleanup** - Consolidate event storage to DuckDB only (Priority #1)
+2. **Analysis infrastructure** - GraphQL server and auto-generated Jupyter notebooks
+3. **Pattern detection** - Gratitude spirals and other research features
+4. **Performance optimization** - Once data flow is clean
 
 ## Note on TODOs
 

@@ -80,7 +80,41 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 ## 🚧 In Progress
 
-(None currently)
+### 🚨 Priority 1: Fix Event Storage Data Flow
+
+**Current Problems:**
+- Events are double-written to both events.jsonl files AND intended for DuckDB
+- EventBus writes to jsonl files (event_bus.py lines 97-99)
+- DuckDB has an `events` table schema but raw events aren't being stored there
+- Only metrics and processed data go to DuckDB currently
+- This creates confusion about source of truth and wastes disk I/O
+
+**Proposed Solution:**
+1. Modify EventBus to write events to DuckDB instead of jsonl files
+2. Use the existing `events` table schema in schema.py
+3. Ensure event replay functionality works from DuckDB
+4. Remove jsonl file writing code
+5. Update any code that reads from jsonl files to read from DuckDB
+
+**Technical Details:**
+- EventBus.__init__ takes event_log_path parameter (currently used for jsonl)
+- Need to pass AsyncExperimentStore to EventBus instead
+- Events should go to the `events` table with proper conversation_id and experiment_id
+- Consider backward compatibility for existing jsonl files (migration tool?)
+- EventBus is created in conversation_lifecycle.py line 68
+- Event writing happens in event_bus.py _write_event() method
+
+**Benefits:**
+- Single source of truth for all events
+- Better query performance for analysis
+- Reduced disk I/O (no double writes)
+- Cleaner architecture
+- Event replay still possible via SQL queries
+
+**Open Questions:**
+- Should we keep jsonl as optional backup/export format?
+- How to handle existing jsonl files from previous runs?
+- Should event replay be synchronous or async?
 
 ## 📋 Upcoming Tasks
 
@@ -89,7 +123,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 
 - [ ] **Update all documentation**
-  - Update ARCHITECTURE.md SQLite references to DuckDB
+  - ✓ Update ARCHITECTURE.md SQLite references to DuckDB (completed)
   - Remove any remaining dashboard references
   - Update command examples
   - Document new architecture

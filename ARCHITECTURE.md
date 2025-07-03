@@ -140,9 +140,9 @@ RateLimitEvent
 
 ### Storage (`io/`)
 - Subscribes to relevant events
-- Persists to SQLite/JSON/Markdown
+- Persists to DuckDB/JSON/Markdown
 - No direct coupling to other components
-- DuckDB migration planned for better analytics
+- Optimized for analytical queries
 
 ## Experiment System
 
@@ -154,7 +154,7 @@ Experiments run as Unix daemon processes:
 └──────────────┘     └───────────────┘     └──────────────┘
                              │                      │
                      ┌───────▼────────┐    ┌───────▼──────┐
-                     │ Sequential     │    │ SQLite Store │
+                     │ Experiment     │    │ DuckDB Store │
                      │ Runner         │    │ • Metrics    │
                      │ • Rate aware   │    │ • Messages   │
                      │ • Fault tolerant│   │ • Metadata   │
@@ -175,8 +175,8 @@ Users can increase parallelism if their environment supports it, but sequential 
 - **click**: CLI framework
 - **rich**: Terminal UI
 - **asyncio**: Async operations (built-in)
-- **aiosqlite**: Async SQLite (current)
-- **duckdb**: Analytical database (planned migration)
+- **duckdb**: Analytical database with async wrapper
+- **aiofiles**: Async file operations
 
 ### Optional
 - **aiohttp**: For Ollama communication (when using local models)
@@ -233,12 +233,7 @@ This modular approach keeps the base installation minimal while allowing users t
 - Future-proof for new model sources
 - Clean abstraction boundary
 
-### Why SQLite (currently)?
-- Simple, reliable, single-file database
-- Good for transactional workloads
-- Well-tested async support
-
-### Why DuckDB (planned)?
+### Why DuckDB?
 - Optimized for analytical queries
 - Columnar storage for metrics data
 - Single file, zero configuration
@@ -257,8 +252,8 @@ This modular approach keeps the base installation minimal while allowing users t
 - **Async Throughout**: Non-blocking I/O everywhere
 - **Lazy Loading**: Models load only when needed
 - **Sequential Execution**: Avoids rate limit issues
-- **SQLite**: Current storage, adequate for experiments
-- **DuckDB (planned)**: Will enable fast analytical queries
+- **DuckDB**: Fast analytical queries with columnar storage
+- **Async Operations**: Non-blocking database access
 
 ## Security Notes
 
