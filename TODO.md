@@ -89,7 +89,8 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 
 - [ ] **Update all documentation**
-  - Remove dashboard references throughout
+  - Update ARCHITECTURE.md SQLite references to DuckDB
+  - Remove any remaining dashboard references
   - Update command examples
   - Document new architecture
 
