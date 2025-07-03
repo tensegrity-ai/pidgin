@@ -19,7 +19,7 @@ from ..core.events import (
 from ..core.types import Agent
 from ..config.models import get_model_config
 from ..io.output_manager import OutputManager
-from .storage import ExperimentStore
+from ..database.event_store import EventStore
 from .config import ExperimentConfig
 from .event_handler import ExperimentEventHandler
 from .daemon import ExperimentDaemon
@@ -36,7 +36,7 @@ from ..config.resolution import resolve_temperatures, resolve_awareness_levels
 class ExperimentRunner:
     """Runs experiment conversations with configurable parallelism."""
     
-    def __init__(self, storage: Optional[ExperimentStore] = None, 
+    def __init__(self, storage: Optional[EventStore] = None, 
                  daemon: Optional[ExperimentDaemon] = None):
         """Initialize experiment runner.
         
@@ -44,7 +44,7 @@ class ExperimentRunner:
             storage: Database storage instance
             daemon: Optional daemon instance for stop detection
         """
-        self.storage = storage or ExperimentStore()
+        self.storage = storage or EventStore()
         self.daemon = daemon
         self.active_tasks = {}
         self.completed_count = 0
@@ -61,7 +61,7 @@ class ExperimentRunner:
         """
         try:
             # Mark experiment as running in database
-            self.storage.update_experiment_status(experiment_id, 'running')
+            await self.storage.update_experiment_status(experiment_id, 'running')
             
             # Prepare conversation configs
             conversations = []
@@ -79,7 +79,7 @@ class ExperimentRunner:
                     'first_speaker': config.first_speaker
                 }
                 
-                self.storage.create_conversation(experiment_id, conv_id, conv_config)
+                await self.storage.create_conversation(experiment_id, conv_id, conv_config)
                 conversations.append((conv_id, conv_config))
             
             # Run conversations with controlled parallelism
@@ -89,13 +89,13 @@ class ExperimentRunner:
             
             # Update final status
             if self.daemon and self.daemon.is_stopping():
-                self.storage.update_experiment_status(experiment_id, 'interrupted')
+                await self.storage.update_experiment_status(experiment_id, 'interrupted')
             else:
-                self.storage.update_experiment_status(experiment_id, 'completed')
+                await self.storage.update_experiment_status(experiment_id, 'completed')
                 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
-            self.storage.update_experiment_status(experiment_id, 'failed')
+            await self.storage.update_experiment_status(experiment_id, 'failed')
             raise
     
     async def _run_parallel_conversations(self,
@@ -143,7 +143,7 @@ class ExperimentRunner:
                 except Exception as e:
                     self.failed_count += 1
                     logging.error(f"Failed {conv_id}: {e}", exc_info=True)
-                    self.storage.update_conversation_status(
+                    await self.storage.update_conversation_status(
                         conv_id, 'failed', error_message=str(e)
                     )
                     
@@ -198,8 +198,8 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
-        # Create isolated event bus for this conversation
-        event_bus = EventBus()
+        # Create isolated event bus for this conversation with shared storage
+        event_bus = EventBus(self.storage)
         await event_bus.start()
         
         # Create event handler

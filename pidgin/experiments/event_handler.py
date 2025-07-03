@@ -14,14 +14,14 @@ from ..core.events import (
     Turn
 )
 from ..core.types import Message
-from .storage import ExperimentStore
+from ..database.event_store import EventStore
 from ..metrics import MetricsCalculator
 
 
 class ExperimentEventHandler:
     """Handles events during experiment runs and stores metrics."""
     
-    def __init__(self, storage: ExperimentStore, experiment_id: str, 
+    def __init__(self, storage: EventStore, experiment_id: str, 
                  event_bus=None):
         """Initialize event handler.
         
@@ -71,7 +71,7 @@ class ExperimentEventHandler:
         }
         
         # Update database
-        self.storage.update_conversation_status(conv_id, 'running')
+        await self.storage.update_conversation_status(conv_id, 'running')
     
     async def handle_system_prompt(self, event: SystemPromptEvent):
         """Handle system prompt events to capture agent names if chosen."""
@@ -79,7 +79,7 @@ class ExperimentEventHandler:
         
         # Check if this is a name choice
         if event.agent_display_name and event.agent_display_name != event.agent_id:
-            self.storage.log_agent_name(
+            await self.storage.log_agent_name(
                 conv_id,
                 event.agent_id,
                 event.agent_display_name,
@@ -155,7 +155,7 @@ class ExperimentEventHandler:
         status = status_map.get(event.reason, event.reason)
         
         # Update conversation status in database
-        self.storage.update_conversation_status(
+        await self.storage.update_conversation_status(
             conv_id, 
             status,
             convergence_reason=event.reason if 'convergence' in event.reason else None
@@ -174,8 +174,8 @@ class ExperimentEventHandler:
     async def _already_processed(self, conv_id: str, turn_number: int) -> bool:
         """Check if turn was already processed."""
         try:
-            existing = self.storage.get_turn_metrics(conv_id, turn_number)
-            return existing is not None
+            # For now, skip this check - it's not implemented in EventStore
+            return False
         except:
             return False
     
@@ -262,24 +262,24 @@ class ExperimentEventHandler:
         turn_metrics['combined_vocabulary_size'] = len(words_a | words_b)
         
         # Store turn-level metrics
-        self.storage.log_turn_metrics(conv_id, turn_number, turn_metrics)
+        await self.storage.log_turn_metrics(conv_id, turn_number, turn_metrics)
         
         # Store agent A metrics
         agent_a_metrics = separated_metrics['agent_a'].copy()
         agent_a_metrics['response_time_ms'] = timing_metrics['agent_a_response_time_ms']
-        self.storage.log_message_metrics(conv_id, turn_number, 'agent_a', agent_a_metrics)
+        await self.storage.log_message_metrics(conv_id, turn_number, 'agent_a', agent_a_metrics)
         
         # Store agent B metrics
         agent_b_metrics = separated_metrics['agent_b'].copy()
         agent_b_metrics['response_time_ms'] = timing_metrics['agent_b_response_time_ms']
-        self.storage.log_message_metrics(conv_id, turn_number, 'agent_b', agent_b_metrics)
+        await self.storage.log_message_metrics(conv_id, turn_number, 'agent_b', agent_b_metrics)
         
         # Store word frequencies
         word_freq_a, _ = calculator.get_word_frequencies(msg_a, 'agent_a')
         word_freq_b, _ = calculator.get_word_frequencies(msg_b, 'agent_b')
         
-        self.storage.log_word_frequencies(conv_id, turn_number, 'agent_a', word_freq_a)
-        self.storage.log_word_frequencies(conv_id, turn_number, 'agent_b', word_freq_b)
+        await self.storage.log_word_frequencies(conv_id, turn_number, 'agent_a', word_freq_a)
+        await self.storage.log_word_frequencies(conv_id, turn_number, 'agent_b', word_freq_b)
     
     async def _emit_metrics_event(self, conv_id: str, turn_number: int,
                                  separated_metrics: Dict[str, Dict],

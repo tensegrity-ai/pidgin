@@ -8,7 +8,8 @@ import argparse
 import logging
 from pathlib import Path
 
-from . import ExperimentConfig, ExperimentStore
+from . import ExperimentConfig
+from ..database.event_store import EventStore
 from .daemon import ExperimentDaemon
 from .runner import ExperimentRunner
 
@@ -23,13 +24,14 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
     """
     # Get the project base from environment (set before daemonization)
     project_base = os.environ.get('PIDGIN_PROJECT_BASE', '.')
-    db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.db"
+    db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.duckdb"
     
     # Ensure the database path is absolute
     db_path = db_path.resolve()
     logging.info(f"Using database at: {db_path}")
     
-    storage = ExperimentStore(db_path=db_path)
+    storage = EventStore(db_path=db_path)
+    await storage.initialize()
     runner = ExperimentRunner(storage, daemon)
     
     try:

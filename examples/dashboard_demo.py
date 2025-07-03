@@ -5,7 +5,7 @@ Demo script for the Pidgin Live Dashboard.
 This demonstrates how to use the dashboard to monitor experiments in real-time.
 
 Usage:
-    python examples/dashboard_demo.py [path_to_experiments.db]
+    python examples/dashboard_demo.py [path_to_experiments.duckdb]
 """
 
 import sys
@@ -21,7 +21,7 @@ from pidgin.dashboard import ExperimentDashboard
 def main():
     """Run the dashboard demo."""
     # Default database path
-    db_path = Path("./pidgin_output/experiments/experiments.db")
+    db_path = Path("./pidgin_output/experiments/experiments.duckdb")
     
     # Check for command line argument
     if len(sys.argv) > 1:

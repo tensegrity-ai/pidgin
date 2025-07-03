@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from pidgin.database.storage import AsyncExperimentStore
+from pidgin.database.event_store import EventStore
 from pidgin.database.async_duckdb import AsyncDuckDB
 
 console = Console()
@@ -16,7 +16,7 @@ async def demo_analytics():
     """Demonstrate DuckDB analytics capabilities."""
     # Use test database
     db_path = Path("pidgin_output/experiments/demo.duckdb")
-    storage = AsyncExperimentStore(db_path)
+    storage = EventStore(db_path)
     
     try:
         # Initialize database

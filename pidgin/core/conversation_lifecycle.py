@@ -16,6 +16,7 @@ from .events import (
 from ..ui.event_logger import EventLogger
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
+from ..database.event_store import EventStore
 
 
 class ConversationLifecycle:
@@ -30,6 +31,8 @@ class ConversationLifecycle:
         self.console = console
         self.bus = None
         self._owns_bus = False
+        self.db_store = None
+        self._owns_db_store = False
         self.event_logger = None
         self.display_filter = None
         self.base_providers = {}
@@ -50,6 +53,7 @@ class ConversationLifecycle:
         show_timing: bool,
         agents: Dict[str, Agent],
         existing_bus=None,
+        db_store=None,
     ):
         """Initialize EventBus and display components.
         
@@ -59,23 +63,25 @@ class ConversationLifecycle:
             show_timing: Whether to show timing
             agents: Dict of agent_id -> Agent
             existing_bus: Optional existing EventBus to use
+            db_store: Optional existing EventStore to use
         """
-        # Create event bus with logging
-        event_log_path = conv_dir / "events.jsonl"
+        # Handle database store
+        if db_store is None:
+            self.db_store = EventStore()
+            await self.db_store.initialize()
+            self._owns_db_store = True
+        else:
+            self.db_store = db_store
+            self._owns_db_store = False
         
         if existing_bus is None:
-            # We don't have a bus yet, create one
-            self.bus = EventBus(event_log_path)
+            # We don't have a bus yet, create one with db_store
+            self.bus = EventBus(self.db_store)
             self._owns_bus = True
             await self.bus.start()
-            # Created new EventBus
         else:
-            # Using shared bus - just set the log path if possible
+            # Using shared bus
             self.bus = existing_bus
-            # Note: EventBus might not support changing log path
-            # Using shared EventBus
-            if hasattr(self.bus, 'event_log_path'):
-                self.bus.event_log_path = event_log_path
         
         # Create event logger and display filter based on mode
         if display_mode == "verbose":
@@ -254,6 +260,10 @@ class ConversationLifecycle:
         # Stop event bus if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()
+        
+        # Close db store if we own it
+        if self._owns_db_store and self.db_store:
+            await self.db_store.close()
     
     async def save_transcripts(self, conversation: Conversation, output_manager, conv_dir: Path):
         """Save conversation transcripts.

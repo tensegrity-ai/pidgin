@@ -42,6 +42,6 @@ def get_database_path() -> Path:
     """Get the path to the experiments database.
     
     Returns:
-        Path to experiments.db
+        Path to experiments.duckdb
     """
-    return get_experiments_dir() / "experiments.db"
+    return get_experiments_dir() / "experiments.duckdb"

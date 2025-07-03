@@ -10,7 +10,8 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from .storage import ExperimentStore
+from ..database.event_store import EventStore
+import asyncio
 from .config import ExperimentConfig
 
 
@@ -36,9 +37,8 @@ class ExperimentManager:
         self.base_dir = base_dir
         self.active_dir = base_dir / "active"
         self.logs_dir = base_dir / "logs"
-        # Use the same database path as the base_dir
-        db_path = base_dir / "experiments.db"
-        self.storage = ExperimentStore(db_path=db_path)
+        # Store the database path but don't keep a connection open
+        self.db_path = base_dir / "experiments.duckdb"
         
         # Ensure directories exist
         self.active_dir.mkdir(parents=True, exist_ok=True)
@@ -55,7 +55,14 @@ class ExperimentManager:
             Experiment ID
         """
         # Create experiment record
-        exp_id = self.storage.create_experiment(config.name, config.dict())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            storage = EventStore(db_path=self.db_path)
+            exp_id = loop.run_until_complete(storage.create_experiment(config.name, config.dict()))
+            loop.run_until_complete(storage.close())
+        finally:
+            loop.close()
         
         # Get working directory
         if working_dir is None:
@@ -176,7 +183,16 @@ class ExperimentManager:
         Returns:
             List of experiment dictionaries
         """
-        experiments = self.storage.list_experiments(limit=limit)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            storage = EventStore(db_path=self.db_path)
+            experiments = loop.run_until_complete(storage.list_experiments())
+            loop.run_until_complete(storage.close())
+            # Apply limit
+            experiments = experiments[:limit]
+        finally:
+            loop.close()
         
         # Add running status
         for exp in experiments:

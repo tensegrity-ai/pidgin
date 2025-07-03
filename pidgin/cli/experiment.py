@@ -36,7 +36,8 @@ from .constants import (
     NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN,
     DEFAULT_TURNS, DEFAULT_TEMPERATURE, DEFAULT_PARALLEL
 )
-from ..experiments import ExperimentManager, ExperimentConfig, ExperimentStore
+from ..experiments import ExperimentManager, ExperimentConfig
+from ..database.event_store import EventStore
 
 console = Console()
 
@@ -180,10 +181,15 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
     
     # Check if experiment already exists
-    storage = ExperimentStore()
-
-    # Check if experiment name already exists
-    existing = next((exp for exp in storage.list_experiments() if exp.get('name') == name), None)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        storage = EventStore()
+        experiments = loop.run_until_complete(storage.list_experiments())
+        existing = next((exp for exp in experiments if exp.get('name') == name), None)
+        loop.run_until_complete(storage.close())
+    finally:
+        loop.close()
 
     if existing:
         console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
@@ -273,16 +279,21 @@ def list(all):
     
     Shows active experiment sessions with their status and progress.
     """
-    storage = ExperimentStore(
-        db_path=get_experiments_dir() / "experiments.db"
-    )
-    
     # Get experiments - filter by status if not showing all
-    if all:
-        experiments = storage.list_experiments()
-    else:
-        # Only show running experiments by default
-        experiments = storage.list_experiments(status_filter='running')
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        storage = EventStore(
+            db_path=get_experiments_dir() / "experiments.duckdb"
+        )
+        if all:
+            experiments = loop.run_until_complete(storage.list_experiments())
+        else:
+            # Only show running experiments by default
+            experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
+        loop.run_until_complete(storage.close())
+    finally:
+        loop.close()
     
     if not experiments:
         if all:
@@ -326,10 +337,14 @@ def list(all):
         started = exp.get('started_at', exp.get('created_at', ''))
         if started:
             try:
-                dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
-                time_str = dt.strftime("%Y-%m-%d %H:%M")
+                # Handle both datetime objects and strings
+                if isinstance(started, datetime):
+                    time_str = started.strftime("%Y-%m-%d %H:%M")
+                else:
+                    dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
+                    time_str = dt.strftime("%Y-%m-%d %H:%M")
             except:
-                time_str = started
+                time_str = str(started)
         else:
             time_str = "-"
         
@@ -367,17 +382,27 @@ def status(experiment_id, watch, notify):
     [#4c566a]Watch experiment until completion:[/#4c566a]
         pidgin experiment status abc123 --watch --notify
     """
-    storage = ExperimentStore(
-        db_path=get_experiments_dir() / "experiments.db"
-    )
-    
     if experiment_id:
         # Show specific experiment
-        exp = storage.get_experiment(experiment_id)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            storage = EventStore(
+                db_path=get_experiments_dir() / "experiments.duckdb"
+            )
+            exp = loop.run_until_complete(storage.get_experiment(experiment_id))
+        finally:
+            loop.close()
         if not exp:
             # Try with partial ID
-            experiments = storage.list_experiments()
-            matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                experiments = loop.run_until_complete(storage.list_experiments())
+                matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
+                loop.run_until_complete(storage.close())
+            finally:
+                loop.close()
             if len(matches) == 1:
                 exp = matches[0]
             elif len(matches) > 1:
@@ -528,14 +553,19 @@ def stop(experiment_id, all):
         # Clean up database
         console.print(f"\n[{NORD_CYAN}]Updating database...[/{NORD_CYAN}]")
         
-        storage = ExperimentStore(
-            db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.db"
-        )
-        
         # Mark all running experiments as failed
-        experiments = storage.list_experiments(status_filter='running')
-        for exp in experiments:
-            storage.update_experiment_status(exp['experiment_id'], 'failed')
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            storage = EventStore(
+                db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.duckdb"
+            )
+            experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
+            for exp in experiments:
+                loop.run_until_complete(storage.update_experiment_status(exp['experiment_id'], 'failed'))
+            loop.run_until_complete(storage.close())
+        finally:
+            loop.close()
             console.print(f"[{NORD_GREEN}]  ✓ Marked '{exp['name']}' as failed[/{NORD_GREEN}]")
         
         console.print(f"\n[bold {NORD_GREEN}]✓ All experiments stopped[/bold {NORD_GREEN}]")

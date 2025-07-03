@@ -18,7 +18,7 @@ from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
 
 from ..providers.token_tracker import get_token_tracker
-from ..experiments.storage import ExperimentStore
+from ..database.event_store import EventStore
 from ..io.logger import get_logger
 
 logger = get_logger("system_monitor")
@@ -43,7 +43,7 @@ class SystemMonitor:
     def __init__(self, refresh_rate: float = 2.0):
         self.refresh_rate = refresh_rate
         self.console = Console()
-        self.storage = ExperimentStore()
+        self.storage = EventStore()
         self.token_tracker = get_token_tracker()
         
     def create_layout(self) -> Layout:

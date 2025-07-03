@@ -15,7 +15,7 @@ from ..core.events import (
     Turn
 )
 from ..core.types import Message
-from .storage import AsyncExperimentStore
+from .event_store import EventStore
 from ..metrics import MetricsCalculator
 from ..io.logger import get_logger
 from .token_handler import TokenUsageHandler
@@ -26,7 +26,7 @@ logger = get_logger("async_event_handler")
 class AsyncExperimentEventHandler:
     """Async event handler that stores metrics in DuckDB."""
     
-    def __init__(self, storage: AsyncExperimentStore, experiment_id: str, 
+    def __init__(self, storage: EventStore, experiment_id: str, 
                  event_bus=None):
         """Initialize async event handler.
         

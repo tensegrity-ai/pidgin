@@ -1,9 +1,7 @@
 """Central event distribution system."""
 
 import asyncio
-import json
 from collections import defaultdict
-from pathlib import Path
 from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
 
 from .events import Event
@@ -18,12 +16,16 @@ T = TypeVar("T", bound=Event)
 class EventBus:
     """Central event distribution with radical transparency."""
 
-    def __init__(self, event_log_path: Optional[Path] = None):
+    def __init__(self, db_store=None):
+        """Initialize EventBus.
+        
+        Args:
+            db_store: Optional EventStore for persisting events
+        """
         self.subscribers: Dict[Type[Event], List[Callable]] = defaultdict(list)
         self.event_history: List[Event] = []
         self.event_queue: asyncio.Queue = asyncio.Queue()
-        self.event_log_path = event_log_path
-        self._event_file = None
+        self.db_store = db_store
         self._running = False
         self._processor_task = None
 
@@ -80,8 +82,8 @@ class EventBus:
         # Queue for processing (for backward compatibility)
         await self.event_queue.put(event)
 
-        # Write to file immediately if configured
-        if self._event_file and self._running:
+        # Write to database if configured
+        if self.db_store and self._running:
             try:
                 # Convert event data to serializable format
                 event_data = {}
@@ -89,16 +91,19 @@ class EventBus:
                     if k not in ["timestamp", "event_id"]:
                         event_data[k] = self._serialize_value(v)
 
-                event_dict = {
-                    "timestamp": event.timestamp.isoformat(),
-                    "event_type": type(event).__name__,
-                    "data": event_data,
-                }
-                json_str = json.dumps(event_dict)
-                self._event_file.write(json_str + "\n")
-                self._event_file.flush()  # Ensure it's written immediately
+                # Add timestamp and event_type to the data
+                event_data["timestamp"] = event.timestamp.isoformat()
+                event_data["event_type"] = type(event).__name__
+
+                # Emit to database
+                await self.db_store.emit_event(
+                    event_type=type(event).__name__,
+                    conversation_id=getattr(event, 'conversation_id', None),
+                    experiment_id=getattr(event, 'experiment_id', None),
+                    data=event_data
+                )
             except Exception as e:
-                logger.error(f"Error writing event {type(event).__name__}: {e}")
+                logger.error(f"Error storing event {type(event).__name__}: {e}")
 
         # Get handlers for this event type and parent types
         handlers = []
@@ -157,21 +162,15 @@ class EventBus:
         self.event_history.clear()
 
     async def start(self):
-        """Start the event processor and open log file."""
-        if self.event_log_path:
-            self._event_file = open(self.event_log_path, "w")
-            # print(f"Opened event log file: {self.event_log_path}")
+        """Start the event processor."""
         self._running = True
         self._processor_task = asyncio.create_task(self._process_events())
         # Give the processor task a chance to start
         await asyncio.sleep(0)
 
     async def stop(self):
-        """Stop processor and close log file."""
+        """Stop processor."""
         self._running = False
-        if self._event_file:
-            self._event_file.close()
-            self._event_file = None
         if self._processor_task:
             # Put a None to unblock the processor
             await self.event_queue.put(None)
@@ -179,8 +178,7 @@ class EventBus:
             self._processor_task = None
 
     async def _process_events(self):
-        """Process events and write to file."""
-        # print(f"Event processor started, running={self._running}")
+        """Process events from queue."""
         while self._running:
             try:
                 event = await self.event_queue.get()
@@ -189,9 +187,6 @@ class EventBus:
                 if event is None:
                     break
 
-                # Write to file if configured (removed - now handled in emit())
-                pass
-                # else:
-                #     print(f"WARNING: No event file open for writing")
+                # Event processing is now handled in emit()
             except Exception as e:
                 logger.error(f"Error processing event: {e}", exc_info=True)

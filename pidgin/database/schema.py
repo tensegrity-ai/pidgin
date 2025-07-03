@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS events (
     experiment_id TEXT,
     event_data JSON,
     -- Date for partitioning (will be populated via trigger or manually)
-    event_date DATE DEFAULT CAST(now() AS DATE)
+    event_date DATE DEFAULT CAST(now() AS DATE),
+    -- Sequence number for ordering events
+    sequence INTEGER
 );
 
 -- Indexes for performance
@@ -297,8 +299,8 @@ def get_all_schemas():
         CONVERSATIONS_SCHEMA,
         TURN_METRICS_SCHEMA,
         MESSAGES_SCHEMA,
-        TOKEN_USAGE_SCHEMA,
-        MATERIALIZED_VIEWS
+        TOKEN_USAGE_SCHEMA
+        # MATERIALIZED_VIEWS removed - views can be created manually when needed
     ]
 
 def get_drop_all_sql():

@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, Optional
 from ..core.events import TokenUsageEvent, MessageCompleteEvent
-from .storage import AsyncExperimentStore
+from .event_store import EventStore
 from ..providers.token_tracker import get_token_tracker
 from ..io.logger import get_logger
 
@@ -39,7 +39,7 @@ class TokenUsageHandler:
         }
     }
     
-    def __init__(self, storage: AsyncExperimentStore):
+    def __init__(self, storage: EventStore):
         """Initialize handler with storage backend."""
         self.storage = storage
         self.token_tracker = get_token_tracker()

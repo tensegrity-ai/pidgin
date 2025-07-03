@@ -47,13 +47,19 @@ class AsyncDuckDB:
         self._running = False
         self._batch_thread = None
         
-        # Initialize database
-        self._init_database()
+        # Database will be initialized on first connection
     
     def _get_connection(self) -> duckdb.DuckDBPyConnection:
         """Get thread-local connection."""
         if not hasattr(self._local, 'conn') or self._local.conn is None:
             self._local.conn = duckdb.connect(self.db_path)
+            # Enable JSON extension
+            try:
+                self._local.conn.execute("INSTALL json")
+                self._local.conn.execute("LOAD json")
+            except:
+                # Extension might already be installed
+                pass
         return self._local.conn
     
     def _init_database(self):
