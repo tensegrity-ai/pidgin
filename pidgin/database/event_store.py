@@ -69,13 +69,13 @@ class EventStore:
             try:
                 return await func()
             except Exception as e:
-                # Check if this is a lock timeout or database locked error
+                # Check if this is a DuckDB concurrency error
                 error_msg = str(e).lower()
                 is_lock_error = any(phrase in error_msg for phrase in [
-                    'database locked',
-                    'lock timeout',
-                    'could not obtain lock',
-                    'timeout expired'
+                    'database is locked',
+                    'could not set lock',
+                    'concurrent',
+                    'another connection'
                 ])
                 
                 if attempt == max_retries - 1:

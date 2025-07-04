@@ -205,18 +205,16 @@ pidgin chat -a local:test -b local:test -t 5
 
 ### Database Concurrency
 
-DuckDB handles multiple readers but only one writer at a time. We use native DuckDB features:
+DuckDB uses MVCC (Multi-Version Concurrency Control) and handles locking internally:
+- Multiple readers allowed simultaneously
+- Only one writer at a time (blocks others)
+- No configurable lock timeout
 
-```python
-# Set lock timeout to fail fast instead of blocking forever
-conn.execute("SET lock_timeout = '5s'")
-```
-
-**Key points:**
+**Our approach:**
 - EventStore handles retries with exponential backoff
-- Lock errors retry faster (0.5-1s) than other errors
-- System monitor uses read-only connections
-- No complex queue infrastructure needed
+- Lock errors retry faster (0.5-1s) than other errors  
+- System monitor uses read-only connections to avoid conflicts
+- No complex queue infrastructure needed - let DuckDB handle it
 
 ## Current State
 

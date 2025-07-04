@@ -55,7 +55,8 @@ class AsyncDuckDB:
             self._local.conn = duckdb.connect(self.db_path)
             
             # Configure for better concurrency
-            self._local.conn.execute("SET lock_timeout = '5s'")  # Fail after 5 seconds instead of blocking forever
+            # DuckDB uses MVCC and handles locking internally
+            # Multiple readers are allowed, but only one writer at a time
             
             # Enable JSON extension
             try:
