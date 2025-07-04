@@ -53,6 +53,10 @@ class AsyncDuckDB:
         """Get thread-local connection."""
         if not hasattr(self._local, 'conn') or self._local.conn is None:
             self._local.conn = duckdb.connect(self.db_path)
+            
+            # Configure for better concurrency
+            self._local.conn.execute("SET lock_timeout = '5s'")  # Fail after 5 seconds instead of blocking forever
+            
             # Enable JSON extension
             try:
                 self._local.conn.execute("INSTALL json")

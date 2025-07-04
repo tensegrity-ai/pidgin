@@ -203,6 +203,21 @@ Always use local test model to avoid API calls during development:
 pidgin chat -a local:test -b local:test -t 5
 ```
 
+### Database Concurrency
+
+DuckDB handles multiple readers but only one writer at a time. We use native DuckDB features:
+
+```python
+# Set lock timeout to fail fast instead of blocking forever
+conn.execute("SET lock_timeout = '5s'")
+```
+
+**Key points:**
+- EventStore handles retries with exponential backoff
+- Lock errors retry faster (0.5-1s) than other errors
+- System monitor uses read-only connections
+- No complex queue infrastructure needed
+
 ## Current State
 
 The core architecture is complete and functional. We're now focused on:

@@ -69,9 +69,24 @@ class EventStore:
             try:
                 return await func()
             except Exception as e:
+                # Check if this is a lock timeout or database locked error
+                error_msg = str(e).lower()
+                is_lock_error = any(phrase in error_msg for phrase in [
+                    'database locked',
+                    'lock timeout',
+                    'could not obtain lock',
+                    'timeout expired'
+                ])
+                
                 if attempt == max_retries - 1:
                     raise
-                wait_time = 2 ** attempt + random.uniform(0, 1)
+                    
+                # Use shorter retry for lock errors, longer for other errors
+                if is_lock_error:
+                    wait_time = 0.5 + random.uniform(0, 0.5)  # 0.5-1s for lock errors
+                else:
+                    wait_time = 2 ** attempt + random.uniform(0, 1)  # Exponential for other errors
+                    
                 logger.warning(f"DB operation failed (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {wait_time:.2f}s")
                 await asyncio.sleep(wait_time)
     

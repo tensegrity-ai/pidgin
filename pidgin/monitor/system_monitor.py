@@ -1,5 +1,9 @@
 # pidgin/monitor/system_monitor.py
-"""System-wide monitor for experiments and API usage."""
+"""System-wide monitor for experiments and API usage.
+
+Note: This module uses read-only DuckDB connections to avoid lock conflicts
+with the main EventStore writer. DuckDB only allows one writer at a time.
+"""
 
 import asyncio
 import duckdb
@@ -285,7 +289,8 @@ Costs:
     def _get_latest_convergence(self, experiment_id: str) -> Optional[float]:
         """Get the latest convergence score from completed conversations."""
         try:
-            with duckdb.connect(str(self.storage.db_path)) as conn:
+            # Use read-only connection to avoid lock conflicts
+            with duckdb.connect(str(self.storage.db_path), read_only=True) as conn:
                 
                 # Get the most recent convergence score from completed conversations
                 query = """
@@ -332,7 +337,7 @@ Costs:
             if not db_path.exists():
                 return 0.0
             
-            with duckdb.connect(str(db_path)) as conn:
+            with duckdb.connect(str(db_path), read_only=True) as conn:
                 # Get token usage from last hour
                 one_hour_ago = datetime.now() - timedelta(hours=1)
                 
@@ -358,7 +363,7 @@ Costs:
             if not db_path.exists():
                 return 0.0
             
-            with duckdb.connect(str(db_path)) as conn:
+            with duckdb.connect(str(db_path), read_only=True) as conn:
                 # Get total costs from experiment dashboard view
                 result = conn.execute("""
                     SELECT SUM(total_cost_usd) as total
@@ -380,7 +385,7 @@ Costs:
             if not db_path.exists():
                 return {'tables': 0, 'events': 0, 'turns': 0, 'messages': 0}
             
-            with duckdb.connect(str(db_path)) as conn:
+            with duckdb.connect(str(db_path), read_only=True) as conn:
                 # Count tables
                 tables = conn.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'main'").fetchone()[0]
                 
