@@ -75,8 +75,10 @@ class ConversationLifecycle:
             self._owns_db_store = False
         
         if existing_bus is None:
-            # We don't have a bus yet, create one with db_store
-            self.bus = EventBus(self.db_store)
+            # We don't have a bus yet, create one with db_store and event logging
+            # Create events directory next to conversation directory
+            event_log_dir = conv_dir.parent / "events"
+            self.bus = EventBus(self.db_store, event_log_dir=event_log_dir)
             self._owns_bus = True
             await self.bus.start()
         else:

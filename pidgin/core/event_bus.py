@@ -1,7 +1,9 @@
 """Central event distribution system."""
 
 import asyncio
+import json
 from collections import defaultdict
+from pathlib import Path
 from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
 
 from .events import Event
@@ -16,18 +18,21 @@ T = TypeVar("T", bound=Event)
 class EventBus:
     """Central event distribution with radical transparency."""
 
-    def __init__(self, db_store=None):
+    def __init__(self, db_store=None, event_log_dir=None):
         """Initialize EventBus.
         
         Args:
             db_store: Optional EventStore for persisting events
+            event_log_dir: Optional directory for JSONL event logs
         """
         self.subscribers: Dict[Type[Event], List[Callable]] = defaultdict(list)
         self.event_history: List[Event] = []
         self.event_queue: asyncio.Queue = asyncio.Queue()
         self.db_store = db_store
+        self.event_log_dir = event_log_dir
         self._running = False
         self._processor_task = None
+        self._jsonl_files = {}  # conversation_id -> file handle
 
     def _serialize_value(self, value: Any) -> Any:
         """Convert a value to a JSON-serializable format."""
@@ -69,6 +74,39 @@ class EventBus:
 
         # Fallback to string representation
         return str(value)
+    
+    def _get_jsonl_file(self, conversation_id: str):
+        """Get or create JSONL file handle for a conversation."""
+        if not self.event_log_dir:
+            return None
+            
+        if conversation_id not in self._jsonl_files:
+            # Create directory if needed
+            log_dir = Path(self.event_log_dir)
+            log_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Open file in append mode
+            log_path = log_dir / f"{conversation_id}_events.jsonl"
+            self._jsonl_files[conversation_id] = open(log_path, 'a', buffering=1)  # Line buffered
+            
+        return self._jsonl_files[conversation_id]
+    
+    def _write_to_jsonl(self, event: Event, event_data: dict):
+        """Write event to JSONL file."""
+        # Get conversation ID from event
+        conversation_id = getattr(event, 'conversation_id', None)
+        if not conversation_id:
+            return
+            
+        try:
+            jsonl_file = self._get_jsonl_file(conversation_id)
+            if jsonl_file:
+                # Write event as single line
+                json.dump(event_data, jsonl_file)
+                jsonl_file.write('\n')
+                jsonl_file.flush()
+        except Exception as e:
+            logger.error(f"Error writing to JSONL: {e}")
 
     async def emit(self, event: Event) -> None:
         """Emit an event to all subscribers.
@@ -82,19 +120,27 @@ class EventBus:
         # Queue for processing (for backward compatibility)
         await self.event_queue.put(event)
 
+        # Prepare event data for serialization
+        event_data = {}
+        for k, v in event.__dict__.items():
+            if k not in ["timestamp", "event_id"]:
+                event_data[k] = self._serialize_value(v)
+
+        # Add timestamp and event_type to the data
+        event_data["timestamp"] = event.timestamp.isoformat()
+        event_data["event_type"] = type(event).__name__
+        
+        # Add experiment_id if not present but conversation_id is
+        if "experiment_id" not in event_data and hasattr(event, 'conversation_id'):
+            event_data["experiment_id"] = getattr(event, 'experiment_id', None)
+
+        # Write to JSONL if configured
+        if self.event_log_dir:
+            self._write_to_jsonl(event, event_data)
+
         # Write to database if configured
         if self.db_store and self._running:
             try:
-                # Convert event data to serializable format
-                event_data = {}
-                for k, v in event.__dict__.items():
-                    if k not in ["timestamp", "event_id"]:
-                        event_data[k] = self._serialize_value(v)
-
-                # Add timestamp and event_type to the data
-                event_data["timestamp"] = event.timestamp.isoformat()
-                event_data["event_type"] = type(event).__name__
-
                 # Emit to database
                 await self.db_store.emit_event(
                     event_type=type(event).__name__,
@@ -176,6 +222,14 @@ class EventBus:
             await self.event_queue.put(None)
             await self._processor_task
             self._processor_task = None
+        
+        # Close all JSONL files
+        for file_handle in self._jsonl_files.values():
+            try:
+                file_handle.close()
+            except Exception as e:
+                logger.error(f"Error closing JSONL file: {e}")
+        self._jsonl_files.clear()
 
     async def _process_events(self):
         """Process events from queue."""

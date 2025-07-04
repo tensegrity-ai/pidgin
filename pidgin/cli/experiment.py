@@ -38,6 +38,7 @@ from .constants import (
 )
 from ..experiments import ExperimentManager, ExperimentConfig
 from ..database.event_store import EventStore
+from .jsonl_reader import JSONLExperimentReader
 
 console = Console()
 
@@ -279,22 +280,37 @@ def list(all):
     
     Shows active experiment sessions with their status and progress.
     """
-    # Get experiments - filter by status if not showing all
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Try to get experiments from database first
+    experiments = []
+    used_jsonl = False
+    
     try:
-        storage = EventStore(
-            db_path=get_experiments_dir() / "experiments.duckdb",
-            read_only=True
-        )
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            storage = EventStore(
+                db_path=get_experiments_dir() / "experiments.duckdb",
+                read_only=True
+            )
+            if all:
+                experiments = loop.run_until_complete(storage.list_experiments())
+            else:
+                # Only show running experiments by default
+                experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
+            loop.run_until_complete(storage.close())
+        finally:
+            loop.close()
+    except Exception as e:
+        # Database is locked or unavailable, fall back to JSONL
+        console.print(f"[{NORD_YELLOW}]Database locked, reading from event files...[/{NORD_YELLOW}]")
+        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+        
         if all:
-            experiments = loop.run_until_complete(storage.list_experiments())
+            experiments = jsonl_reader.list_experiments()
         else:
-            # Only show running experiments by default
-            experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
-        loop.run_until_complete(storage.close())
-    finally:
-        loop.close()
+            experiments = jsonl_reader.list_experiments(status_filter='running')
+        
+        used_jsonl = True
     
     if not experiments:
         if all:
@@ -314,7 +330,12 @@ def list(all):
     table.add_column("Started")
     
     for exp in experiments:
-        config = json.loads(exp.get('config', '{}'))
+        # Handle config - might be dict (from JSONL) or string (from DB)
+        config = exp.get('config', {})
+        if isinstance(config, str):
+            config = json.loads(config) if config else {}
+        elif config is None:
+            config = {}
         
         # Format progress
         total = exp.get('total_conversations', 0)
@@ -360,6 +381,9 @@ def list(all):
     
     console.print(table)
     
+    if used_jsonl:
+        console.print(f"\n[{NORD_CYAN}]Note: Data read from event files (database was locked)[/{NORD_CYAN}]")
+    
     if not all:
         console.print(f"\n[{NORD_CYAN}]Tip: Use 'pidgin experiment status <id> --watch --notify' to monitor completion[/{NORD_CYAN}]")
 
@@ -385,37 +409,61 @@ def status(experiment_id, watch, notify):
     """
     if experiment_id:
         # Show specific experiment
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        exp = None
+        used_jsonl = False
+        
         try:
-            storage = EventStore(
-                db_path=get_experiments_dir() / "experiments.duckdb",
-                read_only=True
-            )
-            exp = loop.run_until_complete(storage.get_experiment(experiment_id))
-        finally:
-            loop.close()
-        if not exp:
-            # Try with partial ID
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                experiments = loop.run_until_complete(storage.list_experiments())
-                matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
+                storage = EventStore(
+                    db_path=get_experiments_dir() / "experiments.duckdb",
+                    read_only=True
+                )
+                exp = loop.run_until_complete(storage.get_experiment(experiment_id))
+                
+                if not exp:
+                    # Try with partial ID
+                    experiments = loop.run_until_complete(storage.list_experiments())
+                    matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
+                    if len(matches) == 1:
+                        exp = matches[0]
+                    elif len(matches) > 1:
+                        console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
+                        return
+                
                 loop.run_until_complete(storage.close())
             finally:
                 loop.close()
-            if len(matches) == 1:
-                exp = matches[0]
-            elif len(matches) > 1:
-                console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
-                return
-            else:
-                console.print(f"[{NORD_RED}]No experiment found with ID '{experiment_id}'[/{NORD_RED}]")
-                return
+        except Exception as e:
+            # Database locked, try JSONL
+            console.print(f"[{NORD_YELLOW}]Database locked, reading from event files...[/{NORD_YELLOW}]")
+            jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+            exp = jsonl_reader.get_experiment_status(experiment_id)
+            
+            if not exp:
+                # Try partial match
+                all_exps = jsonl_reader.list_experiments()
+                matches = [e for e in all_exps if e['experiment_id'].startswith(experiment_id)]
+                if len(matches) == 1:
+                    exp = matches[0]
+                elif len(matches) > 1:
+                    console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
+                    return
+            
+            used_jsonl = True
+        
+        if not exp:
+            console.print(f"[{NORD_RED}]No experiment found with ID '{experiment_id}'[/{NORD_RED}]")
+            return
         
         # Display experiment details
-        config = json.loads(exp.get('config', '{}'))
+        # Handle config - might be dict (from JSONL) or string (from DB)
+        config = exp.get('config', {})
+        if isinstance(config, str):
+            config = json.loads(config) if config else {}
+        elif config is None:
+            config = {}
         
         console.print(f"\n[bold {NORD_BLUE}]◆ Experiment: {exp['name']}[/bold {NORD_BLUE}]")
         console.print(f"  ID: {exp['experiment_id']}")

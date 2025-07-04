@@ -199,7 +199,9 @@ class ExperimentRunner:
             conv_config: Conversation-specific configuration
         """
         # Create isolated event bus for this conversation with shared storage
-        event_bus = EventBus(self.storage)
+        # Create events directory for this experiment
+        event_log_dir = self.storage.db_path.parent / experiment_id / "events"
+        event_bus = EventBus(self.storage, event_log_dir=event_log_dir)
         await event_bus.start()
         
         # Create event handler
