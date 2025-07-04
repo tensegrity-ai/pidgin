@@ -284,7 +284,8 @@ def list(all):
     asyncio.set_event_loop(loop)
     try:
         storage = EventStore(
-            db_path=get_experiments_dir() / "experiments.duckdb"
+            db_path=get_experiments_dir() / "experiments.duckdb",
+            read_only=True
         )
         if all:
             experiments = loop.run_until_complete(storage.list_experiments())
@@ -388,7 +389,8 @@ def status(experiment_id, watch, notify):
         asyncio.set_event_loop(loop)
         try:
             storage = EventStore(
-                db_path=get_experiments_dir() / "experiments.duckdb"
+                db_path=get_experiments_dir() / "experiments.duckdb",
+                read_only=True
             )
             exp = loop.run_until_complete(storage.get_experiment(experiment_id))
         finally:

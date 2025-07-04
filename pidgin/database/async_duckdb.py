@@ -24,7 +24,8 @@ class AsyncDuckDB:
     """Async wrapper for DuckDB with connection pooling and batch operations."""
     
     def __init__(self, db_path: Union[str, Path], max_workers: int = 4, 
-                 batch_size: int = 1000, batch_timeout: float = 0.1):
+                 batch_size: int = 1000, batch_timeout: float = 0.1,
+                 read_only: bool = False):
         """Initialize async DuckDB wrapper.
         
         Args:
@@ -32,11 +33,13 @@ class AsyncDuckDB:
             max_workers: Maximum number of worker threads
             batch_size: Maximum number of events to batch before flushing
             batch_timeout: Maximum time in seconds to wait before flushing batch
+            read_only: If True, open database in read-only mode
         """
         self.db_path = str(Path(db_path).resolve())
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.batch_size = batch_size
         self.batch_timeout = batch_timeout
+        self.read_only = read_only
         
         # Thread-local storage for connections
         self._local = threading.local()
@@ -52,19 +55,22 @@ class AsyncDuckDB:
     def _get_connection(self) -> duckdb.DuckDBPyConnection:
         """Get thread-local connection."""
         if not hasattr(self._local, 'conn') or self._local.conn is None:
+            # Note: Can't use read_only=True when other connections exist
+            # DuckDB error: "Can't open a connection to same database file with different configuration"
             self._local.conn = duckdb.connect(self.db_path)
             
             # Configure for better concurrency
             # DuckDB uses MVCC and handles locking internally
             # Multiple readers are allowed, but only one writer at a time
             
-            # Enable JSON extension
-            try:
-                self._local.conn.execute("INSTALL json")
-                self._local.conn.execute("LOAD json")
-            except:
-                # Extension might already be installed
-                pass
+            # Enable JSON extension (skip in read-only mode as it requires writes)
+            if not self.read_only:
+                try:
+                    self._local.conn.execute("INSTALL json")
+                    self._local.conn.execute("LOAD json")
+                except:
+                    # Extension might already be installed
+                    pass
         return self._local.conn
     
     def _init_database(self):
@@ -254,7 +260,7 @@ class AsyncDuckDB:
     
     def start_batch_processor(self):
         """Start the batch processing thread."""
-        if self._running:
+        if self._running or self.read_only:
             return
         
         self._running = True
