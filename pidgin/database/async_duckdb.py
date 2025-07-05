@@ -153,8 +153,9 @@ class AsyncDuckDB:
             affected = 0
             for params in params_list:
                 result = conn.execute(query, params)
-                if result.fetchone():
-                    affected += result.fetchone()[0]
+                row = result.fetchone()
+                if row:
+                    affected += row[0]
             conn.commit()
             return affected
         except Exception:
@@ -346,15 +347,28 @@ class AsyncDuckDB:
         """Close all connections and stop batch processor."""
         self.stop_batch_processor()
         
-        # Close thread-local connections
-        def close_connections():
-            if hasattr(self._local, 'conn') and self._local.conn:
-                self._local.conn.close()
-                self._local.conn = None
+        # Close connections in all worker threads
+        futures = []
+        for _ in range(self.executor._max_workers):
+            future = self.executor.submit(self._close_thread_connection)
+            futures.append(future)
         
-        # Run in executor to handle thread-local cleanup
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(self.executor, close_connections)
+        # Wait for all to complete
+        for future in futures:
+            try:
+                future.result(timeout=1.0)
+            except Exception as e:
+                print(f"Error closing connection: {e}")
         
         # Shutdown executor
         self.executor.shutdown(wait=True)
+    
+    def _close_thread_connection(self):
+        """Close connection in current thread."""
+        if hasattr(self._local, 'conn') and self._local.conn:
+            try:
+                self._local.conn.close()
+            except Exception as e:
+                print(f"Error closing DuckDB connection: {e}")
+            finally:
+                self._local.conn = None

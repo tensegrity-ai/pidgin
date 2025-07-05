@@ -27,8 +27,9 @@ class EventStore:
             read_only: If True, skip schema initialization and use read-only operations
         """
         if db_path is None:
-            project_base = os.environ.get('PIDGIN_PROJECT_BASE', os.getcwd())
-            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.duckdb"
+            # Use consistent path logic from paths module
+            from ..io.paths import get_database_path
+            db_path = get_database_path()
         
         self.db_path = Path(db_path).resolve()
         self.read_only = read_only
@@ -36,8 +37,14 @@ class EventStore:
         if not self.read_only:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Initialize async database
-        self.db = AsyncDuckDB(self.db_path, read_only=self.read_only)
+        # Check if database exists before creating AsyncDuckDB in read-only mode
+        self._db_exists = self.db_path.exists()
+        
+        # Initialize async database only if not in read-only mode or if database exists
+        if not self.read_only or self._db_exists:
+            self.db = AsyncDuckDB(self.db_path, read_only=self.read_only)
+        else:
+            self.db = None
         
         # Sequence counter for events
         self._sequence = 0
@@ -47,14 +54,16 @@ class EventStore:
         self._initialized = False
         self._init_lock = asyncio.Lock()
         
-        # Start batch processor for events (only if not read-only)
-        if not self.read_only:
+        # Start batch processor for events (only if not read-only and db exists)
+        if not self.read_only and self.db:
             self.db.start_batch_processor()
     
     async def initialize(self):
         """Initialize database schema."""
-        # Skip initialization in read-only mode
+        # In read-only mode, check if database existed when we initialized
         if self.read_only:
+            if not self._db_exists:
+                raise FileNotFoundError(f"Database {self.db_path} does not exist. Cannot open in read-only mode.")
             self._initialized = True
             return
             
@@ -71,13 +80,18 @@ class EventStore:
     
     async def close(self):
         """Close database connections."""
-        await self.db.close()
+        if self.db:
+            await self.db.close()
     
     async def _retry_with_backoff(self, func, max_retries=None):
         """Exponential backoff for all DB operations."""
-        # Use more retries for read-only operations
+        # If database doesn't exist in read-only mode, fail immediately
+        if self.read_only and not self._db_exists:
+            raise FileNotFoundError("Database does not exist")
+        
+        # Use fewer retries for read-only operations to fail fast
         if max_retries is None:
-            max_retries = 10 if self.read_only else 3
+            max_retries = 1 if self.read_only else 3
             
         for attempt in range(max_retries):
             try:
@@ -223,6 +237,10 @@ class EventStore:
         if not self._initialized:
             await self.initialize()
         
+        # In read-only mode, if database didn't exist when we initialized, return None
+        if self.read_only and not self._db_exists:
+            return None
+        
         return await self._retry_with_backoff(lambda: self.db.fetch_one(
             "SELECT * FROM experiments WHERE experiment_id = ?",
             (experiment_id,)
@@ -288,6 +306,10 @@ class EventStore:
         # Ensure initialized
         if not self._initialized:
             await self.initialize()
+        
+        # In read-only mode, if database didn't exist when we initialized, return empty list
+        if self.read_only and not self._db_exists:
+            return []
         
         if status_filter:
             return await self._retry_with_backoff(lambda: self.db.fetch_all(
