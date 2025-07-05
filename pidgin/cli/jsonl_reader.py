@@ -6,9 +6,10 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from collections import defaultdict
 
-from ..io.logger import get_logger
+# Avoid importing pidgin modules to prevent circular imports
+import logging
 
-logger = get_logger("jsonl_reader")
+logger = logging.getLogger("jsonl_reader")
 
 
 class JSONLExperimentReader:
@@ -33,18 +34,23 @@ class JSONLExperimentReader:
         """
         experiments = {}
         
+        # Return empty list if experiments directory doesn't exist yet
+        if not self.experiments_dir.exists():
+            return []
+        
         # Scan for experiment directories
         for exp_dir in self.experiments_dir.iterdir():
             if not exp_dir.is_dir() or not exp_dir.name.startswith('exp_'):
                 continue
                 
-            # Look for events directory
-            events_dir = exp_dir / "events"
-            if not events_dir.exists():
+            # Look for JSONL files directly in experiment directory
+            # (they're not in an "events" subdirectory)
+            jsonl_files = list(exp_dir.glob("*_events.jsonl"))
+            if not jsonl_files:
                 continue
             
             # Parse JSONL files to get experiment info
-            exp_info = self._parse_experiment_from_events(exp_dir.name, events_dir)
+            exp_info = self._parse_experiment_from_events(exp_dir.name, exp_dir)
             if exp_info:
                 if status_filter is None or exp_info.get('status') == status_filter:
                     experiments[exp_info['experiment_id']] = exp_info
@@ -69,18 +75,19 @@ class JSONLExperimentReader:
         if not exp_dir.exists():
             return None
             
-        events_dir = exp_dir / "events"
-        if not events_dir.exists():
+        # JSONL files are directly in experiment directory
+        jsonl_files = list(exp_dir.glob("*_events.jsonl"))
+        if not jsonl_files:
             return None
             
-        return self._parse_experiment_from_events(experiment_id, events_dir)
+        return self._parse_experiment_from_events(experiment_id, exp_dir)
     
-    def _parse_experiment_from_events(self, experiment_id: str, events_dir: Path) -> Optional[Dict[str, Any]]:
+    def _parse_experiment_from_events(self, experiment_id: str, exp_dir: Path) -> Optional[Dict[str, Any]]:
         """Parse experiment info from JSONL event files.
         
         Args:
             experiment_id: Experiment ID
-            events_dir: Directory containing JSONL files
+            exp_dir: Experiment directory containing JSONL files
             
         Returns:
             Experiment info dict
@@ -100,7 +107,7 @@ class JSONLExperimentReader:
         }
         
         # Process each JSONL file
-        for jsonl_file in events_dir.glob("*.jsonl"):
+        for jsonl_file in exp_dir.glob("*_events.jsonl"):
             conv_id = jsonl_file.stem.replace('_events', '')
             conv_info = self._parse_conversation_events(jsonl_file)
             
@@ -115,11 +122,10 @@ class JSONLExperimentReader:
                 # Extract config from first conversation
                 if not experiment_info['config'] and conv_info.get('config'):
                     experiment_info['config'] = conv_info['config']
-                    # Try to extract name from initial prompt
-                    if 'initial_prompt' in conv_info['config']:
-                        experiment_info['name'] = self._extract_name_from_prompt(
-                            conv_info['config']['initial_prompt']
-                        )
+                
+                # Update experiment name if found
+                if conv_info.get('experiment_name'):
+                    experiment_info['name'] = conv_info['experiment_name']
                 
                 # Count conversation statuses
                 if conv_info['status'] == 'completed':
@@ -203,6 +209,12 @@ class JSONLExperimentReader:
                             )
                             if 'convergence_score' in event:
                                 conv_info['convergence_scores'].append(event['convergence_score'])
+                        
+                        elif event_type == 'ExperimentCreated':
+                            # Get experiment name from event data
+                            data = event.get('data', {})
+                            if 'name' in data:
+                                conv_info['experiment_name'] = data['name']
                                 
                     except json.JSONDecodeError:
                         logger.warning(f"Invalid JSON in {jsonl_file}: {line}")

@@ -10,31 +10,31 @@ console = Console()
 
 @click.command()
 def monitor():
-    """System-wide monitor for experiments and API usage.
+    """System health monitor reading from JSONL files.
     
-    Shows a real-time overview of:
-    - API usage and rate limits for all providers
-    - Active experiments with live metrics
-    - System statistics and health
-    - Estimated costs
+    Shows a live overview of:
+    - Active experiments and their progress
+    - System load (concurrent conversations)
+    - Convergence warnings
+    - Completion estimates
     
-    This gives you a bird's eye view of your Pidgin system,
-    helping you manage rate limits and track experiment progress.
+    This reads directly from JSONL files to avoid database locks,
+    providing a real-time view without interfering with running experiments.
     
     [bold]FEATURES:[/bold]
-    • Live updates from database
-    • Rate limit warnings with visual bars
-    • Convergence alerts
-    • Cost tracking (coming soon)
+    • Live updates every 2 seconds
+    • No database access (lock-free)
+    • Progress tracking and ETAs
+    • System load indicators
     
-    Press 'q' to quit, 'r' to refresh, 'e' to export stats.
+    Press Ctrl+C to exit.
     """
-    from ..monitor.system_monitor import SystemMonitor
+    from ..monitor.simple_monitor import SimpleMonitor
     
     console.print("[#8fbcbb]◆ Starting system monitor...[/#8fbcbb]")
-    console.print("[#4c566a]Press 'q' to exit[/#4c566a]\n")
+    console.print("[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
     
-    monitor = SystemMonitor()
+    monitor = SimpleMonitor()
     try:
         asyncio.run(monitor.run())
     except KeyboardInterrupt:

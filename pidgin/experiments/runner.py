@@ -4,9 +4,11 @@
 import os
 import asyncio
 import logging
+import json
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 import uuid
+from datetime import datetime
 
 from ..core import Conductor, EventBus
 from ..core.events import (
@@ -18,10 +20,7 @@ from ..core.events import (
 )
 from ..core.types import Agent
 from ..config.models import get_model_config
-from ..io.output_manager import OutputManager
-from ..database.event_store import EventStore
 from .config import ExperimentConfig
-from .event_handler import ExperimentEventHandler
 from .daemon import ExperimentDaemon
 
 # Import provider builder and prompt builder to avoid circular imports
@@ -36,15 +35,14 @@ from ..config.resolution import resolve_temperatures, resolve_awareness_levels
 class ExperimentRunner:
     """Runs experiment conversations with configurable parallelism."""
     
-    def __init__(self, storage: Optional[EventStore] = None, 
-                 daemon: Optional[ExperimentDaemon] = None):
+    def __init__(self, output_dir: Path, daemon: Optional[ExperimentDaemon] = None):
         """Initialize experiment runner.
         
         Args:
-            storage: Database storage instance
+            output_dir: Base output directory for experiments
             daemon: Optional daemon instance for stop detection
         """
-        self.storage = storage or EventStore()
+        self.output_dir = output_dir
         self.daemon = daemon
         self.active_tasks = {}
         self.completed_count = 0
@@ -59,17 +57,35 @@ class ExperimentRunner:
             experiment_id: Existing experiment ID
             config: Experiment configuration
         """
+        exp_dir = self.output_dir / experiment_id
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Write initial experiment metadata
+        metadata = {
+            'experiment_id': experiment_id,
+            'name': config.name,
+            'status': 'running',
+            'started_at': datetime.utcnow().isoformat(),
+            'total_conversations': config.repetitions,
+            'completed_conversations': 0,
+            'failed_conversations': 0,
+            'config': config.dict()
+        }
+        
+        metadata_path = exp_dir / 'metadata.json'
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        
         try:
-            # Mark experiment as running in database
-            await self.storage.update_experiment_status(experiment_id, 'running')
             
             # Prepare conversation configs
             conversations = []
             for i in range(config.repetitions):
                 conv_id = f"conv_{experiment_id}_{uuid.uuid4().hex[:8]}"
                 
-                # Create conversation record
+                # Create conversation config
                 conv_config = {
+                    'conversation_id': conv_id,
                     'agent_a_model': config.agent_a_model,
                     'agent_b_model': config.agent_b_model,
                     'initial_prompt': config.custom_prompt,
@@ -79,29 +95,50 @@ class ExperimentRunner:
                     'first_speaker': config.first_speaker
                 }
                 
-                await self.storage.create_conversation(experiment_id, conv_id, conv_config)
                 conversations.append((conv_id, conv_config))
             
             # Run conversations with controlled parallelism
             await self._run_parallel_conversations(
-                experiment_id, config, conversations
+                experiment_id, config, conversations, exp_dir
             )
             
             # Update final status
             if self.daemon and self.daemon.is_stopping():
-                await self.storage.update_experiment_status(experiment_id, 'interrupted')
+                final_status = 'interrupted'
             else:
-                await self.storage.update_experiment_status(experiment_id, 'completed')
+                final_status = 'completed'
+            
+            # Update metadata with final status
+            metadata['status'] = final_status
+            metadata['completed_at'] = datetime.utcnow().isoformat()
+            metadata['completed_conversations'] = self.completed_count
+            metadata['failed_conversations'] = self.failed_count
+            
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
+            logging.info(f"Experiment {experiment_id} completed with status: {final_status}")
                 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
-            await self.storage.update_experiment_status(experiment_id, 'failed')
+            
+            # Update metadata with error status
+            metadata['status'] = 'failed'
+            metadata['completed_at'] = datetime.utcnow().isoformat()
+            metadata['error'] = str(e)
+            metadata['completed_conversations'] = self.completed_count
+            metadata['failed_conversations'] = self.failed_count
+            
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
             raise
     
     async def _run_parallel_conversations(self,
                                         experiment_id: str,
                                         config: ExperimentConfig,
-                                        conversations: List[Tuple[str, Dict]]):
+                                        conversations: List[Tuple[str, Dict]],
+                                        exp_dir: Path):
         """Run conversations in parallel with rate limit awareness.
         
         Args:
@@ -131,7 +168,7 @@ class ExperimentRunner:
                 try:
                     logging.info(f"Starting {conv_id}")
                     await self._run_single_conversation(
-                        experiment_id, conv_id, config, conv_config
+                        experiment_id, conv_id, config, conv_config, exp_dir
                     )
                     self.completed_count += 1
                     logging.info(f"Completed {conv_id} ({self.completed_count}/{total})")
@@ -143,9 +180,18 @@ class ExperimentRunner:
                 except Exception as e:
                     self.failed_count += 1
                     logging.error(f"Failed {conv_id}: {e}", exc_info=True)
-                    await self.storage.update_conversation_status(
-                        conv_id, 'failed', error_message=str(e)
-                    )
+                    
+                    # Write error to conversation metadata
+                    conv_metadata = {
+                        'conversation_id': conv_id,
+                        'status': 'failed',
+                        'error': str(e),
+                        'failed_at': datetime.utcnow().isoformat()
+                    }
+                    
+                    conv_metadata_path = exp_dir / f"{conv_id}_metadata.json"
+                    with open(conv_metadata_path, 'w') as f:
+                        json.dump(conv_metadata, f, indent=2)
                     
         # Create all tasks with staggered start times
         tasks = []
@@ -189,7 +235,8 @@ class ExperimentRunner:
                                      experiment_id: str,
                                      conversation_id: str,
                                      config: ExperimentConfig,
-                                     conv_config: Dict[str, Any]):
+                                     conv_config: Dict[str, Any],
+                                     exp_dir: Path):
         """Run a single conversation with metrics capture.
         
         Args:
@@ -198,25 +245,10 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
-        # Create isolated event bus for this conversation with shared storage
-        # Create events directory for this experiment
-        event_log_dir = self.storage.db_path.parent / experiment_id / "events"
-        event_bus = EventBus(self.storage, event_log_dir=event_log_dir)
+        # Create isolated event bus for this conversation
+        # EventBus will write JSONL files to experiment directory
+        event_bus = EventBus(db_store=None, event_log_dir=exp_dir)
         await event_bus.start()
-        
-        # Create event handler
-        handler = ExperimentEventHandler(
-            self.storage, 
-            experiment_id, 
-            event_bus
-        )
-        
-        # Subscribe to events
-        event_bus.subscribe(ConversationStartEvent, handler.handle_conversation_start)
-        event_bus.subscribe(TurnCompleteEvent, handler.handle_turn_complete)
-        event_bus.subscribe(ConversationEndEvent, handler.handle_conversation_end)
-        event_bus.subscribe(MessageCompleteEvent, handler.handle_message_complete)
-        event_bus.subscribe(SystemPromptEvent, handler.handle_system_prompt)
         
         # Build initial prompt using CLI logic
         initial_prompt = build_initial_prompt(
@@ -265,8 +297,11 @@ class ExperimentRunner:
             "agent_b": provider_b
         }
         
-        # Create output manager for this conversation
+        # Create minimal output manager that returns the experiment directory
+        from ..io.output_manager import OutputManager
         output_manager = OutputManager()
+        # Override the create_conversation_dir to return the experiment directory
+        output_manager.create_conversation_dir = lambda conv_id: (conversation_id, exp_dir)
         
         # Create conductor with the isolated event bus
         conductor = Conductor(
@@ -279,13 +314,26 @@ class ExperimentRunner:
         )
         
         try:
+            # Write conversation start metadata
+            conv_metadata = {
+                'conversation_id': conversation_id,
+                'experiment_id': experiment_id,
+                'status': 'running',
+                'started_at': datetime.utcnow().isoformat(),
+                'config': conv_config
+            }
+            
+            conv_metadata_path = exp_dir / f"{conversation_id}_metadata.json"
+            with open(conv_metadata_path, 'w') as f:
+                json.dump(conv_metadata, f, indent=2)
+            
             # Run the conversation
             await conductor.run_conversation(
                 agent_a=agent_a,
                 agent_b=agent_b,
                 initial_prompt=initial_prompt,
                 max_turns=config.max_turns,
-                display_mode='quiet',  # Minimal output for experiments
+                display_mode='none',  # No display for experiments
                 show_timing=False,
                 choose_names=config.choose_names,
                 awareness_a=config.awareness_a or config.awareness,
@@ -294,6 +342,13 @@ class ExperimentRunner:
                 temperature_b=config.temperature_b or config.temperature,
                 conversation_id=conversation_id
             )
+            
+            # Update conversation metadata with completion
+            conv_metadata['status'] = 'completed'
+            conv_metadata['completed_at'] = datetime.utcnow().isoformat()
+            
+            with open(conv_metadata_path, 'w') as f:
+                json.dump(conv_metadata, f, indent=2)
 
         finally:
             # Stop the event bus

@@ -8,16 +8,35 @@ def get_output_dir() -> Path:
     """Get the base output directory, resolving from the original working directory.
     
     Returns:
-        Path to pidgin_output directory
+        Path to pidgin_output directory in user's current working directory
     """
-    # Try to get from environment (set during CLI initialization)
+    # Priority order for determining the working directory:
+    # 1. PIDGIN_ORIGINAL_CWD (set at CLI startup)
+    # 2. PWD (shell's current directory)
+    # 3. os.getcwd() (process's current directory)
+    
     original_cwd = os.environ.get('PIDGIN_ORIGINAL_CWD')
+    if original_cwd and os.path.exists(original_cwd):
+        base_path = Path(original_cwd)
+    else:
+        # Try PWD which is more reliable for shell working directory
+        pwd = os.environ.get('PWD')
+        if pwd and os.path.exists(pwd):
+            base_path = Path(pwd)
+        else:
+            # Final fallback
+            base_path = Path(os.getcwd())
     
-    # Fall back to PWD or current directory
-    if not original_cwd:
-        original_cwd = os.environ.get('PWD', os.getcwd())
+    output_dir = base_path / "pidgin_output"
     
-    return Path(original_cwd) / "pidgin_output"
+    # Debug logging (only if PIDGIN_DEBUG is set)
+    if os.environ.get('PIDGIN_DEBUG'):
+        print(f"[DEBUG] Output directory: {output_dir}")
+        print(f"[DEBUG] PIDGIN_ORIGINAL_CWD: {os.environ.get('PIDGIN_ORIGINAL_CWD')}")
+        print(f"[DEBUG] PWD: {os.environ.get('PWD')}")
+        print(f"[DEBUG] os.getcwd(): {os.getcwd()}")
+    
+    return output_dir
 
 
 def get_experiments_dir() -> Path:

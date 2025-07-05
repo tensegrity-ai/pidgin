@@ -91,10 +91,13 @@ class ConversationLifecycle:
             self.event_logger = EventLogger(self.bus, self.console)
         else:
             # Use display filter for normal/quiet modes
-            self.display_filter = DisplayFilter(
-                self.console, display_mode, show_timing, agents
-            )
-            self.bus.subscribe(Event, self.display_filter.handle_event)
+            if self.console is not None and display_mode != 'none':
+                self.display_filter = DisplayFilter(
+                    self.console, display_mode, show_timing, agents
+                )
+                self.bus.subscribe(Event, self.display_filter.handle_event)
+            else:
+                self.display_filter = None
             # Still create event logger but without console output (for file logging)
             self.event_logger = EventLogger(self.bus, None)
         

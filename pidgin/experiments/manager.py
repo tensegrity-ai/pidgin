@@ -9,9 +9,10 @@ import time
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
-from ..database.event_store import EventStore
 import asyncio
+import uuid
 from .config import ExperimentConfig
 
 
@@ -25,12 +26,9 @@ class ExperimentManager:
             base_dir: Base directory for experiments
         """
         if base_dir is None:
-            # Check if we're in a daemon context
-            project_base = os.environ.get('PIDGIN_PROJECT_BASE')
-            if project_base:
-                base_dir = Path(project_base) / "pidgin_output" / "experiments"
-            else:
-                base_dir = Path("./pidgin_output/experiments").resolve()
+            # Use consistent path logic from paths module
+            from ..io.paths import get_experiments_dir
+            base_dir = get_experiments_dir()
         else:
             base_dir = base_dir.resolve()
             
@@ -54,15 +52,25 @@ class ExperimentManager:
         Returns:
             Experiment ID
         """
-        # Create experiment record
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            storage = EventStore(db_path=self.db_path)
-            exp_id = loop.run_until_complete(storage.create_experiment(config.name, config.dict()))
-            loop.run_until_complete(storage.close())
-        finally:
-            loop.close()
+        # Generate experiment ID
+        exp_id = f"exp_{uuid.uuid4().hex[:8]}"
+        
+        # Create experiment directory and metadata
+        exp_dir = self.base_dir / exp_id
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Write initial metadata
+        metadata = {
+            'experiment_id': exp_id,
+            'name': config.name,
+            'status': 'created',
+            'created_at': datetime.utcnow().isoformat(),
+            'config': config.dict()
+        }
+        
+        metadata_path = exp_dir / 'metadata.json'
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
         
         # Get working directory
         if working_dir is None:
@@ -183,24 +191,34 @@ class ExperimentManager:
         Returns:
             List of experiment dictionaries
         """
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            storage = EventStore(db_path=self.db_path)
-            experiments = loop.run_until_complete(storage.list_experiments())
-            loop.run_until_complete(storage.close())
-            # Apply limit
-            experiments = experiments[:limit]
-        finally:
-            loop.close()
+        experiments = []
         
-        # Add running status
-        for exp in experiments:
-            exp['is_running'] = self.is_running(exp['experiment_id'])
-            if exp['is_running']:
-                exp['pid'] = self._get_pid(exp['experiment_id'])
+        # Read from experiment directories
+        for exp_dir in self.base_dir.iterdir():
+            if not exp_dir.is_dir() or exp_dir.name in ['active', 'logs']:
+                continue
                 
-        return experiments
+            metadata_path = exp_dir / 'metadata.json'
+            if metadata_path.exists():
+                try:
+                    with open(metadata_path) as f:
+                        exp_data = json.load(f)
+                        
+                    # Add runtime status
+                    exp_id = exp_data['experiment_id']
+                    exp_data['is_running'] = self.is_running(exp_id)
+                    if exp_data['is_running']:
+                        exp_data['pid'] = self._get_pid(exp_id)
+                        
+                    experiments.append(exp_data)
+                except Exception as e:
+                    logging.warning(f"Failed to read experiment {exp_dir.name}: {e}")
+        
+        # Sort by creation time (newest first)
+        experiments.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        # Apply limit
+        return experiments[:limit]
         
     def is_running(self, experiment_id: str) -> bool:
         """Check if experiment daemon is running.

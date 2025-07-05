@@ -18,14 +18,9 @@ class OutputManager:
             base_dir: Base directory for all output (default: ./pidgin_output in current working directory)
         """
         if base_dir is None:
-            # Try to use PWD environment variable which reflects the shell's working directory
-            # This is more reliable than os.getcwd() when the command changes directories
-            shell_pwd = os.environ.get('PWD')
-            if shell_pwd and os.path.exists(shell_pwd):
-                self.base_dir = Path(shell_pwd) / "pidgin_output"
-            else:
-                # Fallback to current working directory
-                self.base_dir = Path(os.getcwd()) / "pidgin_output"
+            # Use the same logic as paths.py for consistency
+            from .paths import get_output_dir
+            self.base_dir = get_output_dir()
         else:
             self.base_dir = Path(base_dir)
         

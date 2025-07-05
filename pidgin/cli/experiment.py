@@ -9,6 +9,7 @@ import json
 import asyncio
 import signal
 import subprocess
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -37,7 +38,6 @@ from .constants import (
     DEFAULT_TURNS, DEFAULT_TEMPERATURE, DEFAULT_PARALLEL
 )
 from ..experiments import ExperimentManager, ExperimentConfig
-from ..database.event_store import EventStore
 from .jsonl_reader import JSONLExperimentReader
 
 console = Console()
@@ -87,29 +87,28 @@ def experiment():
 @click.option("--convergence-threshold", type=click.FloatRange(0.0, 1.0), help="Stop at convergence threshold")
 @click.option("--choose-names", is_flag=True, help="Allow agents to choose names")
 @click.option("--max-parallel", type=int, default=1, help="Max parallel conversations (default: 1, sequential)")
-@click.option("--daemon", is_flag=True, help="Start in background (detached)")
+@click.option("--detach", is_flag=True, help="Start in background without attaching")
 @click.option("--debug", is_flag=True, help="Run in debug mode (no daemonization)")
 def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
           temperature, temp_a, temp_b, awareness, awareness_a, awareness_b,
-          convergence_threshold, choose_names, max_parallel, daemon, debug):
+          convergence_threshold, choose_names, max_parallel, detach, debug):
     """Start a new experiment session.
 
-    By default, runs conversations sequentially (one at a time) for reliability.
-    Sequential execution avoids rate limits (API models) and memory issues (local models).
+    By default, starts the experiment and automatically attaches to show live progress.
+    Use Ctrl+C to detach while keeping the experiment running.
 
     [bold]EXAMPLES:[/bold]
 
-    [#4c566a]Sequential execution (default and recommended):[/#4c566a]
+    [#4c566a]Start and watch (default):[/#4c566a]
         pidgin experiment start -a claude -b gpt -r 20 --name "test"
 
-    [#4c566a]Background execution:[/#4c566a] 
-        pidgin experiment start -a opus -b gpt-4 -r 100 --name "prod" --daemon
+    [#4c566a]Start detached (background only):[/#4c566a] 
+        pidgin experiment start -a opus -b gpt-4 -r 100 --name "prod" --detach
 
     [#4c566a]Parallel execution (use with caution):[/#4c566a]
         pidgin experiment start -a claude -b gpt -r 10 --name "parallel" --max-parallel 3
 
-    [bold]WARNING:[/bold] Parallel execution can cause rate limits or memory issues.
-    Most users should stick with sequential execution.
+    [bold]TIP:[/bold] You can always re-attach later with 'pidgin experiment attach <name>'
     """
     # Validate models
     try:
@@ -181,16 +180,10 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
     if convergence_threshold:
         console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
     
-    # Check if experiment already exists
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        storage = EventStore()
-        experiments = loop.run_until_complete(storage.list_experiments())
-        existing = next((exp for exp in experiments if exp.get('name') == name), None)
-        loop.run_until_complete(storage.close())
-    finally:
-        loop.close()
+    # Check if experiment already exists using JSONL
+    jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+    experiments = jsonl_reader.list_experiments()
+    existing = next((exp for exp in experiments if exp.get('name') == name), None)
 
     if existing:
         console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
@@ -216,14 +209,14 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         # Run directly without daemon
         from ..experiments import ExperimentRunner
         
-        # In debug mode, pass None for daemon (runner will handle it gracefully)
-        runner = ExperimentRunner(storage, daemon=None)
+        # Generate experiment ID
+        exp_id = f"exp_{uuid.uuid4().hex[:8]}"
+        
+        # In debug mode, pass output directory
+        runner = ExperimentRunner(get_experiments_dir(), daemon=None)
         
         async def run_debug_experiment():
             try:
-                # Create experiment record first
-                exp_id = storage.create_experiment(config.name, config.dict())
-                
                 # Run the experiment
                 await runner.run_experiment_with_id(exp_id, config)
                 return True
@@ -258,13 +251,29 @@ def start(model_a, model_b, repetitions, max_turns, prompt, dimensions, name,
         # Use the original working directory captured at module import
         exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
         
-        # Show completion message
-        if not daemon:
-            console.print(f"\n[#8fbcbb]◆ Experiment started successfully[/#8fbcbb]")
-            console.print(f"[#4c566a]Use 'pidgin experiment status {exp_id[:8]}' to check progress[/#4c566a]")
+        # Show start message
+        console.print(f"\n[#a3be8c]✓ Experiment '{name}' started successfully[/#a3be8c]")
+        
+        if detach:
+            # User wants to detach - just show info
+            console.print(f"[#4c566a]Running in background. Use 'pidgin experiment attach {exp_id[:8]}' to monitor[/#4c566a]")
         else:
-            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started in background[/#a3be8c]")
-            console.print(f"[#4c566a]Use 'pidgin experiment status' to check progress[/#4c566a]")
+            # Default behavior: automatically attach to show progress
+            console.print(f"[#4c566a]Attaching to experiment...[/#4c566a]\n")
+            
+            # Give the daemon a moment to start
+            import time
+            time.sleep(2)
+            
+            # Get the experiment directory
+            exp_dir = get_experiments_dir() / exp_id
+            
+            # Attach to the experiment
+            try:
+                asyncio.run(attach_to_experiment(exp_id, tail=False, exp_dir=exp_dir))
+            except KeyboardInterrupt:
+                # Already handled in attach_to_experiment
+                pass
             
     except Exception as e:
         console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
@@ -280,39 +289,22 @@ def list(all):
     
     Shows active experiment sessions with their status and progress.
     """
-    # Try to get experiments from database first
-    experiments = []
-    used_jsonl = False
+    from ..experiments.state_builder import StateBuilder
     
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            storage = EventStore(
-                db_path=get_experiments_dir() / "experiments.duckdb",
-                read_only=True
-            )
-            if all:
-                experiments = loop.run_until_complete(storage.list_experiments())
-            else:
-                # Only show running experiments by default
-                experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
-            loop.run_until_complete(storage.close())
-        finally:
-            loop.close()
-    except Exception as e:
-        # Database is locked or unavailable, fall back to JSONL
-        console.print(f"[{NORD_YELLOW}]Database locked, reading from event files...[/{NORD_YELLOW}]")
-        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
-        
-        if all:
-            experiments = jsonl_reader.list_experiments()
-        else:
-            experiments = jsonl_reader.list_experiments(status_filter='running')
-        
-        used_jsonl = True
+    # Build states from JSONL files
+    exp_base = get_experiments_dir()
+    experiment_states = []
     
-    if not experiments:
+    # Find all experiment directories
+    for exp_dir in exp_base.glob("exp_*"):
+        if exp_dir.is_dir():
+            state = StateBuilder.from_experiment_dir(exp_dir)
+            if state:
+                # Filter based on --all flag
+                if all or state.status in ['running', 'created']:
+                    experiment_states.append(state)
+    
+    if not experiment_states:
         if all:
             console.print(f"[{NORD_YELLOW}]No experiments found.[/{NORD_YELLOW}]")
         else:
@@ -329,50 +321,41 @@ def list(all):
     table.add_column("Models")
     table.add_column("Started")
     
-    for exp in experiments:
-        # Handle config - might be dict (from JSONL) or string (from DB)
-        config = exp.get('config', {})
-        if isinstance(config, str):
-            config = json.loads(config) if config else {}
-        elif config is None:
-            config = {}
-        
+    # Sort by started time, most recent first
+    experiment_states.sort(key=lambda s: s.started_at or s.created_at, reverse=True)
+    
+    for state in experiment_states:
         # Format progress
-        total = exp.get('total_conversations', 0)
-        completed = exp.get('completed_conversations', 0)
+        completed, total = state.progress
         progress = f"{completed}/{total}"
         
         # Format status with color
-        status = exp.get('status', 'unknown')
         status_color = {
             'running': NORD_GREEN,
             'completed': NORD_BLUE,
             'failed': NORD_RED,
-            'interrupted': NORD_YELLOW
-        }.get(status, 'white')
-        status_display = f"[{status_color}]{status}[/{status_color}]"
+            'interrupted': NORD_YELLOW,
+            'created': NORD_CYAN
+        }.get(state.status, 'white')
+        status_display = f"[{status_color}]{state.status}[/{status_color}]"
         
-        # Format models
-        models = f"{config.get('agent_a_model', '?')} ↔ {config.get('agent_b_model', '?')}"
+        # Format models from first conversation (they're all the same in an experiment)
+        if state.conversations:
+            first_conv = next(iter(state.conversations.values()))
+            models = f"{first_conv.agent_a_model} ↔ {first_conv.agent_b_model}"
+        else:
+            models = "? ↔ ?"
         
         # Format time
-        started = exp.get('started_at', exp.get('created_at', ''))
-        if started:
-            try:
-                # Handle both datetime objects and strings
-                if isinstance(started, datetime):
-                    time_str = started.strftime("%Y-%m-%d %H:%M")
-                else:
-                    dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
-                    time_str = dt.strftime("%Y-%m-%d %H:%M")
-            except:
-                time_str = str(started)
-        else:
-            time_str = "-"
+        time_str = "-"
+        if state.started_at:
+            time_str = state.started_at.strftime("%Y-%m-%d %H:%M")
+        elif state.created_at:
+            time_str = state.created_at.strftime("%Y-%m-%d %H:%M")
         
         table.add_row(
-            exp['experiment_id'],
-            exp.get('name', 'Unnamed'),
+            state.experiment_id[:8],  # Show shortened ID
+            state.name,
             status_display,
             progress,
             models,
@@ -381,11 +364,8 @@ def list(all):
     
     console.print(table)
     
-    if used_jsonl:
-        console.print(f"\n[{NORD_CYAN}]Note: Data read from event files (database was locked)[/{NORD_CYAN}]")
-    
     if not all:
-        console.print(f"\n[{NORD_CYAN}]Tip: Use 'pidgin experiment status <id> --watch --notify' to monitor completion[/{NORD_CYAN}]")
+        console.print(f"\n[{NORD_CYAN}]Tip: Use 'pidgin experiment attach <id>' to monitor a running experiment[/{NORD_CYAN}]")
 
 @experiment.command()
 @click.argument('experiment_id', required=False)
@@ -408,50 +388,19 @@ def status(experiment_id, watch, notify):
         pidgin experiment status abc123 --watch --notify
     """
     if experiment_id:
-        # Show specific experiment
-        exp = None
-        used_jsonl = False
+        # Show specific experiment - always use JSONL to avoid locks
+        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+        exp = jsonl_reader.get_experiment_status(experiment_id)
         
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                storage = EventStore(
-                    db_path=get_experiments_dir() / "experiments.duckdb",
-                    read_only=True
-                )
-                exp = loop.run_until_complete(storage.get_experiment(experiment_id))
-                
-                if not exp:
-                    # Try with partial ID
-                    experiments = loop.run_until_complete(storage.list_experiments())
-                    matches = [e for e in experiments if e['experiment_id'].startswith(experiment_id)]
-                    if len(matches) == 1:
-                        exp = matches[0]
-                    elif len(matches) > 1:
-                        console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
-                        return
-                
-                loop.run_until_complete(storage.close())
-            finally:
-                loop.close()
-        except Exception as e:
-            # Database locked, try JSONL
-            console.print(f"[{NORD_YELLOW}]Database locked, reading from event files...[/{NORD_YELLOW}]")
-            jsonl_reader = JSONLExperimentReader(get_experiments_dir())
-            exp = jsonl_reader.get_experiment_status(experiment_id)
-            
-            if not exp:
-                # Try partial match
-                all_exps = jsonl_reader.list_experiments()
-                matches = [e for e in all_exps if e['experiment_id'].startswith(experiment_id)]
-                if len(matches) == 1:
-                    exp = matches[0]
-                elif len(matches) > 1:
-                    console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
-                    return
-            
-            used_jsonl = True
+        if not exp:
+            # Try partial match
+            all_exps = jsonl_reader.list_experiments()
+            matches = [e for e in all_exps if e['experiment_id'].startswith(experiment_id)]
+            if len(matches) == 1:
+                exp = matches[0]
+            elif len(matches) > 1:
+                console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
+                return
         
         if not exp:
             console.print(f"[{NORD_RED}]No experiment found with ID '{experiment_id}'[/{NORD_RED}]")
@@ -489,8 +438,10 @@ def status(experiment_id, watch, notify):
                     import time
                     time.sleep(5)  # Check every 5 seconds
                     
-                    # Refresh experiment data
-                    exp = storage.get_experiment(exp['experiment_id'])
+                    # Refresh experiment data from JSONL
+                    jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+                    exp = jsonl_reader.get_experiment_status(exp['experiment_id'])
+                    
                     if exp['status'] != 'running':
                         console.print(f"\n[{NORD_GREEN}]✓ Experiment completed with status: {exp['status']}[/{NORD_GREEN}]")
                         if notify:
@@ -510,8 +461,9 @@ def status(experiment_id, watch, notify):
                 console.print(f"\n[{NORD_YELLOW}]Stopped watching[/{NORD_YELLOW}]")
         
     else:
-        # Show all running experiments
-        experiments = storage.list_experiments(status_filter='running')
+        # Show all running experiments - always use JSONL
+        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
+        experiments = jsonl_reader.list_experiments(status_filter='running')
         
         if not experiments:
             console.print(f"[{NORD_YELLOW}]No running experiments.[/{NORD_YELLOW}]")
@@ -560,6 +512,107 @@ def status(experiment_id, watch, notify):
         
         console.print(table)
         console.print(f"\n[{NORD_CYAN}]Use 'pidgin experiment status <id>' for details[/{NORD_CYAN}]")
+
+
+async def attach_to_experiment(experiment_id: str, tail: bool = False, exp_dir: Path = None):
+    """Attach to a running experiment - simplified version.
+    
+    Args:
+        experiment_id: Experiment ID (can be partial)
+        tail: Whether to show event stream (ignored for now)
+        exp_dir: Optional pre-resolved experiment directory
+        
+    Returns:
+        True if successfully attached and detached, False if error
+    """
+    import time
+    import json
+    
+    # Find experiment directory if not provided
+    if not exp_dir:
+        exp_base = get_experiments_dir()
+        
+        # Handle partial ID match
+        matching_dirs = list(exp_base.glob(f"{experiment_id}*"))
+        if not matching_dirs:
+            console.print(f"[{NORD_RED}]No experiment found matching '{experiment_id}'[/{NORD_RED}]")
+            return False
+        
+        if len(matching_dirs) > 1:
+            console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}':[/{NORD_RED}]")
+            for d in matching_dirs:
+                console.print(f"  • {d.name}")
+            return False
+        
+        exp_dir = matching_dirs[0]
+    
+    # Read metadata
+    metadata_path = exp_dir / 'metadata.json'
+    if not metadata_path.exists():
+        console.print(f"[{NORD_RED}]No metadata found for experiment[/{NORD_RED}]")
+        return False
+        
+    with open(metadata_path) as f:
+        metadata = json.load(f)
+    
+    if metadata.get('status') not in ['running', 'created']:
+        console.print(f"[{NORD_YELLOW}]Experiment is {metadata.get('status', 'unknown')}[/{NORD_YELLOW}]")
+        return False
+    
+    console.print(f"[bold {NORD_CYAN}]◆ Monitoring: {metadata.get('name', experiment_id)}[/bold {NORD_CYAN}]")
+    console.print(f"[{NORD_YELLOW}][Ctrl+C to stop monitoring][/{NORD_YELLOW}]\n")
+    
+    # Simple status monitoring
+    try:
+        while True:
+            # Reload metadata
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+            
+            status = metadata.get('status', 'unknown')
+            if status not in ['running', 'created']:
+                console.print(f"\n[{NORD_GREEN}]Experiment {status}[/{NORD_GREEN}]")
+                break
+            
+            # Show simple status
+            completed = metadata.get('completed_conversations', 0)
+            failed = metadata.get('failed_conversations', 0) 
+            total = metadata.get('total_conversations', 0)
+            
+            console.print(f"Status: {completed}/{total} complete, {failed} failed", end='\r')
+            
+            # Wait before refresh
+            time.sleep(2)
+            
+    except KeyboardInterrupt:
+        console.print(f"\n[{NORD_YELLOW}]Stopped monitoring[/{NORD_YELLOW}]")
+        return True
+    
+    return True
+
+
+@experiment.command()
+@click.argument('experiment_id')
+@click.option('--tail', is_flag=True, help='Show event stream (like tail -f)')
+def attach(experiment_id, tail):
+    """Attach to a running experiment (like screen -r).
+    
+    Shows live progress of a running experiment. Ctrl+C to detach.
+    
+    [bold]EXAMPLES:[/bold]
+    
+    [#4c566a]Attach with progress bar (default):[/#4c566a]
+        pidgin experiment attach exp_abc123
+    
+    [#4c566a]Attach with event stream:[/#4c566a]
+        pidgin experiment attach exp_abc123 --tail
+    """
+    # Run the async attach function
+    try:
+        asyncio.run(attach_to_experiment(experiment_id, tail))
+    except KeyboardInterrupt:
+        # Already handled in attach_to_experiment
+        pass
 
 
 @experiment.command()

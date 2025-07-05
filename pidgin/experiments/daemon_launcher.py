@@ -9,7 +9,6 @@ import logging
 from pathlib import Path
 
 from . import ExperimentConfig
-from ..database.event_store import EventStore
 from .daemon import ExperimentDaemon
 from .runner import ExperimentRunner
 
@@ -22,17 +21,15 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
         config: Experiment configuration
         daemon: Daemon instance
     """
-    # Get the project base from environment (set before daemonization)
-    project_base = os.environ.get('PIDGIN_PROJECT_BASE', '.')
-    db_path = Path(project_base) / "pidgin_output" / "experiments" / "experiments.duckdb"
+    # Get the output directory using consistent logic
+    from ..io.paths import get_experiments_dir
+    output_dir = get_experiments_dir()
     
-    # Ensure the database path is absolute
-    db_path = db_path.resolve()
-    logging.info(f"Using database at: {db_path}")
+    # Ensure the output directory is absolute
+    output_dir = output_dir.resolve()
+    logging.info(f"Using output directory: {output_dir}")
     
-    storage = EventStore(db_path=db_path)
-    await storage.initialize()
-    runner = ExperimentRunner(storage, daemon)
+    runner = ExperimentRunner(output_dir, daemon)
     
     try:
         await runner.run_experiment_with_id(experiment_id, config)
@@ -43,8 +40,7 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
         logging.error(f"Experiment failed: {e}", exc_info=True)
         raise
     finally:
-        # Always close the storage connection
-        await storage.close()
+        pass
 
 
 def main():
@@ -63,9 +59,9 @@ def main():
         sys.stderr.write(f"Failed to parse config: {e}\n")
         sys.exit(1)
     
-    # Set project base path as environment variable before daemonizing
-    # This will be preserved across the fork
+    # Set both the original CWD and project base for consistency
     working_dir = Path(args.working_dir)
+    os.environ['PIDGIN_ORIGINAL_CWD'] = str(working_dir)
     os.environ['PIDGIN_PROJECT_BASE'] = str(working_dir)
     
     # Create daemon with absolute path based on working directory

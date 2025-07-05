@@ -100,27 +100,6 @@ class ExperimentDaemon:
             
     def cleanup(self):
         """Clean up resources on exit."""
-        # Import here to avoid circular imports
-        from ..database.event_store import EventStore
-        
-        # Update experiment status if still running
-        try:
-            # Get storage with proper path resolution
-            project_base = os.environ.get('PIDGIN_PROJECT_BASE', '.')
-            db_path = Path(project_base).resolve() / "pidgin_output" / "experiments" / "experiments.db"
-            storage = EventStore(db_path=db_path)
-            
-            # Run async cleanup in sync context
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(self._async_cleanup(storage))
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            logging.error(f"Failed to update experiment status during cleanup: {e}")
-        
         # Remove PID file
         if self.pid_file.exists():
             try:
@@ -129,18 +108,6 @@ class ExperimentDaemon:
             except Exception as e:
                 logging.error(f"Failed to remove PID file: {e}")
                 
-            
-    async def _async_cleanup(self, storage: 'EventStore'):
-        """Async cleanup operations."""
-        # Check current status
-        exp = await storage.get_experiment(self.experiment_id)
-        if exp and exp['status'] == 'running':
-            # Mark as failed since we're cleaning up unexpectedly
-            await storage.update_experiment_status(self.experiment_id, 'failed')
-            logging.info(f"Marked experiment {self.experiment_id} as failed on cleanup")
-            
-            # Also mark any running conversations as failed
-            await storage.mark_running_conversations_failed(self.experiment_id)
     
     def is_stopping(self) -> bool:
         """Check if daemon should stop."""

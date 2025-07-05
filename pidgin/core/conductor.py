@@ -238,8 +238,47 @@ class Conductor:
         # Save transcripts
         await self.lifecycle.save_transcripts(conversation, self.output_manager, self.current_conv_dir)
         
+        # Batch load to database for single chat sessions
+        if not conversation_id:  # Only for standalone chats, not experiment conversations
+            await self._batch_load_chat_to_database(conv_id, self.current_conv_dir)
+        
         return conversation
 
+    async def _batch_load_chat_to_database(self, conv_id: str, conv_dir: Path):
+        """Batch load single chat session to database after completion.
+        
+        Args:
+            conv_id: Conversation ID
+            conv_dir: Directory containing conversation data
+        """
+        try:
+            # Only load if we have a database path configured
+            db_path = Path.home() / ".pidgin" / "chats.duckdb"
+            
+            # Check if JSONL file exists
+            jsonl_file = conv_dir / f"{conv_id}_events.jsonl"
+            if not jsonl_file.exists():
+                return
+                
+            # Import here to avoid circular dependency
+            from ..database.batch_loader import BatchLoader
+            
+            # Load the chat data
+            loader = BatchLoader(db_path=db_path)
+            await loader.store.initialize()  # Ensure DB schema exists
+            await loader._load_jsonl_file(jsonl_file)
+            await loader.close()
+            
+            # Create marker file
+            marker_file = conv_dir / ".loaded_to_db"
+            marker_file.touch()
+            
+        except Exception as e:
+            # Don't fail the chat if batch loading fails
+            # This is best-effort for analytics
+            if self.console:
+                self.console.print(f"[dim]Note: Failed to save analytics data: {e}[/dim]")
+    
     def check_interrupt(self) -> bool:
         """Check if interrupt was requested during message.
         

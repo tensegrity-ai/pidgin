@@ -138,18 +138,22 @@ class EventBus:
         if self.event_log_dir:
             self._write_to_jsonl(event, event_data)
 
-        # Write to database if configured
-        if self.db_store and self._running:
-            try:
-                # Emit to database
-                await self.db_store.emit_event(
-                    event_type=type(event).__name__,
-                    conversation_id=getattr(event, 'conversation_id', None),
-                    experiment_id=getattr(event, 'experiment_id', None),
-                    data=event_data
-                )
-            except Exception as e:
-                logger.error(f"Error storing event {type(event).__name__}: {e}")
+        # DISABLED: Real-time database writes to avoid concurrency issues
+        # Database will be populated via batch loading after experiments complete
+        # This prevents lock contention during active experiments
+        
+        # # Write to database if configured
+        # if self.db_store and self._running:
+        #     try:
+        #         # Emit to database
+        #         await self.db_store.emit_event(
+        #             event_type=type(event).__name__,
+        #             conversation_id=getattr(event, 'conversation_id', None),
+        #             experiment_id=getattr(event, 'experiment_id', None),
+        #             data=event_data
+        #         )
+        #     except Exception as e:
+        #         logger.error(f"Error storing event {type(event).__name__}: {e}")
 
         # Get handlers for this event type and parent types
         handlers = []
