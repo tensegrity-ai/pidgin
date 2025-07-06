@@ -17,6 +17,7 @@ from ..ui.tail_display import TailDisplay
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
 from ..database.event_store import EventStore
+from ..database.async_duckdb import AsyncDuckDB
 
 
 class ConversationLifecycle:
@@ -68,8 +69,11 @@ class ConversationLifecycle:
         """
         # Handle database store
         if db_store is None:
-            self.db_store = EventStore()
-            await self.db_store.initialize()
+            # Create database connection first
+            # Use in-memory database for tests
+            db_path = conv_dir / "conversation.db" if conv_dir else ":memory:"
+            db = AsyncDuckDB(db_path)
+            self.db_store = EventStore(db)
             self._owns_db_store = True
         else:
             self.db_store = db_store
@@ -330,7 +334,9 @@ class ConversationLifecycle:
         
         # Close db store if we own it
         if self._owns_db_store and self.db_store:
-            await self.db_store.close()
+            # Close the database connection
+            if hasattr(self.db_store, 'db') and self.db_store.db:
+                await self.db_store.db.close()
     
     async def save_transcripts(self, conversation: Conversation, output_manager, conv_dir: Path):
         """Save conversation transcripts.
