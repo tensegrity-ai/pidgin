@@ -49,8 +49,12 @@ rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 import rich_click as click
 
 from .constants import BANNER
-from .chat import chat, models
-from .experiment import experiment
+from .run import run
+from .chat import models
+from .status import status
+from .list_experiments import list_experiments
+from .attach import attach
+from .stop import stop
 from .monitor import monitor
 from .load_db import load_db
 
@@ -65,21 +69,22 @@ def cli():
     develop communication patterns, convergence behaviors, and linguistic adaptations.
 
     [bold]QUICK START:[/bold]
-    pidgin chat -a claude -b gpt -t 20
+    pidgin run -a claude -b gpt
 
     [bold]EXAMPLES:[/bold]
 
-    [#4c566a]Basic conversation with custom prompt:[/#4c566a]
-        pidgin chat -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+    [#4c566a]Single conversation:[/#4c566a]
+        pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+
+    [#4c566a]Multiple conversations (experiment):[/#4c566a]
+        pidgin run -a claude -b gpt -r 20 --name "test"
 
     [#4c566a]Using dimensional prompts:[/#4c566a]
-        pidgin chat -a claude -b gpt -d peers:philosophy:analytical
+        pidgin run -a claude -b gpt -d peers:philosophy:analytical
 
-    [#4c566a]Let agents choose names:[/#4c566a]
-        pidgin chat -a claude -b gpt --choose-names
-
-    [#4c566a]High convergence monitoring:[/#4c566a]
-        pidgin chat -a claude -b gpt -t 100 --convergence-threshold 0.8
+    [#4c566a]Monitor running experiments:[/#4c566a]
+        pidgin status
+        pidgin attach exp_abc123
 
     [bold]CONFIGURATION:[/bold]
 
@@ -100,9 +105,12 @@ def analyze():
 
 
 # Register commands
-cli.add_command(chat)
+cli.add_command(run)
 cli.add_command(models)
-cli.add_command(experiment)
+cli.add_command(status)
+cli.add_command(list_experiments)
+cli.add_command(attach)
+cli.add_command(stop)
 cli.add_command(monitor)
 cli.add_command(analyze)
 cli.add_command(load_db)
