@@ -93,7 +93,7 @@ For better security, we recommend using a key manager rather than hard-coding en
 brew install --cask 1password-cli
 
 # Run Pidgin with keys from 1Password
-op run --env-file=.env.1password -- pidgin chat -a claude -b gpt
+op run --env-file=.env.1password -- pidgin run -a claude -b gpt
 
 # Where .env.1password contains:
 # ANTHROPIC_API_KEY="op://Personal/Anthropic API/credential"
@@ -140,10 +140,10 @@ Pidgin supports running models locally on your machine:
 
 ```bash
 # Quick start - Pidgin handles everything
-pidgin chat -a local -b local
+pidgin run -a local -b local
 
 # Or specify models directly
-pidgin chat -a local:qwen -b local:phi
+pidgin run -a local:qwen -b local:phi
 ```
 
 On first use, Pidgin will:
@@ -182,19 +182,16 @@ Pidgin runs batch experiments for statistical analysis:
 
 ```bash
 # Run 100 conversations between Claude and GPT
-pidgin experiment start -a claude -b gpt -r 100 -t 50 --name language_study
+pidgin run -a claude -b gpt -r 100 -t 50 --name language_study
 
 # Check progress
-pidgin experiment status language_study
-
-# Watch progress with notifications
-pidgin experiment status language_study --watch --notify
+pidgin monitor language_study
 
 # List all experiments
-pidgin experiment list
+pidgin list
 
 # Stop an experiment
-pidgin experiment stop language_study
+pidgin stop language_study
 ```
 
 ### Experiment Features
@@ -222,7 +219,7 @@ pidgin run \
   --name "economical_model_comparison"
 
 # Check status
-pidgin experiment status economical_model_comparison
+pidgin monitor economical_model_comparison
 
 # Data stored in DuckDB with event sourcing
 # Run 'pidgin monitor' to check system and database health
