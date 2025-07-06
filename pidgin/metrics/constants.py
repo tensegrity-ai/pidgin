@@ -40,7 +40,7 @@ THIRD_PERSON_PLURAL = {'they', 'them', 'their', 'theirs', 'themselves'}
 
 # Unicode symbol sets
 ARROWS = {'→', '←', '↔', '⇒', '⇐', '⇔', '➜', '➡', '⬅', '↑', '↓', '⬆', '⬇', '↖', '↗', '↘', '↙'}
-MATH_SYMBOLS = {'≈', '≡', '≠', '≤', '≥', '±', '×', '÷', '∞', '∑', '∏', '∂', '∇', '√', '∫', '∈', '∉', '∀', '∃', '∅'}
+MATH_SYMBOLS = {'≈', '≡', '≠', '≤', '≥', '±', '×', '÷', '∞', '∑', '∏', '∂', '∇', '√', '∫', '∈', '∉', '∀', '∃', '∅', '^', '+', '=', '<', '>', '*', '/', '%', '-'}
 BOX_DRAWING = {'┌', '┐', '└', '┘', '─', '│', '├', '┤', '┬', '┴', '┼', '═', '║', '╔', '╗', '╚', '╝'}
 BULLETS = {'•', '◦', '▪', '▫', '■', '□', '▲', '△', '▼', '▽', '◆', '◇', '○', '●', '★', '☆'}
 
@@ -60,10 +60,11 @@ EMOJI_PATTERN = re.compile(
     "]+", flags=re.UNICODE
 )
 
-ARROW_PATTERN = re.compile(r'[' + ''.join(ARROWS) + ']')
-MATH_PATTERN = re.compile(r'[' + ''.join(MATH_SYMBOLS) + ']')
-BOX_PATTERN = re.compile(r'[' + ''.join(BOX_DRAWING) + ']')
-BULLET_PATTERN = re.compile(r'[' + ''.join(BULLETS) + ']')
+# Include ASCII arrow patterns along with Unicode arrows
+ARROW_PATTERN = re.compile(r'(?:->|<-|<->|=>|<=|<=>|[' + ''.join(re.escape(c) for c in ARROWS) + '])')
+MATH_PATTERN = re.compile(r'[' + ''.join(re.escape(c) for c in MATH_SYMBOLS) + ']')
+BOX_PATTERN = re.compile(r'[' + ''.join(re.escape(c) for c in BOX_DRAWING) + ']')
+BULLET_PATTERN = re.compile(r'[' + ''.join(re.escape(c) for c in BULLETS) + ']')
 
 # Sentence ending patterns
 SENTENCE_ENDINGS = re.compile(r'[.!?]+')
