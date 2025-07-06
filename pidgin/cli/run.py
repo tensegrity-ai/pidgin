@@ -331,11 +331,13 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     
     # Show configuration
     console.print(f"\n[bold {NORD_BLUE}]◆ Experiment Configuration[/bold {NORD_BLUE}]")
-    console.print(f"  Name: {name}")
+    if name:
+        console.print(f"  Name: {name}")
     console.print(f"  Models: {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
     console.print(f"  Conversations: {repetitions}")
     console.print(f"  Turns per conversation: {max_turns}")
-    console.print(f"  Parallel execution: {max_parallel}")
+    if max_parallel > 1:
+        console.print(f"  Parallel execution: {max_parallel}")
     
     if initial_prompt != "Hello":
         console.print(f"  Initial prompt: {initial_prompt[:50]}...")
@@ -372,7 +374,10 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     
     if run_in_foreground:
         # Run in foreground (debug mode)
-        console.print(f"[#ebcb8b]◆ Starting '{name}' in foreground[/#ebcb8b]")
+        if name:
+            console.print(f"[#ebcb8b]◆ Starting '{name}' in foreground[/#ebcb8b]")
+        else:
+            console.print(f"[#ebcb8b]◆ Starting experiment in foreground[/#ebcb8b]")
         console.print(f"[#4c566a]  Models: {agent_a_name} vs {agent_b_name}[/#4c566a]")
         console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
         console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
@@ -393,7 +398,10 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         
         try:
             success = asyncio.run(run_foreground_experiment())
-            console.print(f"\n[#a3be8c][OK] Experiment '{name}' completed[/#a3be8c]")
+            if name:
+                console.print(f"\n[#a3be8c][OK] Experiment '{name}' completed[/#a3be8c]")
+            else:
+                console.print(f"\n[#a3be8c][OK] Experiment completed[/#a3be8c]")
             if notify:
                 send_notification(
                     title="Pidgin Experiment Complete",

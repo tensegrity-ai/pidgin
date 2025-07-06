@@ -49,9 +49,16 @@ MODEL_GLYPHS = {
     
     # Local/Ollama
     "llama3.1": "◐",
-    "qwen2.5": "◑",
+    "qwen2.5": "◑", 
     "deepseek": "◒",
     "test": "◓",
+    "local:llama3.1": "◐",
+    "local:qwen2.5": "◑",
+    "local:deepseek": "◒",
+    "local:test": "◓",
+    "local:mistral": "◔",
+    "local:phi": "◕",
+    "local:qwen": "◑",
 }
 
 # Legacy alias for compatibility
