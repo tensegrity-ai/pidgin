@@ -29,11 +29,9 @@ class EventBus:
         self.subscribers: Dict[Type[Event], List[Callable]] = defaultdict(list)
         self.event_history: List[Event] = []
         self.max_history_size = max_history_size
-        self.event_queue: asyncio.Queue = asyncio.Queue()
         self.db_store = db_store
         self.event_log_dir = event_log_dir
         self._running = False
-        self._processor_task = None
         self._jsonl_files = {}  # conversation_id -> file handle
 
     def _serialize_value(self, value: Any) -> Any:
@@ -122,8 +120,6 @@ class EventBus:
             # Remove oldest events to maintain size limit
             self.event_history = self.event_history[-self.max_history_size:]
 
-        # Queue for processing (for backward compatibility)
-        await self.event_queue.put(event)
 
         # Prepare event data for serialization
         event_data = {}
@@ -217,20 +213,12 @@ class EventBus:
         self.event_history.clear()
 
     async def start(self):
-        """Start the event processor."""
+        """Start the event bus."""
         self._running = True
-        self._processor_task = asyncio.create_task(self._process_events())
-        # Give the processor task a chance to start
-        await asyncio.sleep(0)
 
     async def stop(self):
-        """Stop processor."""
+        """Stop event bus and close resources."""
         self._running = False
-        if self._processor_task:
-            # Put a None to unblock the processor
-            await self.event_queue.put(None)
-            await self._processor_task
-            self._processor_task = None
         
         # Close all JSONL files
         for file_handle in self._jsonl_files.values():
@@ -239,17 +227,18 @@ class EventBus:
             except Exception as e:
                 logger.error(f"Error closing JSONL file: {e}")
         self._jsonl_files.clear()
-
-    async def _process_events(self):
-        """Process events from queue."""
-        while self._running:
+    
+    def close_conversation_log(self, conversation_id: str) -> None:
+        """Close JSONL file for a specific conversation.
+        
+        Args:
+            conversation_id: The conversation ID whose log to close
+        """
+        if conversation_id in self._jsonl_files:
             try:
-                event = await self.event_queue.get()
-
-                # Check for stop signal
-                if event is None:
-                    break
-
-                # Event processing is now handled in emit()
+                self._jsonl_files[conversation_id].close()
+                del self._jsonl_files[conversation_id]
+                logger.debug(f"Closed JSONL file for conversation {conversation_id}")
             except Exception as e:
-                logger.error(f"Error processing event: {e}", exc_info=True)
+                logger.error(f"Error closing JSONL file for {conversation_id}: {e}")
+

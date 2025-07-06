@@ -22,6 +22,8 @@ from ..core.types import Agent
 from ..config.models import get_model_config
 from .config import ExperimentConfig
 from .daemon import ExperimentDaemon
+from .manifest import ManifestManager
+from .tracking_event_bus import TrackingEventBus
 
 # Import provider builder and prompt builder to avoid circular imports
 from ..providers.builder import build_provider as get_provider_for_model
@@ -60,7 +62,16 @@ class ExperimentRunner:
         exp_dir = self.output_dir / experiment_id
         exp_dir.mkdir(parents=True, exist_ok=True)
         
-        # Write initial experiment metadata
+        # Create manifest
+        manifest = ManifestManager(exp_dir)
+        manifest.create(
+            experiment_id=experiment_id,
+            name=config.name,
+            config=config.dict(),
+            total_conversations=config.repetitions
+        )
+        
+        # Also write legacy metadata.json for backward compatibility
         metadata = {
             'experiment_id': experiment_id,
             'name': config.name,
@@ -108,7 +119,10 @@ class ExperimentRunner:
             else:
                 final_status = 'completed'
             
-            # Update metadata with final status
+            # Update manifest with final status
+            manifest.update_experiment_status(final_status)
+            
+            # Update legacy metadata
             metadata['status'] = final_status
             metadata['completed_at'] = datetime.utcnow().isoformat()
             metadata['completed_conversations'] = self.completed_count
@@ -122,7 +136,10 @@ class ExperimentRunner:
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
             
-            # Update metadata with error status
+            # Update manifest with error status
+            manifest.update_experiment_status('failed', error=str(e))
+            
+            # Update legacy metadata
             metadata['status'] = 'failed'
             metadata['completed_at'] = datetime.utcnow().isoformat()
             metadata['error'] = str(e)
@@ -245,9 +262,16 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
-        # Create isolated event bus for this conversation
-        # EventBus will write JSONL files to experiment directory
-        event_bus = EventBus(db_store=None, event_log_dir=exp_dir)
+        # Register conversation in manifest first
+        manifest = ManifestManager(exp_dir)
+        jsonl_filename = f"{conversation_id}_events.jsonl"
+        manifest.add_conversation(conversation_id, jsonl_filename)
+        
+        # Create tracking event bus for this conversation
+        event_bus = TrackingEventBus(
+            experiment_dir=exp_dir,
+            conversation_id=conversation_id
+        )
         await event_bus.start()
         
         # Build initial prompt using CLI logic

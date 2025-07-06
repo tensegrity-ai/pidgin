@@ -13,7 +13,6 @@ from ..core.events import (
     TurnStartEvent,
     TurnCompleteEvent,
     MessageRequestEvent,
-    MessageChunkEvent,
     MessageCompleteEvent,
     SystemPromptEvent,
     APIErrorEvent,

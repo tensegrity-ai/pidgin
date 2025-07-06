@@ -13,7 +13,6 @@ from ..core.events import (
     TurnStartEvent,
     TurnCompleteEvent,
     MessageRequestEvent,
-    MessageChunkEvent,
     MessageCompleteEvent,
 )
 
@@ -27,7 +26,6 @@ class EventLogger:
         TurnStartEvent: "cyan",
         TurnCompleteEvent: "blue",
         MessageRequestEvent: "yellow",
-        MessageChunkEvent: "dim white",
         MessageCompleteEvent: "magenta",
     }
     

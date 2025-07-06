@@ -6,7 +6,6 @@ from typing import List
 from ..core.event_bus import EventBus
 from ..core.events import (
     MessageRequestEvent,
-    MessageChunkEvent,
     MessageCompleteEvent,
     APIErrorEvent,
     TokenUsageEvent,
@@ -63,24 +62,11 @@ class EventAwareProvider:
         model_name = getattr(self.provider, 'model', None)
         input_tokens = estimate_messages_tokens(agent_messages, model_name)
 
-        # Stream response and emit chunk events
+        # Stream response and buffer chunks (no longer emitting chunk events)
         chunks = []
         try:
             async for chunk in self.provider.stream_response(agent_messages, temperature=event.temperature):
                 chunks.append(chunk)
-
-                # Emit chunk event
-                elapsed_ms = int((time.time() - start_time) * 1000)
-                await self.bus.emit(
-                    MessageChunkEvent(
-                        conversation_id=event.conversation_id,
-                        agent_id=self.agent_id,
-                        chunk=chunk,
-                        chunk_index=chunk_index,
-                        elapsed_ms=elapsed_ms,
-                    )
-                )
-
                 chunk_index += 1
 
         except Exception as e:
