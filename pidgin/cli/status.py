@@ -3,6 +3,7 @@
 
 import json
 import asyncio
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -11,8 +12,9 @@ from rich.console import Console
 from rich.table import Table
 
 from .constants import NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN
-from .jsonl_reader import JSONLExperimentReader
 from ..io.paths import get_experiments_dir
+from ..experiments.optimized_state_builder import get_state_builder
+from ..experiments.manifest import ManifestManager
 
 console = Console()
 
@@ -37,83 +39,84 @@ def status(experiment_id, watch, notify):
     [#4c566a]Watch experiment until completion:[/#4c566a]
         pidgin status abc123 --watch --notify
     """
+    state_builder = get_state_builder()
+    exp_base = get_experiments_dir()
+    
     if experiment_id:
-        # Show specific experiment - always use JSONL to avoid locks
-        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
-        exp = jsonl_reader.get_experiment_status(experiment_id)
+        # Show specific experiment
+        exp_state = None
+        exp_dir = None
         
-        if not exp:
-            # Try partial match
-            all_exps = jsonl_reader.list_experiments()
-            matches = [e for e in all_exps if e['experiment_id'].startswith(experiment_id)]
-            if len(matches) == 1:
-                exp = matches[0]
-            elif len(matches) > 1:
-                console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}'[/{NORD_RED}]")
-                return
+        # Find matching experiment directory
+        matching_dirs = list(exp_base.glob(f"*{experiment_id}*"))
         
-        if not exp:
+        if len(matching_dirs) == 1:
+            exp_dir = matching_dirs[0]
+            exp_state = state_builder.get_experiment_state(exp_dir)
+        elif len(matching_dirs) > 1:
+            console.print(f"[{NORD_RED}]Multiple experiments match '{experiment_id}':[/{NORD_RED}]")
+            for d in matching_dirs:
+                console.print(f"  • {d.name}")
+            return
+        
+        if not exp_state:
             console.print(f"[{NORD_RED}]No experiment found with ID '{experiment_id}'[/{NORD_RED}]")
             return
         
         # Display experiment details
-        # Handle config - might be dict (from JSONL) or string (from DB)
-        config = exp.get('config', {})
-        if isinstance(config, str):
-            config = json.loads(config) if config else {}
-        elif config is None:
-            config = {}
+        console.print(f"\n[bold {NORD_BLUE}]◆ Experiment: {exp_state.name}[/bold {NORD_BLUE}]")
+        console.print(f"  ID: {exp_state.experiment_id}")
+        console.print(f"  Status: {exp_state.status}")
+        console.print(f"  Progress: {exp_state.completed_conversations + exp_state.failed_conversations}/{exp_state.total_conversations}")
         
-        console.print(f"\n[bold {NORD_BLUE}]◆ Experiment: {exp['name']}[/bold {NORD_BLUE}]")
-        console.print(f"  ID: {exp['experiment_id']}")
-        console.print(f"  Status: {exp['status']}")
-        console.print(f"  Progress: {exp['completed_conversations']}/{exp['total_conversations']}")
-        console.print(f"  Models: {config.get('agent_a_model')} ↔ {config.get('agent_b_model')}")
+        # Get models from first conversation
+        if exp_state.conversations:
+            first_conv = next(iter(exp_state.conversations.values()))
+            console.print(f"  Models: {first_conv.agent_a_model} ↔ {first_conv.agent_b_model}")
         
-        if exp['status'] == 'running':
+        if exp_state.status == 'running' and exp_state.started_at:
             # Calculate estimated time
-            if exp['completed_conversations'] > 0:
-                started = datetime.fromisoformat(exp['started_at'].replace('Z', '+00:00'))
-                elapsed = datetime.now(started.tzinfo) - started
-                avg_time = elapsed / exp['completed_conversations']
-                remaining = (exp['total_conversations'] - exp['completed_conversations']) * avg_time
+            completed = exp_state.completed_conversations + exp_state.failed_conversations
+            if completed > 0:
+                elapsed = datetime.now(exp_state.started_at.tzinfo) - exp_state.started_at
+                avg_time = elapsed / completed
+                remaining = (exp_state.total_conversations - completed) * avg_time
                 console.print(f"  Estimated time remaining: {str(remaining).split('.')[0]}")
         
-        if watch and exp['status'] == 'running':
+        if watch and exp_state.status in ['running', 'created']:
             console.print(f"\n[{NORD_YELLOW}]Watching experiment... Press Ctrl+C to stop[/{NORD_YELLOW}]")
             
             # Watch loop
             try:
                 while True:
-                    import time
                     time.sleep(5)  # Check every 5 seconds
                     
-                    # Refresh experiment data from JSONL
-                    jsonl_reader = JSONLExperimentReader(get_experiments_dir())
-                    exp = jsonl_reader.get_experiment_status(exp['experiment_id'])
+                    # Refresh experiment state
+                    state_builder.clear_cache()  # Force refresh
+                    exp_state = state_builder.get_experiment_state(exp_dir)
                     
-                    if exp['status'] != 'running':
-                        console.print(f"\n[{NORD_GREEN}]✓ Experiment completed with status: {exp['status']}[/{NORD_GREEN}]")
+                    if exp_state.status not in ['running', 'created']:
+                        console.print(f"\n[{NORD_GREEN}]✓ Experiment completed with status: {exp_state.status}[/{NORD_GREEN}]")
                         if notify:
                             # Try desktop notification
                             try:
                                 from .notify import notify_experiment_complete
-                                notify_experiment_complete(exp['name'], exp['status'])
+                                notify_experiment_complete(exp_state.name, exp_state.status)
                             except:
                                 # Fallback to terminal bell
                                 print('\a', end='', flush=True)
                         break
                     
                     # Update progress
-                    console.print(f"\r  Progress: {exp['completed_conversations']}/{exp['total_conversations']}", end='')
+                    completed = exp_state.completed_conversations + exp_state.failed_conversations
+                    console.print(f"\r  Progress: {completed}/{exp_state.total_conversations}", end='')
                     
             except KeyboardInterrupt:
                 console.print(f"\n[{NORD_YELLOW}]Stopped watching[/{NORD_YELLOW}]")
         
     else:
-        # Show all running experiments - always use JSONL
-        jsonl_reader = JSONLExperimentReader(get_experiments_dir())
-        experiments = jsonl_reader.list_experiments(status_filter='running')
+        # Show all running experiments
+        experiments = state_builder.list_experiments(exp_base, status_filter=['running'])
         
         if not experiments:
             console.print(f"[{NORD_YELLOW}]No running experiments.[/{NORD_YELLOW}]")
@@ -129,32 +132,27 @@ def status(experiment_id, watch, notify):
         table.add_column("Time Running")
         
         for exp in experiments:
-            config = json.loads(exp.get('config', '{}'))
-            
             # Format progress with percentage
-            total = exp.get('total_conversations', 0)
-            completed = exp.get('completed_conversations', 0)
+            total = exp.total_conversations
+            completed = exp.completed_conversations + exp.failed_conversations
             percentage = (completed / total * 100) if total > 0 else 0
             progress = f"{completed}/{total} ({percentage:.0f}%)"
             
             # Format models
-            models = f"{config.get('agent_a_model', '?')} ↔ {config.get('agent_b_model', '?')}"
+            models = "? ↔ ?"
+            if exp.conversations:
+                first_conv = next(iter(exp.conversations.values()))
+                models = f"{first_conv.agent_a_model} ↔ {first_conv.agent_b_model}"
             
             # Calculate time running
-            started = exp.get('started_at', exp.get('created_at', ''))
-            if started:
-                try:
-                    dt = datetime.fromisoformat(started.replace('Z', '+00:00'))
-                    elapsed = datetime.now(dt.tzinfo) - dt
-                    time_str = str(elapsed).split('.')[0]
-                except:
-                    time_str = "-"
-            else:
-                time_str = "-"
+            time_str = "-"
+            if exp.started_at:
+                elapsed = datetime.now(exp.started_at.tzinfo) - exp.started_at
+                time_str = str(elapsed).split('.')[0]
             
             table.add_row(
-                exp['experiment_id'][:8],
-                exp.get('name', 'Unnamed'),
+                exp.experiment_id[:8],
+                exp.name,
                 progress,
                 models,
                 time_str

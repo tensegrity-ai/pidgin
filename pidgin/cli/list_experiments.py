@@ -7,7 +7,7 @@ from rich.table import Table
 
 from .constants import NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN
 from ..io.paths import get_experiments_dir
-from ..experiments.state_builder import StateBuilder
+from ..experiments.optimized_state_builder import get_state_builder
 
 console = Console()
 
@@ -19,18 +19,18 @@ def list_experiments(all):
     
     Shows active experiment sessions with their status and progress.
     """
-    # Build states from JSONL files
+    # Use optimized state builder
+    state_builder = get_state_builder()
     exp_base = get_experiments_dir()
-    experiment_states = []
     
-    # Find all experiment directories
-    for exp_dir in exp_base.glob("exp_*"):
-        if exp_dir.is_dir():
-            state = StateBuilder.from_experiment_dir(exp_dir)
-            if state:
-                # Filter based on --all flag
-                if all or state.status in ['running', 'created']:
-                    experiment_states.append(state)
+    # Get experiments with optional status filter
+    if all:
+        experiment_states = state_builder.list_experiments(exp_base)
+    else:
+        experiment_states = state_builder.list_experiments(
+            exp_base, 
+            status_filter=['running', 'created']
+        )
     
     if not experiment_states:
         if all:

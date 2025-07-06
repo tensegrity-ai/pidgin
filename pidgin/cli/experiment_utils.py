@@ -9,6 +9,7 @@ from typing import Optional
 from rich.console import Console
 
 from ..io.paths import get_experiments_dir
+from ..experiments.optimized_state_builder import get_state_builder
 from .constants import NORD_RED, NORD_YELLOW, NORD_CYAN, NORD_GREEN
 
 console = Console()
@@ -43,38 +44,36 @@ async def attach_to_experiment(experiment_id: str, tail: bool = False, exp_dir: 
         
         exp_dir = matching_dirs[0]
     
-    # Read metadata
-    metadata_path = exp_dir / 'metadata.json'
-    if not metadata_path.exists():
-        console.print(f"[{NORD_RED}]No metadata found for experiment[/{NORD_RED}]")
-        return False
-        
-    with open(metadata_path) as f:
-        metadata = json.load(f)
+    # Get experiment state
+    state_builder = get_state_builder()
+    exp_state = state_builder.get_experiment_state(exp_dir)
     
-    if metadata.get('status') not in ['running', 'created']:
-        console.print(f"[{NORD_YELLOW}]Experiment is {metadata.get('status', 'unknown')}[/{NORD_YELLOW}]")
+    if not exp_state:
+        console.print(f"[{NORD_RED}]No experiment found[/{NORD_RED}]")
         return False
     
-    console.print(f"[bold {NORD_CYAN}]◆ Monitoring: {metadata.get('name', experiment_id)}[/bold {NORD_CYAN}]")
+    if exp_state.status not in ['running', 'created']:
+        console.print(f"[{NORD_YELLOW}]Experiment is {exp_state.status}[/{NORD_YELLOW}]")
+        return False
+    
+    console.print(f"[bold {NORD_CYAN}]◆ Monitoring: {exp_state.name}[/bold {NORD_CYAN}]")
     console.print(f"[{NORD_YELLOW}][Ctrl+C to stop monitoring][/{NORD_YELLOW}]\n")
     
-    # Simple status monitoring
+    # Simple status monitoring using optimized state
     try:
         while True:
-            # Reload metadata
-            with open(metadata_path) as f:
-                metadata = json.load(f)
+            # Clear cache to get fresh data
+            state_builder.clear_cache()
+            exp_state = state_builder.get_experiment_state(exp_dir)
             
-            status = metadata.get('status', 'unknown')
-            if status not in ['running', 'created']:
-                console.print(f"\n[{NORD_GREEN}]Experiment {status}[/{NORD_GREEN}]")
+            if exp_state.status not in ['running', 'created']:
+                console.print(f"\n[{NORD_GREEN}]Experiment {exp_state.status}[/{NORD_GREEN}]")
                 break
             
-            # Show simple status
-            completed = metadata.get('completed_conversations', 0)
-            failed = metadata.get('failed_conversations', 0) 
-            total = metadata.get('total_conversations', 0)
+            # Show status
+            completed = exp_state.completed_conversations
+            failed = exp_state.failed_conversations
+            total = exp_state.total_conversations
             
             console.print(f"Status: {completed}/{total} complete, {failed} failed", end='\r')
             

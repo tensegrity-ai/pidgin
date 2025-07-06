@@ -13,7 +13,7 @@ from rich.live import Live
 from rich.layout import Layout
 from rich.panel import Panel
 
-from ..experiments.state_builder import StateBuilder
+from ..experiments.optimized_state_builder import get_state_builder
 from ..io.paths import get_experiments_dir
 from ..io.logger import get_logger
 
@@ -27,6 +27,7 @@ class SimpleMonitor:
     def __init__(self):
         self.exp_base = get_experiments_dir()
         self.running = True
+        self.state_builder = get_state_builder()
         
     async def run(self):
         """Run the monitor loop."""
@@ -68,16 +69,15 @@ class SimpleMonitor:
         return layout
     
     def get_experiment_states(self) -> List[Any]:
-        """Get all experiment states from JSONL."""
-        states = []
+        """Get all running experiment states efficiently."""
+        # Clear cache periodically for fresh data
+        self.state_builder.clear_cache()
         
-        for exp_dir in self.exp_base.glob("exp_*"):
-            if exp_dir.is_dir():
-                state = StateBuilder.from_experiment_dir(exp_dir)
-                if state and state.status == 'running':
-                    states.append(state)
-        
-        return states
+        # Get only running experiments
+        return self.state_builder.list_experiments(
+            self.exp_base, 
+            status_filter=['running']
+        )
     
     def build_header(self) -> Panel:
         """Build header panel."""
