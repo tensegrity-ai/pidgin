@@ -6,20 +6,20 @@ Last Updated: July 5, 2025
 
 This document tracks the ongoing refactoring and enhancement work for Pidgin. The goal is to create a clean, maintainable research tool for studying AI-to-AI conversation dynamics.
 
-## 🚨 Priority 0: Critical Security Fixes (Immediate)
+## Priority 0: Critical Security Fixes (Immediate)
 
-### ✅ Command Injection Vulnerabilities (FIXED)
+### [DONE] Command Injection Vulnerabilities (FIXED)
 - **Location**: `pidgin/cli/notify.py` (lines 21-22, 36-37), `pidgin/cli/ollama_setup.py` (line 85-89)
 - **Risk**: Arbitrary command execution through unsanitized inputs
 - **Fix**: Use `shlex.quote()` or array-based subprocess calls
 - **Impact**: HIGH - Could allow malicious code execution
 
-### ✅ Other Security Issues (FIXED)
-- ✅ Path traversal risks in output paths - Added validation
-- ✅ Missing input validation limits (turns, repetitions) - Added IntRange limits
-- ✅ Integer overflow possibilities - Bounded with reasonable limits
+### [DONE] Other Security Issues (FIXED)
+- [DONE] Path traversal risks in output paths - Added validation
+- [DONE] Missing input validation limits (turns, repetitions) - Added IntRange limits
+- [DONE] Integer overflow possibilities - Bounded with reasonable limits
 
-## 🔥 Priority 1: Fix Critical Issues from Code Audit
+## Priority 1: Fix Critical Issues from Code Audit
 
 ### Database Issues
 - [ ] **Fix race condition in event sequences** (event_store.py:138-145)
@@ -35,7 +35,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Prevent partial updates on failure
 
 ### Memory Leaks
-- [x] **Event history unbounded growth** (EventBus.event_history) ✅
+- [x] **Event history unbounded growth** (EventBus.event_history) [DONE]
   - Added max_history_size limit (default: 1000)
   - Automatically prunes old events when limit exceeded
   
@@ -48,7 +48,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Archive old messages to disk
 
 ### Resource Management
-- [x] **Provider cleanup** ✅
+- [x] **Provider cleanup** [DONE]
   - Added `async def cleanup()` method to base Provider
   - Providers can now override to close connections properly
   
@@ -56,32 +56,32 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Ensure ThreadPoolExecutor shutdown in all cases
   - Add proper cleanup in daemon processes
 
-## 🚧 Priority 2: Complete Architecture Unification
+## Priority 2: Complete Architecture Unification
 
-### ✅ Unified `pidgin run` Command (COMPLETED)
-- ✅ Created unified run.py combining chat and experiment
-- ✅ Moved experiment subcommands to top level
-- ✅ Single conversations run in foreground by default
-- ✅ Multiple repetitions run as daemon by default
-- ✅ Deleted old chat.py and experiment.py files
-- ✅ Extracted models command to separate file
-- ✅ Updated all internal references
+### [DONE] Unified `pidgin run` Command (COMPLETED)
+- [DONE] Created unified run.py combining chat and experiment
+- [DONE] Moved experiment subcommands to top level
+- [DONE] Single conversations run in foreground by default
+- [DONE] Multiple repetitions run as daemon by default
+- [DONE] Deleted old chat.py and experiment.py files
+- [DONE] Extracted models command to separate file
+- [DONE] Updated all internal references
 
-### ✅ Remaining Unification Work (COMPLETED)
-- ✅ **Update documentation**
-  - ✅ Updated README with new command structure
-  - ✅ Updated all examples to use `pidgin run`
-  - ✅ Removed references to old commands
+### [DONE] Remaining Unification Work (COMPLETED)
+- [DONE] **Update documentation**
+  - [DONE] Updated README with new command structure
+  - [DONE] Updated all examples to use `pidgin run`
+  - [DONE] Removed references to old commands
 
-## ✅ Priority 3: Fix Event Storage Data Flow (COMPLETED)
+## [DONE] Priority 3: Fix Event Storage Data Flow (COMPLETED)
 
 ### Implemented JSONL-First Architecture:
-- ✅ JSONL files are now the single source of truth
-- ✅ Removed direct database writes during conversations
-- ✅ Created manifest.json for efficient state tracking
-- ✅ Built OptimizedStateBuilder with mtime caching
-- ✅ Added `pidgin import` command for batch loading to DuckDB
-- ✅ Eliminated database lock contention
+- [DONE] JSONL files are now the single source of truth
+- [DONE] Removed direct database writes during conversations
+- [DONE] Created manifest.json for efficient state tracking
+- [DONE] Built OptimizedStateBuilder with mtime caching
+- [DONE] Added `pidgin import` command for batch loading to DuckDB
+- [DONE] Eliminated database lock contention
 
 ### Benefits Achieved:
 - No more lock conflicts during experiments
@@ -90,7 +90,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - Post-experiment analysis via DuckDB
 - Clean separation of concerns
 
-## 🛠️ Priority 4: Performance Optimizations
+## [WIP] Priority 4: Performance Optimizations
 
 ### Metrics Calculator
 - [ ] **Cache tokenization results** - Avoid redundant processing
@@ -104,7 +104,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [ ] **Implement connection pooling**
 - [ ] **Optimize batch processing**
 
-## 📊 Priority 5: Analysis Infrastructure
+## Priority 5: Analysis Infrastructure
 
 ### Features to Build
 - [ ] **Auto-generated Jupyter notebooks**
@@ -121,18 +121,18 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Implement gratitude spiral detection
   - Add more conversation pattern recognizers
 
-## ✅ Recently Completed
+## [DONE] Recently Completed
 
 ### Display System Overhaul (July 5, 2025)
-- ✅ Created centered progress panel as default display
-- ✅ Added `--verbose` flag for live conversation view
-- ✅ Made `--quiet` run in background with notifications
-- ✅ Added real-time token usage and cost tracking
-- ✅ Implemented convergence trend indicators (↑, ↑↑, →, ↓, ↓↓)
-- ✅ Removed screen-like attach/detach behavior
-- ✅ Added process titles for daemons (pidgin-exp12345)
+- [DONE] Created centered progress panel as default display
+- [DONE] Added `--verbose` flag for live conversation view
+- [DONE] Made `--quiet` run in background with notifications
+- [DONE] Added real-time token usage and cost tracking
+- [DONE] Implemented convergence trend indicators (↑, ↑↑, →, ↓, ↓↓)
+- [DONE] Removed screen-like attach/detach behavior
+- [DONE] Added process titles for daemons (pidgin-exp12345)
 
-## 🚫 Not Doing
+## Not Doing
 
 These items have been explicitly decided against:
 - **Real-time dashboards** - Adds complexity without sufficient value

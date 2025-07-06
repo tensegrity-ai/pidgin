@@ -29,7 +29,7 @@ def stop(experiment_id, all):
     """
     if all:
         # Stop all logic from stop_all command
-        console.print(f"[bold {NORD_RED}]⚠️  Stopping ALL experiments ⚠️[/bold {NORD_RED}]")
+        console.print(f"[bold {NORD_RED}]WARNING: Stopping ALL experiments[/bold {NORD_RED}]")
         console.print(f"[{NORD_YELLOW}]This will stop ALL running experiments![/{NORD_YELLOW}]\n")
         
         # Find all daemon PIDs
@@ -55,7 +55,7 @@ def stop(experiment_id, all):
             except ProcessLookupError:
                 console.print(f"[{NORD_YELLOW}]  ! {exp_id} already dead (PID: {pid})[/{NORD_YELLOW}]")
             except Exception as e:
-                console.print(f"[{NORD_RED}]  ✗ Failed to stop {exp_id}: {e}[/{NORD_RED}]")
+                console.print(f"[{NORD_RED}]  [FAIL] Failed to stop {exp_id}: {e}[/{NORD_RED}]")
         
         # Clean up database
         console.print(f"\n[{NORD_CYAN}]Updating database...[/{NORD_CYAN}]")
@@ -70,12 +70,12 @@ def stop(experiment_id, all):
             experiments = loop.run_until_complete(storage.list_experiments(status_filter='running'))
             for exp in experiments:
                 loop.run_until_complete(storage.update_experiment_status(exp['experiment_id'], 'failed'))
-                console.print(f"[{NORD_GREEN}]  ✓ Marked '{exp['name']}' as failed[/{NORD_GREEN}]")
+                console.print(f"[{NORD_GREEN}]  [OK] Marked '{exp['name']}' as failed[/{NORD_GREEN}]")
             loop.run_until_complete(storage.close())
         finally:
             loop.close()
         
-        console.print(f"\n[bold {NORD_GREEN}]✓ All experiments stopped[/bold {NORD_GREEN}]")
+        console.print(f"\n[bold {NORD_GREEN}][OK] All experiments stopped[/bold {NORD_GREEN}]")
     else:
         if not experiment_id:
             console.print(f"[{NORD_RED}]Error: Either provide an experiment ID or use --all[/{NORD_RED}]")
@@ -88,7 +88,7 @@ def stop(experiment_id, all):
         console.print(f"[{NORD_YELLOW}]→ Stopping experiment {experiment_id}...[/{NORD_YELLOW}]")
         
         if manager.stop_experiment(experiment_id):
-            console.print(f"[{NORD_GREEN}]✓ Stopped experiment {experiment_id}[/{NORD_GREEN}]")
+            console.print(f"[{NORD_GREEN}][OK] Stopped experiment {experiment_id}[/{NORD_GREEN}]")
         else:
-            console.print(f"[{NORD_RED}]✗ Failed to stop experiment {experiment_id}[/{NORD_RED}]")
+            console.print(f"[{NORD_RED}][FAIL] Failed to stop experiment {experiment_id}[/{NORD_RED}]")
             console.print(f"[{NORD_YELLOW}]  (It may not be running)[/{NORD_YELLOW}]")

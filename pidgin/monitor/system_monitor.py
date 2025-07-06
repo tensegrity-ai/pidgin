@@ -188,9 +188,9 @@ class SystemMonitor:
             if exp['status'] == 'running':
                 status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Running"
             elif exp['status'] == 'completed':
-                status = f"[{self.COLORS['info']}]✓[/{self.COLORS['info']}] Complete"
+                status = f"[{self.COLORS['info']}][OK][/{self.COLORS['info']}] Complete"
             elif exp['status'] == 'failed':
-                status = f"[{self.COLORS['error']}]✗[/{self.COLORS['error']}] Failed"
+                status = f"[{self.COLORS['error']}][FAIL][/{self.COLORS['error']}] Failed"
             else:
                 status = f"[{self.COLORS['warning']}]●[/{self.COLORS['warning']}] {exp['status'].title()}"
             

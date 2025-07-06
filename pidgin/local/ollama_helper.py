@@ -97,7 +97,7 @@ async def auto_install_ollama(console) -> bool:
             )
             
             if result.returncode == 0:
-                console.print("\n[green]✓ Ollama installed successfully![/green]")
+                console.print("\n[green][OK] Ollama installed successfully![/green]")
                 return True
             else:
                 console.print("\n[red]Installation failed[/red]")
@@ -118,7 +118,7 @@ async def auto_install_ollama(console) -> bool:
             )
             
             if result.returncode == 0:
-                console.print("\n[green]✓ Ollama installed successfully![/green]")
+                console.print("\n[green][OK] Ollama installed successfully![/green]")
                 return True
             else:
                 console.print(f"\n[red]Installation failed[/red]")

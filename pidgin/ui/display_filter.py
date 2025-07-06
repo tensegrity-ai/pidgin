@@ -300,7 +300,7 @@ class DisplayFilter:
             conv_text = f"Convergence: {event.convergence_score:.2f}"
             # Add warning if convergence is high
             if event.convergence_score > 0.75:
-                conv_text += " !"
+                conv_text += " [HIGH]"
                 # Use plain text for centering calculation
                 plain_turn_info = f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
                 turn_info += f" | [{self.COLORS['nord13']}]{conv_text}[/{self.COLORS['nord13']}]"
@@ -386,7 +386,7 @@ class DisplayFilter:
 
         if is_billing_error:
             # Special handling for billing errors - less scary, more actionable
-            title = "⚠ Billing Issue"
+            title = "Billing Issue"
             border_style = self.COLORS["nord13"]  # Yellow instead of red
 
             # Determine which service

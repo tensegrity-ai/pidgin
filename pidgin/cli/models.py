@@ -41,16 +41,16 @@ def models(provider, format):
                 'model_id': config.model_id,
                 'shortname': config.shortname,
                 'context_window': config.context_window,
-                'emoji': MODEL_EMOJIS.get(model_id, '🤖')
+                'glyph': MODEL_EMOJIS.get(model_id, '●')
             }
         console.print_json(data=output)
         return
     
     if format == 'list':
         for model_id, config in models_to_show.items():
-            emoji = MODEL_EMOJIS.get(model_id, '🤖')
+            glyph = MODEL_EMOJIS.get(model_id, '●')
             color = PROVIDER_COLORS.get(config.provider, 'white')
-            console.print(f"{emoji} [{color}]{model_id}[/{color}] - {config.shortname}")
+            console.print(f"{glyph} [{color}]{model_id}[/{color}] - {config.shortname}")
         return
     
     # Table format
@@ -78,9 +78,9 @@ def models(provider, format):
         
         # Add models
         for model_id, config in sorted(by_provider[prov], key=lambda x: x[0]):
-            emoji = MODEL_EMOJIS.get(model_id, '🤖')
+            glyph = MODEL_EMOJIS.get(model_id, '●')
             table.add_row(
-                f"{emoji} {model_id}",
+                f"{glyph} {model_id}",
                 config.shortname,
                 config.provider,
                 f"{config.context_window:,}"

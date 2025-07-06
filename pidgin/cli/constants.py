@@ -20,39 +20,42 @@ BANNER = r"""
     [#8fbcbb]✦ · ˚ ⋆[/#8fbcbb] [#4c566a]ai linguistic observatory[/#4c566a] [#8fbcbb]⋆ ˚ · ✦[/#8fbcbb]
 """
 
-# Model display configurations
-MODEL_EMOJIS = {
+# Model display configurations - using glyphs instead of emojis
+MODEL_GLYPHS = {
     # OpenAI
-    "gpt-4": "🧠",
-    "gpt-4-turbo": "🚀",
-    "gpt-4o": "⚡",
-    "gpt-3.5-turbo": "💬",
-    "o1-preview": "🔬",
-    "o1-mini": "🔬",
+    "gpt-4": "◆",
+    "gpt-4-turbo": "◇",
+    "gpt-4o": "▪",
+    "gpt-3.5-turbo": "▫",
+    "o1-preview": "●",
+    "o1-mini": "○",
     
     # Anthropic
-    "claude-3-opus": "🎭",
-    "claude-3-sonnet": "🎵",
-    "claude-3-haiku": "📝",
-    "claude-3.5-sonnet": "🎼",
-    "claude-3.5-haiku": "✍️",
+    "claude-3-opus": "■",
+    "claude-3-sonnet": "□",
+    "claude-3-haiku": "▲",
+    "claude-3.5-sonnet": "△",
+    "claude-3.5-haiku": "▼",
     
     # Google
-    "gemini-1.5-pro": "✨",
-    "gemini-1.5-flash": "⚡",
-    "gemini-2.0-flash": "💫",
-    "gemini-exp": "🧪",
+    "gemini-1.5-pro": "★",
+    "gemini-1.5-flash": "☆",
+    "gemini-2.0-flash": "✦",
+    "gemini-exp": "✧",
     
     # xAI
-    "grok-2": "🎯",
-    "grok-2-vision": "👁️",
+    "grok-2": "◉",
+    "grok-2-vision": "◎",
     
     # Local/Ollama
-    "llama3.1": "🦙",
-    "qwen2.5": "🐼",
-    "deepseek": "🔍",
-    "test": "🧪",
+    "llama3.1": "◐",
+    "qwen2.5": "◑",
+    "deepseek": "◒",
+    "test": "◓",
 }
+
+# Legacy alias for compatibility
+MODEL_EMOJIS = MODEL_GLYPHS
 
 # Provider colors
 PROVIDER_COLORS = {
@@ -68,12 +71,7 @@ DEFAULT_TURNS = 20
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_PARALLEL = 3
 
-# Output messages
-CONVERGENCE_MSGS = {
-    "high": "🔄 High convergence detected",
-    "pause": "⏸️  Paused for convergence review",
-    "stop": "⏹️  Stopped due to convergence",
-}
+# Output messages - removed unused CONVERGENCE_MSGS
 
 # File patterns
 TRANSCRIPT_PATTERN = "transcript.md"

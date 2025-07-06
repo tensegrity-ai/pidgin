@@ -86,9 +86,9 @@ def load_db(experiment_id, all, force):
                     if success:
                         # Create marker
                         marker_file.touch()
-                        console.print(f"[{NORD_GREEN}]✓ Successfully loaded {exp_dir.name}[/{NORD_GREEN}]")
+                        console.print(f"[{NORD_GREEN}][OK] Successfully loaded {exp_dir.name}[/{NORD_GREEN}]")
                     else:
-                        console.print(f"[{NORD_RED}]✗ Failed to load {exp_dir.name}[/{NORD_RED}]")
+                        console.print(f"[{NORD_RED}][FAIL] Failed to load {exp_dir.name}[/{NORD_RED}]")
             
             else:
                 # Load all completed experiments

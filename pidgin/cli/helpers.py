@@ -116,10 +116,10 @@ def format_model_display(model_id: str) -> str:
     if not config:
         return model_id
     
-    emoji = MODEL_EMOJIS.get(model_id, "🤖")
+    glyph = MODEL_EMOJIS.get(model_id, "●")
     color = PROVIDER_COLORS.get(config.provider, "white")
     
-    return f"{emoji} [{color}]{config.shortname}[/{color}]"
+    return f"{glyph} [{color}]{config.shortname}[/{color}]"
 
 
 def find_conversations(path: Optional[str] = None, pattern: str = "*") -> List[Path]:

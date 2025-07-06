@@ -57,13 +57,13 @@ def notify_experiment_complete(experiment_name: str, status: str = 'completed'):
         status: Final status (completed, failed, interrupted)
     """
     if status == 'completed':
-        title = "✓ Experiment Complete"
+        title = "Experiment Complete"
         message = f"Experiment '{experiment_name}' has finished successfully"
     elif status == 'failed':
-        title = "✗ Experiment Failed"
+        title = "Experiment Failed"
         message = f"Experiment '{experiment_name}' failed"
     else:
-        title = "⚠ Experiment Interrupted"
+        title = "Experiment Interrupted"
         message = f"Experiment '{experiment_name}' was interrupted"
     
     send_notification(title, message)

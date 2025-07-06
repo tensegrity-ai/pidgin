@@ -384,7 +384,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         
         try:
             success = asyncio.run(run_foreground_experiment())
-            console.print(f"\n[#a3be8c]✓ Experiment '{name}' completed[/#a3be8c]")
+            console.print(f"\n[#a3be8c][OK] Experiment '{name}' completed[/#a3be8c]")
             if notify:
                 send_notification(
                     title="Pidgin Experiment Complete",
@@ -396,7 +396,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         except KeyboardInterrupt:
             console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
         except Exception as e:
-            console.print(f"\n[#bf616a]✗ Experiment failed: {e}[/#bf616a]")
+            console.print(f"\n[#bf616a][FAIL] Experiment failed: {e}[/#bf616a]")
             import traceback
             traceback.print_exc()
             # Terminal bell for failure too
@@ -416,7 +416,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
             
             # Show start message
-            console.print(f"\n[#a3be8c]✓ Experiment '{name}' started successfully[/#a3be8c]")
+            console.print(f"\n[#a3be8c][OK] Experiment '{name}' started successfully[/#a3be8c]")
             
             # Show where to find logs
             console.print(f"[#4c566a]Running in background. Check progress:[/#4c566a]")
@@ -424,7 +424,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             console.print(f"[#4c566a]  tail -f {get_experiments_dir()}/{exp_id}/*.jsonl[/#4c566a]")
                 
         except Exception as e:
-            console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")
+            console.print(f"\n[#bf616a][FAIL] Failed to start experiment: {str(e)}[/#bf616a]")
             raise
 
 
@@ -452,14 +452,14 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
         console.print(f"\n[{PROVIDER_COLORS.get(provider, 'white')}]{provider.title()}:[/{PROVIDER_COLORS.get(provider, 'white')}]")
         
         for model_id, config in providers[provider]:
-            emoji = MODEL_EMOJIS.get(model_id, "🤖")
-            console.print(f"  {idx}. {emoji} {config.display_name}")
+            glyph = MODEL_EMOJIS.get(model_id, "●")
+            console.print(f"  {idx}. {glyph} {config.display_name}")
             model_map[str(idx)] = model_id
             idx += 1
     
     # Add option for custom local model
     console.print(f"\n[{NORD_YELLOW}]Other:[/{NORD_YELLOW}]")
-    console.print(f"  {idx}. 🔧 Custom local model (requires Ollama)")
+    console.print(f"  {idx}. ▸ Custom local model (requires Ollama)")
     
     # Get selection
     selection = console.input(f"\n[{NORD_BLUE}]Enter selection (1-{idx}) or model name: [/{NORD_BLUE}]")

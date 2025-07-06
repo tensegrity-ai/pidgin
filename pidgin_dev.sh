@@ -28,14 +28,14 @@ case "${1:-help}" in
         # Install with pipx
         pipx install dist/*.whl --force
         
-        echo -e "${GREEN}✓ Rebuild complete!${NC}"
+        echo -e "${GREEN}[OK] Rebuild complete!${NC}"
         ;;
         
     "quick")
         echo -e "${YELLOW}Quick rebuild (no clean)...${NC}"
         cd "$PROJECT_ROOT"
         poetry build && pipx install dist/*.whl --force
-        echo -e "${GREEN}✓ Quick rebuild complete!${NC}"
+        echo -e "${GREEN}[OK] Quick rebuild complete!${NC}"
         ;;
         
     "clean")
@@ -46,7 +46,7 @@ case "${1:-help}" in
         find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
         find . -type f -name "*.pyc" -delete
         
-        echo -e "${GREEN}✓ Clean complete!${NC}"
+        echo -e "${GREEN}[OK] Clean complete!${NC}"
         ;;
         
     "clean-all")
@@ -67,7 +67,7 @@ case "${1:-help}" in
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         
-        echo -e "${GREEN}✓ Full clean complete!${NC}"
+        echo -e "${GREEN}[OK] Full clean complete!${NC}"
         ;;
         
     "reset")
@@ -93,7 +93,7 @@ case "${1:-help}" in
             echo -e "${YELLOW}Removing experiment data...${NC}"
             rm -rf pidgin_output/
             
-            echo -e "${GREEN}✓ Reset complete! You can now run new experiments.${NC}"
+            echo -e "${GREEN}[OK] Reset complete! You can now run new experiments.${NC}"
         else
             echo -e "${YELLOW}Reset cancelled.${NC}"
         fi

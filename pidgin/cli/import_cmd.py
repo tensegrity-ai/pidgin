@@ -138,12 +138,12 @@ async def _run_import(importer: BatchImporter, exp_base: Path, experiment_id: st
         
         # Show result
         if result.success:
-            console.print(f"[{NORD_GREEN}]✓ Successfully imported {result.experiment_id}[/{NORD_GREEN}]")
+            console.print(f"[{NORD_GREEN}][OK] Successfully imported {result.experiment_id}[/{NORD_GREEN}]")
             console.print(f"  • Events: {result.events_imported}")
             console.print(f"  • Conversations: {result.conversations_imported}")
             console.print(f"  • Duration: {result.duration_seconds:.1f}s")
         else:
-            console.print(f"[{NORD_RED}]✗ Failed to import {result.experiment_id}[/{NORD_RED}]")
+            console.print(f"[{NORD_RED}][FAIL] Failed to import {result.experiment_id}[/{NORD_RED}]")
             console.print(f"  Error: {result.error}")
 
 
@@ -166,7 +166,7 @@ def _show_results_summary(results):
     total_duration = 0
     
     for result in results:
-        status = f"[{NORD_GREEN}]✓[/{NORD_GREEN}]" if result.success else f"[{NORD_RED}]✗[/{NORD_RED}]"
+        status = f"[{NORD_GREEN}][OK][/{NORD_GREEN}]" if result.success else f"[{NORD_RED}][FAIL][/{NORD_RED}]"
         
         table.add_row(
             result.experiment_id[:20],

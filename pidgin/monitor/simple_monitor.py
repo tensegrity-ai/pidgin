@@ -159,7 +159,7 @@ class SimpleMonitor:
                     high_convergence_count += 1
         
         if high_convergence_count > 0:
-            stats.append(f"\n[orange1]⚠ High Convergence:[/orange1] {high_convergence_count} conversations")
+            stats.append(f"\n[orange1][WARNING] High Convergence:[/orange1] {high_convergence_count} conversations")
         
         # System load estimate (based on active conversations)
         if active_convs > 0:
