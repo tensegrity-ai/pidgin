@@ -50,7 +50,7 @@ import rich_click as click
 
 from .constants import BANNER
 from .run import run
-from .chat import models
+from .models import models
 from .status import status
 from .list_experiments import list_experiments
 from .attach import attach

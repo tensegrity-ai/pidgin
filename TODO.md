@@ -8,16 +8,16 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 ## 🚨 Priority 0: Critical Security Fixes (Immediate)
 
-### Command Injection Vulnerabilities
+### ✅ Command Injection Vulnerabilities (FIXED)
 - **Location**: `pidgin/cli/notify.py` (lines 21-22, 36-37), `pidgin/cli/ollama_setup.py` (line 85-89)
 - **Risk**: Arbitrary command execution through unsanitized inputs
 - **Fix**: Use `shlex.quote()` or array-based subprocess calls
 - **Impact**: HIGH - Could allow malicious code execution
 
-### Other Security Issues
-- Path traversal risks in output paths
-- Missing input validation limits (turns, repetitions)
-- Integer overflow possibilities
+### ✅ Other Security Issues (FIXED)
+- ✅ Path traversal risks in output paths - Added validation
+- ✅ Missing input validation limits (turns, repetitions) - Added IntRange limits
+- ✅ Integer overflow possibilities - Bounded with reasonable limits
 
 ## 🔥 Priority 1: Fix Critical Issues from Code Audit
 
@@ -35,9 +35,9 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Prevent partial updates on failure
 
 ### Memory Leaks
-- [ ] **Event history unbounded growth** (EventBus.event_history)
-  - Add max_history_size limit
-  - Implement circular buffer or periodic cleanup
+- [x] **Event history unbounded growth** (EventBus.event_history) ✅
+  - Added max_history_size limit (default: 1000)
+  - Automatically prunes old events when limit exceeded
   
 - [ ] **JSONL file handle leaks** (event_bus.py)
   - Close files after each conversation
@@ -48,9 +48,9 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Archive old messages to disk
 
 ### Resource Management
-- [ ] **Provider cleanup**
-  - Add `async def cleanup()` method to base Provider
-  - Ensure all providers close connections properly
+- [x] **Provider cleanup** ✅
+  - Added `async def cleanup()` method to base Provider
+  - Providers can now override to close connections properly
   
 - [ ] **Thread pool management**
   - Ensure ThreadPoolExecutor shutdown in all cases
@@ -58,18 +58,16 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 ## 🚧 Priority 2: Complete Architecture Unification
 
-### ✅ Unified `pidgin run` Command (Just Completed)
-- Created unified run.py combining chat and experiment
-- Moved experiment subcommands to top level
-- Single conversations run in foreground by default
-- Multiple repetitions run as daemon by default
+### ✅ Unified `pidgin run` Command (COMPLETED)
+- ✅ Created unified run.py combining chat and experiment
+- ✅ Moved experiment subcommands to top level
+- ✅ Single conversations run in foreground by default
+- ✅ Multiple repetitions run as daemon by default
+- ✅ Deleted old chat.py and experiment.py files
+- ✅ Extracted models command to separate file
+- ✅ Updated all internal references
 
 ### Remaining Unification Work
-- [ ] **Remove old chat and experiment modules**
-  - Delete pidgin/cli/chat.py (keep models command)
-  - Delete pidgin/cli/experiment.py
-  - Update any remaining references
-  
 - [ ] **Update documentation**
   - Update README with new command structure
   - Update all examples to use `pidgin run`

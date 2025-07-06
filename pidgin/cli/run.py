@@ -38,7 +38,7 @@ from ..io.paths import get_experiments_dir
 from ..config.models import MODELS, get_model_config
 from .notify import send_notification
 from ..experiments import ExperimentManager, ExperimentConfig, ExperimentRunner
-from .experiment import attach_to_experiment
+from .experiment_utils import attach_to_experiment
 
 console = Console()
 
@@ -54,9 +54,11 @@ from . import ORIGINAL_CWD
 @click.option('--prompt', '-p', 
               help='Initial prompt to start the conversation')
 @click.option('--turns', '-t', 
+              type=click.IntRange(1, 1000),
               default=DEFAULT_TURNS, 
               help=f'Maximum number of conversation turns (default: {DEFAULT_TURNS})')
 @click.option('--repetitions', '-r',
+              type=click.IntRange(1, 10000),
               default=1,
               help='Number of conversations to run (default: 1)')
 @click.option('--temperature', 
@@ -114,7 +116,7 @@ from . import ORIGINAL_CWD
 @click.option('--name',
               help='Name for the experiment (required for multiple runs)')
 @click.option('--max-parallel',
-              type=int,
+              type=click.IntRange(1, 50),
               default=1,
               help='Max parallel conversations (default: 1, sequential)')
 @click.option('--foreground',

@@ -17,3 +17,13 @@ class Provider(ABC):
         """
         yield  # type: ignore[misc]
         pass
+    
+    async def cleanup(self) -> None:
+        """Clean up provider resources.
+        
+        Override this method to clean up any resources like:
+        - HTTP client sessions
+        - Open connections
+        - Thread pools
+        """
+        pass

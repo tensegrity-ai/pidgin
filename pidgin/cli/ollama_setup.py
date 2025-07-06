@@ -81,14 +81,24 @@ async def ensure_ollama_models_ready(model_a: str, model_b: str, console: Consol
 
 async def check_and_pull_model(model_name: str, console: Console) -> bool:
     """Check if model exists, download if needed."""
-    # Check if model exists
-    result = subprocess.run(
-        f"ollama list | grep -q '{model_name}'",
-        shell=True,
-        capture_output=True
-    )
+    # Check if model exists - use array to avoid shell injection
+    try:
+        # Get list of models safely
+        result = subprocess.run(
+            ['ollama', 'list'],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        # Check if our model is in the output
+        model_exists = model_name in result.stdout
+    except Exception:
+        model_exists = False
     
-    if result.returncode != 0:
+    result_returncode = 0 if model_exists else 1
+    
+    if result_returncode != 0:
         # Model not found, need to download
         console.print()
         console.print(Panel(

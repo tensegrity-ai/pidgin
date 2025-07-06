@@ -18,15 +18,17 @@ T = TypeVar("T", bound=Event)
 class EventBus:
     """Central event distribution with radical transparency."""
 
-    def __init__(self, db_store=None, event_log_dir=None):
+    def __init__(self, db_store=None, event_log_dir=None, max_history_size: int = 1000):
         """Initialize EventBus.
         
         Args:
             db_store: Optional EventStore for persisting events
             event_log_dir: Optional directory for JSONL event logs
+            max_history_size: Maximum number of events to keep in history (default: 1000)
         """
         self.subscribers: Dict[Type[Event], List[Callable]] = defaultdict(list)
         self.event_history: List[Event] = []
+        self.max_history_size = max_history_size
         self.event_queue: asyncio.Queue = asyncio.Queue()
         self.db_store = db_store
         self.event_log_dir = event_log_dir
@@ -114,8 +116,11 @@ class EventBus:
         Args:
             event: The event to emit
         """
-        # Log to event history
+        # Log to event history with size limit
         self.event_history.append(event)
+        if len(self.event_history) > self.max_history_size:
+            # Remove oldest events to maintain size limit
+            self.event_history = self.event_history[-self.max_history_size:]
 
         # Queue for processing (for backward compatibility)
         await self.event_queue.put(event)

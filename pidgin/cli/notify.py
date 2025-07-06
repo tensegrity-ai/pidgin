@@ -3,6 +3,7 @@
 
 import sys
 import subprocess
+import shlex
 from pathlib import Path
 
 
@@ -18,7 +19,8 @@ def send_notification(title: str, message: str):
     try:
         if system == 'darwin':  # macOS
             # Use osascript for native macOS notifications
-            script = f'display notification "{message}" with title "{title}"'
+            # Properly escape inputs to prevent command injection
+            script = f'display notification {shlex.quote(message)} with title {shlex.quote(title)}'
             subprocess.run(['osascript', '-e', script], check=True)
             
         elif system == 'linux':
@@ -32,9 +34,15 @@ def send_notification(title: str, message: str):
                 toaster = ToastNotifier()
                 toaster.show_toast(title, message, duration=10)
             except ImportError:
-                # Fallback to powershell
-                ps_cmd = f'[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); [System.Windows.Forms.MessageBox]::Show("{message}", "{title}")'
-                subprocess.run(['powershell', '-Command', ps_cmd], check=True)
+                # Fallback to powershell with proper escaping
+                # Use base64 encoding to safely pass strings to PowerShell
+                import base64
+                ps_script = f'''
+                [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null
+                [System.Windows.Forms.MessageBox]::Show({shlex.quote(message)}, {shlex.quote(title)})
+                '''
+                encoded = base64.b64encode(ps_script.encode('utf-16le')).decode('ascii')
+                subprocess.run(['powershell', '-EncodedCommand', encoded], check=True)
                 
     except Exception:
         # If desktop notifications fail, just use terminal bell

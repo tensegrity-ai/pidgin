@@ -6,7 +6,7 @@ import asyncio
 import rich_click as click
 from rich.console import Console
 
-from .experiment import attach_to_experiment
+from .experiment_utils import attach_to_experiment
 
 console = Console()
 
