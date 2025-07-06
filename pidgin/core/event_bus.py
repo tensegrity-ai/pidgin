@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
 
 from .events import Event
 from ..io.logger import get_logger
+from .constants import SystemDefaults
 
 logger = get_logger("event_bus")
 
@@ -18,7 +19,7 @@ T = TypeVar("T", bound=Event)
 class EventBus:
     """Central event distribution with radical transparency."""
 
-    def __init__(self, db_store=None, event_log_dir=None, max_history_size: int = 1000):
+    def __init__(self, db_store=None, event_log_dir=None, max_history_size: int = SystemDefaults.MAX_EVENT_HISTORY):
         """Initialize EventBus.
         
         Args:
@@ -36,44 +37,42 @@ class EventBus:
 
     def _serialize_value(self, value: Any) -> Any:
         """Convert a value to a JSON-serializable format."""
-        # Handle None
-        if value is None:
-            return None
-
-        # Handle basic types
-        if isinstance(value, (str, int, float, bool)):
+        # Handle None and basic types
+        if value is None or isinstance(value, (str, int, float, bool)):
             return value
 
         # Handle datetime
         if hasattr(value, "isoformat"):
             return value.isoformat()
 
-        # Handle lists
+        # Handle collections
         if isinstance(value, list):
             return [self._serialize_value(item) for item in value]
-
-        # Handle dicts
         if isinstance(value, dict):
             return {k: self._serialize_value(v) for k, v in value.items()}
 
-        # Handle objects with __dict__
+        # Handle specific object types
         if hasattr(value, "__dict__"):
-            # For Message objects, extract key fields
-            if hasattr(value, "role") and hasattr(value, "content"):
-                return {
-                    "role": value.role,
-                    "content": value.content,
-                    "agent_id": getattr(value, "agent_id", None),
-                    "timestamp": value.timestamp.isoformat()
-                    if hasattr(value, "timestamp")
-                    else None,
-                }
-            else:
-                # Generic object serialization
-                return {k: self._serialize_value(v) for k, v in value.__dict__.items()}
+            return self._serialize_object(value)
 
         # Fallback to string representation
         return str(value)
+    
+    def _serialize_object(self, obj: Any) -> dict:
+        """Serialize an object to a dictionary."""
+        # Special handling for Message objects
+        if hasattr(obj, "role") and hasattr(obj, "content"):
+            return {
+                "role": obj.role,
+                "content": obj.content,
+                "agent_id": getattr(obj, "agent_id", None),
+                "timestamp": obj.timestamp.isoformat()
+                if hasattr(obj, "timestamp")
+                else None,
+            }
+        
+        # Generic object serialization
+        return {k: self._serialize_value(v) for k, v in obj.__dict__.items()}
     
     def _get_jsonl_file(self, conversation_id: str):
         """Get or create JSONL file handle for a conversation."""
@@ -139,22 +138,8 @@ class EventBus:
         if self.event_log_dir:
             self._write_to_jsonl(event, event_data)
 
-        # DISABLED: Real-time database writes to avoid concurrency issues
-        # Database will be populated via batch loading after experiments complete
-        # This prevents lock contention during active experiments
-        
-        # # Write to database if configured
-        # if self.db_store and self._running:
-        #     try:
-        #         # Emit to database
-        #         await self.db_store.emit_event(
-        #             event_type=type(event).__name__,
-        #             conversation_id=getattr(event, 'conversation_id', None),
-        #             experiment_id=getattr(event, 'experiment_id', None),
-        #             data=event_data
-        #         )
-        #     except Exception as e:
-        #         logger.error(f"Error storing event {type(event).__name__}: {e}")
+        # Note: Database writes are disabled during active experiments to avoid
+        # concurrency issues. Database is populated via batch loading after completion.
 
         # Get handlers for this event type and parent types
         handlers = []

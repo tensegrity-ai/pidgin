@@ -11,6 +11,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRe
 
 from ..io.paths import get_experiments_dir, get_database_path
 from ..database.batch_importer import BatchImporter
+from ..database.transcript_generator import TranscriptGenerator
 from ..io.logger import get_logger
 from .constants import NORD_GREEN, NORD_RED, NORD_YELLOW, NORD_CYAN
 
@@ -22,8 +23,9 @@ logger = get_logger("import_cmd")
 @click.argument("experiment_id", required=False)
 @click.option("--all", is_flag=True, help="Import all unimported experiments")
 @click.option("--force", is_flag=True, help="Force reimport even if already imported")
+@click.option("--transcripts", is_flag=True, help="Generate markdown transcripts after import")
 @click.option("--db-path", type=click.Path(path_type=Path), help="Path to DuckDB database (default: ~/.pidgin/pidgin.db)")
-def import_cmd(experiment_id: str, all: bool, force: bool, db_path: Path):
+def import_cmd(experiment_id: str, all: bool, force: bool, transcripts: bool, db_path: Path):
     """Import JSONL experiments into DuckDB for analysis.
     
     This command batch imports completed experiments from their JSONL files
@@ -39,6 +41,9 @@ def import_cmd(experiment_id: str, all: bool, force: bool, db_path: Path):
     
     [#4c566a]Force reimport:[/#4c566a]
         pidgin import exp_abc123 --force
+    
+    [#4c566a]Import with transcript generation:[/#4c566a]
+        pidgin import exp_abc123 --transcripts
     """
     # Validate arguments
     if not experiment_id and not all:
@@ -58,11 +63,11 @@ def import_cmd(experiment_id: str, all: bool, force: bool, db_path: Path):
     importer = BatchImporter(db_path)
     
     # Run import
-    asyncio.run(_run_import(importer, exp_base, experiment_id, all, force))
+    asyncio.run(_run_import(importer, exp_base, experiment_id, all, force, transcripts, db_path))
 
 
 async def _run_import(importer: BatchImporter, exp_base: Path, experiment_id: str, 
-                     import_all: bool, force: bool):
+                     import_all: bool, force: bool, generate_transcripts: bool, db_path: Path):
     """Run the import operation."""
     
     if import_all:
@@ -99,14 +104,42 @@ async def _run_import(importer: BatchImporter, exp_base: Path, experiment_id: st
             task = progress.add_task("Importing experiments...", total=len(exp_dirs))
             
             results = []
+            exp_dirs_map = {}  # Map experiment_id to exp_dir
+            
             for exp_dir in exp_dirs:
                 result = importer.import_experiment(exp_dir, force=force)
                 results.append(result)
+                if result.success:
+                    exp_dirs_map[result.experiment_id] = exp_dir
                 progress.update(task, advance=1, 
                               description=f"Importing {exp_dir.name}...")
         
         # Show results summary
         _show_results_summary(results)
+        
+        # Generate transcripts for successful imports if requested
+        if generate_transcripts:
+            successful_results = [r for r in results if r.success]
+            if successful_results:
+                console.print(f"\n[{NORD_CYAN}]Generating transcripts for {len(successful_results)} experiments...[/{NORD_CYAN}]")
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                    console=console
+                ) as progress:
+                    task = progress.add_task("Generating transcripts...", total=len(successful_results))
+                    
+                    with TranscriptGenerator(db_path) as generator:
+                        for result in successful_results:
+                            exp_dir = exp_dirs_map[result.experiment_id]
+                            generator.generate_experiment_transcripts(result.experiment_id, exp_dir)
+                            progress.update(task, advance=1,
+                                          description=f"Generating for {result.experiment_id[:20]}...")
+                
+                console.print(f"[{NORD_GREEN}][OK] All transcripts generated[/{NORD_GREEN}]")
         
     else:
         # Import specific experiment
@@ -142,6 +175,13 @@ async def _run_import(importer: BatchImporter, exp_base: Path, experiment_id: st
             console.print(f"  • Events: {result.events_imported}")
             console.print(f"  • Conversations: {result.conversations_imported}")
             console.print(f"  • Duration: {result.duration_seconds:.1f}s")
+            
+            # Generate transcripts if requested
+            if generate_transcripts:
+                console.print(f"[{NORD_CYAN}]Generating transcripts...[/{NORD_CYAN}]")
+                with TranscriptGenerator(db_path) as generator:
+                    generator.generate_experiment_transcripts(result.experiment_id, exp_dir)
+                console.print(f"[{NORD_GREEN}][OK] Transcripts generated[/{NORD_GREEN}]")
         else:
             console.print(f"[{NORD_RED}][FAIL] Failed to import {result.experiment_id}[/{NORD_RED}]")
             console.print(f"  Error: {result.error}")

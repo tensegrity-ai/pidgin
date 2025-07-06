@@ -64,3 +64,12 @@ def get_database_path() -> Path:
         Path to experiments.duckdb
     """
     return get_experiments_dir() / "experiments.duckdb"
+
+
+def get_chats_database_path() -> Path:
+    """Get the path to the chats database.
+    
+    Returns:
+        Path to chats.duckdb in user's home .pidgin directory
+    """
+    return Path.home() / ".pidgin" / "chats.duckdb"

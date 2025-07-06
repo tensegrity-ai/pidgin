@@ -12,6 +12,8 @@ import os
 from .async_duckdb import AsyncDuckDB
 from .schema import get_all_schemas
 from ..io.logger import get_logger
+from ..core.constants import SystemDefaults
+from ..core.exceptions import DatabaseError, DatabaseLockError, DatabaseConnectionError
 
 logger = get_logger("event_store")
 
@@ -87,11 +89,11 @@ class EventStore:
         """Exponential backoff for all DB operations."""
         # If database doesn't exist in read-only mode, fail immediately
         if self.read_only and not self._db_exists:
-            raise FileNotFoundError("Database does not exist")
+            raise DatabaseConnectionError("Database does not exist")
         
         # Use fewer retries for read-only operations to fail fast
         if max_retries is None:
-            max_retries = 1 if self.read_only else 3
+            max_retries = SystemDefaults.DB_RETRY_ATTEMPTS_READONLY if self.read_only else SystemDefaults.DB_RETRY_ATTEMPTS
             
         for attempt in range(max_retries):
             try:
@@ -108,7 +110,13 @@ class EventStore:
                 ])
                 
                 if attempt == max_retries - 1:
-                    raise
+                    # Wrap in appropriate exception type
+                    if is_lock_error:
+                        raise DatabaseLockError(f"Database locked after {max_retries} attempts: {e}")
+                    elif 'connection' in error_msg or 'not found' in error_msg:
+                        raise DatabaseConnectionError(f"Database connection failed: {e}")
+                    else:
+                        raise DatabaseError(f"Database operation failed: {e}")
                     
                 # Use shorter retry for lock errors, longer for other errors
                 if is_lock_error:

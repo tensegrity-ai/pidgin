@@ -44,7 +44,6 @@ from .config import (
 # IO exports
 from .io import (
     OutputManager,
-    TranscriptManager,
     get_logger,
 )
 

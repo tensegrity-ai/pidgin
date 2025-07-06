@@ -9,6 +9,7 @@ from threading import Lock
 
 from ..config import get_config
 from ..io.logger import get_logger
+from .constants import RateLimits, SystemDefaults
 
 logger = get_logger("rate_limiter")
 
@@ -56,7 +57,7 @@ class StreamingRateLimiter:
         self.rate_limits = self._load_limits()
 
         # Track request history per provider
-        self.request_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self.request_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=SystemDefaults.MAX_EVENT_HISTORY))
 
         # Track last request time per provider for pacing
         self.last_request_time: Dict[str, float] = {}
@@ -139,8 +140,8 @@ class StreamingRateLimiter:
             # Check token rate using sliding window
             current_tokens = self._get_current_token_rate(provider)
             if (
-                current_tokens + estimated_tokens > token_limit * 0.9
-            ):  # 90% safety margin
+                current_tokens + estimated_tokens > token_limit * RateLimits.SAFETY_MARGIN
+            ):
                 # Calculate how long to wait for tokens to "expire"
                 token_wait = self._calculate_token_wait(
                     provider, estimated_tokens, token_limit
@@ -264,11 +265,11 @@ class StreamingRateLimiter:
 
         # Calculate when we'll have token budget
         current_tokens = sum(r.tokens for r in recent)
-        if current_tokens + new_tokens <= limit * 0.9:
+        if current_tokens + new_tokens <= limit * RateLimits.SAFETY_MARGIN:
             return 0.0
 
         # Find how long until oldest requests expire
-        tokens_to_free = (current_tokens + new_tokens) - (limit * 0.9)
+        tokens_to_free = (current_tokens + new_tokens) - (limit * RateLimits.SAFETY_MARGIN)
         freed_tokens = 0
 
         for req in recent:

@@ -6,7 +6,7 @@ from typing import List, Optional
 from ..core.types import Message
 
 
-class TestModel:
+class LocalTestModel:
     """Deterministic test model that simulates conversation dynamics."""
     
     def __init__(self):

@@ -14,6 +14,8 @@ from datetime import datetime
 import asyncio
 import uuid
 from .config import ExperimentConfig
+from ..core.constants import SystemDefaults
+from ..core.exceptions import ExperimentAlreadyExistsError
 
 
 class ExperimentManager:
@@ -93,7 +95,7 @@ class ExperimentManager:
         if config.name:
             existing = self._find_experiment_by_name(config.name)
             if existing:
-                raise ValueError(f"Experiment with name '{config.name}' already exists (ID: {existing})")
+                raise ExperimentAlreadyExistsError(config.name, existing)
         
         # Generate experiment ID
         exp_id = f"exp_{uuid.uuid4().hex[:8]}"
@@ -143,7 +145,7 @@ class ExperimentManager:
             )
         
         # Wait for daemon to start with retries
-        max_retries = 10
+        max_retries = SystemDefaults.MAX_RETRIES
         for i in range(max_retries):
             time.sleep(0.5)
             if self.is_running(exp_id):

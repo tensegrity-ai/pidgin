@@ -1,10 +1,12 @@
 # Pidgin Project TODO
 
-Last Updated: July 5, 2025
+Last Updated: July 6, 2025
 
 ## Overview
 
 This document tracks the ongoing refactoring and enhancement work for Pidgin. The goal is to create a clean, maintainable research tool for studying AI-to-AI conversation dynamics.
+
+**MAJOR UPDATE**: Comprehensive code audit completed on July 6, 2025. See CODE_AUDIT_REPORT.md for full details.
 
 ## Priority 0: Critical Security Fixes (Immediate)
 
@@ -19,7 +21,54 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [DONE] Missing input validation limits (turns, repetitions) - Added IntRange limits
 - [DONE] Integer overflow possibilities - Bounded with reasonable limits
 
-## Priority 1: Fix Critical Issues from Code Audit
+## Priority 1: Critical Issues from Code Audit (NEW)
+
+### Test Suite Creation 🚨
+- [ ] **Create comprehensive test suite**
+  - Zero tests exist despite test dependencies
+  - Start with core modules (conductor, event_bus, message_handler)
+  - Aim for 80% coverage
+  - Add integration tests for concurrent operations
+
+### Thread Safety Issues 🚨
+- [ ] **Add asyncio locks to shared state**
+  - EventBus._jsonl_files dict
+  - ManifestManager operations
+  - EventHandler conversation state dicts
+  - 14 modules identified with issues
+
+### God Object Refactoring 🚨
+- [ ] **Split EventStore (856 lines, 22 methods)**
+  - Create ConversationRepository
+  - Create ExperimentRepository
+  - Create MetricsRepository
+  - Maintain backward compatibility
+
+- [ ] **Refactor MetricsCalculator (437 lines, 21 methods)**
+  - Separate calculation from analysis
+  - Extract formatting to separate module
+
+## Priority 2: High Priority Code Quality Issues
+
+### Code Duplication
+- [ ] **Extract provider base functionality**
+  - Error handling (anthropic.py:96-114, openai.py:189-205)
+  - Context truncation (3+ providers)
+  - Create shared error mapping utility
+
+### Long Methods
+- [ ] **Refactor conductor.run_conversation() (142 lines)**
+- [ ] **Refactor message_handler.get_agent_message() (152 lines)**
+- [ ] **Refactor experiment_runner._run_single_conversation() (134 lines)**
+- [ ] **Refactor event_store.import_experiment() (104 lines)**
+
+### Inconsistent Error Handling
+- [ ] **Standardize Google provider error handling**
+- [ ] **Fix bare except clauses**
+  - cli/helpers.py:105-110
+  - Multiple async_duckdb.py locations
+
+## Priority 3: Fix Critical Issues from Code Audit (Original)
 
 ### Database Issues
 - [ ] **Fix race condition in event sequences** (event_store.py:138-145)
@@ -56,7 +105,33 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Ensure ThreadPoolExecutor shutdown in all cases
   - Add proper cleanup in daemon processes
 
-## Priority 2: Complete Architecture Unification
+## Priority 4: Medium Priority Code Quality Issues
+
+### Magic Strings/Numbers
+- [ ] **Create comprehensive constants module**
+  - 250+ hardcoded status strings
+  - Extract all magic values
+  - Enforce usage across codebase
+
+### Naming Consistency
+- [ ] **Standardize naming conventions**
+  - Use full names: conversation (not conv), experiment (not exp)
+  - Consistent agent naming: agent_a everywhere
+  - Update all 127 files with mixed naming
+
+### Missing Validation
+- [ ] **Add convergence weight validation**
+  - Ensure weights sum to 1.0
+  - Add config value schema validation
+  - Validate all user inputs
+
+### API Key Management
+- [ ] **Centralize credential management**
+  - Create secure credential store
+  - Remove direct env var access from providers
+  - Consider keyring integration
+
+## Priority 5: Complete Architecture Unification
 
 ### [DONE] Unified `pidgin run` Command (COMPLETED)
 - [DONE] Created unified run.py combining chat and experiment
@@ -90,7 +165,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - Post-experiment analysis via DuckDB
 - Clean separation of concerns
 
-## [WIP] Priority 4: Performance Optimizations
+## [WIP] Priority 6: Performance Optimizations
 
 ### Metrics Calculator
 - [ ] **Cache tokenization results** - Avoid redundant processing
@@ -104,7 +179,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [ ] **Implement connection pooling**
 - [ ] **Optimize batch processing**
 
-## Priority 5: Analysis Infrastructure
+## Priority 7: Analysis Infrastructure
 
 ### Features to Build
 - [ ] **Auto-generated Jupyter notebooks**
@@ -167,13 +242,34 @@ From CLAUDE.md:
 - Keep modules under 200 lines
 - Methods under 50 lines
 
+## Priority 8: Low Priority Issues
+
+### Repository Cleanup
+- [ ] **Remove orphaned files**
+  - Delete nested pidgin_output/experiments/pidgin_output/
+  - Remove banner_options.txt
+  - Clean up debug_output.txt
+  - Add .DS_Store to .gitignore
+
+### Minor Code Issues
+- [ ] **Address 5 TODO comments**
+  - token_handler.py:89-91 (config from provider)
+  - conversation_lifecycle.py:346 (gather metrics)
+  - event_handler.py:384 (gratitude spiral detection)
+  - event_wrapper.py:94 (track retry count)
+
+- [ ] **Remove unused ConversationError exception**
+- [ ] **Document Router Protocol purpose or remove**
+
 ## Quick Wins (Easy Fixes with High Impact)
 
-1. **Add shlex.quote() to notification commands** - Fixes critical security issue (30 min)
-2. **Set max event history size** - Prevents memory leaks (1 hour)
-3. **Add database connection timeout** - Improves reliability (1 hour)
-4. **Cache tokenization results** - Significant performance boost (2 hours)
-5. **Add input validation limits** - Prevents resource exhaustion (1 hour)
+1. **Create initial test files** - Start test suite foundation (2 hours)
+2. **Add asyncio locks to EventBus** - Fix critical thread safety (1 hour)
+3. **Extract provider error constants** - Reduce duplication (2 hours)
+4. **Split long methods in conductor.py** - Improve maintainability (3 hours)
+5. **Create constants.py with status strings** - Reduce magic strings (2 hours)
+6. **Fix bare except in helpers.py** - Better error handling (30 min)
+7. **Add convergence weight validation** - Prevent invalid configs (1 hour)
 
 ---
 

@@ -10,6 +10,7 @@ from .events import (
     TurnCompleteEvent,
     ConversationEndEvent,
 )
+from .constants import EndReason
 
 
 class TurnExecutor:
@@ -122,7 +123,7 @@ class TurnExecutor:
             if action == "stop":
                 # Signal to stop due to high convergence
                 # Store the reason so conductor can emit the appropriate end event
-                self.stop_reason = "high_convergence"
+                self.stop_reason = EndReason.HIGH_CONVERGENCE
                 return None  # Signal to stop
             elif action == "warn":
                 # Just log a warning (display already shows it)

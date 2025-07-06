@@ -32,6 +32,7 @@ from .constants import (
     DEFAULT_TURNS, DEFAULT_TEMPERATURE,
     MODEL_EMOJIS, PROVIDER_COLORS
 )
+from .name_generator import generate_experiment_name
 from ..core import Conductor, Agent, Conversation
 from ..io import OutputManager
 from ..io.paths import get_experiments_dir
@@ -47,9 +48,9 @@ from . import ORIGINAL_CWD
 
 @click.command()
 @click.option('--agent-a', '-a', 
-              help='First agent model (e.g., gpt-4, claude, gemini-1.5-pro)')
+              help='* First agent model (e.g., gpt-4, claude, gemini-1.5-pro)')
 @click.option('--agent-b', '-b', 
-              help='Second agent model')
+              help='* Second agent model')
 @click.option('--prompt', '-p', 
               help='Initial prompt to start the conversation')
 @click.option('--turns', '-t', 
@@ -116,36 +117,24 @@ from . import ORIGINAL_CWD
 @click.option('--verbose', '-v',
               is_flag=True,
               help='Show full messages with minimal metadata')
-@click.option('--notify', '-n',
+@click.option('--notify',
               is_flag=True,
               help='Send notification when complete')
-@click.option('--name',
-              help='Name for the experiment (required for multiple runs)')
+@click.option('--name', '-n',
+              help='Name for the experiment (auto-generated if not provided)')
 @click.option('--max-parallel',
               type=click.IntRange(1, 50),
               default=1,
               help='Max parallel conversations (default: 1, sequential)')
-@click.option('--foreground',
-              is_flag=True,
-              help='Run in foreground (even for multiple repetitions)')
-@click.option('--background',
-              is_flag=True,
-              help='Run in background (even for single conversation)')
 def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a, 
         temp_b, output, dimension, convergence_threshold,
         convergence_action, convergence_profile, first_speaker, choose_names, awareness,
         awareness_a, awareness_b, show_system_prompts, meditation,
-        quiet, tail, verbose, notify, name, max_parallel, foreground, background):
+        quiet, tail, verbose, notify, name, max_parallel):
     """Run AI conversations - single or multiple.
 
     This unified command runs conversations between two AI agents.
     By default shows a centered progress panel with key metrics.
-
-    [bold]DISPLAY MODES:[/bold]
-    • Default: Centered progress panel with key metrics                                     
-           • --verbose: Show messages with minimal metadata
-           • --tail: Show raw event stream
-           • --quiet: Run in background with notification
 
     [bold]EXAMPLES:[/bold]
 
@@ -159,7 +148,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
       pidgin run -a claude -b gpt --quiet
 
     [#4c566a]Multiple runs:      [/#4c566a]
-      pidgin run -a claude -b gpt -r 20 --name "test"
+      pidgin run -a claude -b gpt -r 20 -n "test"
 
     [#4c566a]Dimensional prompt: [/#4c566a]
       pidgin run -a claude -b gpt -d philosophy
@@ -195,13 +184,33 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     
     # Interactive model selection if not provided
     if not agent_a:
-        agent_a = _prompt_for_model("Select first agent (Agent A)")
-        if not agent_a:
+        try:
+            agent_a = _prompt_for_model("Select first agent (Agent A)")
+            if not agent_a:
+                return
+        except (KeyboardInterrupt, EOFError):
+            console.print(f"\n[{NORD_YELLOW}]Model selection cancelled. Use -a and -b flags to specify models.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            return
+        except Exception as e:
+            console.print(f"\n[{NORD_RED}]Error during model selection: {e}[/{NORD_RED}]")
+            console.print(f"[{NORD_YELLOW}]Use -a and -b flags to specify models directly.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
             return
     
     if not agent_b:
-        agent_b = _prompt_for_model("Select second agent (Agent B)")
-        if not agent_b:
+        try:
+            agent_b = _prompt_for_model("Select second agent (Agent B)")
+            if not agent_b:
+                return
+        except (KeyboardInterrupt, EOFError):
+            console.print(f"\n[{NORD_YELLOW}]Model selection cancelled. Use -a and -b flags to specify models.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            return
+        except Exception as e:
+            console.print(f"\n[{NORD_RED}]Error during model selection: {e}[/{NORD_RED}]")
+            console.print(f"[{NORD_YELLOW}]Use -a and -b flags to specify models directly.[/{NORD_YELLOW}]")
+            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
             return
     
     # Validate models
@@ -240,32 +249,20 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     # Determine execution mode
     is_single = repetitions == 1
     
-    # Check if parallel execution requires background
-    if max_parallel > 1 and not quiet and not background:
-        console.print(f"[{NORD_YELLOW}]Note: Parallel execution (max_parallel={max_parallel}) requires background mode[/{NORD_YELLOW}]")
-        background = True
-    
     # Determine if we run in foreground
     if quiet:
         run_in_foreground = False  # --quiet always means background
-    elif background:
-        run_in_foreground = False  # Explicit --background
-    elif foreground:
-        run_in_foreground = True   # Explicit --foreground
+    elif max_parallel > 1:
+        run_in_foreground = False  # Parallel execution requires background
+        console.print(f"[{NORD_YELLOW}]Note: Parallel execution (max_parallel={max_parallel}) runs in background[/{NORD_YELLOW}]")
     else:
-        # Default behavior: foreground unless parallel
-        run_in_foreground = (max_parallel == 1)
+        # Default behavior: foreground for single conversations
+        run_in_foreground = True
     
-    # Validate name requirement
-    if not is_single and not name:
-        # Auto-generate name for multiple runs
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        name = f"{agent_a}_{agent_b}_{timestamp}"
-        console.print(f"[dim]Auto-generated experiment name: {name}[/dim]")
-    elif is_single and not name and background:
-        # Need name for background single runs
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        name = f"single_{agent_a}_{agent_b}_{timestamp}"
+    # Generate fun name if not provided
+    if not name:
+        name = generate_experiment_name()
+        console.print(f"[dim]Generated experiment name: {name}[/dim]")
     
     # Determine first speaker
     if first_speaker == 'random':
@@ -331,8 +328,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     
     # Show configuration
     console.print(f"\n[bold {NORD_BLUE}]◆ Experiment Configuration[/bold {NORD_BLUE}]")
-    if name:
-        console.print(f"  Name: {name}")
+    console.print(f"  Name: {name}")
     console.print(f"  Models: {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
     console.print(f"  Conversations: {repetitions}")
     console.print(f"  Turns per conversation: {max_turns}")
@@ -354,7 +350,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
     
     # Check if experiment already exists
-    from .jsonl_reader import JSONLExperimentReader
+    from ..io.jsonl_reader import JSONLExperimentReader
     jsonl_reader = JSONLExperimentReader(get_experiments_dir())
     experiments = jsonl_reader.list_experiments()
     existing = next((exp for exp in experiments if exp.get('name') == name), None)
@@ -470,7 +466,7 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
         
         for model_id, config in providers[provider]:
             glyph = MODEL_EMOJIS.get(model_id, "●")
-            console.print(f"  {idx}. {glyph} {config.display_name}")
+            console.print(f"  {idx}. {glyph} {config.shortname}")
             model_map[str(idx)] = model_id
             idx += 1
     
@@ -479,7 +475,11 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
     console.print(f"  {idx}. ▸ Custom local model (requires Ollama)")
     
     # Get selection
-    selection = console.input(f"\n[{NORD_BLUE}]Enter selection (1-{idx}) or model name: [/{NORD_BLUE}]")
+    try:
+        selection = console.input(f"\n[{NORD_BLUE}]Enter selection (1-{idx}) or model name: [/{NORD_BLUE}]")
+    except (KeyboardInterrupt, EOFError):
+        # User cancelled
+        return None
     
     if selection in model_map:
         return model_map[selection]
@@ -488,7 +488,10 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
         if not check_ollama_available():
             console.print(f"[{NORD_RED}]Error: Ollama is not running. Start it with 'ollama serve'[/{NORD_RED}]")
             return None
-        model_name = console.input(f"[{NORD_BLUE}]Enter local model name: [/{NORD_BLUE}]")
+        try:
+            model_name = console.input(f"[{NORD_BLUE}]Enter local model name: [/{NORD_BLUE}]")
+        except (KeyboardInterrupt, EOFError):
+            return None
         return f"local:{model_name}"
     else:
         # Try as direct model ID

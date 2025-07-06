@@ -18,6 +18,9 @@ from ..core.events import (
     MessageCompleteEvent,
     SystemPromptEvent
 )
+from ..database.batch_importer import BatchImporter
+from ..database.transcript_generator import TranscriptGenerator
+from ..io.paths import get_database_path
 from ..core.types import Agent
 from ..config.models import get_model_config
 from .config import ExperimentConfig
@@ -132,6 +135,10 @@ class ExperimentRunner:
                 json.dump(metadata, f, indent=2)
             
             logging.info(f"Experiment {experiment_id} completed with status: {final_status}")
+            
+            # Automatically import to database and generate transcripts
+            if final_status == 'completed':
+                await self._import_and_generate_transcripts(experiment_id, exp_dir)
                 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
@@ -383,3 +390,37 @@ class ExperimentRunner:
         finally:
             # Stop the event bus
             await event_bus.stop()
+    
+    async def _import_and_generate_transcripts(self, experiment_id: str, exp_dir: Path):
+        """Automatically import experiment to database and generate transcripts.
+        
+        Args:
+            experiment_id: Experiment ID
+            exp_dir: Experiment directory
+        """
+        try:
+            logging.info(f"Auto-importing experiment {experiment_id} to database")
+            
+            # Get database path
+            db_path = get_database_path()
+            
+            # Import to database
+            importer = BatchImporter(db_path)
+            result = importer.import_experiment(exp_dir, force=False)
+            
+            if result.success:
+                logging.info(f"Successfully imported {result.events_imported} events, "
+                           f"{result.conversations_imported} conversations")
+                
+                # Generate transcripts
+                logging.info(f"Generating transcripts for {experiment_id}")
+                with TranscriptGenerator(db_path) as generator:
+                    generator.generate_experiment_transcripts(experiment_id, exp_dir)
+                
+                logging.info(f"Transcripts generated in {exp_dir}/transcripts/")
+            else:
+                logging.error(f"Failed to import experiment: {result.error}")
+                
+        except Exception as e:
+            # Log but don't fail the experiment
+            logging.error(f"Error during auto-import/transcript generation: {e}", exc_info=True)

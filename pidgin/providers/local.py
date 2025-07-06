@@ -43,8 +43,8 @@ class LocalProvider(Provider):
             yield f"Error: LocalProvider only supports 'test' model. Got: {self.model_name}"
             return
             
-        from ..local.test_model import TestModel
-        model = TestModel()
+        from ..local.test_model import LocalTestModel
+        model = LocalTestModel()
         response = await model.generate(messages, temperature)
         for word in response.split():
             yield word + " "

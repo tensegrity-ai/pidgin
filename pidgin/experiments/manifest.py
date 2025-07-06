@@ -4,7 +4,7 @@
 import json
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import threading
 
@@ -35,7 +35,7 @@ class ManifestManager:
         manifest = {
             "experiment_id": experiment_id,
             "name": name,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "config": config,
             "total_conversations": total_conversations,
             "status": "created",
@@ -58,13 +58,13 @@ class ManifestManager:
                 "jsonl": jsonl_filename,
                 "last_line": 0,
                 "turns_completed": 0,
-                "last_updated": datetime.utcnow().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             }
             
             # Update experiment status if needed
             if manifest["status"] == "created":
                 manifest["status"] = "running"
-                manifest["started_at"] = datetime.utcnow().isoformat()
+                manifest["started_at"] = datetime.now(timezone.utc).isoformat()
             
             self._write_atomic(manifest)
     
@@ -93,7 +93,7 @@ class ManifestManager:
             if error:
                 conv["error"] = error
             
-            conv["last_updated"] = datetime.utcnow().isoformat()
+            conv["last_updated"] = datetime.now(timezone.utc).isoformat()
             manifest["conversations"][conversation_id] = conv
             
             # Update experiment-level counts
@@ -114,7 +114,7 @@ class ManifestManager:
             if error:
                 manifest["error"] = error
             if status in ["completed", "failed", "interrupted"]:
-                manifest["completed_at"] = datetime.utcnow().isoformat()
+                manifest["completed_at"] = datetime.now(timezone.utc).isoformat()
             
             self._write_atomic(manifest)
     

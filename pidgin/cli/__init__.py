@@ -50,13 +50,13 @@ import rich_click as click
 
 from .constants import BANNER
 from .run import run
-from .models import models
 from .list_experiments import list_experiments
 from .stop import stop
 from .monitor import monitor
 from .load_db import load_db
 from .import_cmd import import_cmd
 from .init_config import init_config
+from .info import info
 
 console = Console()
 
@@ -106,7 +106,6 @@ def analyze():
 
 # Register commands
 cli.add_command(run)
-cli.add_command(models)
 cli.add_command(list_experiments)
 cli.add_command(stop)
 cli.add_command(monitor)
@@ -114,6 +113,7 @@ cli.add_command(analyze)
 cli.add_command(load_db)
 cli.add_command(import_cmd)
 cli.add_command(init_config)
+cli.add_command(info)
 
 def main():
     """Main entry point."""
