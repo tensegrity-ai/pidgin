@@ -20,7 +20,7 @@ from ..core.events import (
     ErrorEvent,
     MessageRequestEvent,
 )
-from ..display.progress_panel import ProgressPanel
+from .progress_panel import ProgressPanel
 
 
 # Model pricing per 1k tokens (input, output)

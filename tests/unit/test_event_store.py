@@ -1,17 +1,17 @@
-"""Tests for refactored EventStore."""
+"""Tests for EventStore."""
 
 import pytest
 from unittest.mock import AsyncMock, Mock, MagicMock
 from datetime import datetime
 
-from pidgin.database.event_store_refactored import RefactoredEventStore
+from pidgin.database.event_store import EventStore
 from pidgin.database.async_duckdb import AsyncDuckDB
 from pidgin.core.events import ConversationStartEvent, TurnStartEvent
 from tests.builders import make_conversation_start_event, make_turn_start_event
 
 
-class TestRefactoredEventStore:
-    """Test the refactored EventStore implementation."""
+class TestEventStore:
+    """Test the EventStore implementation."""
     
     @pytest.fixture
     def mock_db(self):
@@ -24,8 +24,8 @@ class TestRefactoredEventStore:
     
     @pytest.fixture
     def store(self, mock_db):
-        """Create a RefactoredEventStore instance."""
-        return RefactoredEventStore(mock_db)
+        """Create an EventStore instance."""
+        return EventStore(mock_db)
     
     @pytest.mark.asyncio
     async def test_save_event_delegates_to_repository(self, store):

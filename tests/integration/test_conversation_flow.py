@@ -7,7 +7,7 @@ from pathlib import Path
 from pidgin.core.conductor import Conductor
 from pidgin.core.event_bus import EventBus
 from pidgin.core.types import Agent, Conversation
-from pidgin.local.test_model import LocalTestModel
+from pidgin.providers.test_model import LocalTestModel
 from pidgin.providers.local import LocalProvider
 
 

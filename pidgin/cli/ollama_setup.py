@@ -7,7 +7,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 
-from ..local.ollama_helper import ensure_ollama_ready, check_ollama_running, start_ollama_server
+from ..providers.ollama_helper import ensure_ollama_ready, check_ollama_running, start_ollama_server
 from ..config.models import get_model_config
 
 async def normalize_local_model_names(model_a: str, model_b: str, console: Console) -> Tuple[str, str]:

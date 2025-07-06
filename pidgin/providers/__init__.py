@@ -7,6 +7,8 @@ from .local import LocalProvider
 from .silent import SilentProvider
 from .context_manager import ProviderContextManager
 from .token_tracker import GlobalTokenTracker, get_token_tracker
+from .test_model import LocalTestModel
+from .ollama_helper import ensure_ollama_ready, check_ollama_running, start_ollama_server
 
 __all__ = [
     "Provider",
@@ -18,4 +20,8 @@ __all__ = [
     "SilentProvider",
     "GlobalTokenTracker",
     "get_token_tracker",
+    "LocalTestModel",
+    "ensure_ollama_ready",
+    "check_ollama_running",
+    "start_ollama_server",
 ]
