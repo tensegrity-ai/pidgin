@@ -1,22 +1,26 @@
 #!/bin/bash
 # pidgin_dev.sh - Development helper script
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+# Nord color palette for shell
+NORD_RED='\033[38;2;191;97;106m'     # nord11 - errors/warnings
+NORD_GREEN='\033[38;2;163;190;140m'  # nord14 - success
+NORD_YELLOW='\033[38;2;235;203;139m' # nord13 - info/warnings  
+NORD_BLUE='\033[38;2;136;192;208m'   # nord8 - headers
+NORD_ORANGE='\033[38;2;208;135;112m' # nord12 - highlights
+NORD_CYAN='\033[38;2;143;188;187m'   # nord7 - secondary info
+NORD_DARK='\033[38;2;76;86;106m'     # nord3 - dim text
 NC='\033[0m' # No Color
 
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR"
 
-echo -e "${GREEN}Pidgin Development Helper${NC}"
-echo "=========================="
+echo -e "${NORD_BLUE}◆ Pidgin Development Helper${NC}"
+echo -e "${NORD_DARK}━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 case "${1:-help}" in
     "rebuild")
-        echo -e "${YELLOW}Rebuilding and installing with pipx...${NC}"
+        echo -e "${NORD_YELLOW}Rebuilding and installing with pipx...${NC}"
         cd "$PROJECT_ROOT"
         
         # Clean old builds
@@ -28,29 +32,29 @@ case "${1:-help}" in
         # Install with pipx
         pipx install dist/*.whl --force
         
-        echo -e "${GREEN}[OK] Rebuild complete!${NC}"
+        echo -e "${NORD_GREEN}[OK] Rebuild complete!${NC}"
         ;;
         
     "quick")
-        echo -e "${YELLOW}Quick rebuild (no clean)...${NC}"
+        echo -e "${NORD_YELLOW}Quick rebuild (no clean)...${NC}"
         cd "$PROJECT_ROOT"
         poetry build && pipx install dist/*.whl --force
-        echo -e "${GREEN}[OK] Quick rebuild complete!${NC}"
+        echo -e "${NORD_GREEN}[OK] Quick rebuild complete!${NC}"
         ;;
         
     "clean")
-        echo -e "${YELLOW}Cleaning build artifacts...${NC}"
+        echo -e "${NORD_YELLOW}Cleaning build artifacts...${NC}"
         cd "$PROJECT_ROOT"
         
         rm -rf dist/ build/ *.egg-info
         find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
         find . -type f -name "*.pyc" -delete
         
-        echo -e "${GREEN}[OK] Clean complete!${NC}"
+        echo -e "${NORD_GREEN}[OK] Clean complete!${NC}"
         ;;
         
     "clean-all")
-        echo -e "${YELLOW}Cleaning all generated files and directories...${NC}"
+        echo -e "${NORD_YELLOW}Cleaning all generated files and directories...${NC}"
         cd "$PROJECT_ROOT"
         
         # Build artifacts
@@ -62,24 +66,33 @@ case "${1:-help}" in
         # Generated output directories
         rm -rf pidgin_output/ notebooks/
         
+        # Config files
+        rm -f ~/.config/pidgin/pidgin.yaml
+        rm -f ~/.pidgin.yaml
+        rm -f pidgin.yaml
+        rm -f .pidgin.yaml
+        
+        # Remove config directory if empty
+        rmdir ~/.config/pidgin 2>/dev/null || true
+        
         # Python cache files
         find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         
-        echo -e "${GREEN}[OK] Full clean complete!${NC}"
+        echo -e "${NORD_GREEN}[OK] Full clean complete!${NC}"
         ;;
         
     "reset")
-        echo -e "${RED}Resetting all experiment data...${NC}"
-        echo -e "${YELLOW}This will kill running experiments and delete all data!${NC}"
+        echo -e "${NORD_RED}Resetting all experiment data...${NC}"
+        echo -e "${NORD_YELLOW}This will kill running experiments and delete all data!${NC}"
         echo -n "Are you sure? (y/N) "
         read -r response
         
         if [[ "$response" =~ ^[Yy]$ ]]; then
             # Kill any running daemons
             if [ -d "pidgin_output/experiments/active" ]; then
-                echo -e "${YELLOW}Killing running daemons...${NC}"
+                echo -e "${NORD_YELLOW}Killing running daemons...${NC}"
                 for pidfile in pidgin_output/experiments/active/*.pid; do
                     if [ -f "$pidfile" ]; then
                         pid=$(cat "$pidfile")
@@ -90,17 +103,17 @@ case "${1:-help}" in
             fi
             
             # Remove all experiment data
-            echo -e "${YELLOW}Removing experiment data...${NC}"
+            echo -e "${NORD_YELLOW}Removing experiment data...${NC}"
             rm -rf pidgin_output/
             
-            echo -e "${GREEN}[OK] Reset complete! You can now run new experiments.${NC}"
+            echo -e "${NORD_GREEN}[OK] Reset complete! You can now run new experiments.${NC}"
         else
-            echo -e "${YELLOW}Reset cancelled.${NC}"
+            echo -e "${NORD_YELLOW}Reset cancelled.${NC}"
         fi
         ;;
         
     "test")
-        echo -e "${YELLOW}Running quick test...${NC}"
+        echo -e "${NORD_YELLOW}Running quick test...${NC}"
         # Save current directory
         CURRENT_DIR=$(pwd)
         # Create temp directory for test
@@ -113,13 +126,13 @@ case "${1:-help}" in
         ;;
         
     "dev")
-        echo -e "${YELLOW}Running pidgin with poetry from current directory...${NC}"
+        echo -e "${NORD_YELLOW}Running pidgin with poetry from current directory...${NC}"
         # This preserves the current working directory
         poetry -C "$PROJECT_ROOT" run python -m pidgin.cli "$@"
         ;;
         
     "alias")
-        echo -e "${YELLOW}Setting up shell alias...${NC}"
+        echo -e "${NORD_YELLOW}Setting up shell alias...${NC}"
         
         ALIAS_CMD="alias pidgin-dev='poetry -C $PROJECT_ROOT run python -m pidgin.cli'"
         
@@ -147,7 +160,7 @@ case "${1:-help}" in
         ;;
         
     "status")
-        echo -e "${YELLOW}Checking installation status...${NC}"
+        echo -e "${NORD_YELLOW}Checking installation status...${NC}"
         echo
         
         echo "Which pidgin:"

@@ -5,17 +5,62 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from ..io.logger import get_logger
+from rich.console import Console
 
 logger = get_logger("config")
 
 
 class Config:
     """Configuration manager for Pidgin."""
+    
+    # Built-in convergence weight profiles
+    CONVERGENCE_PROFILES = {
+        "balanced": {
+            "content": 0.4,
+            "structure": 0.15,
+            "sentences": 0.2,
+            "length": 0.15,
+            "punctuation": 0.1
+        },
+        "structural": {
+            "content": 0.25,
+            "structure": 0.35,  # Emphasize structural patterns
+            "sentences": 0.2,
+            "length": 0.1,
+            "punctuation": 0.1
+        },
+        "semantic": {
+            "content": 0.6,     # Emphasize meaning/content
+            "structure": 0.1,
+            "sentences": 0.15,
+            "length": 0.1,
+            "punctuation": 0.05
+        },
+        "strict": {
+            "content": 0.5,
+            "structure": 0.25,
+            "sentences": 0.15,
+            "length": 0.05,
+            "punctuation": 0.05
+        }
+    }
 
     DEFAULT_CONFIG = {
         "conversation": {
             "convergence_threshold": 0.85,
             "convergence_action": "stop",  # "stop", "warn", or "continue"
+            "convergence_profile": "balanced",  # balanced, structural, semantic, strict, custom
+        },
+        "convergence": {
+            "profile": "balanced",
+            # Custom weights (used when profile is "custom")
+            "custom_weights": {
+                "content": 0.4,
+                "structure": 0.15,
+                "sentences": 0.2,
+                "length": 0.15,
+                "punctuation": 0.1
+            }
         },
         "context_management": {
             "enabled": True,
@@ -87,30 +132,87 @@ class Config:
         self.config = self.DEFAULT_CONFIG.copy()
         self.config_path = config_path
 
-        # Load from file if provided
+        # Only load from explicit path if provided
         if config_path:
             self.load_from_file(config_path)
         else:
-            # Try to load from standard locations
-            self._load_from_standard_locations()
+            # Check standard location (but don't prompt)
+            config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+            if config_path.exists():
+                logger.info(f"Loading config from: {config_path}")
+                self.load_from_file(config_path)
 
-    def _load_from_standard_locations(self):
-        """Load config from standard locations in order of precedence."""
-        config_locations = [
-            Path.home() / ".config" / "pidgin" / "pidgin.yaml",  # XDG standard
-            Path.home() / ".config" / "pidgin.yaml",  # XDG config location
-            Path.home() / ".pidgin.yaml",  # Home directory
-            Path.cwd() / "pidgin.yaml",  # Current directory
-            Path.cwd() / ".pidgin.yaml",  # Hidden in current dir
-        ]
-
-        for location in config_locations:
-            if location.exists():
-                logger.info(f"Loading config from: {location}")
-                self.load_from_file(location)
-                break
+    def _check_and_create_config(self):
+        """Check for config file and offer to create one if missing."""
+        config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+        
+        if config_path.exists():
+            logger.info(f"Loading config from: {config_path}")
+            self.load_from_file(config_path)
+            return
+            
+        # No config found - ask if user wants to create one
+        self.console.print("\n[yellow]No configuration file found.[/yellow]")
+        self.console.print(f"Would you like to create one at: {config_path}?")
+        self.console.print("This will let you customize convergence profiles and other settings.")
+        
+        response = self.console.input("\nCreate config file? [y/N]: ")
+        
+        if response.lower() == 'y':
+            # Create directory if needed
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write example config
+            self._write_example_config(config_path)
+            self.console.print(f"\n[green]Created config at: {config_path}[/green]")
+            self.console.print("You can edit this file to customize Pidgin's behavior.")
+            
+            # Load the newly created config
+            self.load_from_file(config_path)
         else:
-            logger.info("No config file found, using defaults")
+            logger.info("Using default configuration")
+    
+    def _write_example_config(self, path: Path):
+        """Write example configuration file."""
+        example_config = '''# Pidgin configuration file
+# Edit this file to customize behavior
+
+conversation:
+  convergence_threshold: 0.85    # Stop when convergence exceeds this (0.0-1.0)
+  convergence_action: stop       # What to do: stop, warn, or continue
+  convergence_profile: balanced  # Profile: balanced, structural, semantic, strict, custom
+
+convergence:
+  # Choose a built-in profile or use custom weights
+  profile: structural  # Emphasizes structural similarity
+  
+  # Custom weights (used when profile is "custom", must sum to 1.0)
+  custom_weights:
+    content: 0.25      # Word/phrase similarity
+    structure: 0.35    # Paragraphs, lists, questions
+    sentences: 0.2     # Sentence patterns
+    length: 0.1        # Message length similarity
+    punctuation: 0.1   # Punctuation usage
+
+context_management:
+  enabled: true
+  warning_threshold: 80   # Warn at 80% capacity
+  auto_pause_threshold: 95  # Auto-pause at 95%
+  show_usage: true
+
+defaults:
+  max_turns: 20
+  manual_mode: false
+
+experiments:
+  unattended:
+    convergence_threshold: 0.75
+    convergence_action: stop
+  baseline:
+    convergence_threshold: 1.0  # Never stop on convergence
+'''
+        with open(path, 'w') as f:
+            f.write(example_config)
 
     def load_from_file(self, path: Path):
         """Load configuration from YAML file."""
@@ -180,8 +282,20 @@ class Config:
             yaml.dump(self.config, f, default_flow_style=False)
 
     def get_convergence_config(self) -> Dict[str, Any]:
-        """Get convergence configuration."""
-        return self.get("conversation", {})
+        """Get convergence configuration including weights."""
+        conv_config = self.get("conversation", {}).copy()
+        
+        # Add convergence weights based on profile
+        profile = self.get("convergence.profile", "balanced")
+        if profile == "custom":
+            conv_config["weights"] = self.get("convergence.custom_weights", 
+                                            self.CONVERGENCE_PROFILES["balanced"])
+        else:
+            conv_config["weights"] = self.CONVERGENCE_PROFILES.get(profile, 
+                                                                  self.CONVERGENCE_PROFILES["balanced"])
+        conv_config["profile"] = profile
+        
+        return conv_config
 
     def get_context_config(self) -> Dict[str, Any]:
         """Get context management configuration."""

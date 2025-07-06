@@ -7,14 +7,24 @@ from typing import List, Tuple, Any
 class ConvergenceCalculator:
     """Calculate structural similarity between agent responses."""
 
-    def __init__(self, window_size: int = 10):
+    def __init__(self, window_size: int = 10, weights: dict = None):
         """Initialize convergence calculator.
 
         Args:
             window_size: Number of recent messages to consider
+            weights: Optional weight dictionary for convergence calculation
         """
         self.window_size = window_size
         self.history: List[float] = []
+        
+        # Default weights if none provided
+        self.weights = weights or {
+            "content": 0.4,
+            "length": 0.15,
+            "sentences": 0.2,
+            "structure": 0.15,
+            "punctuation": 0.1,
+        }
 
     def calculate(self, messages: List[Any]) -> float:
         """Calculate structural similarity between recent A and B messages.
@@ -67,20 +77,12 @@ class ConvergenceCalculator:
             punctuation_sim = self._punctuation_similarity(recent_a, recent_b)
 
             # Weighted average including content similarity
-            weights = {
-                "content": 0.4,
-                "length": 0.15,
-                "sentences": 0.2,
-                "structure": 0.15,
-                "punctuation": 0.1,
-            }
-
             similarity = (
-                content_sim * weights["content"]
-                + length_sim * weights["length"]
-                + sentence_sim * weights["sentences"]
-                + structure_sim * weights["structure"]
-                + punctuation_sim * weights["punctuation"]
+                content_sim * self.weights["content"]
+                + length_sim * self.weights["length"]
+                + sentence_sim * self.weights["sentences"]
+                + structure_sim * self.weights["structure"]
+                + punctuation_sim * self.weights["punctuation"]
             )
 
         # Track history

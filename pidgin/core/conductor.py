@@ -64,11 +64,15 @@ class Conductor:
         self.console = console if console else Console()
         self.config = get_config()
         
+        # Get convergence weights from config
+        conv_config = self.config.get_convergence_config()
+        convergence_weights = conv_config.get("weights", None)
+        
         # Initialize specialized handlers
         self.interrupt_handler = InterruptHandler(bus or EventBus(), console)
         self.name_coordinator = NameCoordinator()
         self.rate_limiter = StreamingRateLimiter()
-        self.convergence_calculator = ConvergenceCalculator()
+        self.convergence_calculator = ConvergenceCalculator(weights=convergence_weights)
         
         # Lifecycle manager needs to be set up
         self.lifecycle = ConversationLifecycle(console)

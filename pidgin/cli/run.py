@@ -80,6 +80,10 @@ from . import ORIGINAL_CWD
 @click.option('--convergence-action', 
               type=click.Choice(['notify', 'pause', 'stop']), 
               help='Action when convergence threshold is reached')
+@click.option('--convergence-profile',
+              type=click.Choice(['balanced', 'structural', 'semantic', 'strict']),
+              default='balanced',
+              help='Convergence weight profile (default: balanced)')
 @click.option('--first-speaker', 
               type=click.Choice(['a', 'b', 'random']), 
               default='a',
@@ -129,7 +133,7 @@ from . import ORIGINAL_CWD
               help='Run in background (even for single conversation)')
 def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a, 
         temp_b, output, dimension, convergence_threshold,
-        convergence_action, first_speaker, choose_names, awareness,
+        convergence_action, convergence_profile, first_speaker, choose_names, awareness,
         awareness_a, awareness_b, show_system_prompts, meditation,
         quiet, tail, verbose, notify, name, max_parallel, foreground, background):
     """Run AI conversations - single or multiple.
@@ -213,6 +217,11 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, list(dimension))
+    
+    # Set convergence profile in config
+    from ..config import get_config
+    config = get_config()
+    config.set("convergence.profile", convergence_profile)
     
     # Add smart convergence defaults for API models
     if convergence_threshold is None:
