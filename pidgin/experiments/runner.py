@@ -327,11 +327,17 @@ class ExperimentRunner:
         # Override the create_conversation_dir to return the experiment directory
         output_manager.create_conversation_dir = lambda conv_id: (conversation_id, exp_dir)
         
+        # Check if we need a console for display modes
+        console = None
+        if config.display_mode in ['verbose', 'tail', 'progress']:
+            from rich.console import Console
+            console = Console()
+        
         # Create conductor with the isolated event bus
         conductor = Conductor(
             base_providers=providers,
             output_manager=output_manager,
-            console=None,  # No console output for experiments
+            console=console,  # Pass console if needed for display
             convergence_threshold_override=config.convergence_threshold,
             convergence_action_override=config.convergence_action,
             bus=event_bus  # Use conversation-specific bus
