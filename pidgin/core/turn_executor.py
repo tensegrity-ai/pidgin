@@ -34,6 +34,9 @@ class TurnExecutor:
         # Convergence overrides for experiments
         self._convergence_threshold_override = None
         self._convergence_action_override = None
+        
+        # Track stop reason if conversation ends early
+        self.stop_reason = None
     
     def set_convergence_overrides(self, threshold=None, action=None):
         """Set convergence threshold and action overrides.
@@ -117,15 +120,9 @@ class TurnExecutor:
         
         if convergence_score >= threshold:
             if action == "stop":
-                # Stop the conversation
-                await self.bus.emit(
-                    ConversationEndEvent(
-                        conversation_id=conversation.id,
-                        reason="high_convergence",
-                        total_turns=turn_number + 1,
-                        duration_ms=int((time.time() - self.start_time) * 1000),
-                    )
-                )
+                # Signal to stop due to high convergence
+                # Store the reason so conductor can emit the appropriate end event
+                self.stop_reason = "high_convergence"
                 return None  # Signal to stop
             elif action == "warn":
                 # Just log a warning (display already shows it)

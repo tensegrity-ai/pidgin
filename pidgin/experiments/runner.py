@@ -357,7 +357,7 @@ class ExperimentRunner:
                 agent_b=agent_b,
                 initial_prompt=initial_prompt,
                 max_turns=config.max_turns,
-                display_mode='none',  # No display for experiments
+                display_mode=config.display_mode,  # Use display mode from config
                 show_timing=False,
                 choose_names=config.choose_names,
                 awareness_a=config.awareness_a or config.awareness,

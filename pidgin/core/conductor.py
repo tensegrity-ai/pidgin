@@ -210,6 +210,7 @@ class Conductor:
             
             # Run turns
             final_turn = 0
+            end_reason = None
             for turn_num in range(max_turns):
                 self.interrupt_handler.current_turn = turn_num
                 
@@ -217,18 +218,24 @@ class Conductor:
                 if self.interrupt_handler.interrupt_requested:
                     await self.interrupt_handler.handle_pause(conversation)
                     if not await self.interrupt_handler.should_continue(conversation):
+                        end_reason = "interrupted"
                         break
                 
                 turn = await self.turn_executor.run_single_turn(
                     conversation, turn_num, agent_a, agent_b, self.interrupt_handler
                 )
                 if turn is None:
+                    # Turn executor signaled to stop
+                    final_turn = turn_num  # Use current turn_num since this turn was attempted
+                    end_reason = self.turn_executor.stop_reason or "interrupted"
+                    if self.console:
+                        self.console.print(f"[dim]Turn returned None, stopping due to: {end_reason}[/dim]")
                     break
                 final_turn = turn_num
             
-            # Emit end event and cleanup
-            await self.lifecycle.emit_end_event(
-                conversation, final_turn, max_turns, self.start_time
+            # Always emit end event with appropriate reason
+            await self.lifecycle.emit_end_event_with_reason(
+                conversation, final_turn, max_turns, self.start_time, end_reason
             )
             
         finally:

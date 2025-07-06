@@ -17,7 +17,6 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Recording**: JSONL-based event capture for every interaction
 - **Models**: 15+ models across Anthropic, OpenAI, Google, xAI
 - **Display**: Progress panel with convergence and cost tracking (default), verbose messages, or raw event stream
-- **Interrupts**: Ctrl+C to pause/resume conversations
 - **Output**: JSONL events, markdown transcripts, manifest tracking
 - **Experiments**: Run hundreds of conversations (sequential or parallel)
 - **Background**: Daemon processes with meaningful names (pidgin-exp123)
@@ -140,9 +139,6 @@ Pidgin supports running models locally on your machine:
 
 ```bash
 # Quick start - Pidgin handles everything
-pidgin run -a local -b local
-
-# Or specify models directly
 pidgin run -a local:qwen -b local:phi
 ```
 

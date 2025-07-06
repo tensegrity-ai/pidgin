@@ -226,7 +226,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     
     # Default convergence action
     if convergence_action is None:
-        convergence_action = 'stop' if repetitions > 1 else 'notify'
+        convergence_action = 'stop'  # Always use 'stop' as default
     
     # Determine execution mode
     is_single = repetitions == 1
@@ -264,112 +264,40 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         first_speaker = random.choice(['a', 'b'])
     first_speaker_id = f"agent_{first_speaker}"
     
-    # Run based on mode
-    if is_single and run_in_foreground:
-        # Single conversation in foreground (classic chat mode)
-        try:
-            asyncio.run(_run_single_conversation(
-                agent_a_id, agent_b_id, 
-                agent_a_name, agent_b_name,
-                initial_prompt, turns,
-                temp_a, temp_b,
-                output, convergence_threshold, convergence_action,
-                first_speaker_id, display_mode
-            ))
-            
-            # Send notification if requested
-            if notify:
-                send_notification(
-                    title="Pidgin Conversation Complete",
-                    message=f"Conversation between {agent_a_name} and {agent_b_name} has finished ({turns} turns)"
-                )
-            
-        except KeyboardInterrupt:
-            console.print(f"\n[{NORD_YELLOW}]Conversation interrupted by user[/{NORD_YELLOW}]")
-        except Exception as e:
-            console.print(f"\n[{NORD_RED}]Error: {e}[/{NORD_RED}]")
-            if "rate limit" in str(e).lower():
-                console.print(f"[{NORD_YELLOW}]Tip: Try reducing temperature or adding delays[/{NORD_YELLOW}]")
-    
-    else:
-        # Multiple conversations or background single - run as experiment
-        _run_as_experiment(
-            agent_a_id, agent_b_id,
-            agent_a_name, agent_b_name,
-            repetitions, turns,
-            temp_a, temp_b,
-            initial_prompt, dimension,
-            name, max_parallel,
-            convergence_threshold, convergence_action,
-            awareness, awareness_a, awareness_b,
-            choose_names, run_in_foreground, notify
-        )
-
-
-async def _run_single_conversation(agent_a_id: str, agent_b_id: str,
-                                 agent_a_name: str, agent_b_name: str,
-                                 initial_prompt: str, max_turns: int,
-                                 temp_a: Optional[float], temp_b: Optional[float],
-                                 output_dir: Optional[str],
-                                 convergence_threshold: Optional[float],
-                                 convergence_action: str,
-                                 first_speaker: str,
-                                 display_mode: str = "normal"):
-    """Run a single conversation in foreground."""
-    # Create providers
-    provider_a = await get_provider_for_model(agent_a_id, temp_a)
-    provider_b = await get_provider_for_model(agent_b_id, temp_b)
-    
-    # Create agents
-    agent_a = Agent(
-        id="agent_a",
-        model=agent_a_id,
-        display_name=agent_a_name,
-        temperature=temp_a
-    )
-    
-    agent_b = Agent(
-        id="agent_b",
-        model=agent_b_id,
-        display_name=agent_b_name,
-        temperature=temp_b
-    )
-    
-    # Set up providers
-    providers = {
-        "agent_a": provider_a,
-        "agent_b": provider_b
-    }
-    
-    # Create output manager
-    output_manager = OutputManager(base_dir=output_dir)
-    
-    # Create conductor
-    conductor = Conductor(
-        output_manager=output_manager,
-        console=console,
-        base_providers=providers,
-        convergence_threshold_override=convergence_threshold,
-        convergence_action_override=convergence_action
-    )
-    
-    # Run conversation
-    await conductor.run_conversation(
-        agent_a=agent_a,
-        agent_b=agent_b,
-        initial_prompt=initial_prompt,
-        max_turns=max_turns,
-        display_mode=display_mode,
+    # Always use the unified execution path
+    _run_conversations(
+        agent_a_id, agent_b_id,
+        agent_a_name, agent_b_name,
+        repetitions, turns,
+        temp_a, temp_b,
+        initial_prompt, dimension,
+        name, max_parallel,
+        convergence_threshold, convergence_action,
+        awareness, awareness_a, awareness_b,
+        choose_names, run_in_foreground, notify,
+        display_mode, first_speaker_id, output
     )
 
 
-def _run_as_experiment(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
+
+def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                       repetitions, max_turns, temp_a, temp_b,
                       initial_prompt, dimensions, name, max_parallel,
                       convergence_threshold, convergence_action,
                       awareness, awareness_a, awareness_b,
-                      choose_names, run_in_foreground, notify):
-    """Run as an experiment (multiple conversations or background)."""
+                      choose_names, run_in_foreground, notify,
+                      display_mode, first_speaker_id, output_dir):
+    """Run conversations using the unified execution path."""
+    # Determine display mode for experiments
+    # For parallel execution or background, we can't use interactive displays
+    if max_parallel > 1 or not run_in_foreground:
+        experiment_display_mode = 'none'
+        if display_mode in ['tail', 'verbose', 'progress'] and max_parallel > 1:
+            console.print(f"[{NORD_YELLOW}]Note: --{display_mode} is not supported with parallel execution[/{NORD_YELLOW}]")
+    else:
+        # Single conversation in foreground can use any display mode
+        experiment_display_mode = display_mode
+    
     # Create experiment configuration
     config = ExperimentConfig(
         name=name,
@@ -387,7 +315,9 @@ def _run_as_experiment(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         awareness=awareness,
         awareness_a=awareness_a,
         awareness_b=awareness_b,
-        choose_names=choose_names
+        choose_names=choose_names,
+        first_speaker=first_speaker_id,
+        display_mode=experiment_display_mode
     )
     
     # Show configuration

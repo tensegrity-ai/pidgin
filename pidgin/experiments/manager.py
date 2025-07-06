@@ -41,6 +41,43 @@ class ExperimentManager:
         # Ensure directories exist
         self.active_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _find_experiment_by_name(self, name: str) -> Optional[str]:
+        """Find experiment ID by name.
+        
+        Args:
+            name: Experiment name to search for
+            
+        Returns:
+            Experiment ID if found, None otherwise
+        """
+        for exp_dir in self.base_dir.glob("exp_*"):
+            if not exp_dir.is_dir():
+                continue
+            
+            # Check manifest for name
+            manifest_path = exp_dir / "manifest.json"
+            if manifest_path.exists():
+                try:
+                    with open(manifest_path) as f:
+                        manifest = json.load(f)
+                        if manifest.get("name") == name:
+                            return manifest.get("experiment_id", exp_dir.name)
+                except:
+                    pass
+                    
+            # Fall back to metadata.json for older experiments
+            metadata_path = exp_dir / "metadata.json"
+            if metadata_path.exists():
+                try:
+                    with open(metadata_path) as f:
+                        metadata = json.load(f)
+                        if metadata.get("name") == name:
+                            return metadata.get("experiment_id", exp_dir.name)
+                except:
+                    pass
+        
+        return None
         
     def start_experiment(self, config: ExperimentConfig, working_dir: Optional[str] = None) -> str:
         """Start experiment as daemon process.
@@ -52,6 +89,12 @@ class ExperimentManager:
         Returns:
             Experiment ID
         """
+        # Check for duplicate names
+        if config.name:
+            existing = self._find_experiment_by_name(config.name)
+            if existing:
+                raise ValueError(f"Experiment with name '{config.name}' already exists (ID: {existing})")
+        
         # Generate experiment ID
         exp_id = f"exp_{uuid.uuid4().hex[:8]}"
         

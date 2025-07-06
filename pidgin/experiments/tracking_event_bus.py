@@ -66,7 +66,9 @@ class TrackingEventBus(EventBus):
             )
         
         elif isinstance(event, ConversationEndEvent):
-            status = "completed" if event.reason == "max_turns" else event.reason
+            # Map reasons to completed status
+            completed_reasons = ["max_turns", "max_turns_reached", "high_convergence"]
+            status = "completed" if event.reason in completed_reasons else event.reason
             self.manifest.update_conversation(
                 self.conversation_id,
                 status=status,

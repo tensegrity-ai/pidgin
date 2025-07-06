@@ -44,6 +44,9 @@ class ExperimentConfig:
     convergence_threshold: Optional[float] = None  # Stop at threshold (None = use config default of 0.85)
     convergence_action: str = 'stop'  # 'stop', 'warn', or 'continue'
     
+    # Display settings
+    display_mode: str = 'none'  # Display mode for conversations: none, normal, quiet, progress, tail, verbose
+    
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     

@@ -37,6 +37,7 @@ class ConversationLifecycle:
         self.display_filter = None
         self.base_providers = {}
         self.wrapped_providers = {}
+        self._end_event_emitted = False
     
     def set_providers(self, base_providers):
         """Set base providers for wrapping.
@@ -248,6 +249,56 @@ class ConversationLifecycle:
                 )
             )
     
+    async def emit_end_event_with_reason(
+        self,
+        conversation: Conversation,
+        final_turn: int,
+        max_turns: int,
+        start_time: float,
+        reason: Optional[str] = None,
+    ):
+        """Emit conversation end event with specific reason and cleanup.
+        
+        Args:
+            conversation: Conversation object
+            final_turn: Last turn number completed
+            max_turns: Maximum turns allowed
+            start_time: Conversation start time
+            reason: Optional specific reason for ending
+        """
+        # Check if we already emitted an end event
+        if self._end_event_emitted:
+            if self.console:
+                self.console.print("[dim]Warning: Attempted to emit ConversationEndEvent twice[/dim]")
+            # Still run cleanup
+            await self.cleanup()
+            return
+        
+        # Mark that we've emitted the end event
+        self._end_event_emitted = True
+        
+        # Calculate duration
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        # Determine end reason if not provided
+        if not reason:
+            if final_turn + 1 >= max_turns:
+                reason = "max_turns_reached"
+            else:
+                reason = "interrupted"
+        
+        # Emit end event
+        await self.bus.emit(
+            ConversationEndEvent(
+                conversation_id=conversation.id,
+                reason=reason,
+                total_turns=final_turn + 1,
+                duration_ms=duration_ms,
+            )
+        )
+        
+        await self.cleanup()
+    
     async def emit_end_event(
         self,
         conversation: Conversation,
@@ -263,25 +314,12 @@ class ConversationLifecycle:
             max_turns: Maximum turns allowed
             start_time: Conversation start time
         """
-        # Calculate duration
-        duration_ms = int((time.time() - start_time) * 1000)
-        
-        # Determine end reason
-        if final_turn + 1 >= max_turns:
-            reason = "max_turns_reached"
-        else:
-            reason = "interrupted"
-        
-        # Emit end event
-        await self.bus.emit(
-            ConversationEndEvent(
-                conversation_id=conversation.id,
-                reason=reason,
-                total_turns=final_turn + 1,
-                duration_ms=duration_ms,
-            )
+        await self.emit_end_event_with_reason(
+            conversation, final_turn, max_turns, start_time, None
         )
-        
+    
+    async def cleanup(self):
+        """Clean up resources without emitting end event."""
         # Stop progress display if active
         if hasattr(self, 'progress_display') and self.progress_display:
             self.progress_display.stop()
