@@ -43,14 +43,17 @@ These guidelines ensure consistent, grounded development of the Pidgin research 
 ### Event-Driven for Complete Observability
 ```
 Conductor → EventBus → Components
-         ↓         ↓
-   events.jsonl   DuckDB
-   (legacy)      (metrics only)
+              ↓
+         JSONL files
+              ↓
+        manifest.json
+              ↓
+     DuckDB (post-import)
 ```
 
 Everything emits events. No hidden state. Complete audit trail.
 
-**Note**: Currently in transition - events are double-written to both jsonl files and intended for DuckDB. Priority #1 is consolidating to DuckDB only.
+**Architecture**: JSONL files are the single source of truth. Manifest.json tracks state efficiently. DuckDB is for post-experiment analysis only.
 
 ### Provider Abstraction for Model Flexibility
 ```python
@@ -200,30 +203,25 @@ echo -e "\a"
 
 Always use local test model to avoid API calls during development:
 ```bash
-pidgin chat -a local:test -b local:test -t 5
+pidgin run -a local:test -b local:test -t 5
 ```
 
-### Database Concurrency
+### Database Strategy
 
-DuckDB uses MVCC (Multi-Version Concurrency Control) and handles locking internally:
-- Multiple readers allowed simultaneously
-- Only one writer at a time (blocks others)
-- No configurable lock timeout
-
-**Our approach:**
-- EventStore handles retries with exponential backoff
-- Lock errors retry faster (0.5-1s) than other errors  
-- System monitor uses read-only connections to avoid conflicts
-- No complex queue infrastructure needed - let DuckDB handle it
+With JSONL-first architecture, database concurrency is no longer an issue:
+- JSONL files are append-only (no locks)
+- Manifest.json uses atomic writes
+- DuckDB is only used for post-experiment analysis
+- Batch import happens after experiments complete
 
 ## Current State
 
-The core architecture is complete and functional. We're now focused on:
+The core architecture is complete with JSONL-first data flow. We're now focused on:
 
-1. **Data flow cleanup** - Consolidate event storage to DuckDB only (Priority #1)
-2. **Analysis infrastructure** - GraphQL server and auto-generated Jupyter notebooks
-3. **Pattern detection** - Gratitude spirals and other research features
-4. **Performance optimization** - Once data flow is clean
+1. **Analysis infrastructure** - GraphQL server and auto-generated Jupyter notebooks
+2. **Pattern detection** - Gratitude spirals and other research features
+3. **Performance optimization** - Token caching, metric calculation
+4. **Statistical validation** - Proper significance testing for observations
 
 ## Note on TODOs
 

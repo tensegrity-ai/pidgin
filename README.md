@@ -14,15 +14,15 @@ Pidgin records conversations between AI models to study how they communicate. We
 ## Current Status
 
 ### ◆ What Works
-- **Recording**: Full event-driven system captures every interaction
+- **Recording**: JSONL-based event capture for every interaction
 - **Models**: 15+ models across Anthropic, OpenAI, Google, xAI
-- **Streaming**: Real-time response display
+- **Display**: Progress panel with convergence and cost tracking (default), verbose messages, or raw event stream
 - **Interrupts**: Ctrl+C to pause/resume conversations
-- **Output**: Clean JSON and markdown transcripts
-- **Experiments**: Run hundreds of conversations with comprehensive metrics (sequential execution by default)
-- **Background Execution**: Experiments run as Unix daemons
-- **Analysis**: ~150 metrics captured per conversation turn
-- **Database**: DuckDB with async operations and event sourcing
+- **Output**: JSONL events, markdown transcripts, manifest tracking
+- **Experiments**: Run hundreds of conversations (sequential or parallel)
+- **Background**: Daemon processes with meaningful names (pidgin-exp123)
+- **Analysis**: ~150 metrics per turn, batch import to DuckDB
+- **Monitoring**: Use standard Unix tools (tail, grep, jq)
 
 ### ▶ What's Partial
 - **Statistical Analysis**: Basic queries work, full analysis tools coming
@@ -43,46 +43,49 @@ pip install -e .
 export ANTHROPIC_API_KEY="..."
 export OPENAI_API_KEY="..."
 
-# Run a single conversation
-pidgin chat -a claude -b gpt -t 20
+# Run a single conversation (shows progress panel)
+pidgin run -a claude -b gpt -t 20
 
-# Run with notification when complete
-pidgin chat -a claude -b gpt -t 20 --notify
+# Watch the conversation messages
+pidgin run -a claude -b gpt -t 20 --verbose
 
-# Run in quiet mode (minimal output)
-pidgin chat -a claude -b gpt -t 20 --quiet
+# See raw event stream (like tail -f)
+pidgin run -a claude -b gpt -t 20 --tail
 
-# Run an experiment (10 conversations)
-pidgin experiment start -a claude -b gpt -r 10 --name my_experiment
+# Run in background with notification
+pidgin run -a claude -b gpt -t 20 --quiet
 
-# Check experiment progress
-pidgin experiment status my_experiment
+# Run multiple conversations (10 repetitions)
+pidgin run -a claude -b gpt -r 10 --name my_experiment
 
-# Watch progress with notifications
-pidgin experiment status my_experiment --watch --notify
+# Check experiment status
+pidgin status
+pidgin status my_experiment
+
+# Monitor experiments with tail
+tail -f pidgin_output/experiments/my_experiment/*.jsonl
 
 # Output saved to ./pidgin_output/
 ```
 
-### Database Information
+### Data Storage
 
-Pidgin uses DuckDB for high-performance analytics. The database is created automatically when you run your first experiment or chat.
+Pidgin uses a JSONL-first architecture:
+- **Primary storage**: JSONL files for each conversation
+- **State tracking**: manifest.json for efficient monitoring
+- **Analytics**: DuckDB for post-experiment analysis
 
-To view database statistics, use:
+Experiments are automatilly imported into DuckDB, but it can be done manually:
 ```bash
-pidgin monitor
-```
-
-To reset the database, simply delete the file:
-```bash
-rm pidgin_output/experiments/experiments.duckdb
+pidgin import --all  # Import all unimported experiments
+pidgin import exp_abc123  # Import specific experiment
 ```
 
 ## API Key Management
 
 ▶ **Why this matters**: API keys are like credit cards for AI services. Exposed keys can lead to unexpected charges if someone else uses them.
 
-For better security, we recommend using a key manager rather than environment variables:
+For better security, we recommend using a key manager rather than hard-coding environment variables:
 
 ### Using 1Password CLI (Recommended)
 ```bash
@@ -211,7 +214,7 @@ pidgin experiment stop language_study
 
 ```bash
 # Compare Haiku vs GPT-4o-mini with 20 conversations
-pidgin experiment start \
+pidgin run \
   -a haiku \
   -b gpt-4o-mini \
   -r 20 \

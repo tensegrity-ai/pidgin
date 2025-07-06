@@ -20,14 +20,14 @@ Pidgin is an event-driven system for recording and analyzing AI-to-AI conversati
                             │                     │
                     ┌───────▼────────┐           │
                     │    Providers   │           ▼
-                    ├────────────────┤    ┌─────────────┐
-                    │ • Anthropic    │    │   Storage   │
-                    │ • OpenAI       │    │ • DuckDB    │
-                    │ • Google       │    │ • JSON      │
-                    │ • xAI          │    │ • Markdown  │
-                    │ • Ollama       │    └─────────────┘
-                    │ • Local (test) │
-                    └────────────────┘
+                    ├────────────────┤    ┌─────────────────┐
+                    │ • Anthropic    │    │     Storage     │
+                    │ • OpenAI       │    ├─────────────────┤
+                    │ • Google       │    │ • JSONL (live)  │
+                    │ • xAI          │    │ • manifest.json │
+                    │ • Ollama       │    │ • Markdown      │
+                    │ • Local (test) │    │ • DuckDB (post) │
+                    └────────────────┘    └─────────────────┘
 ```
 
 ## Provider Architecture
@@ -82,6 +82,47 @@ Ollama installation flow:
 2. Offer to install if missing (with user consent)
 3. Start server automatically if not running
 4. Pull models on first use
+
+## Data Flow Architecture (JSONL-First)
+
+Pidgin uses a JSONL-first architecture that eliminates database contention:
+
+```
+┌──────────────┐
+│ Conversation │
+└──────┬───────┘
+       │
+       ▼ (real-time)
+┌──────────────┐     ┌─────────────┐
+│    JSONL     │────▶│  manifest   │
+│   (append)   │     │   .json     │
+└──────────────┘     └─────────────┘
+       │
+       │ (post-experiment)
+       ▼
+┌──────────────┐
+│   DuckDB     │
+│  (analysis)  │
+└──────────────┘
+```
+
+### Key Benefits:
+- **No lock contention**: JSONL files are append-only
+- **Instant monitoring**: manifest.json provides efficient state
+- **Standard tools**: Use tail, grep, jq for debugging
+- **Batch import**: Load to DuckDB when convenient
+
+### File Structure:
+```
+experiments/
+├── exp_abc123/
+│   ├── manifest.json       # Experiment metadata & state
+│   ├── conv_001.jsonl      # Conversation events
+│   ├── conv_002.jsonl      # Conversation events
+│   └── transcripts/        # Human-readable output
+└── active/
+    └── exp_abc123.pid      # Daemon process ID
+```
 
 ## Event System
 

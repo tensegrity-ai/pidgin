@@ -13,7 +13,7 @@ from .events import (
     SystemPromptEvent,
     MessageCompleteEvent,
 )
-from ..ui.event_logger import EventLogger
+from ..ui.tail_display import TailDisplay
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
 from ..database.event_store import EventStore
@@ -86,9 +86,28 @@ class ConversationLifecycle:
             self.bus = existing_bus
         
         # Create event logger and display filter based on mode
-        if display_mode == "verbose":
-            # Use original event logger for verbose mode
-            self.event_logger = EventLogger(self.bus, self.console)
+        if display_mode == "tail":
+            # Use tail display for showing raw events
+            self.tail_display = TailDisplay(self.bus, self.console)
+            self.progress_display = None
+        elif display_mode == "verbose":
+            # Use verbose display for minimal message viewing
+            from ..ui.verbose_display import VerboseDisplay
+            self.verbose_display = VerboseDisplay(self.bus, self.console, agents)
+            self.progress_display = None
+        elif display_mode == "progress":
+            # Use progress panel display
+            from ..ui.progress_display import ProgressDisplay
+            self.progress_display = ProgressDisplay(
+                self.bus, self.console, agents,
+                experiment_name=conv_dir.parent.name
+            )
+            # Start the live display
+            import asyncio
+            asyncio.create_task(self.progress_display.start())
+            # Still create event logger for file logging
+            self.tail_display = TailDisplay(self.bus, None)
+            self.display_filter = None
         else:
             # Use display filter for normal/quiet modes
             if self.console is not None and display_mode != 'none':
@@ -99,7 +118,8 @@ class ConversationLifecycle:
             else:
                 self.display_filter = None
             # Still create event logger but without console output (for file logging)
-            self.event_logger = EventLogger(self.bus, None)
+            self.tail_display = TailDisplay(self.bus, None)
+            self.progress_display = None
         
         # Wrap providers with event awareness now that bus exists
         # Create wrapped providers for agent_a and agent_b
@@ -261,6 +281,10 @@ class ConversationLifecycle:
                 duration_ms=duration_ms,
             )
         )
+        
+        # Stop progress display if active
+        if hasattr(self, 'progress_display') and self.progress_display:
+            self.progress_display.stop()
         
         # Stop event bus if we own it
         if self._owns_bus and self.bus:

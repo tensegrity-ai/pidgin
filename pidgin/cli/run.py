@@ -38,7 +38,6 @@ from ..io.paths import get_experiments_dir
 from ..config.models import MODELS, get_model_config
 from .notify import send_notification
 from ..experiments import ExperimentManager, ExperimentConfig, ExperimentRunner
-from .experiment_utils import attach_to_experiment
 
 console = Console()
 
@@ -106,10 +105,13 @@ from . import ORIGINAL_CWD
               help='Meditation mode: one agent faces silence')
 @click.option('--quiet', '-q',
               is_flag=True,
-              help='Minimal output (start, turn progress, end)')
+              help='Run in background with notification when complete')
+@click.option('--tail',
+              is_flag=True,
+              help='Show raw event stream during conversation')
 @click.option('--verbose', '-v',
               is_flag=True,
-              help='Show all events for debugging')
+              help='Show full messages with minimal metadata')
 @click.option('--notify', '-n',
               is_flag=True,
               help='Send notification when complete')
@@ -125,63 +127,59 @@ from . import ORIGINAL_CWD
 @click.option('--background',
               is_flag=True,
               help='Run in background (even for single conversation)')
-@click.option('--detach',
-              is_flag=True,
-              help='Start in background without attaching')
 def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a, 
         temp_b, output, dimension, convergence_threshold,
         convergence_action, first_speaker, choose_names, awareness,
         awareness_a, awareness_b, show_system_prompts, meditation,
-        quiet, verbose, notify, name, max_parallel, foreground, background, detach):
+        quiet, tail, verbose, notify, name, max_parallel, foreground, background):
     """Run AI conversations - single or multiple.
 
     This unified command runs conversations between two AI agents.
-    Single conversations run in foreground by default.
-    Multiple conversations run as background experiments by default.
+    By default shows a centered progress panel with key metrics.
+
+    [bold]DISPLAY MODES:[/bold]
+    • Default: Centered progress panel with key metrics                                     
+           • --verbose: Show messages with minimal metadata
+           • --tail: Show raw event stream
+           • --quiet: Run in background with notification
 
     [bold]EXAMPLES:[/bold]
 
-    [#4c566a]Single conversation (foreground):[/#4c566a]
-        pidgin run -a claude -b gpt
-        pidgin run -a opus -b gpt-4.1 -t 50 -p "What is consciousness?"
+    [#4c566a]Basic conversation: [/#4c566a]
+      pidgin run -a claude -b gpt
 
-    [#4c566a]Multiple conversations (background):[/#4c566a]
-        pidgin run -a claude -b gpt -r 20 --name "test"
-        pidgin run -a claude -b gpt -r 100 --name "long" --detach
+    [#4c566a]Show raw events: [/#4c566a]
+      pidgin run -a claude -b gpt --tail
 
-    [#4c566a]Using dimensional prompts:[/#4c566a]
-        pidgin run -a claude -b gpt -d peers:philosophy
-        pidgin run -a gpt -b gemini -d debate:language:analytical
+    [#4c566a]Run in background:  [/#4c566a]
+      pidgin run -a claude -b gpt --quiet
 
-    [#4c566a]Let agents name themselves:[/#4c566a]
-        pidgin run -a claude -b gpt --choose-names
+    [#4c566a]Multiple runs:      [/#4c566a]
+      pidgin run -a claude -b gpt -r 20 --name "test"
 
-    [#4c566a]High convergence monitoring:[/#4c566a]
-        pidgin run -a claude -b gpt -t 100 --convergence-threshold 0.8
+    [#4c566a]Dimensional prompt: [/#4c566a]
+      pidgin run -a claude -b gpt -d philosophy
 
-    [#4c566a]Different awareness levels:[/#4c566a]
-        pidgin run -a claude -b gpt --awareness research
-        pidgin run -a claude -b gpt --awareness-a firm --awareness-b none
-
-    [#4c566a]Meditation mode:[/#4c566a]
-        pidgin run -a claude --meditation
-
-    [#4c566a]Force foreground for multiple:[/#4c566a]
-        pidgin run -a claude -b gpt -r 10 --foreground
-
-    [#4c566a]Force background for single:[/#4c566a]
-        pidgin run -a claude -b gpt --background --name "single"
+    [#4c566a]Meditation mode:    [/#4c566a]
+      pidgin run -a claude --meditation
     """
     # Handle display mode flags
-    if quiet and verbose:
-        console.print(f"[{NORD_RED}]Error: Cannot use both --quiet and --verbose[/{NORD_RED}]")
+    mode_count = sum([quiet, tail, verbose])
+    if mode_count > 1:
+        console.print(f"[{NORD_RED}]Error: Can only use one of --quiet, --tail, or --verbose[/{NORD_RED}]")
         return
     
-    display_mode = "normal"
     if quiet:
         display_mode = "quiet"
+        # Quiet mode should run in background and notify
+        background = True
+        notify = True
+    elif tail:
+        display_mode = "tail"  # Show raw events
     elif verbose:
-        display_mode = "verbose"
+        display_mode = "verbose"  # Show messages only
+    else:
+        display_mode = "progress"  # New default: centered progress panel
     
     # Handle meditation mode
     if meditation:
@@ -232,7 +230,22 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     
     # Determine execution mode
     is_single = repetitions == 1
-    run_in_foreground = (is_single and not background) or foreground
+    
+    # Check if parallel execution requires background
+    if max_parallel > 1 and not quiet and not background:
+        console.print(f"[{NORD_YELLOW}]Note: Parallel execution (max_parallel={max_parallel}) requires background mode[/{NORD_YELLOW}]")
+        background = True
+    
+    # Determine if we run in foreground
+    if quiet:
+        run_in_foreground = False  # --quiet always means background
+    elif background:
+        run_in_foreground = False  # Explicit --background
+    elif foreground:
+        run_in_foreground = True   # Explicit --foreground
+    else:
+        # Default behavior: foreground unless parallel
+        run_in_foreground = (max_parallel == 1)
     
     # Validate name requirement
     if not is_single and not name:
@@ -289,7 +302,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
             name, max_parallel,
             convergence_threshold, convergence_action,
             awareness, awareness_a, awareness_b,
-            choose_names, run_in_foreground, detach, notify
+            choose_names, run_in_foreground, notify
         )
 
 
@@ -355,7 +368,7 @@ def _run_as_experiment(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                       initial_prompt, dimensions, name, max_parallel,
                       convergence_threshold, convergence_action,
                       awareness, awareness_a, awareness_b,
-                      choose_names, run_in_foreground, detach, notify):
+                      choose_names, run_in_foreground, notify):
     """Run as an experiment (multiple conversations or background)."""
     # Create experiment configuration
     config = ExperimentConfig(
@@ -475,26 +488,10 @@ def _run_as_experiment(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             # Show start message
             console.print(f"\n[#a3be8c]✓ Experiment '{name}' started successfully[/#a3be8c]")
             
-            if detach:
-                # User wants to detach - just show info
-                console.print(f"[#4c566a]Running in background. Use 'pidgin attach {exp_id[:8]}' to monitor[/#4c566a]")
-            else:
-                # Default behavior: automatically attach to show progress
-                console.print(f"[#4c566a]Attaching to experiment...[/#4c566a]\n")
-                
-                # Give the daemon a moment to start
-                import time
-                time.sleep(2)
-                
-                # Get the experiment directory
-                exp_dir = get_experiments_dir() / exp_id
-                
-                # Attach to the experiment
-                try:
-                    asyncio.run(attach_to_experiment(exp_id, tail=False, exp_dir=exp_dir))
-                except KeyboardInterrupt:
-                    # Already handled in attach_to_experiment
-                    pass
+            # Show where to find logs
+            console.print(f"[#4c566a]Running in background. Check progress:[/#4c566a]")
+            console.print(f"[#4c566a]  pidgin status {exp_id[:8]}[/#4c566a]")
+            console.print(f"[#4c566a]  tail -f {get_experiments_dir()}/{exp_id}/*.jsonl[/#4c566a]")
                 
         except Exception as e:
             console.print(f"\n[#bf616a]✗ Failed to start experiment: {str(e)}[/#bf616a]")

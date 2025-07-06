@@ -38,9 +38,9 @@ def models(provider, format):
         for model_id, config in models_to_show.items():
             output[model_id] = {
                 'provider': config.provider,
-                'model': config.model,
-                'display_name': config.display_name,
-                'temperature': config.temperature,
+                'model_id': config.model_id,
+                'shortname': config.shortname,
+                'context_window': config.context_window,
                 'emoji': MODEL_EMOJIS.get(model_id, '🤖')
             }
         console.print_json(data=output)
@@ -50,7 +50,7 @@ def models(provider, format):
         for model_id, config in models_to_show.items():
             emoji = MODEL_EMOJIS.get(model_id, '🤖')
             color = PROVIDER_COLORS.get(config.provider, 'white')
-            console.print(f"{emoji} [{color}]{model_id}[/{color}] - {config.display_name}")
+            console.print(f"{emoji} [{color}]{model_id}[/{color}] - {config.shortname}")
         return
     
     # Table format
@@ -58,7 +58,7 @@ def models(provider, format):
     table.add_column("Model ID", style="cyan")
     table.add_column("Display Name", style="white")
     table.add_column("Provider", style="yellow")
-    table.add_column("Temperature", style="green")
+    table.add_column("Context", style="green")
     
     # Group by provider for better display
     by_provider = {}
@@ -81,9 +81,9 @@ def models(provider, format):
             emoji = MODEL_EMOJIS.get(model_id, '🤖')
             table.add_row(
                 f"{emoji} {model_id}",
-                config.display_name,
+                config.shortname,
                 config.provider,
-                f"{config.temperature:.1f}" if config.temperature else "-"
+                f"{config.context_window:,}"
             )
     
     console.print(table)

@@ -51,12 +51,11 @@ import rich_click as click
 from .constants import BANNER
 from .run import run
 from .models import models
-from .status import status
 from .list_experiments import list_experiments
-from .attach import attach
 from .stop import stop
 from .monitor import monitor
 from .load_db import load_db
+from .import_cmd import import_cmd
 
 console = Console()
 
@@ -82,9 +81,9 @@ def cli():
     [#4c566a]Using dimensional prompts:[/#4c566a]
         pidgin run -a claude -b gpt -d peers:philosophy:analytical
 
-    [#4c566a]Monitor running experiments:[/#4c566a]
-        pidgin status
-        pidgin attach exp_abc123
+    [#4c566a]Monitor experiments:[/#4c566a]
+        pidgin list
+        pidgin monitor exp_abc123
 
     [bold]CONFIGURATION:[/bold]
 
@@ -107,18 +106,18 @@ def analyze():
 # Register commands
 cli.add_command(run)
 cli.add_command(models)
-cli.add_command(status)
 cli.add_command(list_experiments)
-cli.add_command(attach)
 cli.add_command(stop)
 cli.add_command(monitor)
 cli.add_command(analyze)
 cli.add_command(load_db)
+cli.add_command(import_cmd)
 
 def main():
     """Main entry point."""
-    # Only show banner if not in quiet mode
-    if not os.environ.get('PIDGIN_QUIET'):
+    # Check if help is being requested
+    import sys
+    if '--help' in sys.argv or '-h' in sys.argv or len(sys.argv) == 1:
         console.print(BANNER)
     
     # Run the CLI

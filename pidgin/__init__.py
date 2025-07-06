@@ -27,7 +27,8 @@ from .metrics import (
 # UI exports
 from .ui import (
     DisplayFilter,
-    EventLogger,
+    TailDisplay,
+    VerboseDisplay,
 )
 
 # Config exports
@@ -69,7 +70,8 @@ __all__ = [
     
     # UI
     'DisplayFilter',
-    'EventLogger',
+    'TailDisplay',
+    'VerboseDisplay',
     
     # Config
     'Config',

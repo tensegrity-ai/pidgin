@@ -1,4 +1,4 @@
-"""Event logger for radical transparency - SEE EVERYTHING."""
+"""Tail display for showing raw event stream in console."""
 
 from rich.console import Console
 from rich.panel import Panel
@@ -14,11 +14,12 @@ from ..core.events import (
     TurnCompleteEvent,
     MessageRequestEvent,
     MessageCompleteEvent,
+    MessageChunkEvent,
 )
 
 
-class EventLogger:
-    """SEE EVERYTHING - no filtering at first."""
+class TailDisplay:
+    """Display raw event stream in console (like tail -f for events)."""
     
     EVENT_COLORS = {
         ConversationStartEvent: "bold green",
@@ -30,7 +31,7 @@ class EventLogger:
     }
     
     def __init__(self, bus: EventBus, console: Console):
-        """Initialize logger and subscribe to ALL events.
+        """Initialize tail display and subscribe to ALL events.
         
         Args:
             bus: The event bus to monitor
@@ -43,7 +44,7 @@ class EventLogger:
         bus.subscribe(Event, self.log_event)
         
     def log_event(self, event: Event) -> None:
-        """Log an event with beautiful Rich formatting.
+        """Display an event with beautiful Rich formatting.
         
         Args:
             event: The event to log
@@ -104,7 +105,6 @@ class EventLogger:
             
         elif isinstance(event, ConversationEndEvent):
             return (
-                f"  conversation_id: {event.conversation_id}\n"
                 f"  reason: {event.reason}\n"
                 f"  total_turns: {event.total_turns}\n"
                 f"  duration: {event.duration_ms / 1000:.2f}s"
@@ -112,7 +112,6 @@ class EventLogger:
             
         elif isinstance(event, TurnStartEvent):
             return (
-                f"  conversation_id: {event.conversation_id}\n"
                 f"  turn_number: {event.turn_number}"
             )
             
@@ -121,7 +120,6 @@ class EventLogger:
             a_preview = event.turn.agent_a_message.content[:50]
             b_preview = event.turn.agent_b_message.content[:50]
             return (
-                f"  conversation_id: {event.conversation_id}\n"
                 f"  turn_number: {event.turn_number}\n"
                 f"  agent_a: \"{a_preview}...\"\n"
                 f"  agent_b: \"{b_preview}...\""
@@ -129,7 +127,6 @@ class EventLogger:
             
         elif isinstance(event, MessageRequestEvent):
             return (
-                f"  conversation_id: {event.conversation_id}\n"
                 f"  agent_id: {event.agent_id}\n"
                 f"  turn_number: {event.turn_number}\n"
                 f"  history_length: {len(event.conversation_history)}"
@@ -147,7 +144,6 @@ class EventLogger:
         elif isinstance(event, MessageCompleteEvent):
             preview = event.message.content[:80]
             return (
-                f"  conversation_id: {event.conversation_id}\n"
                 f"  agent_id: {event.agent_id}\n"
                 f"  message_length: {len(event.message.content)}\n"
                 f"  tokens_used: {event.tokens_used}\n"

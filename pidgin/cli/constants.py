@@ -13,14 +13,11 @@ NORD_DARK = "#4c566a"    # nord3
 NORD_LIGHT = "#eceff4"   # nord6
 
 # ASCII Banner
-BANNER = r"""[bold #88c0d0]
-    ____  ________  __________   __
-   / __ \/  _/ __ \/ ____/  _/ | / /
-  / /_/ // // / / / / __ / //  |/ / 
- / ____// // /_/ / /_/ // // /|  /  
-/_/   /___/_____/\____/___/_/ |_/   
-[/bold #88c0d0]
-[#4c566a]AI Conversation Laboratory[/#4c566a]
+BANNER = r"""
+    [#8fbcbb]✧[/#8fbcbb][#81a1c1]·[/#81a1c1][#a3be8c]˚[/#a3be8c][#88c0d0]⋆[/#88c0d0][#8fbcbb]·[/#8fbcbb]     [bold #5e81ac]█▀█[/] [bold #81a1c1]█[/] [bold #88c0d0]█▀▄[/] [bold #8fbcbb]█▀▀[/] [bold #a3be8c]█[/] [bold #4c566a]█▄ █[/]     [#a3be8c]✦[/#a3be8c][#88c0d0]⋆[/#88c0d0][#8fbcbb]·[/#8fbcbb][#81a1c1]˚[/#81a1c1]
+    [#88c0d0]⋆[/#88c0d0][#8fbcbb]·[/#8fbcbb][#a3be8c]✦[/#a3be8c]       [bold #5e81ac]█▀▀[/] [bold #81a1c1]█[/] [bold #88c0d0]█▄▀[/] [bold #8fbcbb]█▄█[/] [bold #a3be8c]█[/] [bold #4c566a]█ ▀█[/]       [#8fbcbb]·[/#8fbcbb][#88c0d0]✦[/#88c0d0][#a3be8c]˚[/#a3be8c][#8fbcbb]✧[/#8fbcbb]
+    
+    [#8fbcbb]✦ · ˚ ⋆[/#8fbcbb] [#4c566a]ai linguistic observatory[/#4c566a] [#8fbcbb]⋆ ˚ · ✦[/#8fbcbb]
 """
 
 # Model display configurations

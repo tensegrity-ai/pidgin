@@ -49,6 +49,56 @@ case "${1:-help}" in
         echo -e "${GREEN}✓ Clean complete!${NC}"
         ;;
         
+    "clean-all")
+        echo -e "${YELLOW}Cleaning all generated files and directories...${NC}"
+        cd "$PROJECT_ROOT"
+        
+        # Build artifacts
+        rm -rf dist/ build/ *.egg-info
+        
+        # Test/coverage artifacts  
+        rm -rf htmlcov/ .coverage .pytest_cache/
+        
+        # Generated output directories
+        rm -rf pidgin_output/ notebooks/
+        
+        # Python cache files
+        find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+        find . -type f -name "*.pyc" -delete
+        find . -type f -name "*.pyo" -delete
+        
+        echo -e "${GREEN}✓ Full clean complete!${NC}"
+        ;;
+        
+    "reset")
+        echo -e "${RED}Resetting all experiment data...${NC}"
+        echo -e "${YELLOW}This will kill running experiments and delete all data!${NC}"
+        echo -n "Are you sure? (y/N) "
+        read -r response
+        
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            # Kill any running daemons
+            if [ -d "pidgin_output/experiments/active" ]; then
+                echo -e "${YELLOW}Killing running daemons...${NC}"
+                for pidfile in pidgin_output/experiments/active/*.pid; do
+                    if [ -f "$pidfile" ]; then
+                        pid=$(cat "$pidfile")
+                        echo "  Killing daemon PID $pid"
+                        kill -9 "$pid" 2>/dev/null || true
+                    fi
+                done
+            fi
+            
+            # Remove all experiment data
+            echo -e "${YELLOW}Removing experiment data...${NC}"
+            rm -rf pidgin_output/
+            
+            echo -e "${GREEN}✓ Reset complete! You can now run new experiments.${NC}"
+        else
+            echo -e "${YELLOW}Reset cancelled.${NC}"
+        fi
+        ;;
+        
     "test")
         echo -e "${YELLOW}Running quick test...${NC}"
         # Save current directory
@@ -113,16 +163,18 @@ case "${1:-help}" in
         ;;
         
     *)
-        echo "Usage: $0 {rebuild|quick|clean|test|dev|alias|status}"
+        echo "Usage: $0 {rebuild|quick|clean|clean-all|reset|test|dev|alias|status}"
         echo
         echo "Commands:"
-        echo "  rebuild - Clean, build, and install with pipx"
-        echo "  quick   - Build and install without cleaning"
-        echo "  clean   - Remove build artifacts"
-        echo "  test    - Run a quick test in temp directory"
-        echo "  dev     - Run development version preserving working directory"
-        echo "  alias   - Set up pidgin-dev alias for development"
-        echo "  status  - Check installation status"
+        echo "  rebuild   - Clean, build, and install with pipx"
+        echo "  quick     - Build and install without cleaning"
+        echo "  clean     - Remove build artifacts only"
+        echo "  clean-all - Remove ALL generated files (build, test, output)"
+        echo "  reset     - Kill experiments and delete all data (destructive!)"
+        echo "  test      - Run a quick test in temp directory"
+        echo "  dev       - Run development version preserving working directory"
+        echo "  alias     - Set up pidgin-dev alias for development"
+        echo "  status    - Check installation status"
         echo
         echo "Examples:"
         echo "  $0 rebuild           # Full rebuild and install"

@@ -1,6 +1,6 @@
 # Pidgin Project TODO
 
-Last Updated: January 6, 2025
+Last Updated: July 5, 2025
 
 ## Overview
 
@@ -67,34 +67,28 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - ✅ Extracted models command to separate file
 - ✅ Updated all internal references
 
-### Remaining Unification Work
-- [ ] **Update documentation**
-  - Update README with new command structure
-  - Update all examples to use `pidgin run`
-  - Remove references to old commands
+### ✅ Remaining Unification Work (COMPLETED)
+- ✅ **Update documentation**
+  - ✅ Updated README with new command structure
+  - ✅ Updated all examples to use `pidgin run`
+  - ✅ Removed references to old commands
 
-## 📋 Priority 3: Fix Event Storage Data Flow
+## ✅ Priority 3: Fix Event Storage Data Flow (COMPLETED)
 
-### Current Problems:
-- Events are double-written to both events.jsonl files AND intended for DuckDB
-- EventBus writes to jsonl files (event_bus.py lines 97-99)
-- DuckDB has an `events` table schema but raw events aren't being stored there
-- Only metrics and processed data go to DuckDB currently
-- This creates confusion about source of truth and wastes disk I/O
+### Implemented JSONL-First Architecture:
+- ✅ JSONL files are now the single source of truth
+- ✅ Removed direct database writes during conversations
+- ✅ Created manifest.json for efficient state tracking
+- ✅ Built OptimizedStateBuilder with mtime caching
+- ✅ Added `pidgin import` command for batch loading to DuckDB
+- ✅ Eliminated database lock contention
 
-### Proposed Solution:
-1. Modify EventBus to write events to DuckDB instead of jsonl files
-2. Use the existing `events` table schema in schema.py
-3. Ensure event replay functionality works from DuckDB
-4. Remove jsonl file writing code
-5. Update any code that reads from jsonl files to read from DuckDB
-
-### Benefits:
-- Single source of truth for all events
-- Better query performance for analysis
-- Reduced disk I/O (no double writes)
-- Cleaner architecture
-- Event replay still possible via SQL queries
+### Benefits Achieved:
+- No more lock conflicts during experiments
+- Instant monitoring via manifest.json
+- Standard Unix tools work (tail, grep, jq)
+- Post-experiment analysis via DuckDB
+- Clean separation of concerns
 
 ## 🛠️ Priority 4: Performance Optimizations
 
@@ -127,6 +121,17 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Implement gratitude spiral detection
   - Add more conversation pattern recognizers
 
+## ✅ Recently Completed
+
+### Display System Overhaul (July 5, 2025)
+- ✅ Created centered progress panel as default display
+- ✅ Added `--verbose` flag for live conversation view
+- ✅ Made `--quiet` run in background with notifications
+- ✅ Added real-time token usage and cost tracking
+- ✅ Implemented convergence trend indicators (↑, ↑↑, →, ↓, ↓↓)
+- ✅ Removed screen-like attach/detach behavior
+- ✅ Added process titles for daemons (pidgin-exp12345)
+
 ## 🚫 Not Doing
 
 These items have been explicitly decided against:
@@ -134,6 +139,7 @@ These items have been explicitly decided against:
 - **Live experiment monitoring** - Static status commands are sufficient  
 - **Complex visualizations** - Let researchers use their own tools
 - **Separate enrichment commands** - Will be handled transparently via GraphQL
+- **Screen-like attach/detach** - Use standard Unix tools instead
 
 ## Architecture Notes
 

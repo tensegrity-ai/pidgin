@@ -77,6 +77,14 @@ class ExperimentDaemon:
         with open(self.pid_file, 'w') as f:
             f.write(str(os.getpid()))
             
+        # Set process title for easier identification
+        try:
+            import setproctitle
+            # Use short ID to avoid truncation
+            setproctitle.setproctitle(f"pidgin-{self.experiment_id[:8]}")
+        except ImportError:
+            pass  # Optional dependency, graceful degradation
+            
         # Set up signal handlers
         signal.signal(signal.SIGTERM, self._handle_signal)
         signal.signal(signal.SIGINT, self._handle_signal)
