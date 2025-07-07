@@ -12,6 +12,7 @@ from .experiment_repository import ExperimentRepository
 from .conversation_repository import ConversationRepository
 from .message_repository import MessageRepository
 from .metrics_repository import MetricsRepository
+from .event_replay import EventReplay
 from ..io.logger import get_logger
 
 logger = get_logger("import_service")
@@ -272,108 +273,39 @@ class ImportService:
         Returns:
             Number of events imported
         """
-        events_imported = 0
-        conversation_data = {}
-        pending_messages = []  # Store messages until conversation is created
-        pending_metrics = []   # Store metrics until conversation is created
-        token_counts = {}      # Map (agent_id, turn_num) -> token_count
+        # Use EventReplay to reconstruct conversation state
+        replayer = EventReplay()
+        state = replayer.replay_conversation(experiment_id, conversation_id, jsonl_path)
         
-        # First pass: Read JSONL and collect data
-        with open(jsonl_path, 'r') as f:
-            for line_num, line in enumerate(f, 1):
-                try:
-                    event = json.loads(line.strip())
-                    
-                    # Insert event into events table
-                    self.db.execute("""
-                        INSERT INTO events (
-                            timestamp, event_type, conversation_id, 
-                            experiment_id, event_data, sequence
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                    """, [
-                        event.get("timestamp"),
-                        event.get("event_type"),
-                        conversation_id,
-                        experiment_id,
-                        json.dumps(event),
-                        line_num
-                    ])
-                    events_imported += 1
-                    
-                    # Process specific event types for structured data
-                    event_type = event.get("event_type")
-                    
-                    if event_type == "ConversationStartEvent":
-                        # Extract conversation metadata
-                        conversation_data.update({
-                            "agent_a_model": event.get("agent_a_model"),
-                            "agent_b_model": event.get("agent_b_model"),
-                            "max_turns": event.get("max_turns"),
-                            "initial_prompt": event.get("initial_prompt"),
-                            "started_at": event.get("timestamp")
-                        })
-                    
-                    elif event_type == "MessageCompleteEvent":
-                        # Store token count for this agent
-                        agent_id = event.get("agent_id")
-                        tokens_used = event.get("tokens_used", 0)
-                        token_counts[agent_id] = tokens_used
-                    
-                    elif event_type == "TurnCompleteEvent":
-                        turn_num = event.get("turn_number", 0)
-                        turn = event.get("turn", {})
-                        
-                        # Extract messages from turn data
-                        msg_a = turn.get("agent_a_message", {})
-                        msg_b = turn.get("agent_b_message", {})
-                        
-                        # Store messages for this turn
-                        if msg_a.get("content"):
-                            pending_messages.append({
-                                "conversation_id": conversation_id,
-                                "turn_number": turn_num,
-                                "agent_id": "agent_a",
-                                "content": msg_a.get("content", ""),
-                                "timestamp": msg_a.get("timestamp"),
-                                "token_count": token_counts.get("agent_a", 0)
-                            })
-                        
-                        if msg_b.get("content"):
-                            pending_messages.append({
-                                "conversation_id": conversation_id,
-                                "turn_number": turn_num,
-                                "agent_id": "agent_b", 
-                                "content": msg_b.get("content", ""),
-                                "timestamp": msg_b.get("timestamp"),
-                                "token_count": token_counts.get("agent_b", 0)
-                            })
-                        
-                        # Store turn metrics for later insertion
-                        pending_metrics.append({
-                            "conversation_id": conversation_id,
-                            "turn_number": turn_num,
-                            "timestamp": event.get("timestamp"),
-                            "convergence_score": event.get("convergence_score", 0.0)
-                        })
-                        
-                        # Update conversation data
-                        conversation_data["final_convergence_score"] = event.get("convergence_score")
-                        conversation_data["total_turns"] = turn_num
-                    
-                    elif event_type == "ConversationEndEvent":
-                        conversation_data.update({
-                            "status": "completed",
-                            "completed_at": event.get("timestamp"),
-                            "total_turns": event.get("total_turns", 0),
-                            "convergence_reason": event.get("reason")
-                        })
-                    
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse line {line_num} in {jsonl_path}: {e}")
-                    continue
+        # Insert raw events with their JSON data
+        for line_num, event in state.events:
+            # Serialize event back to JSON for storage
+            event_data = {
+                "event_type": event.__class__.__name__,
+                "timestamp": event.timestamp.isoformat(),
+                "event_id": event.event_id,
+                "conversation_id": conversation_id,
+                # Add event-specific fields
+                **{k: v for k, v in event.__dict__.items() 
+                   if k not in ["timestamp", "event_id"]}
+            }
+            
+            self.db.execute("""
+                INSERT INTO events (
+                    timestamp, event_type, conversation_id, 
+                    experiment_id, event_data, sequence
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, [
+                event.timestamp.isoformat(),
+                event.__class__.__name__,
+                conversation_id,
+                experiment_id,
+                json.dumps(event_data, default=str),
+                line_num
+            ])
         
-        # Create conversation record first (to satisfy foreign key constraints)
-        if conversation_data:
+        # Create/update conversation record
+        if state.started_at:
             # Check if conversation already exists
             result = self.db.execute(
                 "SELECT COUNT(*) FROM conversations WHERE conversation_id = ?",
@@ -390,10 +322,10 @@ class ImportService:
                         final_convergence_score = ?
                     WHERE conversation_id = ?
                 """, [
-                    conversation_data.get("status", "unknown"),
-                    conversation_data.get("completed_at"),
-                    conversation_data.get("total_turns", 0),
-                    conversation_data.get("final_convergence_score"),
+                    state.status,
+                    state.completed_at.isoformat() if state.completed_at else None,
+                    state.total_turns,
+                    state.final_convergence_score,
                     conversation_id
                 ])
             else:
@@ -407,19 +339,23 @@ class ImportService:
                 """, [
                     conversation_id,
                     experiment_id,
-                    conversation_data.get("started_at"),
-                    conversation_data.get("completed_at"),
-                    conversation_data.get("status", "unknown"),
-                    conversation_data.get("agent_a_model"),
-                    conversation_data.get("agent_b_model"),
-                    conversation_data.get("max_turns"),
-                    conversation_data.get("total_turns", 0),
-                    conversation_data.get("initial_prompt"),
-                    conversation_data.get("final_convergence_score")
+                    state.started_at.isoformat() if state.started_at else None,
+                    state.completed_at.isoformat() if state.completed_at else None,
+                    state.status,
+                    state.agent_a_model,
+                    state.agent_b_model,
+                    state.max_turns,
+                    state.total_turns,
+                    state.initial_prompt,
+                    state.final_convergence_score
                 ])
         
-        # Now insert messages
-        for msg in pending_messages:
+        # Insert agent names if any were chosen
+        for agent_id, name in state.agent_names.items():
+            self.conversations.log_agent_name(conversation_id, agent_id, name)
+        
+        # Insert messages
+        for msg in state.messages:
             self.db.execute("""
                 INSERT INTO messages (
                     conversation_id, turn_number, agent_id, 
@@ -430,12 +366,12 @@ class ImportService:
                 msg["turn_number"],
                 msg["agent_id"],
                 msg["content"],
-                msg["timestamp"],
+                msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"],
                 msg["token_count"]
             ])
         
         # Insert turn metrics
-        for metric in pending_metrics:
+        for metric in state.turn_metrics:
             self.db.execute("""
                 INSERT INTO turn_metrics (
                     conversation_id, turn_number, timestamp,
@@ -444,8 +380,8 @@ class ImportService:
             """, [
                 metric["conversation_id"],
                 metric["turn_number"],
-                metric["timestamp"],
+                metric["timestamp"].isoformat() if isinstance(metric["timestamp"], datetime) else metric["timestamp"],
                 metric["convergence_score"]
             ])
         
-        return events_imported
+        return len(state.events)
