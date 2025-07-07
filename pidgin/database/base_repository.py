@@ -1,0 +1,145 @@
+"""Base repository with common database operations."""
+
+import json
+import duckdb
+from pathlib import Path
+from typing import Optional, Dict, Any, List, Tuple
+from contextlib import contextmanager
+
+from ..io.logger import get_logger
+
+logger = get_logger("base_repository")
+
+
+class BaseRepository:
+    """Base repository with common database operations.
+    
+    Provides connection management, schema helpers, and common query patterns
+    for all repository implementations.
+    """
+    
+    def __init__(self, db: duckdb.DuckDBPyConnection):
+        """Initialize with DuckDB connection.
+        
+        Args:
+            db: Active DuckDB connection
+        """
+        self.db = db
+    
+    def execute(self, query: str, params: Optional[List[Any]] = None):
+        """Execute a query with optional parameters.
+        
+        Args:
+            query: SQL query to execute
+            params: Optional query parameters
+            
+        Returns:
+            Query result
+        """
+        if params is None:
+            return self.db.execute(query)
+        return self.db.execute(query, params)
+    
+    def fetchone(self, query: str, params: Optional[List[Any]] = None) -> Optional[Tuple]:
+        """Execute query and fetch one result.
+        
+        Args:
+            query: SQL query to execute
+            params: Optional query parameters
+            
+        Returns:
+            Single row as tuple or None
+        """
+        result = self.execute(query, params).fetchone()
+        return result
+    
+    def fetchall(self, query: str, params: Optional[List[Any]] = None) -> List[Tuple]:
+        """Execute query and fetch all results.
+        
+        Args:
+            query: SQL query to execute
+            params: Optional query parameters
+            
+        Returns:
+            List of rows as tuples
+        """
+        return self.execute(query, params).fetchall()
+    
+    def row_to_dict(self, row: Tuple, cursor=None) -> Dict[str, Any]:
+        """Convert a database row to dictionary.
+        
+        Args:
+            row: Database row tuple
+            cursor: Cursor with description (uses self.db if not provided)
+            
+        Returns:
+            Dictionary with column names as keys
+        """
+        if not row:
+            return {}
+        
+        if cursor is None:
+            cursor = self.db
+            
+        cols = [desc[0] for desc in cursor.description]
+        return dict(zip(cols, row))
+    
+    def parse_json_field(self, value: Any) -> Any:
+        """Parse a JSON field, returning original value if parsing fails.
+        
+        Args:
+            value: Value to parse
+            
+        Returns:
+            Parsed JSON or original value
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return value
+        return value
+    
+    def exists(self, table: str, **conditions) -> bool:
+        """Check if a record exists with given conditions.
+        
+        Args:
+            table: Table name
+            **conditions: Column=value conditions
+            
+        Returns:
+            True if record exists
+        """
+        if not conditions:
+            raise ValueError("At least one condition is required")
+            
+        where_parts = [f"{col} = ?" for col in conditions.keys()]
+        where_clause = " AND ".join(where_parts)
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause}"
+        
+        result = self.fetchone(query, list(conditions.values()))
+        return result[0] > 0 if result else False
+    
+    def count(self, table: str, **conditions) -> int:
+        """Count records matching conditions.
+        
+        Args:
+            table: Table name
+            **conditions: Column=value conditions
+            
+        Returns:
+            Number of matching records
+        """
+        if conditions:
+            where_parts = [f"{col} = ?" for col in conditions.keys()]
+            where_clause = " WHERE " + " AND ".join(where_parts)
+            params = list(conditions.values())
+        else:
+            where_clause = ""
+            params = []
+        
+        query = f"SELECT COUNT(*) FROM {table}{where_clause}"
+        result = self.fetchone(query, params)
+        return result[0] if result else 0

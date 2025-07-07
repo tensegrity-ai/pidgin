@@ -267,8 +267,8 @@ class ExperimentEventHandler:
         turn_metrics.update(timing_metrics)
         
         # Add combined vocabulary size
-        words_a = set(calculator._tokenize(msg_a.lower()))
-        words_b = set(calculator._tokenize(msg_b.lower()))
+        words_a = set(calculator.text_analyzer.tokenize(msg_a.lower()))
+        words_b = set(calculator.text_analyzer.tokenize(msg_b.lower()))
         turn_metrics['combined_vocabulary_size'] = len(words_a | words_b)
         
         # Store turn-level metrics

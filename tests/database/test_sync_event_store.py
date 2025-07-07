@@ -169,29 +169,12 @@ class TestEventStore:
         result1 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result1.success is True
         
-        # Second import without force
-        result2 = event_store.import_experiment_from_jsonl(sample_experiment_dir, force=False)
+        # Second import should skip
+        result2 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result2.success is True
         assert result2.error == "Already imported"
         assert result2.events_imported == 0
     
-    def test_import_force_reimport(self, event_store, sample_experiment_dir):
-        """Test force reimport deletes existing data."""
-        # First import
-        result1 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
-        assert result1.success is True
-        
-        # Force reimport
-        result2 = event_store.import_experiment_from_jsonl(sample_experiment_dir, force=True)
-        assert result2.success is True
-        assert result2.events_imported == 5
-        
-        # Verify only one experiment exists
-        exp_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM experiments WHERE experiment_id = ?",
-            ["exp_test123"]
-        ).fetchone()[0]
-        assert exp_count == 1
     
     def test_messages_extracted_correctly(self, event_store, sample_experiment_dir):
         """Test that messages are extracted from TurnCompleteEvent."""
@@ -250,14 +233,14 @@ class TestEventStore:
         ).fetchone()
         assert exp[0] == "exp_null_name"
     
-    def test_delete_experiment_data(self, event_store, sample_experiment_dir):
-        """Test that _delete_experiment_data removes all related data."""
+    def test_delete_experiment(self, event_store, sample_experiment_dir):
+        """Test that delete_experiment removes all related data."""
         # Import first
         result = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result.success is True
         
-        # Delete the experiment data
-        event_store._delete_experiment_data("exp_test123")
+        # Delete the experiment
+        event_store.delete_experiment("exp_test123")
         
         # Verify all data is gone
         exp_count = event_store.db.execute(

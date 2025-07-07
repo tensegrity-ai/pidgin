@@ -25,6 +25,9 @@ class ConvergenceCalculator:
             "structure": 0.15,
             "punctuation": 0.1,
         }
+        
+        # Validate weights
+        self._validate_weights()
 
     def calculate(self, messages: List[Any]) -> float:
         """Calculate structural similarity between recent A and B messages.
@@ -299,6 +302,36 @@ class ConvergenceCalculator:
             return "stable"
         else:
             return "fluctuating"
+    
+    def _validate_weights(self):
+        """Validate that weights are properly configured.
+        
+        Raises:
+            ValueError: If weights don't sum to 1.0 or have invalid values
+        """
+        # Check all required keys are present
+        required_keys = {"content", "length", "sentences", "structure", "punctuation"}
+        provided_keys = set(self.weights.keys())
+        
+        if provided_keys != required_keys:
+            missing = required_keys - provided_keys
+            extra = provided_keys - required_keys
+            msg_parts = []
+            if missing:
+                msg_parts.append(f"missing keys: {missing}")
+            if extra:
+                msg_parts.append(f"extra keys: {extra}")
+            raise ValueError(f"Invalid weight keys - {', '.join(msg_parts)}")
+        
+        # Check all weights are non-negative
+        for key, value in self.weights.items():
+            if not isinstance(value, (int, float)) or value < 0:
+                raise ValueError(f"Weight '{key}' must be a non-negative number, got {value}")
+        
+        # Check weights sum to 1.0 (with small tolerance for floating point)
+        total = sum(self.weights.values())
+        if abs(total - 1.0) > 0.001:
+            raise ValueError(f"Weights must sum to 1.0, got {total:.3f}")
 
     def get_recent_history(self, n: int = 5) -> List[Tuple[int, float]]:
         """Get recent convergence history with turn numbers.

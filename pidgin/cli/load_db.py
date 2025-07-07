@@ -1,13 +1,12 @@
 """Command to load completed experiments into DuckDB for analytics."""
 
-import asyncio
 from pathlib import Path
 
 import rich_click as click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
-from ..database.batch_loader import BatchLoader
+from ..database.event_store import EventStore
 from ..io.paths import get_experiments_dir
 from .constants import NORD_GREEN, NORD_YELLOW, NORD_RED, NORD_CYAN
 
@@ -39,9 +38,9 @@ def load_db(experiment_id, all, force):
         console.print(f"[{NORD_RED}]Error: Specify an experiment ID or use --all[/{NORD_RED}]")
         return
     
-    async def run_loading():
+    def run_loading():
         """Run the loading process."""
-        loader = BatchLoader()
+        store = EventStore()
         
         try:
             if experiment_id:
@@ -81,7 +80,13 @@ def load_db(experiment_id, all, force):
                 ) as progress:
                     task = progress.add_task("Loading JSONL data...", total=None)
                     
-                    success = await loader.load_experiment(exp_dir)
+                    # Import experiment from JSONL
+                    manifest_path = exp_dir / "manifest.json"
+                    if not manifest_path.exists():
+                        console.print(f"[{NORD_RED}]No manifest.json found in {exp_dir.name}[/{NORD_RED}]")
+                        return
+                    
+                    success = store.import_experiment_from_jsonl(str(exp_dir))
                     
                     if success:
                         # Create marker
@@ -103,7 +108,47 @@ def load_db(experiment_id, all, force):
                 ) as progress:
                     task = progress.add_task("Loading experiments...", total=None)
                     
-                    stats = await loader.load_completed_experiments(get_experiments_dir())
+                    # Load all completed experiments
+                    exp_base = get_experiments_dir()
+                    stats = {
+                        'total_experiments': 0,
+                        'loaded': 0,
+                        'failed': 0,
+                        'already_loaded': 0
+                    }
+                    
+                    for exp_dir in exp_base.iterdir():
+                        if not exp_dir.is_dir():
+                            continue
+                        
+                        manifest_path = exp_dir / "manifest.json"
+                        if not manifest_path.exists():
+                            continue
+                        
+                        stats['total_experiments'] += 1
+                        
+                        # Check if already loaded
+                        marker_file = exp_dir / ".loaded_to_db"
+                        if marker_file.exists() and not force:
+                            stats['already_loaded'] += 1
+                            continue
+                        
+                        try:
+                            # Remove marker if forcing
+                            if force and marker_file.exists():
+                                marker_file.unlink()
+                            
+                            progress.update(task, description=f"Loading {exp_dir.name}...")
+                            success = store.import_experiment_from_jsonl(str(exp_dir))
+                            
+                            if success:
+                                marker_file.touch()
+                                stats['loaded'] += 1
+                            else:
+                                stats['failed'] += 1
+                        except Exception as e:
+                            console.print(f"[{NORD_RED}]Error loading {exp_dir.name}: {e}[/{NORD_RED}]")
+                            stats['failed'] += 1
                     
                     console.print(f"\n[bold {NORD_CYAN}]Batch Loading Complete[/bold {NORD_CYAN}]")
                     console.print(f"  Total experiments: {stats['total_experiments']}")
@@ -112,11 +157,11 @@ def load_db(experiment_id, all, force):
                     console.print(f"  [{NORD_YELLOW}]Already loaded: {stats['already_loaded']}[/{NORD_YELLOW}]")
                     
         finally:
-            await loader.close()
+            store.close()
     
-    # Run the async function
+    # Run the function
     try:
-        asyncio.run(run_loading())
+        run_loading()
     except KeyboardInterrupt:
         console.print(f"\n[{NORD_YELLOW}]Loading cancelled[/{NORD_YELLOW}]")
     except Exception as e:

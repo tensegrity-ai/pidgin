@@ -406,7 +406,7 @@ class ExperimentRunner:
             
             # Import to database using EventStore
             with EventStore(db_path) as event_store:
-                result = event_store.import_experiment_from_jsonl(exp_dir, force=False)
+                result = event_store.import_experiment_from_jsonl(exp_dir)
             
             if result.success:
                 logging.info(f"Successfully imported {result.events_imported} events, "

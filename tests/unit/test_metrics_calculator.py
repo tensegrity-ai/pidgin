@@ -33,17 +33,18 @@ class TestMetricsCalculator:
             agent_b_message="I'm doing well, thank you!"
         )
         
-        # Check structure - metrics use suffixes _a and _b
-        assert 'message_a' in metrics
-        assert 'message_b' in metrics
+        # Check structure - now uses nested structure
+        assert 'agent_a' in metrics
+        assert 'agent_b' in metrics
+        assert 'convergence' in metrics
         
-        # Check basic metrics exist
-        assert 'message_length_a' in metrics
-        assert 'word_count_a' in metrics
-        assert 'vocabulary_size_a' in metrics
-        assert 'message_length_b' in metrics
-        assert 'word_count_b' in metrics
-        assert 'vocabulary_size_b' in metrics
+        # Check basic metrics exist under agent keys
+        assert 'message_length' in metrics['agent_a']
+        assert 'word_count' in metrics['agent_a']
+        assert 'vocabulary_size' in metrics['agent_a']
+        assert 'message_length' in metrics['agent_b']
+        assert 'word_count' in metrics['agent_b']
+        assert 'vocabulary_size' in metrics['agent_b']
     
     def test_vocabulary_tracking(self, calculator):
         """Test vocabulary tracking across turns."""
@@ -62,8 +63,8 @@ class TestMetricsCalculator:
         assert len(calculator.turn_vocabularies) == 2
         
         # Check overlap calculation
-        assert 'vocabulary_overlap' in metrics2
-        assert metrics2['vocabulary_overlap'] > 0
+        assert 'vocabulary_overlap' in metrics2['convergence']
+        assert metrics2['convergence']['vocabulary_overlap'] > 0
     
     def test_message_length_metrics(self, calculator):
         """Test message length calculations."""
@@ -72,10 +73,11 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, short_msg, long_msg)
         
-        assert metrics['message_length_a'] == len(short_msg)
-        assert metrics['message_length_b'] == len(long_msg)
-        # Check convergence score reflects length difference
-        assert metrics['length_ratio'] < 1.0  # Short vs long messages
+        assert metrics['agent_a']['message_length'] == len(short_msg)
+        assert metrics['agent_b']['message_length'] == len(long_msg)
+        # Check that both agents have the metrics
+        assert metrics['agent_a']['word_count'] == 1
+        assert metrics['agent_b']['word_count'] == 9
     
     def test_punctuation_metrics(self, calculator):
         """Test punctuation analysis."""
@@ -84,9 +86,9 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, msg_with_punct, msg_no_punct)
         
-        assert metrics['punctuation_diversity_a'] > 0  # Has diverse punctuation
-        assert metrics['punctuation_diversity_b'] == 0  # No punctuation
-        assert metrics['sentence_count_a'] >= 3
+        assert metrics['agent_a']['punctuation_diversity'] > 0  # Has diverse punctuation
+        assert metrics['agent_b']['punctuation_diversity'] == 0  # No punctuation
+        assert metrics['agent_a']['sentence_count'] >= 3
     
     def test_question_detection(self, calculator):
         """Test question pattern detection."""
@@ -95,8 +97,8 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, question_msg, statement_msg)
         
-        assert metrics['question_count_a'] == 2
-        assert metrics['question_count_b'] == 0
+        assert metrics['agent_a']['question_count'] == 2
+        assert metrics['agent_b']['question_count'] == 0
     
     def test_hedge_word_detection(self, calculator):
         """Test hedge word detection."""
@@ -105,8 +107,8 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, hedge_msg, direct_msg)
         
-        assert metrics['hedge_count_a'] >= 2
-        assert metrics['hedge_count_b'] == 0
+        assert metrics['agent_a']['hedge_words'] >= 2
+        assert metrics['agent_b']['hedge_words'] == 0
     
     def test_agreement_markers(self, calculator):
         """Test agreement/disagreement marker detection."""
@@ -115,8 +117,8 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, agree_msg, disagree_msg)
         
-        assert metrics['agreement_marker_count_a'] >= 1  # "Yes", "agree"
-        assert metrics['disagreement_marker_count_b'] >= 1  # "No"
+        assert metrics['agent_a']['agreement_markers'] >= 1  # "Yes", "agree"
+        assert metrics['agent_b']['disagreement_markers'] >= 1  # "No"
     
     def test_pronoun_usage(self, calculator):
         """Test pronoun usage tracking."""
@@ -125,8 +127,8 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, first_person_msg, second_person_msg)
         
-        assert metrics['first_person_singular_count_a'] >= 2
-        assert metrics['second_person_count_b'] >= 2
+        assert metrics['agent_a']['first_person_singular'] >= 2
+        assert metrics['agent_b']['second_person'] >= 2
     
     def test_special_symbols(self, calculator):
         """Test special symbol detection."""
@@ -135,8 +137,8 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, math_msg, arrow_msg)
         
-        assert metrics['math_symbol_count_a'] > 0
-        assert metrics['arrow_count_b'] > 0
+        assert metrics['agent_a']['special_symbol_count'] > 0
+        assert metrics['agent_b']['special_symbol_count'] > 0
     
     def test_engagement_score(self, calculator):
         """Test engagement score calculation."""
@@ -146,8 +148,8 @@ class TestMetricsCalculator:
         metrics = calculator.calculate_turn_metrics(0, engaged_msg, neutral_msg)
         
         # Check that convergence metrics exist
-        assert 'convergence_score' in metrics
-        assert 'vocabulary_overlap' in metrics
+        assert 'vocabulary_overlap' in metrics['convergence']
+        assert 'cross_repetition' in metrics['convergence']
     
     def test_convergence_metrics(self, calculator):
         """Test convergence tracking across multiple turns."""
@@ -166,23 +168,22 @@ class TestMetricsCalculator:
         
         # Check convergence indicators
         last_metrics = all_metrics[-1]
-        assert 'vocabulary_overlap' in last_metrics
-        assert 'convergence_score' in last_metrics
+        assert 'vocabulary_overlap' in last_metrics['convergence']
+        assert 'cumulative_overlap' in last_metrics['convergence']
         
         # Check that vocabulary overlap is being tracked
-        # Note: overlap can vary based on specific word choices
-        assert isinstance(all_metrics[-1]['vocabulary_overlap'], float)
-        assert 0 <= all_metrics[-1]['vocabulary_overlap'] <= 1
+        assert isinstance(last_metrics['convergence']['vocabulary_overlap'], float)
+        assert 0 <= last_metrics['convergence']['vocabulary_overlap'] <= 1
     
     def test_acknowledgment_detection(self, calculator):
         """Test acknowledgment pattern detection."""
-        ack_msg = "I see, uh-huh, that makes sense"
+        ack_msg = "I see, that makes sense"
         no_ack_msg = "Let me explain my perspective"
         
         metrics = calculator.calculate_turn_metrics(0, ack_msg, no_ack_msg)
         
-        assert metrics['starts_with_acknowledgment_a'] == True
-        assert metrics['starts_with_acknowledgment_b'] == False
+        assert metrics['agent_a']['starts_with_acknowledgment'] == True
+        assert metrics['agent_b']['starts_with_acknowledgment'] == False
     
     def test_politeness_markers(self, calculator):
         """Test politeness marker detection."""
@@ -191,17 +192,17 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, polite_msg, neutral_msg)
         
-        assert metrics['politeness_marker_count_a'] >= 2
-        assert metrics['politeness_marker_count_b'] == 0
+        assert metrics['agent_a']['politeness_markers'] >= 2
+        assert metrics['agent_b']['politeness_markers'] == 0
     
     def test_empty_messages(self, calculator):
         """Test handling of empty messages."""
         metrics = calculator.calculate_turn_metrics(0, "", "")
         
-        assert metrics['message_length_a'] == 0
-        assert metrics['message_length_b'] == 0
-        assert metrics['word_count_a'] == 0
-        assert metrics['word_count_b'] == 0
+        assert metrics['agent_a']['message_length'] == 0
+        assert metrics['agent_b']['message_length'] == 0
+        assert metrics['agent_a']['word_count'] == 0
+        assert metrics['agent_b']['word_count'] == 0
     
     def test_unicode_handling(self, calculator):
         """Test handling of unicode characters."""
@@ -210,8 +211,9 @@ class TestMetricsCalculator:
         
         metrics = calculator.calculate_turn_metrics(0, unicode_msg, ascii_msg)
         
-        assert metrics['emoji_count_a'] >= 2
-        assert metrics['emoji_count_b'] == 0
+        # Special symbols count includes emojis
+        assert metrics['agent_a']['special_symbol_count'] >= 2
+        assert metrics['agent_b']['special_symbol_count'] == 0
     
     def test_vocabulary_persistence(self, calculator):
         """Test vocabulary state persistence across turns."""
@@ -241,8 +243,13 @@ class TestMetricsCalculator:
         
         metrics_imbalanced = calculator.calculate_turn_metrics(1, short, long)
         
-        # Check length ratio reflects balance
-        assert metrics_balanced['length_ratio'] > metrics_imbalanced['length_ratio']
+        # Check message lengths reflect balance
+        len_diff_balanced = abs(metrics_balanced['agent_a']['message_length'] - 
+                               metrics_balanced['agent_b']['message_length'])
+        len_diff_imbalanced = abs(metrics_imbalanced['agent_a']['message_length'] - 
+                                 metrics_imbalanced['agent_b']['message_length'])
+        
+        assert len_diff_balanced < len_diff_imbalanced
     
     def test_semantic_similarity_placeholder(self, calculator):
         """Test semantic similarity calculation (placeholder for now)."""
@@ -252,7 +259,7 @@ class TestMetricsCalculator:
         metrics = calculator.calculate_turn_metrics(0, similar_a, similar_b)
         
         # Should have high vocabulary overlap due to shared words
-        assert metrics['vocabulary_overlap'] > 0.3
+        assert metrics['convergence']['vocabulary_overlap'] > 0.3
     
     def test_calculate_final_metrics(self, calculator):
         """Test final conversation metrics calculation."""

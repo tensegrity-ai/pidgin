@@ -333,8 +333,8 @@ class ConversationLifecycle:
         # Close db store if we own it
         if self._owns_db_store and self.db_store:
             # Close the database connection
-            if hasattr(self.db_store, 'db') and self.db_store.db:
-                await self.db_store.db.close()
+            if hasattr(self.db_store, 'close'):
+                self.db_store.close()
     
     async def save_transcripts(self, conversation: Conversation, output_manager, conv_dir: Path):
         """Save conversation transcripts.

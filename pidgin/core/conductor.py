@@ -349,13 +349,16 @@ class Conductor:
                 return
                 
             # Import here to avoid circular dependency
-            from ..database.batch_loader import BatchLoader
+            from ..database.event_store import EventStore
             
-            # Load the chat data
-            loader = BatchLoader(db_path=db_path)
-            await loader.store.initialize()  # Ensure DB schema exists
-            await loader._load_jsonl_file(jsonl_file)
-            await loader.close()
+            # Load the chat data using EventStore
+            store = EventStore(db_path)
+            success = store.import_experiment_from_jsonl(str(conv_dir))
+            store.close()
+            
+            if not success:
+                logger.error(f"Failed to import JSONL data for {conv_id}")
+                return
             
             # Create marker file
             marker_file = conv_dir / ".loaded_to_db"
@@ -364,7 +367,7 @@ class Conductor:
             logger.info(f"Successfully batch loaded conversation {conv_id} to database")
             
         except ImportError as e:
-            logger.error(f"Failed to import BatchLoader: {e}")
+            logger.error(f"Failed to import EventStore: {e}")
             if self.console:
                 self.console.print(f"[dim]Note: Database module not available[/dim]")
         except FileNotFoundError as e:
