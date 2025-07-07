@@ -1,10 +1,14 @@
 """Ollama provider for local model inference."""
 import json
 import socket
+import logging
 from typing import List, Optional, AsyncGenerator
 import aiohttp
 from .base import Provider
 from ..core.types import Message
+from .error_utils import ProviderErrorHandler
+
+logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
 from ..config.models import ModelConfig, ModelCharacteristics
@@ -66,6 +70,17 @@ class OllamaProvider(Provider):
         self.model_name = model_name
         self.base_url = "http://localhost:11434"
         
+        # Set up error handler for Ollama
+        self.error_handler = ProviderErrorHandler(
+            provider_name="Ollama",
+            custom_errors={
+                "connection_error": "Cannot connect to Ollama. Start it with: ollama serve",
+                "model_not_found": f"Model '{model_name}' not found. Run: ollama pull {model_name}",
+                "server_not_running": "Ollama server is not running!\nPlease start it with: ollama serve\nOr run: pidgin chat -a local -b local (to auto-start)"
+            },
+            custom_suppress=["connection_error", "model_not_found", "server_not_running"]
+        )
+        
         # Check if Ollama is running at initialization
         self._check_ollama_available()
     
@@ -76,11 +91,7 @@ class OllamaProvider(Provider):
             result = sock.connect_ex(('localhost', 11434))
             sock.close()
             if result != 0:
-                raise RuntimeError(
-                    "Ollama server is not running!\n"
-                    "Please start it with: ollama serve\n"
-                    "Or run: pidgin chat -a local -b local (to auto-start)"
-                )
+                raise RuntimeError("server_not_running")
         except Exception as e:
             raise RuntimeError(f"Cannot connect to Ollama: {e}")
         
@@ -91,9 +102,19 @@ class OllamaProvider(Provider):
     ) -> AsyncGenerator[str, None]:
         """Stream response from Ollama model."""
         
+        # Apply context truncation
+        from .context_utils import apply_context_truncation
+        
+        truncated_messages = apply_context_truncation(
+            messages,
+            provider="local",  # Use "local" provider for Ollama models
+            model=self.model,
+            logger_name=__name__
+        )
+        
         # Convert messages to Ollama format
         ollama_messages = []
-        for msg in messages:
+        for msg in truncated_messages:
             role = "assistant" if msg.role == "assistant" else "user"
             ollama_messages.append({"role": role, "content": msg.content})
         
@@ -120,8 +141,10 @@ class OllamaProvider(Provider):
                     json=request_data
                 ) as response:
                     if response.status == 404:
-                        yield f"Error: Model '{self.model_name}' not found in Ollama"
-                        yield f"Run: ollama pull {self.model_name}"
+                        # Model not found error
+                        error = Exception("model_not_found")
+                        friendly_msg = self.error_handler.get_friendly_error(error)
+                        yield f"Error: {friendly_msg}"
                         return
                         
                     elif response.status != 200:
@@ -137,7 +160,18 @@ class OllamaProvider(Provider):
                                     yield chunk['message']['content']
                             except:
                                 pass
-        except aiohttp.ClientConnectorError:
-            yield "Error: Cannot connect to Ollama. Start it with: ollama serve"
+        except aiohttp.ClientConnectorError as e:
+            # Connection error
+            error = Exception("connection_error")
+            friendly_msg = self.error_handler.get_friendly_error(error)
+            if self.error_handler.should_suppress_traceback(error):
+                logger.info(f"Expected error: {friendly_msg}")
+            yield f"Error: {friendly_msg}"
         except Exception as e:
-            yield f"Error: {str(e)}"
+            # Other errors
+            friendly_msg = self.error_handler.get_friendly_error(e)
+            if self.error_handler.should_suppress_traceback(e):
+                logger.info(f"Expected error: {friendly_msg}")
+            else:
+                logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+            yield f"Error: {friendly_msg}"

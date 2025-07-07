@@ -3,6 +3,7 @@ import logging
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
+from .error_utils import create_google_error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -129,25 +130,20 @@ class GoogleProvider(Provider):
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)
         self._last_usage = None
+        self.error_handler = create_google_error_handler()
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
-        # Apply context management
-        from .context_manager import ProviderContextManager
-        context_mgr = ProviderContextManager()
-        truncated_messages = context_mgr.prepare_context(
+        # Apply context truncation
+        from .context_utils import apply_context_truncation
+        
+        truncated_messages = apply_context_truncation(
             messages,
             provider="google",
-            model=self.model.model_name if hasattr(self.model, 'model_name') else None
+            model=self.model.model_name if hasattr(self.model, 'model_name') else None,
+            logger_name=__name__
         )
-        
-        # Log if truncation occurred
-        if len(truncated_messages) < len(messages):
-            logger.info(
-                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
-                f"for Google model"
-            )
         
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
@@ -191,8 +187,17 @@ class GoogleProvider(Provider):
                         'total_tokens': getattr(metadata, 'total_token_count', 0)
                     }
         except Exception as e:
-            # Basic error handling - just don't crash
-            raise Exception(f"Google API error: {str(e)}")
+            # Get friendly error message
+            friendly_error = self.error_handler.get_friendly_error(e)
+            
+            # Log appropriately based on error type
+            if self.error_handler.should_suppress_traceback(e):
+                logger.info(f"Expected API error: {friendly_error}")
+            else:
+                logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+            
+            # Create a clean exception with friendly message
+            raise Exception(friendly_error) from None
     
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""

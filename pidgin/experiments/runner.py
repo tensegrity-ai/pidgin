@@ -231,24 +231,53 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
-        # Register conversation in manifest first
+        # Register conversation in manifest
+        self._register_conversation(exp_dir, conversation_id)
+        
+        # Set up event bus
+        event_bus = await self._setup_event_bus(exp_dir, conversation_id)
+        
+        try:
+            # Create agents and providers
+            agents, providers = await self._create_agents_and_providers(config)
+            
+            # Set up output and console
+            output_manager, console = self._setup_output_and_console(
+                config, exp_dir, conversation_id
+            )
+            
+            # Create and run conductor
+            await self._create_and_run_conductor(
+                config=config,
+                agents=agents,
+                providers=providers,
+                output_manager=output_manager,
+                console=console,
+                event_bus=event_bus,
+                conversation_id=conversation_id
+            )
+            
+        finally:
+            # Stop the event bus
+            await event_bus.stop()
+    
+    def _register_conversation(self, exp_dir: Path, conversation_id: str) -> None:
+        """Register conversation in manifest."""
         manifest = ManifestManager(exp_dir)
         jsonl_filename = f"{conversation_id}_events.jsonl"
         manifest.add_conversation(conversation_id, jsonl_filename)
-        
-        # Create tracking event bus for this conversation
+    
+    async def _setup_event_bus(self, exp_dir: Path, conversation_id: str) -> TrackingEventBus:
+        """Create and start tracking event bus for conversation."""
         event_bus = TrackingEventBus(
             experiment_dir=exp_dir,
             conversation_id=conversation_id
         )
         await event_bus.start()
-        
-        # Build initial prompt using CLI logic
-        initial_prompt = build_initial_prompt(
-            custom_prompt=config.custom_prompt,
-            dimensions=config.dimensions,
-        )
-        
+        return event_bus
+    
+    async def _create_agents_and_providers(self, config: ExperimentConfig) -> tuple[dict, dict]:
+        """Create agents and providers from configuration."""
         # Get model configs
         model_a_config = get_model_config(config.agent_a_model)
         model_b_config = get_model_config(config.agent_b_model)
@@ -284,12 +313,14 @@ class ExperimentRunner:
             temperature=config.temperature_b
         )
         
-        # Set up providers dict
-        providers = {
-            "agent_a": provider_a,
-            "agent_b": provider_b
-        }
+        agents = {"agent_a": agent_a, "agent_b": agent_b}
+        providers = {"agent_a": provider_a, "agent_b": provider_b}
         
+        return agents, providers
+    
+    def _setup_output_and_console(self, config: ExperimentConfig, exp_dir: Path, 
+                                  conversation_id: str) -> tuple:
+        """Set up output manager and console for display."""
         # Create minimal output manager that returns the experiment directory
         from ..io.output_manager import OutputManager
         output_manager = OutputManager()
@@ -301,41 +332,44 @@ class ExperimentRunner:
         if config.display_mode in ['verbose', 'tail', 'progress']:
             from rich.console import Console
             console = Console()
+            
+        return output_manager, console
+    
+    async def _create_and_run_conductor(self, config: ExperimentConfig, agents: dict,
+                                        providers: dict, output_manager, console,
+                                        event_bus: TrackingEventBus, conversation_id: str) -> None:
+        """Create conductor and run the conversation."""
+        # Build initial prompt
+        initial_prompt = build_initial_prompt(
+            custom_prompt=config.custom_prompt,
+            dimensions=config.dimensions,
+        )
         
         # Create conductor with the isolated event bus
         conductor = Conductor(
             base_providers=providers,
             output_manager=output_manager,
-            console=console,  # Pass console if needed for display
+            console=console,
             convergence_threshold_override=config.convergence_threshold,
             convergence_action_override=config.convergence_action,
-            bus=event_bus  # Use conversation-specific bus
+            bus=event_bus
         )
         
-        try:
-            # Conversation status tracked in manifest.json
-            
-            # Run the conversation
-            await conductor.run_conversation(
-                agent_a=agent_a,
-                agent_b=agent_b,
-                initial_prompt=initial_prompt,
-                max_turns=config.max_turns,
-                display_mode=config.display_mode,  # Use display mode from config
-                show_timing=False,
-                choose_names=config.choose_names,
-                awareness_a=config.awareness_a or config.awareness,
-                awareness_b=config.awareness_b or config.awareness,
-                temperature_a=config.temperature_a or config.temperature,
-                temperature_b=config.temperature_b or config.temperature,
-                conversation_id=conversation_id
-            )
-            
-            # Conversation completion tracked in manifest.json
-
-        finally:
-            # Stop the event bus
-            await event_bus.stop()
+        # Run the conversation
+        await conductor.run_conversation(
+            agent_a=agents["agent_a"],
+            agent_b=agents["agent_b"],
+            initial_prompt=initial_prompt,
+            max_turns=config.max_turns,
+            display_mode=config.display_mode,
+            show_timing=False,
+            choose_names=config.choose_names,
+            awareness_a=config.awareness_a or config.awareness,
+            awareness_b=config.awareness_b or config.awareness,
+            temperature_a=config.temperature_a or config.temperature,
+            temperature_b=config.temperature_b or config.temperature,
+            conversation_id=conversation_id
+        )
     
     async def _import_and_generate_transcripts(self, experiment_id: str, exp_dir: Path):
         """Automatically import experiment to database and generate transcripts.

@@ -1,0 +1,77 @@
+"""Utilities for context window management across providers."""
+
+from typing import List, Optional, Tuple
+import logging
+
+from ..core.types import Message
+from .context_manager import ProviderContextManager
+
+logger = logging.getLogger(__name__)
+
+
+def apply_context_truncation(
+    messages: List[Message],
+    provider: str,
+    model: Optional[str] = None,
+    logger_name: Optional[str] = None
+) -> List[Message]:
+    """Apply context truncation to messages using ProviderContextManager.
+    
+    This is a centralized utility to avoid duplicating context management
+    code across all providers.
+    
+    Args:
+        messages: List of messages to potentially truncate
+        provider: Provider name (e.g., "anthropic", "openai")
+        model: Optional model name for model-specific limits
+        logger_name: Optional logger name for provider-specific logging
+        
+    Returns:
+        List of messages, potentially truncated to fit context limits
+    """
+    # Use provided logger or default
+    log = logging.getLogger(logger_name) if logger_name else logger
+    
+    # Apply context management
+    context_mgr = ProviderContextManager()
+    truncated_messages = context_mgr.prepare_context(
+        messages,
+        provider=provider,
+        model=model
+    )
+    
+    # Log if truncation occurred
+    if len(truncated_messages) < len(messages):
+        log.info(
+            f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
+            f"for {model or provider}"
+        )
+    
+    return truncated_messages
+
+
+def split_system_and_conversation_messages(
+    messages: List[Message]
+) -> Tuple[List[str], List[dict]]:
+    """Split messages into system messages and conversation messages.
+    
+    This is a common pattern used by multiple providers.
+    
+    Args:
+        messages: List of messages to split
+        
+    Returns:
+        Tuple of (system_messages, conversation_messages) where:
+        - system_messages: List of system message contents
+        - conversation_messages: List of dicts with 'role' and 'content'
+    """
+    system_messages = []
+    conversation_messages = []
+    
+    for m in messages:
+        if m.role == "system":
+            system_messages.append(m.content)
+        else:
+            conversation_messages.append({"role": m.role, "content": m.content})
+    
+    return system_messages, conversation_messages

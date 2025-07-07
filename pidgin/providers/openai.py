@@ -7,6 +7,7 @@ from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_retryable_error
+from .error_utils import create_openai_error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -185,24 +186,6 @@ OPENAI_MODELS = {
 
 class OpenAIProvider(Provider):
     """OpenAI API provider with friendly error handling."""
-    
-    FRIENDLY_ERRORS: Dict[str, str] = {
-        "insufficient_quota": "OpenAI API quota exceeded. Please check your billing at platform.openai.com",
-        "invalid_api_key": "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable",
-        "model_not_found": "Model not found. Please verify the model name is correct",
-        "rate_limit": "Rate limit reached. The system will automatically retry...",
-        "billing": "OpenAI API billing issue. Please update payment method at platform.openai.com",
-        "authentication": "Authentication failed. Please verify your OpenAI API key",
-    }
-    
-    SUPPRESS_TRACEBACK_ERRORS = [
-        "insufficient_quota",
-        "invalid_api_key", 
-        "billing",
-        "payment",
-        "quota",
-        "authentication"
-    ]
     def __init__(self, model: str):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -212,46 +195,21 @@ class OpenAIProvider(Provider):
             )
         self.client = AsyncOpenAI(api_key=api_key)
         self.model = model
+        self.error_handler = create_openai_error_handler()
     
-    def _get_friendly_error(self, error: Exception) -> str:
-        """Convert technical API errors to user-friendly messages."""
-        error_str = str(error).lower()
-        
-        # Check error message content
-        for key, friendly_msg in self.FRIENDLY_ERRORS.items():
-            if key.replace('_', ' ') in error_str:
-                return friendly_msg
-                
-        # Fallback to original error
-        return str(error)
-    
-    def _should_suppress_traceback(self, error: Exception) -> bool:
-        """Check if we should suppress the full traceback for this error."""
-        error_str = str(error).lower()
-        
-        return any(
-            phrase in error_str
-            for phrase in self.SUPPRESS_TRACEBACK_ERRORS
-        )
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
-        # Apply context management
-        from .context_manager import ProviderContextManager
-        context_mgr = ProviderContextManager()
-        truncated_messages = context_mgr.prepare_context(
+        # Apply context truncation
+        from .context_utils import apply_context_truncation
+        
+        truncated_messages = apply_context_truncation(
             messages,
             provider="openai",
-            model=self.model
+            model=self.model,
+            logger_name=__name__
         )
-        
-        # Log if truncation occurred
-        if len(truncated_messages) < len(messages):
-            logger.info(
-                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
-                f"for {self.model}"
-            )
         
         # Convert to OpenAI format
         openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
@@ -312,16 +270,16 @@ class OpenAIProvider(Provider):
                         continue
                     else:
                         # Max retries exhausted
-                        friendly_error = self._get_friendly_error(e)
-                        if self._should_suppress_traceback(e):
+                        friendly_error = self.error_handler.get_friendly_error(e)
+                        if self.error_handler.should_suppress_traceback(e):
                             logger.info(f"Expected API error: {friendly_error}")
                         else:
                             logger.error(f"API error after retries: {str(e)}", exc_info=True)
                         raise Exception(friendly_error) from None
                 else:
                     # Non-retryable error
-                    friendly_error = self._get_friendly_error(e)
-                    if self._should_suppress_traceback(e):
+                    friendly_error = self.error_handler.get_friendly_error(e)
+                    if self.error_handler.should_suppress_traceback(e):
                         logger.info(f"Expected API error: {friendly_error}")
                     else:
                         logger.error(f"Unexpected API error: {str(e)}", exc_info=True)

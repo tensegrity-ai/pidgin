@@ -3,6 +3,7 @@ import logging
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
+from .error_utils import ProviderErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -85,25 +86,24 @@ class xAIProvider(Provider):
         self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
         self.model = model
         self._last_usage = None
+        # xAI uses similar errors to OpenAI  
+        self.error_handler = ProviderErrorHandler(
+            provider_name="xAI",
+            custom_errors={"model_not_found": "Model not found. Please check the xAI model name is correct"}
+        )
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
-        # Apply context management
-        from .context_manager import ProviderContextManager
-        context_mgr = ProviderContextManager()
-        truncated_messages = context_mgr.prepare_context(
+        # Apply context truncation
+        from .context_utils import apply_context_truncation
+        
+        truncated_messages = apply_context_truncation(
             messages,
             provider="xai",
-            model=self.model
+            model=self.model,
+            logger_name=__name__
         )
-        
-        # Log if truncation occurred
-        if len(truncated_messages) < len(messages):
-            logger.info(
-                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
-                f"for {self.model}"
-            )
         
         # Convert to OpenAI format (xAI is OpenAI-compatible)
         openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
@@ -138,7 +138,17 @@ class xAIProvider(Provider):
                     }
                     logger.debug(f"xAI usage data captured: {self._last_usage}")
         except Exception as e:
-            raise Exception(f"xAI API error: {str(e)}")
+            # Get friendly error message
+            friendly_error = self.error_handler.get_friendly_error(e)
+            
+            # Log appropriately based on error type
+            if self.error_handler.should_suppress_traceback(e):
+                logger.info(f"Expected API error: {friendly_error}")
+            else:
+                logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+            
+            # Create a clean exception with friendly message
+            raise Exception(friendly_error) from None
     
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""

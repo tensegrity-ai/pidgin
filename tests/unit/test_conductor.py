@@ -93,11 +93,23 @@ class TestConductorConversation:
         )
         
         # Mock dependencies
-        conductor.lifecycle = AsyncMock()
+        conductor.lifecycle = Mock()
+        # Set up async methods on lifecycle
+        conductor.lifecycle.create_conversation = Mock()
+        conductor.lifecycle.add_initial_messages = AsyncMock()
+        conductor.lifecycle.emit_start_events = AsyncMock()
+        conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
+        conductor.lifecycle.save_transcripts = AsyncMock()
+        conductor.lifecycle.initialize_event_system = AsyncMock()
+        
         conductor.message_handler = Mock()  # Has both sync and async methods
         conductor.message_handler.set_display_filter = Mock()  # Sync method
         conductor.message_handler.handle_message_complete = Mock()  # Sync method
-        conductor.turn_executor = AsyncMock()
+        
+        conductor.turn_executor = Mock()
+        conductor.turn_executor.run_single_turn = AsyncMock()
+        conductor.turn_executor.stop_reason = "max_turns"
+        
         conductor.interrupt_handler = Mock()
         conductor.name_coordinator = Mock()  # Use regular Mock since these are sync methods
         conductor.name_coordinator.initialize_name_mode = Mock()
@@ -108,8 +120,8 @@ class TestConductorConversation:
     @pytest.fixture
     def mock_providers(self):
         """Create mock providers."""
-        provider_a = AsyncMock()
-        provider_b = AsyncMock()
+        provider_a = Mock()
+        provider_b = Mock()
         
         async def mock_stream_a():
             yield {"type": "text", "text": "Hello from A"}
@@ -119,8 +131,13 @@ class TestConductorConversation:
             yield {"type": "text", "text": "Hello from B"}
             yield {"type": "usage", "usage": {"total_tokens": 10}}
         
-        provider_a.stream_response.return_value = mock_stream_a()
-        provider_b.stream_response.return_value = mock_stream_b()
+        # Use Mock with async methods configured properly
+        provider_a.stream_response = Mock(return_value=mock_stream_a())
+        provider_b.stream_response = Mock(return_value=mock_stream_b())
+        
+        # Add any other methods that might be called
+        provider_a.get_last_usage = Mock(return_value=None)
+        provider_b.get_last_usage = Mock(return_value=None)
         
         return {"agent_a": provider_a, "agent_b": provider_b}
     
@@ -190,15 +207,6 @@ class TestConductorConversation:
             messages=[]
         )
         conductor.lifecycle.create_conversation.return_value = test_conversation
-        conductor.lifecycle.add_initial_messages = AsyncMock()
-        conductor.lifecycle.emit_start_events = AsyncMock()
-        conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
-        conductor.lifecycle.save_transcripts = AsyncMock()
-        conductor.lifecycle.initialize_event_system = AsyncMock()
-        
-        # Mock turn execution
-        conductor.turn_executor.run_single_turn = AsyncMock(return_value=None)
-        conductor.turn_executor.stop_reason = "max_turns"
         
         # Mock name choosing methods that actually exist
         conductor.name_coordinator.initialize_name_mode = Mock()
@@ -327,8 +335,8 @@ class TestConductorEventEmission:
         
         # Mock providers
         mock_providers = {
-            "agent_a": AsyncMock(),
-            "agent_b": AsyncMock()
+            "agent_a": Mock(),
+            "agent_b": Mock()
         }
         
         conductor = Conductor(
@@ -399,8 +407,8 @@ class TestConductorProviderHandling:
         """Test that providers are properly initialized."""
         # Mock providers
         mock_providers = {
-            "agent_a": AsyncMock(),
-            "agent_b": AsyncMock()
+            "agent_a": Mock(),
+            "agent_b": Mock()
         }
         
         output_manager = Mock(spec=OutputManager)

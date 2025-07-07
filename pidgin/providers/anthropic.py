@@ -5,6 +5,7 @@ from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_overloaded_error
+from .error_utils import create_anthropic_error_handler
 from dataclasses import dataclass
 from typing import Literal
 
@@ -92,26 +93,6 @@ ANTHROPIC_MODELS = {
 
 class AnthropicProvider(Provider):
     """Anthropic API provider with friendly error handling."""
-    
-    FRIENDLY_ERRORS: Dict[str, str] = {
-        "credit_balance_too_low": "Anthropic API credit balance is too low. Please add credits at console.anthropic.com → Billing",
-        "invalid_api_key": "Invalid Anthropic API key. Please check your ANTHROPIC_API_KEY environment variable",
-        "authentication_error": "Authentication failed. Please verify your Anthropic API key",
-        "rate_limit": "Rate limit reached. The system will automatically retry...",
-        "not_found_error": "Model not found. Please check the model name is correct",
-        "overloaded_error": "Anthropic API is temporarily overloaded. Retrying...",
-        "permission_error": "Your API key doesn't have permission to use this model",
-    }
-    
-    SUPPRESS_TRACEBACK_ERRORS = [
-        "credit_balance_too_low",
-        "invalid_api_key",
-        "authentication_error",
-        "permission_error",
-        "quota",
-        "billing",
-        "payment"
-    ]
     def __init__(self, model: str):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
@@ -121,58 +102,26 @@ class AnthropicProvider(Provider):
             )
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
+        self.error_handler = create_anthropic_error_handler()
     
-    def _get_friendly_error(self, error: Exception) -> str:
-        """Convert technical API errors to user-friendly messages."""
-        error_str = str(error).lower()
-        error_type = getattr(error, '__class__.__name__', '').lower()
-        
-        # Check error message content
-        for key, friendly_msg in self.FRIENDLY_ERRORS.items():
-            if key.replace('_', ' ') in error_str or key in error_type:
-                return friendly_msg
-                
-        # Fallback to original error
-        return str(error)
-    
-    def _should_suppress_traceback(self, error: Exception) -> bool:
-        """Check if we should suppress the full traceback for this error."""
-        error_str = str(error).lower()
-        error_type = getattr(error, '__class__.__name__', '').lower()
-        
-        return any(
-            phrase in error_str or phrase in error_type 
-            for phrase in self.SUPPRESS_TRACEBACK_ERRORS
-        )
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
-        # Apply context management
-        from .context_manager import ProviderContextManager
-        context_mgr = ProviderContextManager()
-        truncated_messages = context_mgr.prepare_context(
+        # Apply context truncation
+        from .context_utils import apply_context_truncation, split_system_and_conversation_messages
+        
+        truncated_messages = apply_context_truncation(
             messages,
             provider="anthropic",
-            model=self.model
+            model=self.model,
+            logger_name=__name__
         )
         
-        # Log if truncation occurred
-        if len(truncated_messages) < len(messages):
-            logger.info(
-                f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
-                f"for {self.model}"
-            )
-        
         # Extract system messages and conversation messages
-        system_messages = []
-        conversation_messages = []
-
-        for m in truncated_messages:
-            if m.role == "system":
-                system_messages.append(m.content)
-            else:
-                conversation_messages.append({"role": m.role, "content": m.content})
+        system_messages, conversation_messages = split_system_and_conversation_messages(
+            truncated_messages
+        )
 
         # Build API call parameters
         api_params = {
@@ -229,10 +178,10 @@ class AnthropicProvider(Provider):
                 yield chunk
         except Exception as e:
             # Get friendly error message
-            friendly_error = self._get_friendly_error(e)
+            friendly_error = self.error_handler.get_friendly_error(e)
             
             # Log appropriately based on error type
-            if self._should_suppress_traceback(e):
+            if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected API error: {friendly_error}")
             else:
                 logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
