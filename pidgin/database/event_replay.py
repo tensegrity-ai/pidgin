@@ -50,6 +50,9 @@ class ConversationState:
     # Messages grouped by turn
     messages: List[Dict[str, Any]] = field(default_factory=list)
     
+    # Turns for metric calculation
+    turns: List[tuple[Any, Any]] = field(default_factory=list)
+    
     # Turn metrics
     turn_metrics: List[Dict[str, Any]] = field(default_factory=list)
     
@@ -169,7 +172,10 @@ class EventReplay:
                 "token_count": state.token_counts.get("agent_b", 0)
             })
         
-        # Store turn metrics
+        # Store turn for metric calculation
+        state.turns.append((turn.agent_a_message, turn.agent_b_message))
+        
+        # Store turn metrics (only convergence from live calculation)
         state.turn_metrics.append({
             "conversation_id": event.conversation_id,
             "turn_number": turn_num,

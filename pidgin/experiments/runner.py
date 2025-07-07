@@ -74,21 +74,7 @@ class ExperimentRunner:
             total_conversations=config.repetitions
         )
         
-        # Also write legacy metadata.json for backward compatibility
-        metadata = {
-            'experiment_id': experiment_id,
-            'name': config.name,
-            'status': 'running',
-            'started_at': datetime.utcnow().isoformat(),
-            'total_conversations': config.repetitions,
-            'completed_conversations': 0,
-            'failed_conversations': 0,
-            'config': config.dict()
-        }
-        
-        metadata_path = exp_dir / 'metadata.json'
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        # Removed legacy metadata.json - using only manifest.json
         
         try:
             
@@ -125,14 +111,7 @@ class ExperimentRunner:
             # Update manifest with final status
             manifest.update_experiment_status(final_status)
             
-            # Update legacy metadata
-            metadata['status'] = final_status
-            metadata['completed_at'] = datetime.utcnow().isoformat()
-            metadata['completed_conversations'] = self.completed_count
-            metadata['failed_conversations'] = self.failed_count
-            
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
+            # Metadata tracking removed - using only manifest.json
             
             logging.info(f"Experiment {experiment_id} completed with status: {final_status}")
             
@@ -146,15 +125,7 @@ class ExperimentRunner:
             # Update manifest with error status
             manifest.update_experiment_status('failed', error=str(e))
             
-            # Update legacy metadata
-            metadata['status'] = 'failed'
-            metadata['completed_at'] = datetime.utcnow().isoformat()
-            metadata['error'] = str(e)
-            metadata['completed_conversations'] = self.completed_count
-            metadata['failed_conversations'] = self.failed_count
-            
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
+            # Metadata tracking removed - using only manifest.json
             
             raise
     
@@ -206,16 +177,7 @@ class ExperimentRunner:
                     logging.error(f"Failed {conv_id}: {e}", exc_info=True)
                     
                     # Write error to conversation metadata
-                    conv_metadata = {
-                        'conversation_id': conv_id,
-                        'status': 'failed',
-                        'error': str(e),
-                        'failed_at': datetime.utcnow().isoformat()
-                    }
-                    
-                    conv_metadata_path = exp_dir / f"{conv_id}_metadata.json"
-                    with open(conv_metadata_path, 'w') as f:
-                        json.dump(conv_metadata, f, indent=2)
+                    # Error already tracked in manifest.json
                     
         # Create all tasks with staggered start times
         tasks = []
@@ -351,18 +313,7 @@ class ExperimentRunner:
         )
         
         try:
-            # Write conversation start metadata
-            conv_metadata = {
-                'conversation_id': conversation_id,
-                'experiment_id': experiment_id,
-                'status': 'running',
-                'started_at': datetime.utcnow().isoformat(),
-                'config': conv_config
-            }
-            
-            conv_metadata_path = exp_dir / f"{conversation_id}_metadata.json"
-            with open(conv_metadata_path, 'w') as f:
-                json.dump(conv_metadata, f, indent=2)
+            # Conversation status tracked in manifest.json
             
             # Run the conversation
             await conductor.run_conversation(
@@ -380,12 +331,7 @@ class ExperimentRunner:
                 conversation_id=conversation_id
             )
             
-            # Update conversation metadata with completion
-            conv_metadata['status'] = 'completed'
-            conv_metadata['completed_at'] = datetime.utcnow().isoformat()
-            
-            with open(conv_metadata_path, 'w') as f:
-                json.dump(conv_metadata, f, indent=2)
+            # Conversation completion tracked in manifest.json
 
         finally:
             # Stop the event bus

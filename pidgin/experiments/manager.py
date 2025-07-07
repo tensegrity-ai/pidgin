@@ -68,16 +68,7 @@ class ExperimentManager:
                 except:
                     pass
                     
-            # Fall back to metadata.json for older experiments
-            metadata_path = exp_dir / "metadata.json"
-            if metadata_path.exists():
-                try:
-                    with open(metadata_path) as f:
-                        metadata = json.load(f)
-                        if metadata.get("name") == name:
-                            return metadata.get("experiment_id", exp_dir.name)
-                except:
-                    pass
+            # Only check manifest.json
         
         return None
         
@@ -105,17 +96,7 @@ class ExperimentManager:
         exp_dir.mkdir(parents=True, exist_ok=True)
         
         # Write initial metadata
-        metadata = {
-            'experiment_id': exp_id,
-            'name': config.name,
-            'status': 'created',
-            'created_at': datetime.utcnow().isoformat(),
-            'config': config.dict()
-        }
-        
-        metadata_path = exp_dir / 'metadata.json'
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        # Initial experiment state written to manifest.json by runner
         
         # Get working directory
         if working_dir is None:
@@ -243,10 +224,10 @@ class ExperimentManager:
             if not exp_dir.is_dir() or exp_dir.name in ['active', 'logs']:
                 continue
                 
-            metadata_path = exp_dir / 'metadata.json'
-            if metadata_path.exists():
+            manifest_path = exp_dir / 'manifest.json'
+            if manifest_path.exists():
                 try:
-                    with open(metadata_path) as f:
+                    with open(manifest_path) as f:
                         exp_data = json.load(f)
                         
                     # Add runtime status

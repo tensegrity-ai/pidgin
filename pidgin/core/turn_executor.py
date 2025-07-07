@@ -102,6 +102,9 @@ class TurnExecutor:
         )
         
         # Calculate convergence
+        # NOTE: Only convergence is calculated live during experiments.
+        # Full metrics (~80 fields) are calculated post-hoc during import 
+        # to avoid slowing down conversations. See ImportService.
         convergence_score = self.convergence_calculator.calculate(conversation.messages)
         
         # Emit turn complete with convergence
