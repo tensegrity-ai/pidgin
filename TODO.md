@@ -24,10 +24,20 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 ## Priority 1: Critical Issues from Code Audit (NEW)
 
 ### Test Suite Creation 🚨
-- [ ] **Create comprehensive test suite**
-  - Zero tests exist despite test dependencies
-  - Start with core modules (conductor, event_bus, message_handler)
-  - Aim for 80% coverage
+- [x] **Create comprehensive test suite** ✅ IN PROGRESS
+  - Fixed 238 tests (up from 181 broken tests)
+  - Created test builders for consistent test data
+  - Achieved high coverage on core modules:
+    - MetricsCalculator: 97% coverage (20 tests)
+    - InterruptHandler: 88% coverage (13 tests) 
+    - Router: 93% coverage (13 tests)
+    - TurnExecutor: 100% coverage (11 tests)
+    - EventRepository: 76% coverage
+    - ExperimentRepository: 91% coverage
+    - ConversationRepository: 93% coverage
+    - MessageRepository: 85% coverage
+    - MetricsRepository: 89% coverage
+  - Still need tests for: name_coordinator, context_manager, event_wrapper, token_handler
   - Add integration tests for concurrent operations
 
 ### Thread Safety Issues 🚨
@@ -38,11 +48,14 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - 14 modules identified with issues
 
 ### God Object Refactoring 🚨
-- [ ] **Split EventStore (856 lines, 22 methods)**
-  - Create ConversationRepository
-  - Create ExperimentRepository
-  - Create MetricsRepository
-  - Maintain backward compatibility
+- [x] **Split EventStore (856 lines, 22 methods)** ✅ DONE
+  - Created BaseRepository with retry logic
+  - Created EventRepository (76% coverage)
+  - Created ExperimentRepository (91% coverage)
+  - Created ConversationRepository (93% coverage)
+  - Created MessageRepository (85% coverage)
+  - Created MetricsRepository (89% coverage)
+  - Maintained backward compatibility
 
 - [ ] **Refactor MetricsCalculator (437 lines, 21 methods)**
   - Separate calculation from analysis
@@ -197,6 +210,13 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Add more conversation pattern recognizers
 
 ## [DONE] Recently Completed
+
+### Directory Structure Consolidation (July 6, 2025)
+- [DONE] Consolidated display/ into ui/ directory
+- [DONE] Moved progress_panel.py from display/ to ui/
+- [DONE] Moved local/ providers into providers/ directory
+- [DONE] Moved ollama_helper.py and test_model.py to providers/
+- [DONE] Updated all imports and module exports
 
 ### Display System Overhaul (July 5, 2025)
 - [DONE] Created centered progress panel as default display

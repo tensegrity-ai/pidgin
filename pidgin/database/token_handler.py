@@ -47,7 +47,7 @@ class TokenUsageHandler:
         # Track token counts for conversations
         self.conversation_tokens: Dict[str, Dict[str, int]] = {}
         
-    async def handle_token_usage(self, event: TokenUsageEvent):
+    def handle_token_usage(self, event: TokenUsageEvent):
         """Handle token usage event from providers."""
         conv_id = event.conversation_id
         provider = event.provider.lower().replace('provider', '')
@@ -56,7 +56,7 @@ class TokenUsageHandler:
         model = getattr(event, 'model', None)
         if not model:
             # Try to get from stored conversation info
-            model = await self._get_model_from_conversation(conv_id, provider)
+            model = self._get_model_from_conversation(conv_id, provider)
         
         # Get token breakdown from event
         prompt_tokens = getattr(event, 'prompt_tokens', 0)
@@ -76,7 +76,7 @@ class TokenUsageHandler:
         )
         
         # Store in database
-        await self.storage.log_token_usage(
+        self.storage.log_token_usage(
             conversation_id=conv_id,
             provider=provider,
             model=model or 'unknown',
@@ -103,7 +103,7 @@ class TokenUsageHandler:
             f"Cost: ${costs['total_cost']/100:.4f}"
         )
     
-    async def handle_message_complete(self, event: MessageCompleteEvent):
+    def handle_message_complete(self, event: MessageCompleteEvent):
         """Enhanced handler that extracts provider-specific usage data."""
         conv_id = event.conversation_id
         
@@ -161,7 +161,7 @@ class TokenUsageHandler:
             'total_cost': total_cost
         }
     
-    async def _get_model_from_conversation(self, conv_id: str, provider: str) -> Optional[str]:
+    def _get_model_from_conversation(self, conv_id: str, provider: str) -> Optional[str]:
         """Get model name from conversation data."""
         # This would query the conversations table
         # For now, return None

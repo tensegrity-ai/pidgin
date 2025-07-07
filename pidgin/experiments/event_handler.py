@@ -1,6 +1,7 @@
 """Event handler for capturing metrics during experiments."""
 
 import asyncio
+import threading
 from typing import Dict, Any, Optional, Set, List, Tuple
 from datetime import datetime
 
@@ -40,38 +41,42 @@ class ExperimentEventHandler:
         self.message_timings: Dict[str, Dict[str, int]] = {}
         self.turn_start_times: Dict[str, Dict[int, datetime]] = {}
         self.conversation_metrics: Dict[str, Dict[str, Any]] = {}  # Track metrics history
+        
+        # Thread safety locks
+        self._state_lock = threading.Lock()  # Protects all state dicts
     
     async def handle_conversation_start(self, event: ConversationStartEvent):
         """Initialize tracking for new conversation."""
         conv_id = event.conversation_id
         
-        # Initialize metrics calculator for this conversation
-        self.metrics_calculators[conv_id] = MetricsCalculator()
-        
-        # Store conversation config
-        self.conversation_configs[conv_id] = {
-            'agent_a_model': event.agent_a_model,
-            'agent_b_model': event.agent_b_model,
-            'initial_prompt': event.initial_prompt,
-            'max_turns': event.max_turns,
-            'temperature_a': event.temperature_a,
-            'temperature_b': event.temperature_b,
-            'started_at': event.timestamp
-        }
-        
-        # Initialize tracking structures
-        self.message_timings[conv_id] = {}
-        self.turn_start_times[conv_id] = {}
-        self.conversation_metrics[conv_id] = {
-            'convergence_history': [],
-            'vocabulary_overlap_history': [],
-            'message_lengths': {'agent_a': [], 'agent_b': []},
-            'word_counts': {'agent_a': [], 'agent_b': []},
-            'emoji_counts': {'agent_a': [], 'agent_b': []}
-        }
+        with self._state_lock:
+            # Initialize metrics calculator for this conversation
+            self.metrics_calculators[conv_id] = MetricsCalculator()
+            
+            # Store conversation config
+            self.conversation_configs[conv_id] = {
+                'agent_a_model': event.agent_a_model,
+                'agent_b_model': event.agent_b_model,
+                'initial_prompt': event.initial_prompt,
+                'max_turns': event.max_turns,
+                'temperature_a': event.temperature_a,
+                'temperature_b': event.temperature_b,
+                'started_at': event.timestamp
+            }
+            
+            # Initialize tracking structures
+            self.message_timings[conv_id] = {}
+            self.turn_start_times[conv_id] = {}
+            self.conversation_metrics[conv_id] = {
+                'convergence_history': [],
+                'vocabulary_overlap_history': [],
+                'message_lengths': {'agent_a': [], 'agent_b': []},
+                'word_counts': {'agent_a': [], 'agent_b': []},
+                'emoji_counts': {'agent_a': [], 'agent_b': []}
+            }
         
         # Update database
-        await self.storage.update_conversation_status(conv_id, 'running')
+        self.storage.update_conversation_status(conv_id, 'running')
     
     async def handle_system_prompt(self, event: SystemPromptEvent):
         """Handle system prompt events to capture agent names if chosen."""
@@ -79,7 +84,7 @@ class ExperimentEventHandler:
         
         # Check if this is a name choice
         if event.agent_display_name and event.agent_display_name != event.agent_id:
-            await self.storage.log_agent_name(
+            self.storage.log_agent_name(
                 conv_id,
                 event.agent_id,
                 event.agent_display_name,
@@ -90,11 +95,12 @@ class ExperimentEventHandler:
         """Track message completion for timing metrics."""
         conv_id = event.conversation_id
         
-        # Store timing information
-        if conv_id not in self.message_timings:
-            self.message_timings[conv_id] = {}
-        
-        self.message_timings[conv_id][event.agent_id] = event.duration_ms
+        with self._state_lock:
+            # Store timing information
+            if conv_id not in self.message_timings:
+                self.message_timings[conv_id] = {}
+            
+            self.message_timings[conv_id][event.agent_id] = event.duration_ms
     
     async def handle_turn_complete(self, event: TurnCompleteEvent):
         """Calculate and store metrics when turn completes."""
@@ -107,9 +113,10 @@ class ExperimentEventHandler:
             return
         
         # Get the calculator for this conversation
-        calculator = self.metrics_calculators.get(conv_id)
-        if not calculator:
-            return
+        with self._state_lock:
+            calculator = self.metrics_calculators.get(conv_id)
+            if not calculator:
+                return
         
         # Extract messages
         msg_a = turn.agent_a_message.content
@@ -155,7 +162,7 @@ class ExperimentEventHandler:
         status = status_map.get(event.reason, event.reason)
         
         # Update conversation status in database
-        await self.storage.update_conversation_status(
+        self.storage.update_conversation_status(
             conv_id, 
             status,
             convergence_reason=event.reason if 'convergence' in event.reason else None
@@ -163,11 +170,12 @@ class ExperimentEventHandler:
         
         
         # Clean up tracking data
-        self.metrics_calculators.pop(conv_id, None)
-        self.conversation_configs.pop(conv_id, None)
-        self.message_timings.pop(conv_id, None)
-        self.turn_start_times.pop(conv_id, None)
-        self.conversation_metrics.pop(conv_id, None)
+        with self._state_lock:
+            self.metrics_calculators.pop(conv_id, None)
+            self.conversation_configs.pop(conv_id, None)
+            self.message_timings.pop(conv_id, None)
+            self.turn_start_times.pop(conv_id, None)
+            self.conversation_metrics.pop(conv_id, None)
     
     # ========== Helper Methods ==========
     
@@ -204,47 +212,49 @@ class ExperimentEventHandler:
     
     def _calculate_timing_metrics(self, conv_id: str, turn_number: int) -> Dict[str, int]:
         """Calculate timing-related metrics."""
-        # Initialize if needed
-        if conv_id not in self.turn_start_times:
-            self.turn_start_times[conv_id] = {}
-        
-        if turn_number not in self.turn_start_times[conv_id]:
-            self.turn_start_times[conv_id][turn_number] = datetime.now()
-        
-        # Calculate turn duration
-        turn_start = self.turn_start_times[conv_id][turn_number]
-        turn_duration_ms = int((datetime.now() - turn_start).total_seconds() * 1000)
-        
-        # Get response times from message timings
-        timings = self.message_timings.get(conv_id, {})
-        
-        return {
-            'turn_duration_ms': turn_duration_ms,
-            'agent_a_response_time_ms': timings.get('agent_a', 0),
-            'agent_b_response_time_ms': timings.get('agent_b', 0)
-        }
+        with self._state_lock:
+            # Initialize if needed
+            if conv_id not in self.turn_start_times:
+                self.turn_start_times[conv_id] = {}
+            
+            if turn_number not in self.turn_start_times[conv_id]:
+                self.turn_start_times[conv_id][turn_number] = datetime.now()
+            
+            # Calculate turn duration
+            turn_start = self.turn_start_times[conv_id][turn_number]
+            turn_duration_ms = int((datetime.now() - turn_start).total_seconds() * 1000)
+            
+            # Get response times from message timings
+            timings = self.message_timings.get(conv_id, {})
+            
+            return {
+                'turn_duration_ms': turn_duration_ms,
+                'agent_a_response_time_ms': timings.get('agent_a', 0),
+                'agent_b_response_time_ms': timings.get('agent_b', 0)
+            }
     
     def _track_conversation_metrics(self, conv_id: str, separated_metrics: Dict[str, Dict]):
         """Track metrics history for this conversation."""
-        if conv_id not in self.conversation_metrics:
-            return
-        
-        history = self.conversation_metrics[conv_id]
-        turn_metrics = separated_metrics['turn']
-        agent_a_metrics = separated_metrics['agent_a']
-        agent_b_metrics = separated_metrics['agent_b']
-        
-        # Track convergence
-        history['convergence_history'].append(turn_metrics.get('convergence_score', 0))
-        history['vocabulary_overlap_history'].append(turn_metrics.get('vocabulary_overlap', 0))
-        
-        # Track per-agent metrics
-        history['message_lengths']['agent_a'].append(agent_a_metrics.get('message_length', 0))
-        history['message_lengths']['agent_b'].append(agent_b_metrics.get('message_length', 0))
-        history['word_counts']['agent_a'].append(agent_a_metrics.get('word_count', 0))
-        history['word_counts']['agent_b'].append(agent_b_metrics.get('word_count', 0))
-        history['emoji_counts']['agent_a'].append(agent_a_metrics.get('emoji_count', 0))
-        history['emoji_counts']['agent_b'].append(agent_b_metrics.get('emoji_count', 0))
+        with self._state_lock:
+            if conv_id not in self.conversation_metrics:
+                return
+            
+            history = self.conversation_metrics[conv_id]
+            turn_metrics = separated_metrics['turn']
+            agent_a_metrics = separated_metrics['agent_a']
+            agent_b_metrics = separated_metrics['agent_b']
+            
+            # Track convergence
+            history['convergence_history'].append(turn_metrics.get('convergence_score', 0))
+            history['vocabulary_overlap_history'].append(turn_metrics.get('vocabulary_overlap', 0))
+            
+            # Track per-agent metrics
+            history['message_lengths']['agent_a'].append(agent_a_metrics.get('message_length', 0))
+            history['message_lengths']['agent_b'].append(agent_b_metrics.get('message_length', 0))
+            history['word_counts']['agent_a'].append(agent_a_metrics.get('word_count', 0))
+            history['word_counts']['agent_b'].append(agent_b_metrics.get('word_count', 0))
+            history['emoji_counts']['agent_a'].append(agent_a_metrics.get('emoji_count', 0))
+            history['emoji_counts']['agent_b'].append(agent_b_metrics.get('emoji_count', 0))
     
     async def _store_metrics_to_database(self, conv_id: str, turn_number: int,
                                         separated_metrics: Dict[str, Dict],
@@ -262,24 +272,30 @@ class ExperimentEventHandler:
         turn_metrics['combined_vocabulary_size'] = len(words_a | words_b)
         
         # Store turn-level metrics
-        await self.storage.log_turn_metrics(conv_id, turn_number, turn_metrics)
+        self.storage.log_turn_metrics(conv_id, turn_number, turn_metrics)
         
         # Store agent A metrics
-        agent_a_metrics = separated_metrics['agent_a'].copy()
-        agent_a_metrics['response_time_ms'] = timing_metrics['agent_a_response_time_ms']
-        await self.storage.log_message_metrics(conv_id, turn_number, 'agent_a', agent_a_metrics)
+        agent_a_metrics = separated_metrics['agent_a']
+        self.storage.log_message_metrics(
+            conv_id, turn_number, 'agent_a',
+            message_length=agent_a_metrics.get('message_length', 0),
+            vocabulary_size=agent_a_metrics.get('vocabulary_size', 0),
+            punctuation_ratio=agent_a_metrics.get('punctuation_ratio', 0.0),
+            sentiment_score=agent_a_metrics.get('sentiment_score')
+        )
         
         # Store agent B metrics
-        agent_b_metrics = separated_metrics['agent_b'].copy()
-        agent_b_metrics['response_time_ms'] = timing_metrics['agent_b_response_time_ms']
-        await self.storage.log_message_metrics(conv_id, turn_number, 'agent_b', agent_b_metrics)
+        agent_b_metrics = separated_metrics['agent_b']
+        self.storage.log_message_metrics(
+            conv_id, turn_number, 'agent_b',
+            message_length=agent_b_metrics.get('message_length', 0),
+            vocabulary_size=agent_b_metrics.get('vocabulary_size', 0),
+            punctuation_ratio=agent_b_metrics.get('punctuation_ratio', 0.0),
+            sentiment_score=agent_b_metrics.get('sentiment_score')
+        )
         
-        # Store word frequencies
-        word_freq_a, _ = calculator.get_word_frequencies(msg_a, 'agent_a')
-        word_freq_b, _ = calculator.get_word_frequencies(msg_b, 'agent_b')
-        
-        await self.storage.log_word_frequencies(conv_id, turn_number, 'agent_a', word_freq_a)
-        await self.storage.log_word_frequencies(conv_id, turn_number, 'agent_b', word_freq_b)
+        # Word frequencies are stored in turn_metrics as JSON
+        # No need for separate log_word_frequencies calls
     
     async def _emit_metrics_event(self, conv_id: str, turn_number: int,
                                  separated_metrics: Dict[str, Dict],
@@ -305,57 +321,58 @@ class ExperimentEventHandler:
     
     def _build_conversation_summary(self, conv_id: str, event: ConversationEndEvent) -> Dict[str, Any]:
         """Build a comprehensive summary of the completed conversation."""
-        config = self.conversation_configs.get(conv_id, {})
-        history = self.conversation_metrics.get(conv_id, {})
-        
-        # Basic info
-        summary = {
-            'conversation_id': conv_id,
-            'total_turns': event.total_turns,
-            'model_pair': (config.get('agent_a_model'), config.get('agent_b_model')),
-            'temperatures': (config.get('temperature_a'), config.get('temperature_b')),
-        }
-        
-        # Convergence metrics
-        convergence_history = history.get('convergence_history', [])
-        if convergence_history:
-            summary['final_convergence'] = convergence_history[-1]
-            summary['max_convergence'] = max(convergence_history)
-            summary['convergence_history'] = convergence_history
-        else:
-            summary['final_convergence'] = 0.0
-            summary['max_convergence'] = 0.0
-            summary['convergence_history'] = []
-        
-        # Vocabulary metrics
-        vocab_history = history.get('vocabulary_overlap_history', [])
-        if vocab_history and len(vocab_history) > 5:
-            # Check for vocabulary compression
-            early_overlap = sum(vocab_history[:5]) / 5
-            late_overlap = sum(vocab_history[-5:]) / 5
-            compression_ratio = late_overlap / early_overlap if early_overlap > 0 else 1.0
-            summary['vocabulary_metrics'] = {
-                'compression_ratio': compression_ratio,
-                'final_overlap': vocab_history[-1] if vocab_history else 0
+        with self._state_lock:
+            config = self.conversation_configs.get(conv_id, {})
+            history = self.conversation_metrics.get(conv_id, {})
+            calculator = self.metrics_calculators.get(conv_id)
+            
+            # Basic info
+            summary = {
+                'conversation_id': conv_id,
+                'total_turns': event.total_turns,
+                'model_pair': (config.get('agent_a_model'), config.get('agent_b_model')),
+                'temperatures': (config.get('temperature_a'), config.get('temperature_b')),
             }
         
-        # Pattern detection
-        patterns = self._detect_patterns(conv_id, history, summary)
-        summary['pattern_flags'] = patterns
-        
-        # Word frequencies (simplified for now)
-        calculator = self.metrics_calculators.get(conv_id)
-        if calculator:
-            # Get final word frequencies
-            all_words = calculator.all_words_seen
-            summary['word_frequencies'] = {word: 1 for word in list(all_words)[:50]}  # Top 50
+            # Convergence metrics
+            convergence_history = history.get('convergence_history', [])
+            if convergence_history:
+                summary['final_convergence'] = convergence_history[-1]
+                summary['max_convergence'] = max(convergence_history)
+                summary['convergence_history'] = convergence_history
+            else:
+                summary['final_convergence'] = 0.0
+                summary['max_convergence'] = 0.0
+                summary['convergence_history'] = []
             
-            # Emergent words (appeared after turn 10)
-            emergent = set()
-            for turn_vocab in calculator.turn_vocabularies[10:]:
-                emergent.update(turn_vocab.get('agent_a', set()))
-                emergent.update(turn_vocab.get('agent_b', set()))
-            summary['emergent_words'] = emergent
+            # Vocabulary metrics
+            vocab_history = history.get('vocabulary_overlap_history', [])
+            if vocab_history and len(vocab_history) > 5:
+                # Check for vocabulary compression
+                early_overlap = sum(vocab_history[:5]) / 5
+                late_overlap = sum(vocab_history[-5:]) / 5
+                compression_ratio = late_overlap / early_overlap if early_overlap > 0 else 1.0
+                summary['vocabulary_metrics'] = {
+                    'compression_ratio': compression_ratio,
+                    'final_overlap': vocab_history[-1] if vocab_history else 0
+                }
+            
+            # Pattern detection
+            patterns = self._detect_patterns(conv_id, history, summary)
+            summary['pattern_flags'] = patterns
+            
+            # Word frequencies (simplified for now)
+            if calculator:
+                # Get final word frequencies
+                all_words = calculator.all_words_seen
+                summary['word_frequencies'] = {word: 1 for word in list(all_words)[:50]}  # Top 50
+                
+                # Emergent words (appeared after turn 10)
+                emergent = set()
+                for turn_vocab in calculator.turn_vocabularies[10:]:
+                    emergent.update(turn_vocab.get('agent_a', set()))
+                    emergent.update(turn_vocab.get('agent_b', set()))
+                summary['emergent_words'] = emergent
         
         return summary
     

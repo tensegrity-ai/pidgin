@@ -17,7 +17,7 @@ Pidgin is an event-driven system for recording and analyzing AI-to-AI conversati
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
 │     CLI     │────▶│   Conductor  │────▶│   EventBus  │
 └─────────────┘     └──────────────┘     └─────────────┘
-                            │                     │
+                            │                    │
                     ┌───────▼────────┐           │
                     │    Providers   │           ▼
                     ├────────────────┤    ┌─────────────────┐
@@ -66,10 +66,10 @@ Pidgin supports local models through two mechanisms:
 - Automatic installation support with user consent
 
 ```
-┌─────────────┐     HTTP      ┌──────────────┐
-│   Pidgin    │ ──────────▶   │ Ollama Server│
+┌────────────-─┐     HTTP      ┌──────────────┐
+│   Pidgin     │ ────-──────▶  │ Ollama Server│
 │OllamaProvider│               │ (port 11434) │
-└─────────────┘               └──────────────┘
+└─────────────-┘               └──────────────┘
                                      │
                               ┌──────▼────────┐
                               │ Local Models  │
@@ -194,13 +194,13 @@ Experiments run as Unix daemon processes:
 │ CLI Command  │────▶│ Daemon Process│────▶│   EventBus   │
 └──────────────┘     └───────────────┘     └──────────────┘
                              │                      │
-                     ┌───────▼────────┐    ┌───────▼──────┐
-                     │ Experiment     │    │ DuckDB Store │
-                     │ Runner         │    │ • Metrics    │
-                     │ • Rate aware   │    │ • Messages   │
-                     │ • Fault tolerant│   │ • Metadata   │
+                     ┌───────▼───────-─┐    ┌───────▼──────┐
+                     │ Experiment      │    │ DuckDB Store │
+                     │ Runner          │    │ • Metrics    │
+                     │ • Rate aware    │    │ • Messages   │
+                     │ • Fault tolerant│    │ • Metadata   │
                      │ • Progress track│    │ • Events     │
-                     └────────────────┘    └──────────────┘
+                     └────────────────-┘    └──────────────┘
 ```
 
 **Important Note**: While the architecture supports parallel execution, experiments run sequentially by default due to:

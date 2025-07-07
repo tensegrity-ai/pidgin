@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import threading
 from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
@@ -34,6 +35,9 @@ class EventBus:
         self.event_log_dir = event_log_dir
         self._running = False
         self._jsonl_files = {}  # conversation_id -> file handle
+        self._jsonl_lock = threading.Lock()  # Protect JSONL file access
+        self._history_lock = threading.Lock()  # Protect event history
+        self._subscriber_lock = threading.Lock()  # Protect subscriber list
 
     def _serialize_value(self, value: Any) -> Any:
         """Convert a value to a JSON-serializable format."""
@@ -79,16 +83,17 @@ class EventBus:
         if not self.event_log_dir:
             return None
             
-        if conversation_id not in self._jsonl_files:
-            # Create directory if needed
-            log_dir = Path(self.event_log_dir)
-            log_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Open file in append mode
-            log_path = log_dir / f"{conversation_id}_events.jsonl"
-            self._jsonl_files[conversation_id] = open(log_path, 'a', buffering=1)  # Line buffered
-            
-        return self._jsonl_files[conversation_id]
+        with self._jsonl_lock:
+            if conversation_id not in self._jsonl_files:
+                # Create directory if needed
+                log_dir = Path(self.event_log_dir)
+                log_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Open file in append mode
+                log_path = log_dir / f"{conversation_id}_events.jsonl"
+                self._jsonl_files[conversation_id] = open(log_path, 'a', buffering=1)  # Line buffered
+                
+            return self._jsonl_files[conversation_id]
     
     def _write_to_jsonl(self, event: Event, event_data: dict):
         """Write event to JSONL file."""
@@ -114,10 +119,11 @@ class EventBus:
             event: The event to emit
         """
         # Log to event history with size limit
-        self.event_history.append(event)
-        if len(self.event_history) > self.max_history_size:
-            # Remove oldest events to maintain size limit
-            self.event_history = self.event_history[-self.max_history_size:]
+        with self._history_lock:
+            self.event_history.append(event)
+            if len(self.event_history) > self.max_history_size:
+                # Remove oldest events to maintain size limit
+                self.event_history = self.event_history[-self.max_history_size:]
 
 
         # Prepare event data for serialization
@@ -145,9 +151,10 @@ class EventBus:
         handlers = []
 
         # Check all registered event types
-        for event_type, handler_list in self.subscribers.items():
-            if isinstance(event, event_type):
-                handlers.extend(handler_list)
+        with self._subscriber_lock:
+            for event_type, handler_list in self.subscribers.items():
+                if isinstance(event, event_type):
+                    handlers.extend(handler_list)
 
         # Notify all subscribers
         for handler in handlers:
@@ -167,7 +174,8 @@ class EventBus:
             event_type: The type of event to subscribe to
             handler: The function to call when event is emitted
         """
-        self.subscribers[event_type].append(handler)
+        with self._subscriber_lock:
+            self.subscribers[event_type].append(handler)
 
     def unsubscribe(self, event_type: Type[T], handler: Callable[[T], None]) -> None:
         """Unsubscribe from events.
@@ -176,8 +184,9 @@ class EventBus:
             event_type: The type of event to unsubscribe from
             handler: The handler to remove
         """
-        if handler in self.subscribers[event_type]:
-            self.subscribers[event_type].remove(handler)
+        with self._subscriber_lock:
+            if handler in self.subscribers[event_type]:
+                self.subscribers[event_type].remove(handler)
 
     def get_history(self, event_type: Type[T] = None) -> List[Event]:
         """Get event history, optionally filtered by type.
@@ -188,14 +197,16 @@ class EventBus:
         Returns:
             List of events
         """
-        if event_type is None:
-            return self.event_history.copy()
+        with self._history_lock:
+            if event_type is None:
+                return self.event_history.copy()
 
-        return [e for e in self.event_history if isinstance(e, event_type)]
+            return [e for e in self.event_history if isinstance(e, event_type)]
 
     def clear_history(self) -> None:
         """Clear the event history."""
-        self.event_history.clear()
+        with self._history_lock:
+            self.event_history.clear()
 
     async def start(self):
         """Start the event bus."""
@@ -206,12 +217,13 @@ class EventBus:
         self._running = False
         
         # Close all JSONL files
-        for file_handle in self._jsonl_files.values():
-            try:
-                file_handle.close()
-            except Exception as e:
-                logger.error(f"Error closing JSONL file: {e}")
-        self._jsonl_files.clear()
+        with self._jsonl_lock:
+            for file_handle in self._jsonl_files.values():
+                try:
+                    file_handle.close()
+                except Exception as e:
+                    logger.error(f"Error closing JSONL file: {e}")
+            self._jsonl_files.clear()
     
     def close_conversation_log(self, conversation_id: str) -> None:
         """Close JSONL file for a specific conversation.
@@ -219,11 +231,12 @@ class EventBus:
         Args:
             conversation_id: The conversation ID whose log to close
         """
-        if conversation_id in self._jsonl_files:
-            try:
-                self._jsonl_files[conversation_id].close()
-                del self._jsonl_files[conversation_id]
-                logger.debug(f"Closed JSONL file for conversation {conversation_id}")
-            except Exception as e:
-                logger.error(f"Error closing JSONL file for {conversation_id}: {e}")
+        with self._jsonl_lock:
+            if conversation_id in self._jsonl_files:
+                try:
+                    self._jsonl_files[conversation_id].close()
+                    del self._jsonl_files[conversation_id]
+                    logger.debug(f"Closed JSONL file for conversation {conversation_id}")
+                except Exception as e:
+                    logger.error(f"Error closing JSONL file for {conversation_id}: {e}")
 

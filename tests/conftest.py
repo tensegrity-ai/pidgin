@@ -269,14 +269,13 @@ def mock_event_store(mocker):
 
 
 @pytest.fixture
-async def in_memory_duckdb():
+def in_memory_duckdb():
     """Create an in-memory DuckDB for testing."""
-    from pidgin.database.async_duckdb import AsyncDuckDB
+    from pidgin.database.event_store import EventStore
     
-    db = AsyncDuckDB(":memory:")
-    await db.initialize()
-    yield db
-    await db.close()
+    store = EventStore(Path(":memory:"))
+    yield store
+    store.close()
 
 
 # ===== CLI Fixtures =====

@@ -214,13 +214,15 @@ class TranscriptGenerator:
         started = conv_data.get("started_at", "")
         if isinstance(started, str):
             date_str = started
-        else:
+        elif started:
             date_str = started.strftime("%Y-%m-%d %H:%M:%S UTC")
+        else:
+            date_str = "N/A"
         
         lines = [
-            f"# Conversation: {conv_data['agent_a_model']} ↔ {conv_data['agent_b_model']}",
+            f"# Conversation: {conv_data.get('agent_a_model', 'Unknown')} ↔ {conv_data.get('agent_b_model', 'Unknown')}",
             "",
-            f"**Experiment**: {conv_data['experiment_id']}",
+            f"**Experiment**: {conv_data.get('experiment_id', 'N/A')}",
             f"**Date**: {date_str}",
             f"**Duration**: {duration_str}",
             f"**Agents**: {agent_a} ↔ {agent_b}"
@@ -231,6 +233,9 @@ class TranscriptGenerator:
     def _format_summary_metrics(self, conv_data: Dict, token_data: Dict, num_turns: int) -> str:
         """Format summary metrics table."""
         total_cost = (token_data.get("total_cost_cents") or 0) / 100.0
+        final_convergence = conv_data.get('final_convergence_score')
+        if final_convergence is None:
+            final_convergence = 0
         
         lines = [
             "## Summary Metrics",
@@ -238,7 +243,7 @@ class TranscriptGenerator:
             "| Metric | Value |",
             "|--------|-------|",
             f"| Total Turns | {conv_data.get('total_turns', num_turns)} |",
-            f"| Final Convergence | {conv_data.get('final_convergence_score', 0):.3f} |",
+            f"| Final Convergence | {final_convergence:.3f} |",
             f"| Total Messages | {conv_data.get('total_turns', num_turns) * 2} |",
             f"| Total Tokens | {token_data['total_tokens']:,} |",
             f"| Total Cost | ${total_cost:.2f} |",
@@ -281,15 +286,19 @@ class TranscriptGenerator:
                 # Calculate trend
                 if len(scores) > 1:
                     prev_idx = max(0, len(scores) - 2)
-                    prev_score = float(scores[prev_idx])
-                    if score > prev_score + 0.1:
-                        trends.append("↑↑")
-                    elif score > prev_score:
-                        trends.append("↑")
-                    elif score < prev_score:
-                        trends.append("↓")
+                    # Check if previous score is not "-"
+                    if scores[prev_idx] != "-":
+                        prev_score = float(scores[prev_idx])
+                        if score > prev_score + 0.1:
+                            trends.append("↑↑")
+                        elif score > prev_score:
+                            trends.append("↑")
+                        elif score < prev_score:
+                            trends.append("↓")
+                        else:
+                            trends.append("→")
                     else:
-                        trends.append("→")
+                        trends.append("-")  # Can't calculate trend from missing data
                 else:
                     trends.append("-")
             else:
@@ -381,15 +390,21 @@ class TranscriptGenerator:
                 # Parse shared vocabulary from JSON
                 shared_vocab_json = last_metric.get("shared_vocabulary")
                 if shared_vocab_json:
-                    if isinstance(shared_vocab_json, str):
-                        shared_vocab = json.loads(shared_vocab_json)
-                    else:
-                        shared_vocab = shared_vocab_json
-                    shared_count = len(shared_vocab) if isinstance(shared_vocab, list) else 0
+                    try:
+                        if isinstance(shared_vocab_json, str):
+                            shared_vocab = json.loads(shared_vocab_json)
+                        else:
+                            shared_vocab = shared_vocab_json
+                        shared_count = len(shared_vocab) if isinstance(shared_vocab, list) else 0
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse shared_vocabulary JSON: {shared_vocab_json}")
+                        shared_count = 0
                 else:
                     shared_count = 0
                 
-                # Calculate overlap percentage
+                # Calculate overlap percentage (handle None values)
+                unique_a = unique_a or 0
+                unique_b = unique_b or 0
                 total_unique = unique_a + unique_b - shared_count
                 overlap_pct = (shared_count / total_unique * 100) if total_unique > 0 else 0
                 

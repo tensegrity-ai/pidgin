@@ -1,5 +1,5 @@
 """Database package for Pidgin using DuckDB."""
 
-from .async_duckdb import AsyncDuckDB
+from .event_store import EventStore
 
-__all__ = ["AsyncDuckDB"]
+__all__ = ["EventStore"]

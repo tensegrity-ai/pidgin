@@ -18,7 +18,7 @@ from ..core.events import (
     MessageCompleteEvent,
     SystemPromptEvent
 )
-from ..database.batch_importer import BatchImporter
+from ..database.event_store import EventStore
 from ..database.transcript_generator import TranscriptGenerator
 from ..io.paths import get_database_path
 from ..core.types import Agent
@@ -404,9 +404,9 @@ class ExperimentRunner:
             # Get database path
             db_path = get_database_path()
             
-            # Import to database
-            importer = BatchImporter(db_path)
-            result = importer.import_experiment(exp_dir, force=False)
+            # Import to database using EventStore
+            with EventStore(db_path) as event_store:
+                result = event_store.import_experiment_from_jsonl(exp_dir, force=False)
             
             if result.success:
                 logging.info(f"Successfully imported {result.events_imported} events, "

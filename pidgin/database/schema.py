@@ -85,9 +85,11 @@ CREATE TABLE IF NOT EXISTS conversations (
     -- Error information if failed
     error_message TEXT,
     error_type TEXT,
-    error_timestamp TIMESTAMP,
+    error_timestamp TIMESTAMP
     
-    FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
+    -- DuckDB limitation: Removing foreign keys due to UPDATE issues
+    -- See: https://github.com/duckdb/duckdb/issues/10574
+    -- FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
 );
 
 -- Indexes for queries
@@ -138,8 +140,9 @@ CREATE TABLE IF NOT EXISTS turn_metrics (
     -- Extended metrics as JSON
     extended_metrics JSON,
     
-    PRIMARY KEY (conversation_id, turn_number),
-    FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
+    PRIMARY KEY (conversation_id, turn_number)
+    -- DuckDB limitation: Removing foreign keys due to UPDATE issues
+    -- FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
 );
 
 -- Indexes for analytics
@@ -161,8 +164,9 @@ CREATE TABLE IF NOT EXISTS messages (
     token_count INTEGER,
     model_reported_tokens INTEGER,
     
-    PRIMARY KEY (conversation_id, turn_number, agent_id),
-    FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
+    PRIMARY KEY (conversation_id, turn_number, agent_id)
+    -- DuckDB limitation: Removing foreign keys due to UPDATE issues
+    -- FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
 );
 
 -- Full-text index (if supported by DuckDB version)

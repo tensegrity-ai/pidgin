@@ -17,7 +17,6 @@ from ..ui.tail_display import TailDisplay
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
 from ..database.event_store import EventStore
-from ..database.async_duckdb import AsyncDuckDB
 
 
 class ConversationLifecycle:
@@ -72,8 +71,7 @@ class ConversationLifecycle:
             # Create database connection first
             # Use in-memory database for tests
             db_path = conv_dir / "conversation.db" if conv_dir else ":memory:"
-            db = AsyncDuckDB(db_path)
-            self.db_store = EventStore(db)
+            self.db_store = EventStore(db_path)
             self._owns_db_store = True
         else:
             self.db_store = db_store
