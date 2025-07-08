@@ -15,27 +15,13 @@ class EventRepository(BaseRepository):
     """Repository for event storage and retrieval."""
     
     def save_event(self, event: Event, experiment_id: str, conversation_id: str):
-        """Save an event to the database.
+        """Save an event to the database with atomic sequence generation.
         
         Args:
             event: Event to save
             experiment_id: Experiment ID
             conversation_id: Conversation ID
         """
-        query = """
-            INSERT INTO events (
-                timestamp, event_type, conversation_id, 
-                experiment_id, event_data, sequence
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """
-        
-        # Get next sequence number for this conversation
-        seq_result = self.fetchone(
-            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM events WHERE conversation_id = ?",
-            [conversation_id]
-        )
-        sequence = seq_result[0] if seq_result else 1
-        
         # Convert event to dict for storage
         event_dict = {
             "event_type": event.__class__.__name__,
@@ -48,23 +34,72 @@ class EventRepository(BaseRepository):
         for field_name in event.__dataclass_fields__:
             if field_name not in ["timestamp", "event_id"]:
                 value = getattr(event, field_name)
-                if hasattr(value, "isoformat"):
+                if value is None:
+                    event_dict[field_name] = None
+                elif hasattr(value, "isoformat"):
+                    # Handle datetime objects
                     event_dict[field_name] = value.isoformat()
-                elif hasattr(value, "__dict__"):
-                    event_dict[field_name] = value.__dict__
+                elif hasattr(value, "model_dump"):
+                    # Handle Pydantic models
+                    event_dict[field_name] = value.model_dump(mode="json")
+                elif hasattr(value, "__dict__") and not isinstance(value, (str, int, float, bool, list, dict)):
+                    # Handle dataclass objects
+                    sub_dict = {}
+                    for k, v in value.__dict__.items():
+                        if hasattr(v, "isoformat"):
+                            sub_dict[k] = v.isoformat()
+                        elif hasattr(v, "model_dump"):
+                            sub_dict[k] = v.model_dump(mode="json")
+                        elif hasattr(v, "__dict__") and not isinstance(v, (str, int, float, bool, list, dict)):
+                            # Recursively handle nested objects
+                            sub_dict[k] = {kk: vv.isoformat() if hasattr(vv, "isoformat") else vv for kk, vv in v.__dict__.items()}
+                        else:
+                            sub_dict[k] = v
+                    event_dict[field_name] = sub_dict
+                elif isinstance(value, list):
+                    # Handle lists - check each item
+                    serialized_list = []
+                    for item in value:
+                        if hasattr(item, "model_dump"):
+                            serialized_list.append(item.model_dump(mode="json"))
+                        elif hasattr(item, "__dict__") and not isinstance(item, (str, int, float, bool)):
+                            serialized_list.append({k: v for k, v in item.__dict__.items()})
+                        else:
+                            serialized_list.append(item)
+                    event_dict[field_name] = serialized_list
                 else:
                     event_dict[field_name] = value
         
-        self.execute(query, [
+        # Atomic INSERT with subquery for sequence generation
+        # This eliminates the race condition by calculating the sequence
+        # within the same INSERT statement
+        query = """
+            INSERT INTO events (
+                timestamp, event_type, conversation_id, 
+                experiment_id, event_data, sequence
+            ) 
+            SELECT ?, ?, ?, ?, ?, 
+                   COALESCE(MAX(sequence), 0) + 1
+            FROM events 
+            WHERE conversation_id = ?
+            RETURNING sequence
+        """
+        
+        result = self.fetchone(query, [
             event.timestamp,
             event.__class__.__name__,
             conversation_id,
             experiment_id,
             json.dumps(event_dict),
-            sequence
+            conversation_id  # For the WHERE clause in the subquery
         ])
         
-        logger.debug(f"Saved {event.__class__.__name__} for conversation {conversation_id}")
+        if result:
+            sequence = result[0]
+            logger.debug(f"Saved {event.__class__.__name__} for conversation {conversation_id} with sequence {sequence}")
+        else:
+            # Fallback for DuckDB versions that might not support RETURNING
+            logger.debug(f"Saved {event.__class__.__name__} for conversation {conversation_id}")
     
     def get_events(
         self,

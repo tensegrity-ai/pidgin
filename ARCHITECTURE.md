@@ -242,6 +242,17 @@ This modular approach keeps the base installation minimal while allowing users t
 6. Storage components persist all data
 7. `ConversationEndEvent` completes the flow
 
+## Message Flow and Memory Management
+
+Pidgin uses a sophisticated message flow system that transforms messages for each agent's perspective and manages memory efficiently. Key points:
+
+- **Message Transformation**: Each agent sees the conversation from their perspective (their messages as "assistant", other's as "user")
+- **Context Truncation**: Providers automatically truncate messages to fit their context windows
+- **Memory Efficiency**: Only recent messages need to be kept in memory since all messages are stored in JSONL files
+- **Token Accuracy**: Token tracking is based on truncated messages sent to APIs, not the full history
+
+For detailed information, see [docs/MESSAGE_FLOW.md](docs/MESSAGE_FLOW.md).
+
 ## Extension Points
 
 ### Adding a New Provider
