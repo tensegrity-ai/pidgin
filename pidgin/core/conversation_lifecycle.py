@@ -16,7 +16,6 @@ from .events import (
 from ..ui.tail_display import TailDisplay
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
-from ..database.event_store import EventStore
 
 
 class ConversationLifecycle:
@@ -66,22 +65,15 @@ class ConversationLifecycle:
             existing_bus: Optional existing EventBus to use
             db_store: Optional existing EventStore to use
         """
-        # Handle database store
-        if db_store is None:
-            # Create database connection first
-            # Use in-memory database for tests
-            db_path = conv_dir / "conversation.db" if conv_dir else ":memory:"
-            self.db_store = EventStore(db_path)
-            self._owns_db_store = True
-        else:
-            self.db_store = db_store
-            self._owns_db_store = False
+        # In JSONL-first architecture, we don't create per-conversation databases
+        # Database operations happen post-experiment via batch import
+        self.db_store = db_store
+        self._owns_db_store = False
         
         if existing_bus is None:
-            # We don't have a bus yet, create one with db_store and event logging
-            # Create events directory next to conversation directory
-            event_log_dir = conv_dir.parent / "events"
-            self.bus = EventBus(self.db_store, event_log_dir=event_log_dir)
+            # We don't have a bus yet, create one with event logging only (no db_store)
+            # JSONL files are written to the conversation directory
+            self.bus = EventBus(db_store=None, event_log_dir=conv_dir)
             self._owns_bus = True
             await self.bus.start()
         else:
@@ -333,12 +325,6 @@ class ConversationLifecycle:
         # Stop event bus if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()
-        
-        # Close db store if we own it
-        if self._owns_db_store and self.db_store:
-            # Close the database connection
-            if hasattr(self.db_store, 'close'):
-                self.db_store.close()
     
     async def save_transcripts(self, conversation: Conversation, output_manager, conv_dir: Path):
         """Save conversation transcripts.
