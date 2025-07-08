@@ -14,6 +14,7 @@ from rich.prompt import Prompt, Confirm
 from ..config.models import get_model_config, MODELS
 from ..providers.builder import build_provider
 from ..config.prompts import build_initial_prompt
+from ..config.dimensional_prompts import DimensionalPromptGenerator
 from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
 
 console = Console()
