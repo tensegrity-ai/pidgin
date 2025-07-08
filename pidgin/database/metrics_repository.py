@@ -40,23 +40,83 @@ class MetricsRepository(BaseRepository):
             """
             params.extend([conversation_id, turn_number])
         else:
-            # Insert new row
+            # Insert new row with all columns to match schema
+            # This is only used during import, not live conversations
             query = """
                 INSERT INTO turn_metrics (
                     conversation_id, turn_number, timestamp,
+                    -- Core convergence metrics
                     convergence_score, vocabulary_overlap, structural_similarity,
-                    topic_similarity, style_match
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    topic_similarity, style_match,
+                    -- Additional convergence metrics
+                    cumulative_overlap, cross_repetition,
+                    mimicry_a_to_b, mimicry_b_to_a, mutual_mimicry,
+                    -- Agent A metrics (will be updated later if provided)
+                    message_a_length, message_a_word_count, message_a_unique_words,
+                    message_a_type_token_ratio, message_a_avg_word_length,
+                    message_a_response_time_ms,
+                    message_a_sentence_count, message_a_paragraph_count,
+                    message_a_avg_sentence_length,
+                    message_a_question_count, message_a_exclamation_count,
+                    message_a_special_symbol_count, message_a_number_count,
+                    message_a_proper_noun_count,
+                    message_a_entropy, message_a_compression_ratio,
+                    message_a_lexical_diversity, message_a_punctuation_diversity,
+                    message_a_self_repetition, message_a_turn_repetition,
+                    message_a_formality_score, message_a_starts_with_ack,
+                    message_a_new_words,
+                    message_a_hedge_words, message_a_agreement_markers,
+                    message_a_disagreement_markers, message_a_politeness_markers,
+                    message_a_first_person_singular, message_a_first_person_plural,
+                    message_a_second_person,
+                    -- Agent B metrics (will be updated later if provided)
+                    message_b_length, message_b_word_count, message_b_unique_words,
+                    message_b_type_token_ratio, message_b_avg_word_length,
+                    message_b_response_time_ms,
+                    message_b_sentence_count, message_b_paragraph_count,
+                    message_b_avg_sentence_length,
+                    message_b_question_count, message_b_exclamation_count,
+                    message_b_special_symbol_count, message_b_number_count,
+                    message_b_proper_noun_count,
+                    message_b_entropy, message_b_compression_ratio,
+                    message_b_lexical_diversity, message_b_punctuation_diversity,
+                    message_b_self_repetition, message_b_turn_repetition,
+                    message_b_formality_score, message_b_starts_with_ack,
+                    message_b_new_words,
+                    message_b_hedge_words, message_b_agreement_markers,
+                    message_b_disagreement_markers, message_b_politeness_markers,
+                    message_b_first_person_singular, message_b_first_person_plural,
+                    message_b_second_person
+                ) VALUES (
+                    ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
             """
             params = [
                 conversation_id,
                 turn_number,
                 datetime.now(),
+                # Core convergence
                 metrics.get("convergence_score", 0.0),
-                metrics.get("vocabulary_overlap"),
-                metrics.get("structural_similarity"),
-                metrics.get("topic_similarity"),
-                metrics.get("style_match")
+                metrics.get("vocabulary_overlap", 0.0),
+                metrics.get("structural_similarity", 0.0),
+                metrics.get("topic_similarity", 0.0),
+                metrics.get("style_match", 0.0),
+                # Additional convergence
+                metrics.get("cumulative_overlap", 0.0),
+                metrics.get("cross_repetition", 0.0),
+                metrics.get("mimicry_a_to_b", 0.0),
+                metrics.get("mimicry_b_to_a", 0.0),
+                metrics.get("mutual_mimicry", 0.0),
+                # Agent A defaults (35 columns)
+                0, 0, 0, 0.0, 0.0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False, 0,
+                0, 0, 0, 0, 0, 0, 0,
+                # Agent B defaults (35 columns)
+                0, 0, 0, 0.0, 0.0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False, 0,
+                0, 0, 0, 0, 0, 0, 0
             ]
         
         self.execute(query, params)
