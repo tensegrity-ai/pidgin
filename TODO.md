@@ -1,12 +1,13 @@
 # Pidgin Project TODO
 
-Last Updated: July 6, 2025
+Last Updated: July 7, 2025
 
 ## Overview
 
 This document tracks the ongoing refactoring and enhancement work for Pidgin. The goal is to create a clean, maintainable research tool for studying AI-to-AI conversation dynamics.
 
 **MAJOR UPDATE**: Comprehensive code audit completed on July 6, 2025. See CODE_AUDIT_REPORT.md for full details.
+**UPDATE July 7, 2025**: Completed EventStore repository refactoring and all Priority 1-2 code quality issues.
 
 ## Priority 0: Critical Security Fixes (Immediate)
 
@@ -57,16 +58,17 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - All critical modules now have proper thread safety
 
 ### God Object Refactoring 🚨
-- [x] **Split EventStore (1358 lines → 641 lines)** ✅ DONE (July 7, 2025)
+- [x] **Split EventStore (1358 lines → 250 lines)** ✅ DONE (July 7, 2025)
   - Created BaseRepository with common DB operations
-  - Created EventRepository for event storage/retrieval
+  - Created EventRepository for event storage/retrieval (with atomic sequence generation)
   - Created ExperimentRepository for experiment CRUD  
   - Created ConversationRepository for conversation management
   - Created MessageRepository for message storage
   - Created MetricsRepository for metrics operations
   - Added SchemaManager for caching schema initialization
-  - EventStore now a clean facade delegating to repositories
+  - EventStore now a clean facade delegating to repositories (250 lines, 81% reduction)
   - Maintained full backward compatibility
+  - Added comprehensive test suite (25 tests, all passing)
 
 - [x] **Refactor MetricsCalculator (437 lines → 222 lines)** ✅ DONE
   - Split into 4 focused modules:
@@ -79,16 +81,16 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 ## Priority 2: High Priority Code Quality Issues
 
 ### Code Duplication
-- [x] **Extract provider base functionality** ✅ PARTIALLY DONE
+- [x] **Extract provider base functionality** ✅ DONE (July 7, 2025)
   - [x] Error handling (anthropic.py:96-114, openai.py:189-205) - Created error_utils.py
   - [x] Create shared error mapping utility - ProviderErrorHandler with 100% coverage
-  - [ ] Context truncation (3+ providers) - Still needs extraction
-  - [ ] Update providers to use new error_utils module
+  - [x] Context truncation (3+ providers) - Extracted to context_utils.py
+  - [x] Update providers to use new error_utils module - All providers updated
 
 ### Long Methods
-- [ ] **Refactor conductor.run_conversation() (142 lines)**
-- [ ] **Refactor message_handler.get_agent_message() (152 lines)**
-- [ ] **Refactor experiment_runner._run_single_conversation() (134 lines)**
+- [x] **Refactor conductor.run_conversation()** ✅ DONE (Already refactored to 58 lines)
+- [x] **Refactor message_handler.get_agent_message()** ✅ DONE (Already refactored to 34 lines)
+- [x] **Refactor experiment_runner._run_single_conversation()** ✅ DONE (Already refactored to 43 lines)
 - [ ] **Refactor event_store.import_experiment() (104 lines)**
 
 ### Inconsistent Error Handling
@@ -100,13 +102,13 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 ## Priority 3: Fix Critical Issues from Code Audit (Original)
 
 ### Database Issues
-- [ ] **Fix race condition in event sequences** (event_store.py:138-145)
-  - Make sequence generation atomic with INSERT
-  - Impact: Data corruption with concurrent writes
+- [x] **Fix race condition in event sequences** ✅ DONE (July 7, 2025)
+  - Made sequence generation atomic with INSERT in EventRepository
+  - Impact: Data corruption with concurrent writes ELIMINATED
   
-- [ ] **Fix database connection leaks** (async_duckdb.py)
-  - Properly close connections in all worker threads
-  - Add connection timeout configuration
+- [x] **Fix database connection leaks** ✅ DONE (July 7, 2025)
+  - async_duckdb.py no longer exists after repository refactoring
+  - Database connections now properly managed by repository pattern
   
 - [ ] **Add transaction boundaries**
   - Wrap multi-table operations in transactions
@@ -117,9 +119,9 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Added max_history_size limit (default: 1000)
   - Automatically prunes old events when limit exceeded
   
-- [ ] **JSONL file handle leaks** (event_bus.py)
-  - Close files after each conversation
-  - Implement file handle pooling
+- [x] **JSONL file handle leaks** ✅ DONE (July 7, 2025)
+  - Added close_conversation_log() call when conversations end
+  - Files are now properly closed per conversation, not just on EventBus stop
   
 - [ ] **Message history accumulation**
   - Add message pruning for long conversations
