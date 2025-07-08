@@ -10,6 +10,9 @@ from pathlib import Path
 import uuid
 from datetime import datetime
 
+from rich.console import Console
+from rich.panel import Panel
+
 from ..core import Conductor, EventBus
 from ..core.events import (
     ConversationStartEvent,
@@ -48,6 +51,7 @@ class ExperimentRunner:
             daemon: Optional daemon instance for stop detection
         """
         self.output_dir = output_dir
+        self.console = Console()
         self.daemon = daemon
         self.active_tasks = {}
         self.completed_count = 0
@@ -399,8 +403,42 @@ class ExperimentRunner:
                 
                 logging.info(f"Transcripts generated in {exp_dir}/transcripts/")
             else:
+                # Display error in a nice panel
+                error_message = f"[bold red]Database Import Failed[/bold red]\n\n"
+                error_message += f"[yellow]Experiment:[/yellow] {experiment_id}\n\n"
+                error_message += f"[red]Error:[/red] {result.error}\n\n"
+                error_message += "[dim]This usually means the database schema needs updating.[/dim]"
+                
+                self.console.print(Panel(
+                    error_message,
+                    title="[bold red]Import Error[/bold red]",
+                    border_style="red",
+                    padding=(1, 2)
+                ))
+                
                 logging.error(f"Failed to import experiment: {result.error}")
                 
         except Exception as e:
+            # Display error in a nice panel
+            error_message = f"[bold red]Import/Transcript Generation Failed[/bold red]\n\n"
+            error_message += f"[yellow]Experiment:[/yellow] {experiment_id}\n\n"
+            error_message += f"[red]Error:[/red] {str(e)}\n\n"
+            
+            # Add helpful context based on error type
+            if "column" in str(e).lower() and "does not exist" in str(e).lower():
+                error_message += "[dim]This appears to be a database schema issue.[/dim]\n"
+                error_message += "[dim]The database may need to be updated to match the current schema.[/dim]"
+            elif "permission" in str(e).lower():
+                error_message += "[dim]This appears to be a file permission issue.[/dim]"
+            else:
+                error_message += "[dim]Check the logs for more details.[/dim]"
+            
+            self.console.print(Panel(
+                error_message,
+                title="[bold red]Import Error[/bold red]",
+                border_style="red",
+                padding=(1, 2)
+            ))
+            
             # Log but don't fail the experiment
             logging.error(f"Error during auto-import/transcript generation: {e}", exc_info=True)

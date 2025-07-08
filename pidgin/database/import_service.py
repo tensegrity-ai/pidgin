@@ -174,14 +174,28 @@ class ImportService:
                 raise
                 
         except Exception as e:
-            logger.error(f"Failed to import {exp_dir.name}: {e}")
+            # Create more descriptive error messages
+            error_msg = str(e)
+            
+            # Enhance common error messages
+            if "binder error" in error_msg.lower() and "does not have a column" in error_msg.lower():
+                # Extract column name from error
+                import re
+                match = re.search(r'"(\w+)" does not have a column with name "(\w+)"', error_msg)
+                if match:
+                    table_name, column_name = match.groups()
+                    error_msg = f"Database schema mismatch: Table '{table_name}' is missing column '{column_name}'. The database schema may need to be updated."
+            elif "no such table" in error_msg.lower():
+                error_msg = f"Database not initialized properly: {error_msg}"
+            
+            logger.error(f"Failed to import {exp_dir.name}: {error_msg}")
             
             return ImportResult(
                 success=False,
                 experiment_id=exp_dir.name,
                 events_imported=0,
                 conversations_imported=0,
-                error=str(e),
+                error=error_msg,
                 duration_seconds=(datetime.now() - start_time).total_seconds()
             )
     
