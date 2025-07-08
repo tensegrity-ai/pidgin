@@ -299,6 +299,10 @@ class ConversationLifecycle:
             )
         )
         
+        # Close JSONL log for this conversation
+        if self.bus and hasattr(self.bus, 'close_conversation_log'):
+            self.bus.close_conversation_log(conversation.id)
+        
         await self.cleanup()
     
     async def emit_end_event(
