@@ -1,6 +1,7 @@
 """Logging configuration for Pidgin."""
 import logging
 import sys
+from rich.logging import RichHandler
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -19,11 +20,15 @@ def setup_logging(level: str = "INFO", log_file: str = None):
     logger = logging.getLogger("pidgin")
     logger.setLevel(getattr(logging, level.upper()))
     
-    # Console handler with clean format
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(
-        logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    # Rich console handler for beautiful output
+    console_handler = RichHandler(
+        rich_tracebacks=True,  # Beautiful tracebacks
+        tracebacks_show_locals=False,  # Don't show local variables (too noisy)
+        tracebacks_suppress=[],  # Show all frames for now
+        show_time=False,  # Don't show timestamps (cleaner)
+        show_path=False,  # Don't show file paths (cleaner)
     )
+    console_handler.setLevel(getattr(logging, level.upper()))
     logger.addHandler(console_handler)
     
     # Optional file handler
@@ -36,3 +41,8 @@ def setup_logging(level: str = "INFO", log_file: str = None):
     
     # Don't propagate to root logger
     logger.propagate = False
+
+
+# Initialize Rich logging when this module is imported
+# This ensures all loggers use Rich formatting
+setup_logging()

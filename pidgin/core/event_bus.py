@@ -166,10 +166,14 @@ class EventBus:
             except Exception as e:
                 # Log but don't crash on handler errors
                 error_msg = f"Error in event handler {handler.__name__}: {e}"
-                logger.error(error_msg, exc_info=True)
                 
-                # For now, just rely on logging
-                # TODO: Consider passing console to EventBus for cleaner error display
+                # Only show traceback in DEBUG mode
+                import os
+                if os.getenv("PIDGIN_DEBUG"):
+                    logger.error(error_msg, exc_info=True)
+                else:
+                    # In normal mode, just show the error message
+                    logger.error(error_msg)
 
     def subscribe(self, event_type: Type[T], handler: Callable[[T], None]) -> None:
         """Subscribe to events of a specific type.
