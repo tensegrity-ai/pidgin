@@ -107,12 +107,25 @@ class ExperimentManager:
         logging.info(f"Starting experiment {exp_id} with working_dir: {working_dir}")
         
         # Launch daemon process
-        cmd = [
-            sys.executable, "-m", "pidgin.experiments.daemon_launcher",
-            "--experiment-id", exp_id,
-            "--config", json.dumps(config.dict()),
-            "--working-dir", working_dir
-        ]
+        # Try to use setproctitle if available to make the process identifiable
+        try:
+            import setproctitle
+            # Create a wrapper script that sets process title before running
+            wrapper_cmd = [
+                sys.executable, "-c",
+                f"import setproctitle; setproctitle.setproctitle('pidgin-exp-{exp_id[:8]}'); "
+                f"import sys; sys.argv = {[sys.executable, '-m', 'pidgin.experiments.daemon_launcher', '--experiment-id', exp_id, '--config', json.dumps(config.dict()), '--working-dir', working_dir]!r}; "
+                f"from pidgin.experiments.daemon_launcher import main; main()"
+            ]
+            cmd = wrapper_cmd
+        except ImportError:
+            # Fall back to regular command
+            cmd = [
+                sys.executable, "-m", "pidgin.experiments.daemon_launcher",
+                "--experiment-id", exp_id,
+                "--config", json.dumps(config.dict()),
+                "--working-dir", working_dir
+            ]
         
         # Create a temporary error file to capture startup errors
         error_file = self.logs_dir / f"{exp_id}_startup_error.log"
