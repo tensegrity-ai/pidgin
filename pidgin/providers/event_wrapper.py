@@ -113,7 +113,7 @@ class EventAwareProvider:
         
         # Get provider name for model-specific token counting
         provider_name = self.provider.__class__.__name__.replace("Provider", "").lower()
-        model_name = getattr(self.provider, 'model', None)
+        model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', None)
         
         # Try to get actual token usage from provider
         tokens_used = 0
@@ -145,7 +145,7 @@ class EventAwareProvider:
             if usage_data and 'total_tokens' in usage_data:
                 # Extract provider name and model
                 provider_name = self.provider.__class__.__name__.replace("Provider", "")
-                model_name = getattr(self.provider, 'model', 'unknown')
+                model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', 'unknown')
                 
                 # Get token tracker for rate limits
                 from ..providers.token_tracker import get_token_tracker
