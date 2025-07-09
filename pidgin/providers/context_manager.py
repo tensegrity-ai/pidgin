@@ -102,17 +102,15 @@ class ProviderContextManager:
                         truncated_message_count=len(result),
                         messages_dropped=len(messages) - len(result)
                     )
-                    # Handle both sync and async event buses
-                    if asyncio.iscoroutinefunction(event_bus.emit):
-                        # Create a task to emit the event asynchronously
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            asyncio.create_task(event_bus.emit(event))
-                        else:
-                            # If no loop is running, we can't emit async
-                            logger.warning("Cannot emit async event without running event loop")
-                    else:
-                        event_bus.emit(event)
+                    # Emit the event - EventBus.emit is always async
+                    # Since we're already in an async context (providers are async),
+                    # we can create a task to emit without blocking
+                    try:
+                        loop = asyncio.get_running_loop()
+                        asyncio.create_task(event_bus.emit(event))
+                    except RuntimeError:
+                        # No running loop, skip emission
+                        logger.debug("No running event loop, skipping truncation event emission")
                 except Exception as e:
                     logger.warning(f"Failed to emit truncation event: {e}")
         

@@ -35,9 +35,9 @@ class EventBus:
         self.event_log_dir = event_log_dir
         self._running = False
         self._jsonl_files = {}  # conversation_id -> file handle
-        self._jsonl_lock = threading.Lock()  # Protect JSONL file access
-        self._history_lock = threading.Lock()  # Protect event history
-        self._subscriber_lock = threading.Lock()  # Protect subscriber list
+        self._jsonl_lock = threading.RLock()  # Protect JSONL file access (reentrant)
+        self._history_lock = threading.RLock()  # Protect event history (reentrant)
+        self._subscriber_lock = threading.RLock()  # Protect subscriber list (reentrant)
 
     def _serialize_value(self, value: Any) -> Any:
         """Convert a value to a JSON-serializable format."""
