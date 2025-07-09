@@ -150,10 +150,24 @@ class StreamingRateLimiter:
 
         # Wait if necessary
         if wait_time > 0:
-            logger.info(
-                f"Rate limit pacing for {provider}: waiting {wait_time:.1f}s "
-                f"(request interval: {request_interval:.1f}s, token cost: {token_interval:.1f}s)"
-            )
+            # Use display utilities if available (for CLI), otherwise fall back to logger
+            try:
+                from ..ui.display_utils import DisplayUtils
+                from rich.console import Console
+                console = Console()
+                display = DisplayUtils(console)
+                display.info(
+                    f"Rate limit pacing for {provider}: waiting {wait_time:.1f}s\n"
+                    f"Request interval: {request_interval:.1f}s, token cost: {token_interval:.1f}s",
+                    title="⏱ Rate Limit Pacing",
+                    use_panel=True
+                )
+            except ImportError:
+                # Fallback for non-CLI contexts
+                logger.info(
+                    f"Rate limit pacing for {provider}: waiting {wait_time:.1f}s "
+                    f"(request interval: {request_interval:.1f}s, token cost: {token_interval:.1f}s)"
+                )
             await asyncio.sleep(wait_time)
 
         # Record this request
