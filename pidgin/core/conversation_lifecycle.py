@@ -263,7 +263,9 @@ class ConversationLifecycle:
         # Check if we already emitted an end event
         if self._end_event_emitted:
             if self.console:
-                self.console.print("[dim]Warning: Attempted to emit ConversationEndEvent twice[/dim]")
+                from ..ui.display_utils import DisplayUtils
+                display = DisplayUtils(self.console)
+                display.warning("Attempted to emit ConversationEndEvent twice", use_panel=False)
             # Still run cleanup
             await self.cleanup()
             return

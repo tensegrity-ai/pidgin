@@ -64,7 +64,8 @@ async def start_ollama_server(console) -> bool:
             await asyncio.sleep(0.5)
             if check_ollama_running():
                 # Only show a subtle notice that it started
-                console.print("[dim]◆ Ollama server started (stop with: ollama stop)[/dim]")
+                display = DisplayUtils(console)
+                display.dim("◆ Ollama server started (stop with: ollama stop)")
                 return True
         
         return False
@@ -82,13 +83,15 @@ async def auto_install_ollama(console) -> bool:
             # Check if Homebrew is installed
             brew_check = subprocess.run("which brew", shell=True, capture_output=True)
             if brew_check.returncode != 0:
-                console.print("[yellow]Homebrew not found[/yellow]")
-                console.print("Install Homebrew first: https://brew.sh")
-                console.print("Then run: [cyan]brew install ollama[/cyan]")
+                display = DisplayUtils(console)
+                display.warning("Homebrew not found", use_panel=False)
+                display.info("Install Homebrew first: https://brew.sh", use_panel=False)
+                display.info("Then run: brew install ollama", use_panel=False)
                 return False
             
-            console.print("[dim]Installing Ollama via Homebrew...[/dim]")
-            console.print("[dim]This may take a few minutes[/dim]\n")
+            display = DisplayUtils(console)
+            display.dim("Installing Ollama via Homebrew...")
+            display.dim("This may take a few minutes\n")
             
             # Install with Homebrew (quietly)
             result = subprocess.run(
@@ -126,7 +129,8 @@ async def auto_install_ollama(console) -> bool:
                 display.success("Ollama installed successfully!")
                 return True
             else:
-                console.print(f"\n[red]Installation failed[/red]")
+                display = DisplayUtils(console)
+                display.error("Installation failed", use_panel=False)
                 return False
                 
         elif system == "Windows":
@@ -149,9 +153,14 @@ async def ensure_ollama_ready(console) -> bool:
     
     # Step 1: Check if installed
     if not check_ollama_installed():
-        console.print("\n◆ Ollama is required for local models")
-        console.print("  Download size: ~150MB")
-        console.print("  Installs to: /usr/local/bin/ollama\n")
+        display = DisplayUtils(console)
+        info_lines = [
+            "◆ Ollama is required for local models",
+            "  Download size: ~150MB",
+            "  Installs to: /usr/local/bin/ollama"
+        ]
+        display.info("\n".join(info_lines), use_panel=False)
+        console.print()
         
         if click.confirm("Install Ollama now?", default=True):
             # Auto-install with progress
@@ -171,8 +180,10 @@ async def ensure_ollama_ready(console) -> bool:
         # Automatically start the server without asking
         success = await start_ollama_server(console)
         if not success:
-            console.print("\n[yellow]Failed to start Ollama server[/yellow]")
-            console.print("Please start manually: [cyan]ollama serve[/cyan]")
+            display = DisplayUtils(console)
+            console.print()  # Add spacing
+            display.warning("Failed to start Ollama server", use_panel=False)
+            display.info("Please start manually: ollama serve", use_panel=False)
             return False
     
     return True

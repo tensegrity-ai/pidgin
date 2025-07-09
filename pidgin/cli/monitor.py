@@ -4,8 +4,10 @@
 import asyncio
 import rich_click as click
 from rich.console import Console
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 @click.command()
@@ -31,11 +33,11 @@ def monitor():
     """
     from ..monitor.simple_monitor import SimpleMonitor
     
-    console.print("[#8fbcbb]◆ Starting system monitor...[/#8fbcbb]")
-    console.print("[#4c566a]Press Ctrl+C to exit[/#4c566a]\n")
+    display.info("◆ Starting system monitor...", use_panel=False)
+    display.dim("Press Ctrl+C to exit\n")
     
     monitor = SimpleMonitor()
     try:
         asyncio.run(monitor.run())
     except KeyboardInterrupt:
-        console.print("\n[#4c566a]Monitor stopped[/#4c566a]")
+        display.dim("\nMonitor stopped")

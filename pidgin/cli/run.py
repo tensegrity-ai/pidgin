@@ -350,16 +350,17 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     )
     
     # Show configuration
-    console.print(f"\n[bold {NORD_BLUE}]◆ Experiment Configuration[/bold {NORD_BLUE}]")
-    console.print(f"  Name: {name}")
-    console.print(f"  Models: {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
-    console.print(f"  Conversations: {repetitions}")
-    console.print(f"  Turns per conversation: {max_turns}")
+    config_lines = []
+    config_lines.append(f"Name: {name}")
+    config_lines.append(f"Models: {format_model_display(agent_a_id)} ↔ {format_model_display(agent_b_id)}")
+    config_lines.append(f"Conversations: {repetitions}")
+    config_lines.append(f"Turns per conversation: {max_turns}")
+    
     if max_parallel > 1:
-        console.print(f"  Parallel execution: {max_parallel}")
+        config_lines.append(f"Parallel execution: {max_parallel}")
     
     if initial_prompt != "Hello":
-        console.print(f"  Initial prompt: {initial_prompt[:50]}...")
+        config_lines.append(f"Initial prompt: {initial_prompt[:50]}...")
     
     if temp_a is not None or temp_b is not None:
         temp_parts = []
@@ -367,10 +368,12 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             temp_parts.append(f"A: {temp_a}")
         if temp_b is not None:
             temp_parts.append(f"B: {temp_b}")
-        console.print(f"  Temperature: {', '.join(temp_parts)}")
+        config_lines.append(f"Temperature: {', '.join(temp_parts)}")
     
     if convergence_threshold:
-        console.print(f"  Convergence: {convergence_threshold} → {convergence_action}")
+        config_lines.append(f"Convergence: {convergence_threshold} → {convergence_action}")
+    
+    display.info("\n".join(config_lines), title="◆ Experiment Configuration", use_panel=True)
     
     # Check if experiment already exists
     from ..io.jsonl_reader import JSONLExperimentReader
@@ -397,15 +400,19 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     
     if run_in_foreground:
         # Run in foreground (debug mode)
+        # Show starting info
+        start_lines = []
         if name:
-            display.info(f"Starting '{name}' in foreground", use_panel=False)
+            start_lines.append(f"Starting '{name}' in foreground")
         else:
-            display.info("Starting experiment in foreground", use_panel=False)
-        display.dim(f"  Models: {agent_a_name} vs {agent_b_name}")
-        display.dim(f"  Conversations: {repetitions}")
-        display.dim(f"  Max turns: {max_turns}")
+            start_lines.append("Starting experiment in foreground")
+        start_lines.append(f"\nModels: {agent_a_name} vs {agent_b_name}")
+        start_lines.append(f"Conversations: {repetitions}")
+        start_lines.append(f"Max turns: {max_turns}")
+        
+        display.info("\n".join(start_lines), title="◆ Experiment Starting", use_panel=True)
         console.print()
-        display.warning("Running in foreground - press Ctrl+C to stop", use_panel=False)
+        display.warning("Running in foreground - press Ctrl+C to stop", use_panel=True)
         console.print()
         
         # Run directly without daemon
@@ -470,17 +477,19 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             
             # Show where to find logs
             console.print(f"[#4c566a]Running in background. Check progress:[/#4c566a]")
-            console.print(f"[#4c566a]  pidgin status {exp_id[:8]}[/#4c566a]")
-            console.print(f"[#4c566a]  tail -f {get_experiments_dir()}/{exp_id}/*.jsonl[/#4c566a]")
+            cmd_lines = []
+            cmd_lines.append(f"pidgin status {exp_id[:8]}")
+            cmd_lines.append(f"tail -f {get_experiments_dir()}/{exp_id}/*.jsonl")
+            display.info("\n".join(cmd_lines), title="Commands", use_panel=True)
                 
         except Exception as e:
-            console.print(f"\n[#bf616a][FAIL] Failed to start experiment: {str(e)}[/#bf616a]")
+            display.error(f"Failed to start experiment: {str(e)}", use_panel=True)
             raise
 
 
 def _prompt_for_model(prompt_text: str) -> Optional[str]:
     """Interactive model selection."""
-    console.print(f"\n[bold {NORD_BLUE}]{prompt_text}:[/bold {NORD_BLUE}]")
+    display.info(prompt_text, use_panel=False)
     
     # Group models by provider
     providers = {}
@@ -499,17 +508,18 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
         if provider not in providers:
             continue
             
-        console.print(f"\n[{PROVIDER_COLORS.get(provider, 'white')}]{provider.title()}:[/{PROVIDER_COLORS.get(provider, 'white')}]")
+        # Show provider section
+        display.dim(f"\n{provider.title()}:")
         
         for model_id, config in providers[provider]:
             glyph = MODEL_EMOJIS.get(model_id, "●")
-            console.print(f"  {idx}. {glyph} {config.shortname}")
+            display.dim(f"  {idx}. {glyph} {config.shortname}")
             model_map[str(idx)] = model_id
             idx += 1
     
     # Add option for custom local model
-    console.print(f"\n[{NORD_YELLOW}]Other:[/{NORD_YELLOW}]")
-    console.print(f"  {idx}. ▸ Custom local model (requires Ollama)")
+    display.dim("\nOther:")
+    display.dim(f"  {idx}. ▸ Custom local model (requires Ollama)")
     
     # Get selection
     try:
@@ -523,7 +533,7 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
     elif selection == str(idx):
         # Custom local model
         if not check_ollama_available():
-            console.print(f"[{NORD_RED}]Error: Ollama is not running. Start it with 'ollama serve'[/{NORD_RED}]")
+            display.error("Ollama is not running. Start it with 'ollama serve'", use_panel=False)
             return None
         try:
             model_name = console.input(f"[{NORD_BLUE}]Enter local model name: [/{NORD_BLUE}]")
@@ -536,5 +546,5 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
             validate_model_id(selection)
             return selection
         except ValueError:
-            console.print(f"[{NORD_RED}]Invalid selection[/{NORD_RED}]")
+            display.error("Invalid selection", use_panel=False)
             return None

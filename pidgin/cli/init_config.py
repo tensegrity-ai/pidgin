@@ -7,8 +7,10 @@ from rich.console import Console
 
 from ..config import Config
 from .constants import NORD_GREEN, NORD_YELLOW, NORD_BLUE
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 @click.command()
@@ -22,8 +24,8 @@ def init_config(force):
     config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
     
     if config_path.exists() and not force:
-        console.print(f"[{NORD_YELLOW}]Config file already exists at: {config_path}[/{NORD_YELLOW}]")
-        console.print(f"Use --force to overwrite")
+        display.warning(f"Config file already exists at: {config_path}", use_panel=False)
+        display.info("Use --force to overwrite", use_panel=False)
         return
     
     # Create config instance to access the write method
@@ -35,11 +37,15 @@ def init_config(force):
     # Write example config
     config._write_example_config(config_path)
     
-    console.print(f"\n[{NORD_GREEN}]◆ Created configuration file[/{NORD_GREEN}]")
-    console.print(f"Location: {config_path}")
-    console.print(f"\n[{NORD_BLUE}]Available convergence profiles:[/{NORD_BLUE}]")
-    console.print("  • balanced   - Default, balanced weights")
-    console.print("  • structural - Emphasizes structural patterns (2x weight)")
-    console.print("  • semantic   - Emphasizes content/meaning")
-    console.print("  • strict     - Higher standards for all metrics")
-    console.print(f"\n[dim]Edit the file to customize settings[/dim]")
+    display.success("◆ Created configuration file")
+    display.info(f"Location: {config_path}", use_panel=False)
+    
+    profiles_info = [
+        "Available convergence profiles:",
+        "  • balanced   - Default, balanced weights",
+        "  • structural - Emphasizes structural patterns (2x weight)",
+        "  • semantic   - Emphasizes content/meaning",
+        "  • strict     - Higher standards for all metrics"
+    ]
+    display.info("\n".join(profiles_info), use_panel=False)
+    display.dim("\nEdit the file to customize settings")

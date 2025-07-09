@@ -41,9 +41,10 @@ class InterruptHandler:
                 self.interrupt_requested = True
                 # Show immediate feedback
                 if self.console:
-                    self.console.print(
-                        f"\n[{self.NORD_YELLOW}]⏸ Interrupt received, pausing after current message...[/{self.NORD_YELLOW}]"
-                    )
+                    from ..ui.display_utils import DisplayUtils
+                    display = DisplayUtils(self.console)
+                    self.console.print()  # Add spacing
+                    display.warning("⏸ Interrupt received, pausing after current message...", use_panel=False)
         
         # Save original handler and set our own
         self._original_sigint_handler = signal.signal(signal.SIGINT, handle_interrupt)

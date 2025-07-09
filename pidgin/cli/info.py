@@ -7,8 +7,10 @@ from rich.table import Table
 
 from ..config.models import MODELS
 from .constants import PROVIDER_COLORS, MODEL_GLYPHS
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 @click.group()
@@ -23,7 +25,8 @@ def models():
     
     Shows models grouped by provider with their configurations.
     """
-    console.print("\n[bold]Available Models[/bold]\n")
+    display.info("Available Models", use_panel=False)
+    console.print()
     
     # Group models by provider
     providers = {}
@@ -39,7 +42,7 @@ def models():
             
         # Provider header
         color = PROVIDER_COLORS.get(provider, "white")
-        console.print(f"[bold {color}]{provider.title()}[/bold {color}]")
+        display.info(provider.title(), use_panel=False)
         
         # Create table for this provider
         table = Table(box=None, padding=(0, 2))

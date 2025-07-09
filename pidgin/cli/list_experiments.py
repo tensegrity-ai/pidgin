@@ -4,6 +4,7 @@
 import rich_click as click
 from rich.console import Console
 from rich.table import Table
+from ..ui.display_utils import DisplayUtils
 
 from .constants import NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN
 from ..io.paths import get_experiments_dir
@@ -12,6 +13,7 @@ from ..constants import ExperimentStatus
 from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 display = DisplayUtils(console)
 
 
@@ -96,4 +98,4 @@ def list_experiments(all):
     console.print(table)
     
     if not all:
-        console.print(f"\n[{NORD_CYAN}]Tip: Use 'pidgin attach <id>' to monitor a running experiment[/{NORD_CYAN}]")
+        display.dim("\nTip: Use 'pidgin attach <id>' to monitor a running experiment")

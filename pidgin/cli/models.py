@@ -7,8 +7,10 @@ from rich.table import Table
 
 from ..config.models import MODELS
 from .constants import NORD_BLUE, MODEL_EMOJIS, PROVIDER_COLORS
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 @click.command()
@@ -50,7 +52,7 @@ def models(provider, format):
         for model_id, config in models_to_show.items():
             glyph = MODEL_EMOJIS.get(model_id, '●')
             color = PROVIDER_COLORS.get(config.provider, 'white')
-            console.print(f"{glyph} [{color}]{model_id}[/{color}] - {config.shortname}")
+            display.dim(f"{glyph} {model_id} - {config.shortname}")
         return
     
     # Table format

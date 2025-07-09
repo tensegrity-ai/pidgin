@@ -24,11 +24,14 @@ async def normalize_local_model_names(model_a: str, model_b: str, console: Conso
             return model_a, model_b
         
         # Show selection menu
-        console.print("\n◆ Select local model:")
-        console.print("  1. [#88c0d0]qwen[/] - 500MB, fast")
-        console.print("  2. [#88c0d0]phi[/] - 2.8GB, balanced")
-        console.print("  3. [#88c0d0]mistral[/] - 4.1GB, best, 8GB+ RAM")
-        console.print("  4. [#a3be8c]test[/] - no download, pattern-based")
+        menu_lines = [
+            "◆ Select local model:",
+            "  1. qwen - 500MB, fast",
+            "  2. phi - 2.8GB, balanced",
+            "  3. mistral - 4.1GB, best, 8GB+ RAM",
+            "  4. test - no download, pattern-based"
+        ]
+        display.info("\n".join(menu_lines), use_panel=False)
         console.print()
         
         models = ["qwen", "phi", "mistral", "test"]
@@ -110,11 +113,13 @@ async def check_and_pull_model(model_name: str, console: Console) -> bool:
     if result_returncode != 0:
         # Model not found, need to download
         console.print()
-        console.print(Panel(
-            f"[bold #88c0d0]◆ Model Setup: {model_name}[/bold #88c0d0]\n\n"
-            f"[#d8dee9]Model not found locally.[/#d8dee9]\n"
-            # ... rest of the panel content
-        ))
+        display.info(
+            f"Model Setup: {model_name}\n\n"
+            f"Model not found locally.\n"
+            f"This model needs to be downloaded first.",
+            title="◆ Model Setup",
+            use_panel=True
+        )
         
         if click.confirm("Download model?", default=True):
             # ... download logic

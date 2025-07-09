@@ -11,7 +11,7 @@ from typing import Dict, Optional
 from rich.console import Console
 
 from .interrupt_handler import InterruptHandler
-from ..ui.display_utils import dim
+from ..ui.display_utils import dim, DisplayUtils
 from .name_coordinator import NameCoordinator
 from .turn_executor import TurnExecutor
 from .message_handler import MessageHandler
@@ -299,7 +299,8 @@ class Conductor:
                     final_turn = turn_num  # Use current turn_num since this turn was attempted
                     end_reason = self.turn_executor.stop_reason or "interrupted"
                     if self.console:
-                        self.console.print(f"[dim]Turn returned None, stopping due to: {end_reason}[/dim]")
+                        display = DisplayUtils(self.console)
+                        display.dim(f"Turn returned None, stopping due to: {end_reason}")
                     break
                 final_turn = turn_num
                 

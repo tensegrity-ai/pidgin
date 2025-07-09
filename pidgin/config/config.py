@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 
 from ..io.logger import get_logger
 from rich.console import Console
-from ..ui.display_utils import warning, success, info
+from ..ui.display_utils import warning, success, info, DisplayUtils
 from ..constants import (
     ConvergenceProfiles, ConvergenceComponents, DEFAULT_CONVERGENCE_WEIGHTS,
     ConvergenceActions, DEFAULT_CONVERGENCE_THRESHOLD, DEFAULT_CONVERGENCE_PROFILE,
@@ -124,10 +124,11 @@ class Config:
             
         # No config found - ask if user wants to create one
         warning("No configuration file found.", use_panel=False)
-        self.console.print(f"Would you like to create one at: {config_path}?")
-        self.console.print("This will let you customize convergence profiles and other settings.")
+        info(f"Would you like to create one at: {config_path}?", use_panel=False)
+        info("This will let you customize convergence profiles and other settings.", use_panel=False)
         
-        response = self.console.input("\nCreate config file? [y/N]: ")
+        console = Console()
+        response = console.input("\nCreate config file? [y/N]: ")
         
         if response.lower() == 'y':
             # Create directory if needed

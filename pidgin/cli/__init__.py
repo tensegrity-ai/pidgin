@@ -55,8 +55,10 @@ from .stop import stop
 from .monitor import monitor
 from .init_config import init_config
 from .info import info
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
@@ -98,8 +100,8 @@ def analyze():
     Coming soon: Jupyter notebook and GraphQL interfaces for 
     exploring experiment data.
     """
-    console.print("[bold cyan]Coming soon![/bold cyan]")
-    console.print("This will launch Jupyter notebooks and GraphQL tools for analysis.")
+    display.info("Coming soon!", use_panel=False)
+    display.dim("This will launch Jupyter notebooks and GraphQL tools for analysis.")
 
 
 # Register commands
