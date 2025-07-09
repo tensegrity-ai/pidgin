@@ -165,7 +165,11 @@ class EventBus:
                     handler(event)
             except Exception as e:
                 # Log but don't crash on handler errors
-                logger.error(f"Error in event handler {handler.__name__}: {e}", exc_info=True)
+                error_msg = f"Error in event handler {handler.__name__}: {e}"
+                logger.error(error_msg, exc_info=True)
+                
+                # For now, just rely on logging
+                # TODO: Consider passing console to EventBus for cleaner error display
 
     def subscribe(self, event_type: Type[T], handler: Callable[[T], None]) -> None:
         """Subscribe to events of a specific type.

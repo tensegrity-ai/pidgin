@@ -59,7 +59,9 @@ class EventAwareProvider:
         )
         
         # Estimate input tokens
-        model_name = getattr(self.provider, 'model', None)
+        # Try model_name first (for providers that store model name separately)
+        # Fall back to model if model_name doesn't exist
+        model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', None)
         input_tokens = estimate_messages_tokens(agent_messages, model_name)
 
         # Stream response and buffer chunks (no longer emitting chunk events)

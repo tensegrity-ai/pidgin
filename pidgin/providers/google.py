@@ -124,6 +124,7 @@ class GoogleProvider(Provider):
 
         api_key = APIKeyManager.get_api_key("google")
         genai.configure(api_key=api_key)
+        self.model_name = model  # Store the model name as string
         self.model = genai.GenerativeModel(model)
         self._last_usage = None
         self.error_handler = create_google_error_handler()
@@ -143,8 +144,13 @@ class GoogleProvider(Provider):
         
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
+        # Google doesn't support system messages, so we skip them
         google_messages = []
         for m in truncated_messages:
+            if m.role == "system":
+                # Skip system messages as Google doesn't support them
+                logger.debug(f"Skipping system message for Google provider: {m.content[:50]}...")
+                continue
             role = "model" if m.role == "assistant" else m.role
             google_messages.append({"role": role, "parts": [m.content]})
 
