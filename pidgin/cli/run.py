@@ -6,6 +6,8 @@ import sys
 import asyncio
 import uuid
 import signal
+import time
+import json
 from typing import Optional, List
 from pathlib import Path
 from datetime import datetime
@@ -429,12 +431,50 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                 raise
         
         try:
+            start_time = time.time()
             success = asyncio.run(run_foreground_experiment())
+            duration = time.time() - start_time
             console.print()  # Add spacing
-            if name:
-                display.success(f"Experiment '{name}' completed")
+            
+            # Read manifest to get completion statistics
+            exp_dir = get_experiments_dir() / exp_id
+            manifest_path = exp_dir / "manifest.json"
+            
+            if manifest_path.exists():
+                try:
+                    with open(manifest_path, 'r') as f:
+                        manifest = json.load(f)
+                    
+                    # Extract statistics from manifest
+                    completed = manifest.get("completed_conversations", 0)
+                    failed = manifest.get("failed_conversations", 0)
+                    total = manifest.get("total_conversations", repetitions)
+                    status = manifest.get("status", "completed")
+                    
+                    # Display comprehensive completion panel
+                    display.experiment_complete(
+                        name=name or exp_id,
+                        experiment_id=exp_id,
+                        completed=completed,
+                        failed=failed,
+                        total=total,
+                        duration_seconds=duration,
+                        status=status,
+                        exp_dir=str(exp_dir)
+                    )
+                except Exception as e:
+                    # Fallback to simple message if manifest read fails
+                    if name:
+                        display.success(f"Experiment '{name}' completed")
+                    else:
+                        display.success("Experiment completed")
             else:
-                display.success("Experiment completed")
+                # Fallback if no manifest
+                if name:
+                    display.success(f"Experiment '{name}' completed")
+                else:
+                    display.success("Experiment completed")
+            
             if notify:
                 send_notification(
                     title="Pidgin Experiment Complete",
@@ -444,8 +484,37 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                 # Terminal bell notification
                 print('\a', end='', flush=True)
         except KeyboardInterrupt:
+            duration = time.time() - start_time
             console.print()  # Add spacing
-            display.warning("Experiment interrupted by user", use_panel=False)
+            
+            # Try to read manifest for partial results
+            exp_dir = get_experiments_dir() / exp_id
+            manifest_path = exp_dir / "manifest.json"
+            
+            if manifest_path.exists():
+                try:
+                    with open(manifest_path, 'r') as f:
+                        manifest = json.load(f)
+                    
+                    completed = manifest.get("completed_conversations", 0)
+                    failed = manifest.get("failed_conversations", 0)
+                    total = manifest.get("total_conversations", repetitions)
+                    
+                    # Display interruption panel with statistics
+                    display.experiment_complete(
+                        name=name or exp_id,
+                        experiment_id=exp_id,
+                        completed=completed,
+                        failed=failed,
+                        total=total,
+                        duration_seconds=duration,
+                        status="interrupted",
+                        exp_dir=str(exp_dir)
+                    )
+                except Exception:
+                    display.warning("Experiment interrupted by user", use_panel=False)
+            else:
+                display.warning("Experiment interrupted by user", use_panel=False)
         except APIKeyError as e:
             console.print()  # Add spacing
             display.api_key_error(str(e))

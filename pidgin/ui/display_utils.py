@@ -279,6 +279,79 @@ class DisplayUtils:
         """
         self.dim(message)
     
+    def experiment_complete(self, name: str, experiment_id: str, 
+                           completed: int, failed: int, total: int,
+                           duration_seconds: float, status: str,
+                           exp_dir: Optional[str] = None) -> None:
+        """Display experiment completion summary in a panel.
+        
+        Args:
+            name: Experiment name
+            experiment_id: Experiment ID
+            completed: Number of completed conversations
+            failed: Number of failed conversations
+            total: Total number of conversations
+            duration_seconds: Total duration in seconds
+            status: Final status (completed, completed_with_failures, interrupted)
+            exp_dir: Experiment directory path
+        """
+        # Format duration
+        if duration_seconds < 60:
+            duration_str = f"{duration_seconds:.1f}s"
+        elif duration_seconds < 3600:
+            minutes = int(duration_seconds / 60)
+            seconds = int(duration_seconds % 60)
+            duration_str = f"{minutes}m {seconds}s"
+        else:
+            hours = int(duration_seconds / 3600)
+            minutes = int((duration_seconds % 3600) / 60)
+            duration_str = f"{hours}h {minutes}m"
+        
+        # Build content lines
+        lines = []
+        lines.append(f"[bold]◇ Experiment Complete[/bold]")
+        lines.append("")
+        lines.append(f"Name: {name}")
+        lines.append(f"ID: {experiment_id[:8]}")
+        lines.append("")
+        
+        # Conversation summary
+        if failed == 0:
+            lines.append(f"Conversations: {completed}/{total} completed")
+        else:
+            lines.append(f"Conversations: {completed}/{total} completed, {failed} failed")
+        
+        lines.append(f"Duration: {duration_str}")
+        
+        if exp_dir:
+            lines.append("")
+            lines.append(f"[dim]Data: {exp_dir}[/dim]")
+        
+        # Choose color based on status
+        if status == "interrupted":
+            border_color = NORD_COLORS["nord13"]  # Yellow for interrupted
+            title = "⚠ Experiment Interrupted"
+        elif failed > 0:
+            border_color = NORD_COLORS["nord13"]  # Yellow for partial success
+            title = "◇ Experiment Complete (with failures)"
+        else:
+            border_color = NORD_COLORS["nord14"]  # Green for full success
+            title = "◇ Experiment Complete"
+        
+        # Create panel
+        content = "\n".join(lines)
+        self.console.print(
+            Panel(
+                content,
+                title=f" {title} ",
+                title_align="left",
+                border_style=border_color,
+                padding=(1, 2),
+                width=self._calculate_panel_width(content, title, max_width=80),
+                expand=False
+            )
+        )
+    
     def api_key_error(self, message: str, provider: Optional[str] = None) -> None:
         """Display an API key configuration error.
         
