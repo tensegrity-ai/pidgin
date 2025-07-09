@@ -126,9 +126,12 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Added close_conversation_log() call when conversations end
   - Files are now properly closed per conversation, not just on EventBus stop
   
-- [ ] **Message history accumulation**
-  - Add message pruning for long conversations
-  - Archive old messages to disk
+- [x] **Message history accumulation** ✅ NOT NEEDED (July 9, 2025)
+  - ProviderContextManager already handles context limits with smart truncation
+  - Keeps system messages + sliding window of recent messages
+  - Binary search algorithm maximizes messages within token limits
+  - Full history preserved in JSONL files for analysis
+  - In-memory list is not a concern for typical conversation lengths
 
 ### Resource Management
 - [x] **Provider cleanup** [DONE]
