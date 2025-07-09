@@ -201,3 +201,17 @@ class MetricsCalculatedEvent(Event):
     turn_number: int
     metrics: Dict[str, Any]
     experiment_id: Optional[str] = None
+
+
+@dataclass
+class ContextTruncationEvent(Event):
+    """Emitted when messages are truncated to fit context window."""
+    
+    conversation_id: str
+    agent_id: str
+    provider: str
+    model: str
+    turn_number: int
+    original_message_count: int
+    truncated_message_count: int
+    messages_dropped: int

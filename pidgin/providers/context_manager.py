@@ -5,6 +5,7 @@ from typing import List, Optional
 import logging
 
 from ..core.types import Message
+from ..core.events import ContextTruncationEvent
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,11 @@ class ProviderContextManager:
         self, 
         messages: List[Message], 
         provider: str, 
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        event_bus=None,
+        conversation_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        turn_number: Optional[int] = None
     ) -> List[Message]:
         """Keep messages under context limit - that's it."""
         
@@ -82,5 +87,33 @@ class ProviderContextManager:
                 f"Truncated {provider} context: {len(messages)} → {len(result)} messages "
                 f"(~{estimated_tokens:,} → {final_tokens:,} tokens, limit: {limit:,})"
             )
+            
+            # Emit truncation event if event bus is available
+            if event_bus and conversation_id and agent_id is not None and turn_number is not None:
+                try:
+                    import asyncio
+                    event = ContextTruncationEvent(
+                        conversation_id=conversation_id,
+                        agent_id=agent_id,
+                        provider=provider,
+                        model=model or "unknown",
+                        turn_number=turn_number,
+                        original_message_count=len(messages),
+                        truncated_message_count=len(result),
+                        messages_dropped=len(messages) - len(result)
+                    )
+                    # Handle both sync and async event buses
+                    if asyncio.iscoroutinefunction(event_bus.emit):
+                        # Create a task to emit the event asynchronously
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            asyncio.create_task(event_bus.emit(event))
+                        else:
+                            # If no loop is running, we can't emit async
+                            logger.warning("Cannot emit async event without running event loop")
+                    else:
+                        event_bus.emit(event)
+                except Exception as e:
+                    logger.warning(f"Failed to emit truncation event: {e}")
         
         return result

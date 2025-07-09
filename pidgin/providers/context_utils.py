@@ -13,7 +13,11 @@ def apply_context_truncation(
     messages: List[Message],
     provider: str,
     model: Optional[str] = None,
-    logger_name: Optional[str] = None
+    logger_name: Optional[str] = None,
+    event_bus=None,
+    conversation_id: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    turn_number: Optional[int] = None
 ) -> List[Message]:
     """Apply context truncation to messages using ProviderContextManager.
     
@@ -25,6 +29,10 @@ def apply_context_truncation(
         provider: Provider name (e.g., "anthropic", "openai")
         model: Optional model name for model-specific limits
         logger_name: Optional logger name for provider-specific logging
+        event_bus: Optional event bus for emitting truncation events
+        conversation_id: Optional conversation ID for events
+        agent_id: Optional agent ID for events
+        turn_number: Optional turn number for events
         
     Returns:
         List of messages, potentially truncated to fit context limits
@@ -37,7 +45,11 @@ def apply_context_truncation(
     truncated_messages = context_mgr.prepare_context(
         messages,
         provider=provider,
-        model=model
+        model=model,
+        event_bus=event_bus,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+        turn_number=turn_number
     )
     
     # Log if truncation occurred

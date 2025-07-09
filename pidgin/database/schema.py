@@ -85,7 +85,10 @@ CREATE TABLE IF NOT EXISTS conversations (
     -- Error information if failed
     error_message TEXT,
     error_type TEXT,
-    error_timestamp TIMESTAMP
+    error_timestamp TIMESTAMP,
+    
+    -- Context truncation flag
+    had_truncation BOOLEAN DEFAULT FALSE
     
     -- DuckDB limitation: Removing foreign keys due to UPDATE issues
     -- See: https://github.com/duckdb/duckdb/issues/10574
@@ -262,6 +265,25 @@ CREATE INDEX IF NOT EXISTS idx_token_usage_provider ON token_usage(provider);
 CREATE INDEX IF NOT EXISTS idx_token_usage_timestamp ON token_usage(timestamp);
 """
 
+# Context truncation tracking
+CONTEXT_TRUNCATIONS_SCHEMA = """
+-- Track when context truncation occurs during conversations
+CREATE TABLE IF NOT EXISTS context_truncations (
+    conversation_id TEXT NOT NULL,
+    experiment_id TEXT,
+    agent_id TEXT NOT NULL,
+    turn_number INTEGER NOT NULL,
+    messages_dropped INTEGER NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (conversation_id, agent_id, turn_number)
+);
+
+-- Indexes for truncation analysis
+CREATE INDEX IF NOT EXISTS idx_truncations_conversation ON context_truncations(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_truncations_experiment ON context_truncations(experiment_id);
+"""
+
 # Materialized views for dashboards
 MATERIALIZED_VIEWS = """
 -- Real-time experiment dashboard
@@ -360,7 +382,8 @@ def get_all_schemas():
         CONVERSATIONS_SCHEMA,
         TURN_METRICS_SCHEMA,
         MESSAGES_SCHEMA,
-        TOKEN_USAGE_SCHEMA
+        TOKEN_USAGE_SCHEMA,
+        CONTEXT_TRUNCATIONS_SCHEMA
         # MATERIALIZED_VIEWS removed - views can be created manually when needed
     ]
 
@@ -370,6 +393,7 @@ def get_drop_all_sql():
     DROP VIEW IF EXISTS vocabulary_analysis CASCADE;
     DROP VIEW IF EXISTS convergence_trends CASCADE;
     DROP VIEW IF EXISTS experiment_dashboard CASCADE;
+    DROP TABLE IF EXISTS context_truncations CASCADE;
     DROP TABLE IF EXISTS token_usage CASCADE;
     DROP TABLE IF EXISTS messages CASCADE;
     DROP TABLE IF EXISTS turn_metrics CASCADE;

@@ -13,6 +13,7 @@ from ..core.events import (
     TurnCompleteEvent,
     ConversationStartEvent,
     ConversationEndEvent,
+    ContextTruncationEvent,
 )
 from ..core.types import Agent
 
@@ -51,6 +52,7 @@ class VerboseDisplay:
         bus.subscribe(MessageCompleteEvent, self.handle_message)
         bus.subscribe(TurnCompleteEvent, self.handle_turn_complete)
         bus.subscribe(ConversationEndEvent, self.handle_end)
+        bus.subscribe(ContextTruncationEvent, self.handle_truncation)
     
     def handle_start(self, event: ConversationStartEvent) -> None:
         """Display conversation start header.
@@ -239,3 +241,35 @@ class VerboseDisplay:
         self.console.print()
         self.console.print(end_panel, justify="center")
         self.console.print()
+    
+    def handle_truncation(self, event: ContextTruncationEvent) -> None:
+        """Display context truncation event.
+        
+        Args:
+            event: Context truncation event
+        """
+        # Get agent name
+        agent_name = "Unknown"
+        if event.agent_id in self.agents:
+            agent = self.agents[event.agent_id]
+            agent_name = agent.display_name or agent.model
+        
+        # Build truncation info
+        info = Text()
+        info.append("⚠ Context Truncated", style="bold yellow")
+        info.append(f" • {agent_name}", style="yellow")
+        info.append(f" • Turn {event.turn_number}", style=self.COLORS["dim"])
+        info.append(f" • {event.messages_dropped} messages dropped", style=self.COLORS["dim"])
+        info.append(f" • {event.truncated_message_count} remain", style=self.COLORS["dim"])
+        
+        # Create truncation panel
+        truncation_panel = Panel(
+            info,
+            padding=(0, 1),
+            border_style="yellow",
+            width=80,
+            expand=False
+        )
+        
+        self.console.print()
+        self.console.print(truncation_panel, justify="center")
