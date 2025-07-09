@@ -33,7 +33,11 @@ class TestContextUtils:
             mock_instance.prepare_context.assert_called_once_with(
                 messages,
                 provider="anthropic",
-                model="claude-3"
+                model="claude-3",
+                event_bus=None,
+                conversation_id=None,
+                agent_id=None,
+                turn_number=None
             )
     
     def test_apply_context_truncation_with_truncation(self):

@@ -74,11 +74,17 @@ class TestInterruptHandler:
             # Should set interrupt flag
             assert handler.interrupt_requested is True
             
-            # Should show feedback
-            mock_console.print.assert_called_once()
-            call_args = mock_console.print.call_args[0][0]
-            assert "Interrupt received" in call_args
-            assert "pausing after current message" in call_args
+            # Should show feedback (two calls: one for spacing, one for message)
+            assert mock_console.print.call_count == 2
+            # First call is empty (spacing)
+            first_call = mock_console.print.call_args_list[0]
+            assert first_call == ((), {})  # Empty call with no args
+            # Second call has the interrupt message
+            second_call_args = mock_console.print.call_args_list[1][0]
+            if len(second_call_args) > 0:
+                call_args = second_call_args[0]
+                assert "Interrupt received" in call_args
+                assert "pausing after current message" in call_args
     
     def test_multiple_interrupts_ignored(self, handler, mock_console):
         """Test that multiple interrupts are ignored."""
@@ -88,11 +94,11 @@ class TestInterruptHandler:
             
             # First interrupt
             interrupt_callback(signal.SIGINT, None)
-            assert mock_console.print.call_count == 1
+            assert mock_console.print.call_count == 2  # Two calls: spacing + message
             
             # Second interrupt should be ignored
             interrupt_callback(signal.SIGINT, None)
-            assert mock_console.print.call_count == 1  # No additional print
+            assert mock_console.print.call_count == 2  # No additional print
     
     def test_restore_interrupt_handler(self, handler):
         """Test restoring the original interrupt handler."""

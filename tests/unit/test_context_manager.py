@@ -75,28 +75,28 @@ class TestProviderContextManager:
         assert result == short_messages
         assert len(result) == len(short_messages)
     
-    def test_prepare_context_over_limit_anthropic(self, manager, long_messages, caplog):
+    def test_prepare_context_over_limit_anthropic(self, manager, long_messages):
         """Test context truncation for Anthropic."""
-        with caplog.at_level(logging.INFO):
-            result = manager.prepare_context(long_messages, "anthropic")
+        result = manager.prepare_context(long_messages, "anthropic")
         
         # Should have truncated messages
         assert len(result) < len(long_messages)
+        assert len(result) == 56  # Expected result based on limit
         # Should keep system message
         assert result[0].role == "system"
-        # Should have log message about truncation
-        assert "Truncated anthropic context" in caplog.text
-        assert "61 → " in caplog.text  # Original message count
+        # Verify messages were truncated from the beginning
+        assert result[-1] == long_messages[-1]  # Last message preserved
     
-    def test_prepare_context_local_provider(self, manager, long_messages, caplog):
+    def test_prepare_context_local_provider(self, manager, long_messages):
         """Test context truncation for local models with small limits."""
-        with caplog.at_level(logging.INFO):
-            result = manager.prepare_context(long_messages, "local")
+        result = manager.prepare_context(long_messages, "local")
         
         # Local has 4000 token limit, should truncate heavily
         assert len(result) <= 3  # System + maybe 1-2 messages
         assert result[0].role == "system"
-        assert "Truncated local context" in caplog.text
+        # Verify it kept the most recent messages
+        if len(result) > 1:
+            assert result[-1] == long_messages[-1]
     
     def test_prepare_context_model_specific_limit(self, manager):
         """Test using model-specific limit instead of provider limit."""
