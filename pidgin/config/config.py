@@ -6,6 +6,12 @@ from typing import Dict, Any, Optional
 
 from ..io.logger import get_logger
 from rich.console import Console
+from ..ui.display_utils import warning, success, info
+from ..constants import (
+    ConvergenceProfiles, ConvergenceComponents, DEFAULT_CONVERGENCE_WEIGHTS,
+    ConvergenceActions, DEFAULT_CONVERGENCE_THRESHOLD, DEFAULT_CONVERGENCE_PROFILE,
+    DEFAULT_CONVERGENCE_ACTION
+)
 
 logger = get_logger("config")
 
@@ -13,54 +19,19 @@ logger = get_logger("config")
 class Config:
     """Configuration manager for Pidgin."""
     
-    # Built-in convergence weight profiles
-    CONVERGENCE_PROFILES = {
-        "balanced": {
-            "content": 0.4,
-            "structure": 0.15,
-            "sentences": 0.2,
-            "length": 0.15,
-            "punctuation": 0.1
-        },
-        "structural": {
-            "content": 0.25,
-            "structure": 0.35,  # Emphasize structural patterns
-            "sentences": 0.2,
-            "length": 0.1,
-            "punctuation": 0.1
-        },
-        "semantic": {
-            "content": 0.6,     # Emphasize meaning/content
-            "structure": 0.1,
-            "sentences": 0.15,
-            "length": 0.1,
-            "punctuation": 0.05
-        },
-        "strict": {
-            "content": 0.5,
-            "structure": 0.25,
-            "sentences": 0.15,
-            "length": 0.05,
-            "punctuation": 0.05
-        }
-    }
+    # Use convergence profiles from constants
+    CONVERGENCE_PROFILES = DEFAULT_CONVERGENCE_WEIGHTS
 
     DEFAULT_CONFIG = {
         "conversation": {
-            "convergence_threshold": 0.85,
-            "convergence_action": "stop",  # "stop", "warn", or "continue"
-            "convergence_profile": "balanced",  # balanced, structural, semantic, strict, custom
+            "convergence_threshold": DEFAULT_CONVERGENCE_THRESHOLD,
+            "convergence_action": DEFAULT_CONVERGENCE_ACTION,
+            "convergence_profile": DEFAULT_CONVERGENCE_PROFILE,  # Now defaults to "structural"
         },
         "convergence": {
-            "profile": "balanced",
+            "profile": DEFAULT_CONVERGENCE_PROFILE,
             # Custom weights (used when profile is "custom")
-            "custom_weights": {
-                "content": 0.4,
-                "structure": 0.15,
-                "sentences": 0.2,
-                "length": 0.15,
-                "punctuation": 0.1
-            }
+            "custom_weights": DEFAULT_CONVERGENCE_WEIGHTS[ConvergenceProfiles.BALANCED]
         },
         "context_management": {
             "enabled": True,
@@ -152,7 +123,7 @@ class Config:
             return
             
         # No config found - ask if user wants to create one
-        self.console.print("\n[yellow]No configuration file found.[/yellow]")
+        warning("No configuration file found.", use_panel=False)
         self.console.print(f"Would you like to create one at: {config_path}?")
         self.console.print("This will let you customize convergence profiles and other settings.")
         
@@ -164,8 +135,8 @@ class Config:
             
             # Write example config
             self._write_example_config(config_path)
-            self.console.print(f"\n[green]Created config at: {config_path}[/green]")
-            self.console.print("You can edit this file to customize Pidgin's behavior.")
+            success(f"Created config at: {config_path}")
+            info("You can edit this file to customize Pidgin's behavior.", use_panel=False)
             
             # Load the newly created config
             self.load_from_file(config_path)
@@ -286,16 +257,58 @@ experiments:
         conv_config = self.get("conversation", {}).copy()
         
         # Add convergence weights based on profile
-        profile = self.get("convergence.profile", "balanced")
-        if profile == "custom":
-            conv_config["weights"] = self.get("convergence.custom_weights", 
-                                            self.CONVERGENCE_PROFILES["balanced"])
+        profile = self.get("convergence.profile", DEFAULT_CONVERGENCE_PROFILE)
+        if profile == ConvergenceProfiles.CUSTOM:
+            weights = self.get("convergence.custom_weights", 
+                             self.CONVERGENCE_PROFILES[ConvergenceProfiles.BALANCED])
+            # Validate custom weights
+            self._validate_convergence_weights(weights)
+            conv_config["weights"] = weights
         else:
-            conv_config["weights"] = self.CONVERGENCE_PROFILES.get(profile, 
-                                                                  self.CONVERGENCE_PROFILES["balanced"])
+            conv_config["weights"] = self.CONVERGENCE_PROFILES.get(
+                profile, 
+                self.CONVERGENCE_PROFILES[DEFAULT_CONVERGENCE_PROFILE]
+            )
         conv_config["profile"] = profile
         
         return conv_config
+    
+    def _validate_convergence_weights(self, weights: Dict[str, float]) -> None:
+        """Validate that convergence weights sum to 1.0.
+        
+        Args:
+            weights: Dictionary of convergence component weights
+            
+        Raises:
+            ValueError: If weights don't sum to 1.0 or are missing components
+        """
+        # Check all required components are present
+        required_components = {
+            ConvergenceComponents.CONTENT,
+            ConvergenceComponents.STRUCTURE,
+            ConvergenceComponents.SENTENCES,
+            ConvergenceComponents.LENGTH,
+            ConvergenceComponents.PUNCTUATION
+        }
+        
+        weight_keys = set(weights.keys())
+        if weight_keys != required_components:
+            missing = required_components - weight_keys
+            extra = weight_keys - required_components
+            msg = []
+            if missing:
+                msg.append(f"Missing components: {', '.join(missing)}")
+            if extra:
+                msg.append(f"Unknown components: {', '.join(extra)}")
+            raise ValueError(f"Invalid convergence weights. {' '.join(msg)}")
+        
+        # Check weights sum to 1.0
+        total = sum(weights.values())
+        if not (0.99 <= total <= 1.01):  # Allow small floating point errors
+            raise ValueError(
+                f"Convergence weights must sum to 1.0, but got {total:.3f}. "
+                f"Current weights: {weights}"
+            )
 
     def get_context_config(self) -> Dict[str, Any]:
         """Get context management configuration."""

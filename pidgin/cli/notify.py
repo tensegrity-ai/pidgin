@@ -6,6 +6,8 @@ import subprocess
 import shlex
 from pathlib import Path
 
+from ..constants import ExperimentStatus
+
 
 def send_notification(title: str, message: str):
     """Send desktop notification using system tools.
@@ -49,22 +51,25 @@ def send_notification(title: str, message: str):
         print('\a', end='', flush=True)
 
 
-def notify_experiment_complete(experiment_name: str, status: str = 'completed'):
+def notify_experiment_complete(experiment_name: str, status: str = ExperimentStatus.COMPLETED):
     """Send notification for experiment completion.
     
     Args:
         experiment_name: Name of the experiment
         status: Final status (completed, failed, interrupted)
     """
-    if status == 'completed':
+    if status == ExperimentStatus.COMPLETED:
         title = "Experiment Complete"
         message = f"Experiment '{experiment_name}' has finished successfully"
-    elif status == 'failed':
+    elif status == ExperimentStatus.FAILED:
         title = "Experiment Failed"
         message = f"Experiment '{experiment_name}' failed"
-    else:
+    elif status == ExperimentStatus.INTERRUPTED:
         title = "Experiment Interrupted"
         message = f"Experiment '{experiment_name}' was interrupted"
+    else:
+        title = "Experiment Status Changed"
+        message = f"Experiment '{experiment_name}' status: {status}"
     
     send_notification(title, message)
     # Also do terminal bell

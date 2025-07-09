@@ -16,6 +16,8 @@ from rich.table import Table
 from rich.panel import Panel
 
 from .ollama_setup import normalize_local_model_names, ensure_ollama_models_ready
+from ..ui.display_utils import DisplayUtils
+from ..providers import APIKeyError
 from .helpers import (
     get_provider_for_model, 
     build_initial_prompt,
@@ -41,6 +43,7 @@ from .notify import send_notification
 from ..experiments import ExperimentManager, ExperimentConfig, ExperimentRunner
 
 console = Console()
+display = DisplayUtils(console)
 
 # Import ORIGINAL_CWD from main module
 from . import ORIGINAL_CWD
@@ -189,13 +192,20 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
             if not agent_a:
                 return
         except (KeyboardInterrupt, EOFError):
-            console.print(f"\n[{NORD_YELLOW}]Model selection cancelled. Use -a and -b flags to specify models.[/{NORD_YELLOW}]")
-            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            console.print()  # Add newline
+            display.warning(
+                "Model selection cancelled",
+                context="Use -a and -b flags to specify models.\nExample: pidgin run -a claude -b gpt",
+                use_panel=False
+            )
             return
         except Exception as e:
-            console.print(f"\n[{NORD_RED}]Error during model selection: {e}[/{NORD_RED}]")
-            console.print(f"[{NORD_YELLOW}]Use -a and -b flags to specify models directly.[/{NORD_YELLOW}]")
-            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            console.print()  # Add newline
+            display.error(
+                f"Error during model selection: {e}",
+                context="Use -a and -b flags to specify models directly.\nExample: pidgin run -a claude -b gpt",
+                use_panel=False
+            )
             return
     
     if not agent_b:
@@ -204,13 +214,20 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
             if not agent_b:
                 return
         except (KeyboardInterrupt, EOFError):
-            console.print(f"\n[{NORD_YELLOW}]Model selection cancelled. Use -a and -b flags to specify models.[/{NORD_YELLOW}]")
-            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            console.print()  # Add newline
+            display.warning(
+                "Model selection cancelled",
+                context="Use -a and -b flags to specify models.\nExample: pidgin run -a claude -b gpt",
+                use_panel=False
+            )
             return
         except Exception as e:
-            console.print(f"\n[{NORD_RED}]Error during model selection: {e}[/{NORD_RED}]")
-            console.print(f"[{NORD_YELLOW}]Use -a and -b flags to specify models directly.[/{NORD_YELLOW}]")
-            console.print(f"[{NORD_YELLOW}]Example: pidgin run -a claude -b gpt[/{NORD_YELLOW}]")
+            console.print()  # Add newline
+            display.error(
+                f"Error during model selection: {e}",
+                context="Use -a and -b flags to specify models directly.\nExample: pidgin run -a claude -b gpt",
+                use_panel=False
+            )
             return
     
     # Validate models
@@ -218,7 +235,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         agent_a_id, agent_a_name = validate_model_id(agent_a)
         agent_b_id, agent_b_name = validate_model_id(agent_b)
     except ValueError as e:
-        console.print(f"[{NORD_RED}]Error: {e}[/{NORD_RED}]")
+        display.error(str(e), use_panel=False)
         return
 
     # Handle temperature settings
@@ -240,7 +257,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
             if convergence_action is None:
                 convergence_action = default_action
             # Log this default
-            console.print(f"[dim]Using default convergence threshold: {convergence_threshold} → {convergence_action}[/dim]")
+            display.dim(f"Using default convergence threshold: {convergence_threshold} → {convergence_action}")
     
     # Default convergence action
     if convergence_action is None:
@@ -254,7 +271,10 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         run_in_foreground = False  # --quiet always means background
     elif max_parallel > 1:
         run_in_foreground = False  # Parallel execution requires background
-        console.print(f"[{NORD_YELLOW}]Note: Parallel execution (max_parallel={max_parallel}) runs in background[/{NORD_YELLOW}]")
+        display.warning(
+            f"Parallel execution (max_parallel={max_parallel}) runs in background",
+            use_panel=False
+        )
     else:
         # Default behavior: foreground for single conversations
         run_in_foreground = True
@@ -262,7 +282,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     # Generate fun name if not provided
     if not name:
         name = generate_experiment_name()
-        console.print(f"[dim]Generated experiment name: {name}[/dim]")
+        display.dim(f"Generated experiment name: {name}")
     
     # Determine first speaker
     if first_speaker == 'random':
@@ -299,7 +319,10 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     if max_parallel > 1 or not run_in_foreground:
         experiment_display_mode = 'none'
         if display_mode in ['tail', 'verbose', 'progress'] and max_parallel > 1:
-            console.print(f"[{NORD_YELLOW}]Note: --{display_mode} is not supported with parallel execution[/{NORD_YELLOW}]")
+            display.warning(
+                f"--{display_mode} is not supported with parallel execution",
+                use_panel=False
+            )
     else:
         # Single conversation in foreground can use any display mode
         experiment_display_mode = display_mode
@@ -356,28 +379,34 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     existing = next((exp for exp in experiments if exp.get('name') == name), None)
 
     if existing:
-        console.print(f"[#bf616a]Experiment session '{name}' already exists[/#bf616a]")
-        console.print(f"Use 'pidgin attach {name}' to monitor")
+        display.error(
+            f"Experiment session '{name}' already exists",
+            context=f"Use 'pidgin attach {name}' to monitor",
+            use_panel=False
+        )
         return
     
     # Validate configuration
     errors = config.validate()
     if errors:
-        console.print(f"[#bf616a]Configuration errors:[/#bf616a]")
+        error_msg = "Configuration errors:\n\n"
         for error in errors:
-            console.print(f"  • {error}")
+            error_msg += f"  • {error}\n"
+        display.error(error_msg.rstrip(), use_panel=True)
         return
     
     if run_in_foreground:
         # Run in foreground (debug mode)
         if name:
-            console.print(f"[#ebcb8b]◆ Starting '{name}' in foreground[/#ebcb8b]")
+            display.info(f"Starting '{name}' in foreground", use_panel=False)
         else:
-            console.print(f"[#ebcb8b]◆ Starting experiment in foreground[/#ebcb8b]")
-        console.print(f"[#4c566a]  Models: {agent_a_name} vs {agent_b_name}[/#4c566a]")
-        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
-        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-        console.print(f"\n[#bf616a]Running in foreground - press Ctrl+C to stop[/#bf616a]\n")
+            display.info("Starting experiment in foreground", use_panel=False)
+        display.dim(f"  Models: {agent_a_name} vs {agent_b_name}")
+        display.dim(f"  Conversations: {repetitions}")
+        display.dim(f"  Max turns: {max_turns}")
+        console.print()
+        display.warning("Running in foreground - press Ctrl+C to stop", use_panel=False)
+        console.print()
         
         # Run directly without daemon
         runner = ExperimentRunner(get_experiments_dir(), daemon=None)
@@ -394,10 +423,11 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         
         try:
             success = asyncio.run(run_foreground_experiment())
+            console.print()  # Add spacing
             if name:
-                console.print(f"\n[#a3be8c][OK] Experiment '{name}' completed[/#a3be8c]")
+                display.success(f"Experiment '{name}' completed")
             else:
-                console.print(f"\n[#a3be8c][OK] Experiment completed[/#a3be8c]")
+                display.success("Experiment completed")
             if notify:
                 send_notification(
                     title="Pidgin Experiment Complete",
@@ -407,9 +437,16 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                 # Terminal bell notification
                 print('\a', end='', flush=True)
         except KeyboardInterrupt:
-            console.print(f"\n[#ebcb8b]Experiment interrupted by user[/#ebcb8b]")
+            console.print()  # Add spacing
+            display.warning("Experiment interrupted by user", use_panel=False)
+        except APIKeyError as e:
+            console.print()  # Add spacing
+            display.api_key_error(str(e))
+            # Terminal bell for failure
+            print('\a', end='', flush=True)
         except Exception as e:
-            console.print(f"\n[#bf616a][FAIL] Experiment failed: {e}[/#bf616a]")
+            console.print()  # Add spacing
+            display.error(f"Experiment failed: {e}", use_panel=False)
             import traceback
             traceback.print_exc()
             # Terminal bell for failure too

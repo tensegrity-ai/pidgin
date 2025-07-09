@@ -1,9 +1,9 @@
-import os
 import logging
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 from .error_utils import ProviderErrorHandler
+from .api_key_manager import APIKeyManager
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +75,7 @@ class xAIProvider(Provider):
                 "OpenAI client not available. Install with: " "pip install openai"
             )
 
-        api_key = os.getenv("XAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "XAI_API_KEY environment variable not set. "
-                "Please set it to your xAI API key."
-            )
+        api_key = APIKeyManager.get_api_key("xai")
 
         # xAI uses OpenAI-compatible API with custom base URL
         self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")

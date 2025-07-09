@@ -16,6 +16,7 @@ from rich.panel import Panel
 from ..experiments.optimized_state_builder import get_state_builder
 from ..io.paths import get_experiments_dir
 from ..io.logger import get_logger
+from ..constants import ExperimentStatus, ConversationStatus
 
 logger = get_logger("simple_monitor")
 console = Console()
@@ -76,7 +77,7 @@ class SimpleMonitor:
         # Get only running experiments
         return self.state_builder.list_experiments(
             self.exp_base, 
-            status_filter=['running']
+            status_filter=[ExperimentStatus.RUNNING]
         )
     
     def build_header(self) -> Panel:
@@ -107,7 +108,7 @@ class SimpleMonitor:
             progress_str = f"{completed}/{total} ({progress_pct:.0f}%)"
             
             # Current conversation
-            active_convs = [c for c in exp.conversations.values() if c.status == 'running']
+            active_convs = [c for c in exp.conversations.values() if c.status == ConversationStatus.RUNNING]
             current_str = f"{len(active_convs)} active" if active_convs else "starting..."
             
             # Calculate rate

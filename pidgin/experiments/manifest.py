@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import threading
 
+from ..constants import ExperimentStatus, ConversationStatus
+
 
 class ManifestManager:
     """Manages experiment manifest with atomic updates."""
@@ -38,7 +40,7 @@ class ManifestManager:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "config": config,
             "total_conversations": total_conversations,
-            "status": "created",
+            "status": ExperimentStatus.CREATED,
             "conversations": {}
         }
         
@@ -54,7 +56,7 @@ class ManifestManager:
         with self._lock:
             manifest = self._read()
             manifest["conversations"][conversation_id] = {
-                "status": "created",
+                "status": ConversationStatus.CREATED,
                 "jsonl": jsonl_filename,
                 "last_line": 0,
                 "turns_completed": 0,
@@ -62,8 +64,8 @@ class ManifestManager:
             }
             
             # Update experiment status if needed
-            if manifest["status"] == "created":
-                manifest["status"] = "running"
+            if manifest["status"] == ExperimentStatus.CREATED:
+                manifest["status"] = ExperimentStatus.RUNNING
                 manifest["started_at"] = datetime.now(timezone.utc).isoformat()
             
             self._write_atomic(manifest)
@@ -113,7 +115,7 @@ class ManifestManager:
             manifest["status"] = status
             if error:
                 manifest["error"] = error
-            if status in ["completed", "failed", "interrupted"]:
+            if status in [ExperimentStatus.COMPLETED, ExperimentStatus.FAILED, ExperimentStatus.INTERRUPTED]:
                 manifest["completed_at"] = datetime.now(timezone.utc).isoformat()
             
             self._write_atomic(manifest)
@@ -166,11 +168,11 @@ class ManifestManager:
         running = 0
         
         for conv in manifest["conversations"].values():
-            if conv["status"] == "completed":
+            if conv["status"] == ConversationStatus.COMPLETED:
                 completed += 1
-            elif conv["status"] == "failed":
+            elif conv["status"] == ConversationStatus.FAILED:
                 failed += 1
-            elif conv["status"] == "running":
+            elif conv["status"] == ConversationStatus.RUNNING:
                 running += 1
         
         manifest["completed_conversations"] = completed
@@ -181,6 +183,6 @@ class ManifestManager:
         total = manifest.get("total_conversations", 0)
         if completed + failed >= total and total > 0:
             if failed == 0:
-                manifest["status"] = "completed"
+                manifest["status"] = ExperimentStatus.COMPLETED
             else:
-                manifest["status"] = "completed_with_failures"
+                manifest["status"] = ExperimentStatus.COMPLETED_WITH_FAILURES

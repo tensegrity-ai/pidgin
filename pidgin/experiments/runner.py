@@ -13,6 +13,9 @@ from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 
+from ..constants import ExperimentStatus
+from ..ui.display_utils import DisplayUtils
+
 from ..core import Conductor, EventBus
 from ..core.events import (
     ConversationStartEvent,
@@ -30,6 +33,7 @@ from .config import ExperimentConfig
 from .daemon import ExperimentDaemon
 from .manifest import ManifestManager
 from .tracking_event_bus import TrackingEventBus
+from ..providers.api_key_manager import APIKeyManager
 
 # Import provider builder and prompt builder to avoid circular imports
 from ..providers.builder import build_provider as get_provider_for_model
@@ -52,6 +56,7 @@ class ExperimentRunner:
         """
         self.output_dir = output_dir
         self.console = Console()
+        self.display = DisplayUtils(self.console)
         self.daemon = daemon
         self.active_tasks = {}
         self.completed_count = 0
@@ -81,6 +86,17 @@ class ExperimentRunner:
         # Removed legacy metadata.json - using only manifest.json
         
         try:
+            # Validate API keys for all required providers
+            providers = set()
+            agent_a_config = get_model_config(config.agent_a_model)
+            agent_b_config = get_model_config(config.agent_b_model)
+            if agent_a_config:
+                providers.add(agent_a_config.provider)
+            if agent_b_config:
+                providers.add(agent_b_config.provider)
+            
+            # Check all providers have API keys before starting
+            APIKeyManager.validate_required_providers(list(providers))
             
             # Prepare conversation configs
             conversations = []
@@ -108,9 +124,9 @@ class ExperimentRunner:
             
             # Update final status
             if self.daemon and self.daemon.is_stopping():
-                final_status = 'interrupted'
+                final_status = ExperimentStatus.INTERRUPTED
             else:
-                final_status = 'completed'
+                final_status = ExperimentStatus.COMPLETED
             
             # Update manifest with final status
             manifest.update_experiment_status(final_status)
@@ -120,14 +136,14 @@ class ExperimentRunner:
             logging.info(f"Experiment {experiment_id} completed with status: {final_status}")
             
             # Automatically import to database and generate transcripts
-            if final_status == 'completed':
+            if final_status == ExperimentStatus.COMPLETED:
                 await self._import_and_generate_transcripts(experiment_id, exp_dir)
                 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
             
             # Update manifest with error status
-            manifest.update_experiment_status('failed', error=str(e))
+            manifest.update_experiment_status(ExperimentStatus.FAILED, error=str(e))
             
             # Metadata tracking removed - using only manifest.json
             
@@ -404,41 +420,41 @@ class ExperimentRunner:
                 logging.info(f"Transcripts generated in {exp_dir}/transcripts/")
             else:
                 # Display error in a nice panel
-                error_message = f"[bold red]Database Import Failed[/bold red]\n\n"
-                error_message += f"[yellow]Experiment:[/yellow] {experiment_id}\n\n"
-                error_message += f"[red]Error:[/red] {result.error}\n\n"
-                error_message += "[dim]This usually means the database schema needs updating.[/dim]"
+                error_message = f"Database Import Failed\n\n"
+                error_message += f"Experiment: {experiment_id}\n\n"
+                error_message += f"Error: {result.error}"
                 
-                self.console.print(Panel(
+                self.display.error(
                     error_message,
-                    title="[bold red]Import Error[/bold red]",
-                    border_style="red",
-                    padding=(1, 2)
-                ))
+                    title="Import Error",
+                    context="This usually means the database schema needs updating.",
+                    use_panel=True
+                )
                 
-                logging.error(f"Failed to import experiment: {result.error}")
+                # Don't double-log the error since we're showing it in a panel
+                logging.debug(f"Import failed for {experiment_id}: {result.error}")
                 
         except Exception as e:
             # Display error in a nice panel
-            error_message = f"[bold red]Import/Transcript Generation Failed[/bold red]\n\n"
-            error_message += f"[yellow]Experiment:[/yellow] {experiment_id}\n\n"
-            error_message += f"[red]Error:[/red] {str(e)}\n\n"
+            error_message = f"Import/Transcript Generation Failed\n\n"
+            error_message += f"Experiment: {experiment_id}\n\n"
+            error_message += f"Error: {str(e)}"
             
             # Add helpful context based on error type
+            context = None
             if "column" in str(e).lower() and "does not exist" in str(e).lower():
-                error_message += "[dim]This appears to be a database schema issue.[/dim]\n"
-                error_message += "[dim]The database may need to be updated to match the current schema.[/dim]"
+                context = "This appears to be a database schema issue.\nThe database may need to be updated to match the current schema."
             elif "permission" in str(e).lower():
-                error_message += "[dim]This appears to be a file permission issue.[/dim]"
+                context = "This appears to be a file permission issue."
             else:
-                error_message += "[dim]Check the logs for more details.[/dim]"
+                context = "Check the logs for more details."
             
-            self.console.print(Panel(
+            self.display.error(
                 error_message,
-                title="[bold red]Import Error[/bold red]",
-                border_style="red",
-                padding=(1, 2)
-            ))
+                title="Import Error",
+                context=context,
+                use_panel=True
+            )
             
             # Log but don't fail the experiment
             logging.error(f"Error during auto-import/transcript generation: {e}", exc_info=True)

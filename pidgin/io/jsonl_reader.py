@@ -9,6 +9,8 @@ from collections import defaultdict
 # Avoid importing pidgin modules to prevent circular imports
 import logging
 
+from ..constants import ExperimentStatus, ConversationStatus
+
 logger = logging.getLogger("jsonl_reader")
 
 
@@ -128,9 +130,9 @@ class JSONLExperimentReader:
                     experiment_info['name'] = conv_info['experiment_name']
                 
                 # Count conversation statuses
-                if conv_info['status'] == 'completed':
+                if conv_info['status'] == ConversationStatus.COMPLETED:
                     experiment_info['completed_conversations'] += 1
-                elif conv_info['status'] == 'failed':
+                elif conv_info['status'] == ConversationStatus.FAILED:
                     experiment_info['failed_conversations'] += 1
         
         # Calculate total conversations and overall status
@@ -141,9 +143,9 @@ class JSONLExperimentReader:
             
         # Determine experiment status
         if experiment_info['completed_conversations'] + experiment_info['failed_conversations'] == experiment_info['total_conversations']:
-            experiment_info['status'] = 'completed'
-        elif any(c['status'] == 'running' for c in conversations.values()):
-            experiment_info['status'] = 'running'
+            experiment_info['status'] = ExperimentStatus.COMPLETED
+        elif any(c['status'] == ConversationStatus.RUNNING for c in conversations.values()):
+            experiment_info['status'] = ExperimentStatus.RUNNING
         else:
             experiment_info['status'] = 'unknown'
         
@@ -179,7 +181,7 @@ class JSONLExperimentReader:
                         
                         if event_type == 'ConversationStartEvent':
                             conv_info['started_at'] = event.get('timestamp')
-                            conv_info['status'] = 'running'
+                            conv_info['status'] = ConversationStatus.RUNNING
                             # Extract config
                             conv_info['config'] = {
                                 'agent_a_model': event.get('agent_a_model'),
@@ -196,11 +198,11 @@ class JSONLExperimentReader:
                             reason = event.get('reason', '')
                             
                             if reason == 'max_turns' or reason == 'high_convergence':
-                                conv_info['status'] = 'completed'
+                                conv_info['status'] = ConversationStatus.COMPLETED
                             elif reason == 'error':
-                                conv_info['status'] = 'failed'
+                                conv_info['status'] = ConversationStatus.FAILED
                             else:
-                                conv_info['status'] = 'interrupted'
+                                conv_info['status'] = ConversationStatus.INTERRUPTED
                         
                         elif event_type == 'TurnCompleteEvent':
                             conv_info['total_turns'] = max(

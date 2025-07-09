@@ -262,31 +262,30 @@ class TestEventStoreFull:
         exp_id = event_store.create_experiment("test-exp", {})
         event_store.create_conversation(exp_id, "conv_123", {})
         
-        # Log metrics
+        # Log metrics - during live conversations only convergence_score is logged
         metrics = {
-            "convergence_score": 0.75,
-            "vocabulary_overlap": 0.6,
-            "structural_similarity": 0.8,
-            "topic_similarity": 0.7
+            "convergence_score": 0.75
         }
         
         event_store.log_turn_metrics("conv_123", 1, metrics)
         
         # Verify by querying directly
         result = event_store.db.execute("""
-            SELECT convergence_score, vocabulary_overlap 
+            SELECT convergence_score 
             FROM turn_metrics 
             WHERE conversation_id = ? AND turn_number = ?
         """, ["conv_123", 1]).fetchone()
         
         assert result[0] == 0.75
-        assert result[1] == 0.6
     
     def test_log_message_metrics(self, event_store):
         """Test logging message metrics."""
         # Setup
         exp_id = event_store.create_experiment("test-exp", {})
         event_store.create_conversation(exp_id, "conv_123", {})
+        
+        # First create the turn metrics row (required during live conversations)
+        event_store.log_turn_metrics("conv_123", 1, {"convergence_score": 0.5})
         
         # Log message metrics
         event_store.log_message_metrics(
@@ -306,26 +305,9 @@ class TestEventStoreFull:
             WHERE conversation_id = ? AND turn_number = ?
         """, ["conv_123", 1]).fetchone()
         
-        # If not exists, create the turn_metrics row first
-        if not result:
-            event_store.log_turn_metrics("conv_123", 1, {})
-            event_store.log_message_metrics(
-                conversation_id="conv_123",
-                turn_number=1,
-                agent_id="agent_a",
-                message_length=100,
-                vocabulary_size=25,
-                punctuation_ratio=0.05,
-                sentiment_score=0.8
-            )
-            
-            result = event_store.db.execute("""
-                SELECT message_a_length, message_a_unique_words 
-                FROM turn_metrics 
-                WHERE conversation_id = ? AND turn_number = ?
-            """, ["conv_123", 1]).fetchone()
-        
         assert result is not None
+        assert result[0] == 100  # message_a_length
+        assert result[1] == 25   # message_a_unique_words
     
     def test_get_experiment_metrics(self, event_store):
         """Test retrieving experiment metrics."""

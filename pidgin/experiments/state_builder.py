@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
 from ..io.logger import get_logger
+from ..constants import ConversationStatus, ExperimentStatus
 
 logger = get_logger("state_builder")
 
@@ -16,7 +17,7 @@ class ConversationState:
     """Lightweight state for a single conversation."""
     conversation_id: str
     experiment_id: str
-    status: str = "created"
+    status: str = ConversationStatus.CREATED
     current_turn: int = 0
     max_turns: int = 20
     started_at: Optional[datetime] = None
@@ -33,7 +34,7 @@ class ExperimentState:
     """Lightweight state for an experiment."""
     experiment_id: str
     name: str
-    status: str = "created"
+    status: str = ExperimentStatus.CREATED
     total_conversations: int = 0
     completed_conversations: int = 0
     failed_conversations: int = 0
@@ -45,7 +46,7 @@ class ExperimentState:
     @property
     def active_conversations(self) -> int:
         """Count of currently running conversations."""
-        return sum(1 for c in self.conversations.values() if c.status == "running")
+        return sum(1 for c in self.conversations.values() if c.status == ConversationStatus.RUNNING)
     
     @property
     def progress(self) -> tuple[int, int]:
@@ -97,17 +98,17 @@ class StateBuilder:
                 state.conversations[conv_state.conversation_id] = conv_state
                 
                 # Update experiment-level counts
-                if conv_state.status == "completed":
+                if conv_state.status == ConversationStatus.COMPLETED:
                     state.completed_conversations += 1
-                elif conv_state.status == "failed":
+                elif conv_state.status == ConversationStatus.FAILED:
                     state.failed_conversations += 1
         
         # Infer experiment status from conversations
         state.total_conversations = len(state.conversations)
         if state.active_conversations > 0:
-            state.status = "running"
+            state.status = ExperimentStatus.RUNNING
         elif state.completed_conversations + state.failed_conversations == state.total_conversations:
-            state.status = "completed"
+            state.status = ExperimentStatus.COMPLETED
         
         return state
     
@@ -172,7 +173,7 @@ class StateBuilder:
             state.max_turns = data.get('max_turns', state.max_turns)
             
         elif event_type == 'ConversationStartEvent':
-            state.status = 'running'
+            state.status = ConversationStatus.RUNNING
             state.started_at = StateBuilder._parse_timestamp(event.get('timestamp'))
             
         elif event_type == 'TurnCompleteEvent':
@@ -183,13 +184,13 @@ class StateBuilder:
                 state.last_convergence = convergence
                 
         elif event_type == 'ConversationEndEvent':
-            state.status = 'completed'
+            state.status = ConversationStatus.COMPLETED
             state.completed_at = StateBuilder._parse_timestamp(event.get('timestamp'))
             
         elif event_type == 'ConversationStatusChanged':
             data = event.get('data', {})
             state.status = data.get('status', state.status)
-            if state.status == 'failed':
+            if state.status == ConversationStatus.FAILED:
                 state.error_message = data.get('error_message')
                 
     @staticmethod
@@ -208,7 +209,7 @@ class StateBuilder:
         for exp_dir in base_dir.glob("exp_*"):
             if exp_dir.is_dir():
                 state = StateBuilder.from_experiment_dir(exp_dir)
-                if state and state.status in ["running", "created"]:
+                if state and state.status in [ExperimentStatus.RUNNING, ExperimentStatus.CREATED]:
                     experiments.append(state)
                     
         return experiments

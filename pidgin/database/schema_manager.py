@@ -52,9 +52,6 @@ class SchemaManager:
             for schema_sql in get_all_schemas():
                 db.execute(schema_sql)
             
-            # Apply migrations for existing databases
-            self._apply_migrations(db)
-            
             # Mark as initialized
             self._initialized_databases.add(cache_key)
             
@@ -78,30 +75,6 @@ class SchemaManager:
         import os
         cache_key = os.path.abspath(db_path)
         return cache_key in self._initialized_databases
-    
-    def _apply_migrations(self, db: duckdb.DuckDBPyConnection) -> None:
-        """Apply schema migrations to existing databases.
-        
-        Args:
-            db: DuckDB connection
-        """
-        try:
-            # Check if cumulative_overlap column exists in turn_metrics
-            result = db.execute("""
-                SELECT COUNT(*) 
-                FROM information_schema.columns 
-                WHERE table_name = 'turn_metrics' 
-                AND column_name = 'cumulative_overlap'
-            """).fetchone()
-            
-            if result and result[0] == 0:
-                logger.info("Applying migration: Adding cumulative_overlap column to turn_metrics")
-                db.execute("ALTER TABLE turn_metrics ADD COLUMN cumulative_overlap DOUBLE")
-                logger.info("Migration applied successfully")
-                
-        except Exception as e:
-            # Log but don't fail - table might not exist yet
-            logger.debug(f"Migration check skipped: {e}")
 
 
 # Global instance

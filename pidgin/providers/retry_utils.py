@@ -100,6 +100,8 @@ def is_retryable_error(error: Exception) -> bool:
     # Other retryable patterns
     retryable_patterns = [
         "timeout",
+        "readtimeout",
+        "read timeout",
         "connection",
         "network",
         "temporary",

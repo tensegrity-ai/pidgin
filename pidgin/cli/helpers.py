@@ -16,8 +16,10 @@ from ..providers.builder import build_provider
 from ..config.prompts import build_initial_prompt
 from ..config.dimensional_prompts import DimensionalPromptGenerator
 from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 async def get_provider_for_model(model_id: str, temperature: Optional[float] = None):
@@ -62,7 +64,7 @@ def build_initial_prompt(custom_prompt: Optional[str] = None,
             dimension_spec = dimensions[0]  # Take the first dimension spec
             return generator.generate(dimension_spec)
         except ValueError as e:
-            console.print(f"[{NORD_YELLOW}]Warning: {e}[/{NORD_YELLOW}]")
+            display.warning(str(e), use_panel=False)
             return "I'm looking forward to your conversation."
     
     return "I'm looking forward to your conversation."
@@ -176,7 +178,8 @@ def load_conversation_metadata(conv_dir: Path) -> Dict[str, Any]:
                 metadata['agents'] = state.get('agents', [])
                 metadata['total_turns'] = state.get('total_turns', 0)
                 metadata['started_at'] = state.get('started_at', '')
-        except:
+        except (json.JSONDecodeError, OSError, KeyError):
+            # State file might be corrupted or inaccessible
             pass
     
     # Get file sizes
@@ -235,7 +238,7 @@ def parse_dimensions(dimensions: List[str]) -> List[str]:
             generator.generate(dim_spec)
             valid_dims.append(dim_spec)
         except ValueError as e:
-            console.print(f"[{NORD_YELLOW}]Warning: Invalid dimension spec '{dim_spec}': {e}[/{NORD_YELLOW}]")
+            display.warning(f"Invalid dimension spec '{dim_spec}': {e}", use_panel=False)
     
     return valid_dims
 

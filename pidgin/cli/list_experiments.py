@@ -8,8 +8,11 @@ from rich.table import Table
 from .constants import NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN
 from ..io.paths import get_experiments_dir
 from ..experiments.optimized_state_builder import get_state_builder
+from ..constants import ExperimentStatus
+from ..ui.display_utils import DisplayUtils
 
 console = Console()
+display = DisplayUtils(console)
 
 
 @click.command(name='list')
@@ -29,15 +32,15 @@ def list_experiments(all):
     else:
         experiment_states = state_builder.list_experiments(
             exp_base, 
-            status_filter=['running', 'created']
+            status_filter=[ExperimentStatus.RUNNING, ExperimentStatus.CREATED]
         )
     
     if not experiment_states:
         if all:
-            console.print(f"[{NORD_YELLOW}]No experiments found.[/{NORD_YELLOW}]")
+            display.warning("No experiments found.", use_panel=False)
         else:
-            console.print(f"[{NORD_YELLOW}]No running experiments.[/{NORD_YELLOW}]")
-            console.print(f"[{NORD_CYAN}]Use --all to see completed experiments.[/{NORD_CYAN}]")
+            display.warning("No running experiments.", use_panel=False)
+            display.dim("Use --all to see completed experiments.")
         return
     
     # Create table

@@ -91,8 +91,8 @@ class EventDeserializer:
             if "+" in timestamp_str or timestamp_str.endswith("Z"):
                 return datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             return datetime.fromisoformat(timestamp_str)
-        except:
-            # Fallback to now if parsing fails
+        except (ValueError, TypeError, AttributeError):
+            # Fallback to now if parsing fails (invalid format, None, or not a string)
             return datetime.now()
     
     @classmethod

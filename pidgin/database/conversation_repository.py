@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 
 from .base_repository import BaseRepository
 from ..io.logger import get_logger
+from ..constants import ConversationStatus
 
 logger = get_logger("conversation_repository")
 
@@ -37,7 +38,7 @@ class ConversationRepository(BaseRepository):
         self.execute(query, [
             conversation_id,
             experiment_id,
-            "created",
+            ConversationStatus.CREATED,
             datetime.now(),
             agent_a_config.get("model", "unknown"),
             agent_a_config.get("provider", "unknown"),
@@ -81,11 +82,11 @@ class ConversationRepository(BaseRepository):
             end_reason: Optional end reason
             error_message: Optional error message
         """
-        if status == "completed" or status == "failed":
+        if status == ConversationStatus.COMPLETED or status == ConversationStatus.FAILED:
             # Calculate final metrics if completing
             final_score = None
             total_turns = 0
-            if status == "completed":
+            if status == ConversationStatus.COMPLETED:
                 # Get the final convergence score from turn metrics
                 result = self.fetchone("""
                     SELECT turn_number, convergence_score

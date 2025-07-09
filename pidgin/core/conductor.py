@@ -11,6 +11,7 @@ from typing import Dict, Optional
 from rich.console import Console
 
 from .interrupt_handler import InterruptHandler
+from ..ui.display_utils import dim
 from .name_coordinator import NameCoordinator
 from .turn_executor import TurnExecutor
 from .message_handler import MessageHandler
@@ -369,14 +370,14 @@ class Conductor:
         except ImportError as e:
             logger.error(f"Failed to import EventStore: {e}")
             if self.console:
-                self.console.print(f"[dim]Note: Database module not available[/dim]")
+                dim("Note: Database module not available")
         except FileNotFoundError as e:
             logger.error(f"File not found during batch load: {e}")
         except Exception as e:
             # Log the specific error type for better debugging
             logger.error(f"Failed to batch load conversation {conv_id}: {type(e).__name__}: {e}")
             if self.console:
-                self.console.print(f"[dim]Note: Failed to save analytics data: {e}[/dim]")
+                dim(f"Note: Failed to save analytics data: {e}")
     
     def check_interrupt(self) -> bool:
         """Check if interrupt was requested during message.

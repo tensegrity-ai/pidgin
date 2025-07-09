@@ -234,7 +234,8 @@ class MessageHandler:
         try:
             message = await future
             return message
-        except:
+        except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
+            # Message generation was cancelled or failed
             return None
     
     async def _record_request_completion(

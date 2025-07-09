@@ -1,4 +1,3 @@
-import os
 import logging
 import time
 import asyncio
@@ -8,6 +7,7 @@ from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_retryable_error
 from .error_utils import create_openai_error_handler
+from .api_key_manager import APIKeyManager
 
 logger = logging.getLogger(__name__)
 
@@ -187,12 +187,7 @@ OPENAI_MODELS = {
 class OpenAIProvider(Provider):
     """OpenAI API provider with friendly error handling."""
     def __init__(self, model: str):
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "OPENAI_API_KEY environment variable not set. "
-                "Please set it to your OpenAI API key."
-            )
+        api_key = APIKeyManager.get_api_key("openai")
         self.client = AsyncOpenAI(api_key=api_key)
         self.model = model
         self.error_handler = create_openai_error_handler()
@@ -255,9 +250,28 @@ class OpenAIProvider(Provider):
 
             except Exception as e:
                 error_str = str(e)
+                error_type = type(e).__name__.lower()
 
+                # Check if it's a timeout error (by type name or content)
+                if "timeout" in error_type or any(
+                    err in error_str.lower()
+                    for err in ["timeout", "timed out"]
+                ):
+                    if attempt < max_retries - 1:
+                        # Calculate exponential backoff with jitter
+                        delay = base_delay * (2**attempt) + (0.1 * time.time() % 1)
+                        # Log timeout without traceback
+                        logger.info(f"OpenAI request timed out, retrying in {delay:.1f}s")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        # Max retries exhausted for timeout
+                        friendly_error = self.error_handler.get_friendly_error(e)
+                        logger.info(f"Timeout after retries: {friendly_error}")
+                        raise Exception(friendly_error) from None
+                
                 # Check if it's a rate limit or overloaded error
-                if any(
+                elif any(
                     err in error_str.lower()
                     for err in ["rate_limit", "rate limit", "overloaded", "429"]
                 ):

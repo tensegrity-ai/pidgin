@@ -184,37 +184,75 @@ class EventStore:
     
     # Deletion Operations
     def delete_experiment(self, experiment_id: str):
-        """Delete an experiment and all related data."""
-        # Get all conversation IDs for this experiment
-        result = self.db.execute(
-            "SELECT conversation_id FROM conversations WHERE experiment_id = ?",
-            [experiment_id]
-        ).fetchall()
+        """Delete an experiment and all related data.
         
-        conversation_ids = [row[0] for row in result]
-        
-        # Delete all conversations (which cascades to messages, metrics, events)
-        for conv_id in conversation_ids:
-            self.delete_conversation(conv_id)
-        
-        # Delete experiment-level events
-        self.events.delete_events_for_experiment(experiment_id)
-        
-        # Finally delete experiment
-        self.experiments.delete_experiment(experiment_id)
-        
-        logger.info(f"Deleted experiment {experiment_id}")
-        logger.info(f"Deleted {len(conversation_ids)} conversations")
+        This operation is wrapped in a transaction to ensure data integrity.
+        If any part fails, the entire deletion is rolled back.
+        """
+        try:
+            # Begin transaction
+            self.db.begin()
+            
+            # Get all conversation IDs for this experiment
+            result = self.db.execute(
+                "SELECT conversation_id FROM conversations WHERE experiment_id = ?",
+                [experiment_id]
+            ).fetchall()
+            
+            conversation_ids = [row[0] for row in result]
+            
+            # Delete all conversations (which cascades to messages, metrics, events)
+            for conv_id in conversation_ids:
+                # Note: We call the internal delete methods directly to stay in transaction
+                self.metrics.delete_metrics_for_conversation(conv_id)
+                self.messages.delete_messages_for_conversation(conv_id)
+                self.events.delete_events_for_conversation(conv_id)
+                self.conversations.delete_conversation(conv_id)
+            
+            # Delete experiment-level events
+            self.events.delete_events_for_experiment(experiment_id)
+            
+            # Finally delete experiment
+            self.experiments.delete_experiment(experiment_id)
+            
+            # Commit transaction
+            self.db.commit()
+            
+            logger.info(f"Deleted experiment {experiment_id}")
+            logger.info(f"Deleted {len(conversation_ids)} conversations")
+            
+        except Exception as e:
+            # Rollback on any error
+            self.db.rollback()
+            logger.error(f"Failed to delete experiment {experiment_id}: {e}")
+            raise
     
     def delete_conversation(self, conversation_id: str):
-        """Delete a conversation and related data."""
-        # Delete in reverse dependency order
-        self.metrics.delete_metrics_for_conversation(conversation_id)
-        self.messages.delete_messages_for_conversation(conversation_id)
-        self.events.delete_events_for_conversation(conversation_id)
-        self.conversations.delete_conversation(conversation_id)
+        """Delete a conversation and related data.
         
-        logger.info(f"Deleted conversation {conversation_id}")
+        This operation is wrapped in a transaction to ensure data integrity.
+        If any part fails, the entire deletion is rolled back.
+        """
+        try:
+            # Begin transaction
+            self.db.begin()
+            
+            # Delete in reverse dependency order
+            self.metrics.delete_metrics_for_conversation(conversation_id)
+            self.messages.delete_messages_for_conversation(conversation_id)
+            self.events.delete_events_for_conversation(conversation_id)
+            self.conversations.delete_conversation(conversation_id)
+            
+            # Commit transaction
+            self.db.commit()
+            
+            logger.info(f"Deleted conversation {conversation_id}")
+            
+        except Exception as e:
+            # Rollback on any error
+            self.db.rollback()
+            logger.error(f"Failed to delete conversation {conversation_id}: {e}")
+            raise
     
     def __enter__(self):
         return self

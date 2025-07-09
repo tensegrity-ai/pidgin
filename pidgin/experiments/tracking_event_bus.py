@@ -10,6 +10,7 @@ from ..core.events import (
     ConversationStartEvent, ErrorEvent
 )
 from .manifest import ManifestManager
+from ..constants import ConversationStatus
 
 
 class TrackingEventBus(EventBus):
@@ -53,7 +54,7 @@ class TrackingEventBus(EventBus):
         if isinstance(event, ConversationStartEvent):
             self.manifest.update_conversation(
                 self.conversation_id,
-                status="running",
+                status=ConversationStatus.RUNNING,
                 last_line=self.line_count
             )
         
@@ -68,7 +69,7 @@ class TrackingEventBus(EventBus):
         elif isinstance(event, ConversationEndEvent):
             # Map reasons to completed status
             completed_reasons = ["max_turns", "max_turns_reached", "high_convergence"]
-            status = "completed" if event.reason in completed_reasons else event.reason
+            status = ConversationStatus.COMPLETED if event.reason in completed_reasons else event.reason
             self.manifest.update_conversation(
                 self.conversation_id,
                 status=status,
@@ -81,7 +82,7 @@ class TrackingEventBus(EventBus):
         elif isinstance(event, ErrorEvent):
             self.manifest.update_conversation(
                 self.conversation_id,
-                status="failed",
+                status=ConversationStatus.FAILED,
                 last_line=self.line_count,
                 error=event.error_message
             )

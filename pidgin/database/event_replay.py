@@ -15,6 +15,7 @@ from ..core.events import (
 )
 from ..io.event_deserializer import EventDeserializer
 from ..io.logger import get_logger
+from ..constants import ConversationStatus
 
 logger = get_logger("event_replay")
 
@@ -39,7 +40,7 @@ class ConversationState:
     completed_at: Optional[datetime] = None
     
     # Status
-    status: str = "unknown"
+    status: str = ConversationStatus.CREATED  # Default to created, not unknown
     end_reason: Optional[str] = None
     total_turns: int = 0
     final_convergence_score: Optional[float] = None
@@ -112,7 +113,7 @@ class EventReplay:
         state.temperature_a = event.temperature_a
         state.temperature_b = event.temperature_b
         state.started_at = event.timestamp
-        state.status = "running"
+        state.status = ConversationStatus.RUNNING
         
         # Store display names if provided
         if event.agent_a_display_name:
@@ -129,11 +130,11 @@ class EventReplay:
         
         # Map reason to status
         if event.reason in ["max_turns", "max_turns_reached", "high_convergence"]:
-            state.status = "completed"
+            state.status = ConversationStatus.COMPLETED
         elif event.reason == "error":
-            state.status = "failed"
+            state.status = ConversationStatus.FAILED
         else:
-            state.status = "interrupted"
+            state.status = ConversationStatus.INTERRUPTED
     
     def _handle_turn_complete(self, state: ConversationState, 
                             event: TurnCompleteEvent) -> None:

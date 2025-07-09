@@ -108,7 +108,7 @@ class OllamaProvider(Provider):
         truncated_messages = apply_context_truncation(
             messages,
             provider="local",  # Use "local" provider for Ollama models
-            model=self.model,
+            model=self.model_name,
             logger_name=__name__
         )
         
@@ -158,7 +158,8 @@ class OllamaProvider(Provider):
                                 chunk = json.loads(line)
                                 if 'message' in chunk and 'content' in chunk['message']:
                                     yield chunk['message']['content']
-                            except:
+                            except (json.JSONDecodeError, ValueError, TypeError):
+                                # Skip malformed JSON lines
                                 pass
         except aiohttp.ClientConnectorError as e:
             # Connection error

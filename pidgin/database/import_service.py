@@ -62,6 +62,97 @@ class ImportService:
         self.metrics = metrics
         self.metrics_calculator = MetricsCalculator()
     
+    def _check_import_status(self, exp_dir: Path, imported_marker: Path, 
+                            importing_marker: Path) -> Optional[ImportResult]:
+        """Check if experiment is already imported or being imported.
+        
+        Returns:
+            ImportResult if already handled, None if ready to import
+        """
+        if imported_marker.exists():
+            logger.info(f"Experiment {exp_dir.name} already imported")
+            return ImportResult(
+                success=True,
+                experiment_id=exp_dir.name,
+                events_imported=0,
+                conversations_imported=0,
+                error="Already imported"
+            )
+        
+        if importing_marker.exists():
+            logger.warning(f"Import already in progress for {exp_dir.name}")
+            return ImportResult(
+                success=False,
+                experiment_id=exp_dir.name,
+                events_imported=0,
+                conversations_imported=0,
+                error="Import in progress"
+            )
+        
+        return None
+    
+    def _load_manifest(self, manifest_path: Path) -> Optional[Dict[str, Any]]:
+        """Load and validate manifest file.
+        
+        Returns:
+            Manifest data or None if not found
+        """
+        if not manifest_path.exists():
+            return None
+        
+        with open(manifest_path) as f:
+            return json.load(f)
+    
+    def _import_experiment_data(self, exp_dir: Path, manifest_data: Dict[str, Any]) -> tuple[int, int]:
+        """Import experiment and conversation data within a transaction.
+        
+        Returns:
+            Tuple of (events_count, conversations_count)
+        """
+        experiment_id = manifest_data.get("experiment_id", exp_dir.name)
+        
+        # Import experiment record
+        self._import_experiment_record(manifest_data)
+        
+        # Import conversations and events
+        events_count = 0
+        conversations_count = 0
+        
+        for conv_id, conv_info in manifest_data.get("conversations", {}).items():
+            jsonl_path = exp_dir / conv_info["jsonl"]
+            if jsonl_path.exists():
+                event_count = self._import_conversation_from_jsonl(
+                    experiment_id, conv_id, jsonl_path
+                )
+                events_count += event_count
+                conversations_count += 1
+        
+        return events_count, conversations_count
+    
+    def _create_import_marker(self, imported_marker: Path, events_count: int, 
+                            conversations_count: int) -> None:
+        """Create marker file indicating successful import."""
+        with open(imported_marker, 'w') as f:
+            json.dump({
+                "imported_at": datetime.now().isoformat(),
+                "events_count": events_count,
+                "conversations_count": conversations_count
+            }, f)
+    
+    def _enhance_error_message(self, error_msg: str) -> str:
+        """Create more descriptive error messages for common database errors."""
+        if "binder error" in error_msg.lower() and "does not have a column" in error_msg.lower():
+            # Extract column name from error
+            import re
+            match = re.search(r'"(\w+)" does not have a column with name "(\w+)"', error_msg)
+            if match:
+                table_name, column_name = match.groups()
+                return f"Database schema mismatch: Table '{table_name}' is missing column '{column_name}'. The database schema may need to be updated."
+        elif "no such table" in error_msg.lower():
+            return f"Database not initialized properly: {error_msg}"
+        
+        return error_msg
+
     def import_experiment_from_jsonl(self, exp_dir: Path) -> ImportResult:
         """Import experiment data from JSONL files into database.
         
@@ -73,10 +164,15 @@ class ImportService:
         """
         start_time = datetime.now()
         
+        # Setup paths
+        manifest_path = exp_dir / "manifest.json"
+        imported_marker = exp_dir / ".imported"
+        importing_marker = exp_dir / ".importing"
+        
         try:
-            # Check for manifest
-            manifest_path = exp_dir / "manifest.json"
-            if not manifest_path.exists():
+            # Check if manifest exists
+            manifest_data = self._load_manifest(manifest_path)
+            if not manifest_data:
                 return ImportResult(
                     success=False,
                     experiment_id=exp_dir.name,
@@ -85,71 +181,31 @@ class ImportService:
                     error="No manifest.json found"
                 )
             
-            # Check import status markers
-            imported_marker = exp_dir / ".imported"
-            importing_marker = exp_dir / ".importing"
-            
-            if imported_marker.exists():
-                logger.info(f"Experiment {exp_dir.name} already imported")
-                return ImportResult(
-                    success=True,
-                    experiment_id=exp_dir.name,
-                    events_imported=0,
-                    conversations_imported=0,
-                    error="Already imported"
-                )
-            
-            # Check if another import is in progress
-            if importing_marker.exists():
-                logger.warning(f"Import already in progress for {exp_dir.name}")
-                return ImportResult(
-                    success=False,
-                    experiment_id=exp_dir.name,
-                    events_imported=0,
-                    conversations_imported=0,
-                    error="Import in progress"
-                )
+            # Check import status
+            status_result = self._check_import_status(exp_dir, imported_marker, importing_marker)
+            if status_result:
+                return status_result
             
             # Mark as importing
             importing_marker.touch()
             
             try:
-                # Load manifest
-                with open(manifest_path) as f:
-                    manifest_data = json.load(f)
-                
                 experiment_id = manifest_data.get("experiment_id", exp_dir.name)
                 
                 # Begin transaction for the import
                 self.db.begin()
                 
-                # Import experiment record
-                self._import_experiment_record(manifest_data)
-                
-                # Import conversations and events
-                events_count = 0
-                conversations_count = 0
-                
-                for conv_id, conv_info in manifest_data.get("conversations", {}).items():
-                    jsonl_path = exp_dir / conv_info["jsonl"]
-                    if jsonl_path.exists():
-                        event_count = self._import_conversation_from_jsonl(
-                            experiment_id, conv_id, jsonl_path
-                        )
-                        events_count += event_count
-                        conversations_count += 1
+                # Import all data
+                events_count, conversations_count = self._import_experiment_data(
+                    exp_dir, manifest_data
+                )
                 
                 # Commit transaction
                 self.db.commit()
                 
                 # Create imported marker
                 importing_marker.unlink()
-                with open(imported_marker, 'w') as f:
-                    json.dump({
-                        "imported_at": datetime.now().isoformat(),
-                        "events_count": events_count,
-                        "conversations_count": conversations_count
-                    }, f)
+                self._create_import_marker(imported_marker, events_count, conversations_count)
                 
                 duration = (datetime.now() - start_time).total_seconds()
                 
@@ -174,21 +230,11 @@ class ImportService:
                 raise
                 
         except Exception as e:
-            # Create more descriptive error messages
-            error_msg = str(e)
+            # Enhance error message
+            error_msg = self._enhance_error_message(str(e))
             
-            # Enhance common error messages
-            if "binder error" in error_msg.lower() and "does not have a column" in error_msg.lower():
-                # Extract column name from error
-                import re
-                match = re.search(r'"(\w+)" does not have a column with name "(\w+)"', error_msg)
-                if match:
-                    table_name, column_name = match.groups()
-                    error_msg = f"Database schema mismatch: Table '{table_name}' is missing column '{column_name}'. The database schema may need to be updated."
-            elif "no such table" in error_msg.lower():
-                error_msg = f"Database not initialized properly: {error_msg}"
-            
-            logger.error(f"Failed to import {exp_dir.name}: {error_msg}")
+            # Log at debug level since the runner will display this nicely
+            logger.debug(f"Failed to import {exp_dir.name}: {error_msg}")
             
             return ImportResult(
                 success=False,

@@ -1,9 +1,10 @@
-import os
 import logging
+import asyncio
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
 from ..core.types import Message
 from .base import Provider
 from .error_utils import create_google_error_handler
+from .api_key_manager import APIKeyManager
 
 logger = logging.getLogger(__name__)
 
@@ -121,12 +122,7 @@ class GoogleProvider(Provider):
                 "pip install google-generativeai"
             )
 
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "GOOGLE_API_KEY environment variable not set. "
-                "Please set it to your Google AI API key."
-            )
+        api_key = APIKeyManager.get_api_key("google")
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)
         self._last_usage = None
@@ -152,52 +148,119 @@ class GoogleProvider(Provider):
             role = "model" if m.role == "assistant" else m.role
             google_messages.append({"role": role, "parts": [m.content]})
 
-        try:
-            # Reset usage tracking
-            self._last_usage = None
-            
-            # Create chat session
-            chat = self.model.start_chat(history=google_messages[:-1])
-            
-            # Build generation config if temperature is specified
-            generation_config = {}
-            if temperature is not None:
-                generation_config["temperature"] = temperature
-            
-            # Stream the response
-            response = chat.send_message(
-                google_messages[-1]["parts"][0], 
-                stream=True,
-                generation_config=generation_config if generation_config else None
-            )
+        # Initialize usage tracking
+        self._last_usage = None
+        
+        # Retry logic for rate limits and transient errors
+        max_retries = 3
+        base_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                # Create chat session
+                chat = self.model.start_chat(history=google_messages[:-1])
+                
+                # Build generation config if temperature is specified
+                generation_config = {}
+                if temperature is not None:
+                    generation_config["temperature"] = temperature
+                
+                # Stream the response
+                response = chat.send_message(
+                    google_messages[-1]["parts"][0], 
+                    stream=True,
+                    generation_config=generation_config if generation_config else None
+                )
 
-            last_chunk = None
-            for chunk in response:
-                if chunk.text:
-                    yield chunk.text
-                last_chunk = chunk
-            
-            # Try to extract usage data from the last chunk
-            if last_chunk and hasattr(last_chunk, 'usage_metadata'):
-                metadata = last_chunk.usage_metadata
-                if metadata:
-                    self._last_usage = {
-                        'prompt_tokens': getattr(metadata, 'prompt_token_count', 0),
-                        'completion_tokens': getattr(metadata, 'candidates_token_count', 0),
-                        'total_tokens': getattr(metadata, 'total_token_count', 0)
-                    }
-        except Exception as e:
-            # Get friendly error message
-            friendly_error = self.error_handler.get_friendly_error(e)
-            
-            # Log appropriately based on error type
-            if self.error_handler.should_suppress_traceback(e):
-                logger.info(f"Expected API error: {friendly_error}")
-            else:
-                logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
-            
-            # Create a clean exception with friendly message
-            raise Exception(friendly_error) from None
+                last_chunk = None
+                for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
+                    last_chunk = chunk
+                
+                # Try to extract usage data from the last chunk
+                if last_chunk and hasattr(last_chunk, 'usage_metadata'):
+                    metadata = last_chunk.usage_metadata
+                    if metadata:
+                        self._last_usage = {
+                            'prompt_tokens': getattr(metadata, 'prompt_token_count', 0),
+                            'completion_tokens': getattr(metadata, 'candidates_token_count', 0),
+                            'total_tokens': getattr(metadata, 'total_token_count', 0)
+                        }
+                        logger.debug(f"Google usage data captured: {self._last_usage}")
+                
+                return  # Success!
+                
+            except Exception as e:
+                error_str = str(e)
+                error_type = type(e).__name__.lower()
+                
+                # Check if it's a timeout error
+                if "timeout" in error_type or any(
+                    err in error_str.lower()
+                    for err in ["timeout", "timed out", "deadline exceeded"]
+                ):
+                    if attempt < max_retries - 1:
+                        # Calculate exponential backoff with jitter
+                        delay = base_delay * (2**attempt) + (0.1 * asyncio.get_event_loop().time() % 1)
+                        # Log timeout without traceback
+                        logger.info(f"Google API request timed out, retrying in {delay:.1f}s")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        # Max retries exhausted for timeout
+                        friendly_error = self.error_handler.get_friendly_error(e)
+                        logger.info(f"Timeout after retries: {friendly_error}")
+                        raise Exception(friendly_error) from None
+                
+                # Check if it's a rate limit or quota error
+                elif any(
+                    err in error_str.lower()
+                    for err in ["rate_limit", "rate limit", "quota", "429", "resource_exhausted", "too many requests"]
+                ):
+                    if attempt < max_retries - 1:
+                        # Calculate exponential backoff with jitter
+                        delay = base_delay * (2**attempt) + (0.1 * asyncio.get_event_loop().time() % 1)
+                        # Log rate limit without traceback
+                        logger.info(f"Google API rate limit hit, retrying in {delay:.1f}s")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        # Max retries exhausted
+                        friendly_error = self.error_handler.get_friendly_error(e)
+                        if self.error_handler.should_suppress_traceback(e):
+                            logger.info(f"Expected API error: {friendly_error}")
+                        else:
+                            logger.error(f"API error after retries: {str(e)}", exc_info=True)
+                        raise Exception(friendly_error) from None
+                
+                # Check if it's another retryable error
+                elif any(
+                    err in error_str.lower()
+                    for err in ["unavailable", "internal", "500", "502", "503", "504"]
+                ):
+                    if attempt < max_retries - 1:
+                        # Calculate exponential backoff with jitter
+                        delay = base_delay * (2**attempt) + (0.1 * asyncio.get_event_loop().time() % 1)
+                        logger.info(f"Google API temporarily unavailable, retrying in {delay:.1f}s")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        # Max retries exhausted
+                        friendly_error = self.error_handler.get_friendly_error(e)
+                        if self.error_handler.should_suppress_traceback(e):
+                            logger.info(f"Expected API error: {friendly_error}")
+                        else:
+                            logger.error(f"API error after retries: {str(e)}", exc_info=True)
+                        raise Exception(friendly_error) from None
+                else:
+                    # Non-retryable error
+                    friendly_error = self.error_handler.get_friendly_error(e)
+                    if self.error_handler.should_suppress_traceback(e):
+                        logger.info(f"Expected API error: {friendly_error}")
+                    else:
+                        logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+                    raise Exception(friendly_error) from None
     
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""

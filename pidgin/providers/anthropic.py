@@ -1,4 +1,3 @@
-import os
 import logging
 from anthropic import AsyncAnthropic
 from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
@@ -6,6 +5,7 @@ from ..core.types import Message
 from .base import Provider
 from .retry_utils import retry_with_exponential_backoff, is_overloaded_error
 from .error_utils import create_anthropic_error_handler
+from .api_key_manager import APIKeyManager
 from dataclasses import dataclass
 from typing import Literal
 
@@ -94,12 +94,7 @@ ANTHROPIC_MODELS = {
 class AnthropicProvider(Provider):
     """Anthropic API provider with friendly error handling."""
     def __init__(self, model: str):
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "ANTHROPIC_API_KEY environment variable not set. "
-                "Please set it to your Anthropic API key."
-            )
+        api_key = APIKeyManager.get_api_key("anthropic")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
         self.error_handler = create_anthropic_error_handler()

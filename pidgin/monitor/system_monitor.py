@@ -18,12 +18,15 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+
+from ..constants import ExperimentStatus
 from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
 
 from ..providers.token_tracker import get_token_tracker
 from ..database.event_store import EventStore
 from ..io.logger import get_logger
+from ..ui.display_utils import error
 
 logger = get_logger("system_monitor")
 
@@ -185,11 +188,11 @@ class SystemMonitor:
             models = f"{exp.get('agent_a_model', '?')} ↔ {exp.get('agent_b_model', '?')}"
             
             # Determine status display
-            if exp['status'] == 'running':
+            if exp['status'] == ExperimentStatus.RUNNING:
                 status = f"[{self.COLORS['success']}]●[/{self.COLORS['success']}] Running"
-            elif exp['status'] == 'completed':
+            elif exp['status'] == ExperimentStatus.COMPLETED:
                 status = f"[{self.COLORS['info']}][OK][/{self.COLORS['info']}] Complete"
-            elif exp['status'] == 'failed':
+            elif exp['status'] == ExperimentStatus.FAILED:
                 status = f"[{self.COLORS['error']}][FAIL][/{self.COLORS['error']}] Failed"
             else:
                 status = f"[{self.COLORS['warning']}]●[/{self.COLORS['warning']}] {exp['status'].title()}"
@@ -203,7 +206,7 @@ class SystemMonitor:
             )
         
         # Count active experiments for title
-        active_count = sum(1 for e in recent_experiments if e['status'] == 'running')
+        active_count = sum(1 for e in recent_experiments if e['status'] == ExperimentStatus.RUNNING)
         
         return Panel(table, title=f"◇ Recent Experiments (Active: {active_count})", 
                     border_style=self.COLORS['success'])
@@ -214,9 +217,9 @@ class SystemMonitor:
         all_experiments = self.storage.list_experiments()
         
         total = len(all_experiments)
-        running = sum(1 for e in all_experiments if e['status'] == 'running')
-        completed = sum(1 for e in all_experiments if e['status'] == 'completed')
-        failed = sum(1 for e in all_experiments if e['status'] == 'failed')
+        running = sum(1 for e in all_experiments if e['status'] == ExperimentStatus.RUNNING)
+        completed = sum(1 for e in all_experiments if e['status'] == ExperimentStatus.COMPLETED)
+        failed = sum(1 for e in all_experiments if e['status'] == ExperimentStatus.FAILED)
         
         total_conversations = sum(e.get('total_conversations', 0) for e in all_experiments)
         completed_conversations = sum(e.get('completed_conversations', 0) for e in all_experiments)
@@ -393,21 +396,24 @@ Costs:
                 events = 0
                 try:
                     events = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-                except:
+                except (duckdb.CatalogException, duckdb.BinderException):
+                    # Table doesn't exist yet
                     pass
                 
                 # Count turn metrics
                 turns = 0
                 try:
                     turns = conn.execute("SELECT COUNT(*) FROM turn_metrics").fetchone()[0]
-                except:
+                except (duckdb.CatalogException, duckdb.BinderException):
+                    # Table doesn't exist yet
                     pass
                 
                 # Count messages
                 messages = 0
                 try:
                     messages = conn.execute("SELECT COUNT(*) FROM message_metrics").fetchone()[0]
-                except:
+                except (duckdb.CatalogException, duckdb.BinderException):
+                    # Table doesn't exist yet
                     pass
                 
                 return {
@@ -439,7 +445,7 @@ Costs:
                     break
                 except Exception as e:
                     # Show error but keep running
-                    self.console.print(f"[red]Error: {e}[/red]")
+                    error(str(e), title="Monitor Error", use_panel=False)
                     await asyncio.sleep(5)
 
 

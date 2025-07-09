@@ -86,13 +86,19 @@ class MetricsRepository(BaseRepository):
                     message_b_hedge_words, message_b_agreement_markers,
                     message_b_disagreement_markers, message_b_politeness_markers,
                     message_b_first_person_singular, message_b_first_person_plural,
-                    message_b_second_person
+                    message_b_second_person,
+                    -- Word frequencies
+                    word_frequencies_a, word_frequencies_b, shared_vocabulary,
+                    -- Timing
+                    turn_start_time, turn_end_time, duration_ms
                 ) VALUES (
                     ?, ?, ?,
                     ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?,
+                    ?, ?, ?
                 )
             """
             params = [
@@ -111,12 +117,16 @@ class MetricsRepository(BaseRepository):
                 metrics.get("mimicry_a_to_b", 0.0),
                 metrics.get("mimicry_b_to_a", 0.0),
                 metrics.get("mutual_mimicry", 0.0),
-                # Agent A defaults (35 columns)
+                # Agent A defaults (30 columns)
                 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False, 0,
                 0, 0, 0, 0, 0, 0, 0,
-                # Agent B defaults (35 columns)
+                # Agent B defaults (30 columns)
                 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False, 0,
-                0, 0, 0, 0, 0, 0, 0
+                0, 0, 0, 0, 0, 0, 0,
+                # Word frequencies (3 JSON columns)
+                '{}', '{}', '[]',
+                # Timing (3 columns)
+                None, None, None
             ]
         
         self.execute(query, params)

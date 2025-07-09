@@ -125,7 +125,8 @@ class VerboseDisplay:
         if any(marker in content for marker in ["```", "**", "*", "#", "-", "1."]):
             try:
                 content_display = Markdown(content, code_theme="nord")
-            except:
+            except (ValueError, AttributeError, Exception):
+                # Markdown parsing failed, fall back to plain text
                 content_display = Text(content, style="default")
         else:
             content_display = Text(content, style="default")

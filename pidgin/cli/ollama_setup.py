@@ -9,13 +9,16 @@ from rich.panel import Panel
 
 from ..providers.ollama_helper import ensure_ollama_ready, check_ollama_running, start_ollama_server
 from ..config.models import get_model_config
+from ..ui.display_utils import DisplayUtils
 
 async def normalize_local_model_names(model_a: str, model_b: str, console: Console) -> Tuple[str, str]:
     """Handle 'local' shorthand with interactive selection."""
+    display = DisplayUtils(console)
     if model_a == "local" or model_b == "local":
         # Ensure Ollama is ready (auto-install if needed)
         if not await ensure_ollama_ready(console):
-            console.print("\n[#4c566a]Using test model instead[/#4c566a]")
+            console.print()  # Add newline
+            display.dim("Using test model instead")
             if model_a == "local": model_a = "local:test"
             if model_b == "local": model_b = "local:test"
             return model_a, model_b
@@ -42,6 +45,7 @@ async def normalize_local_model_names(model_a: str, model_b: str, console: Conso
 
 async def ensure_ollama_models_ready(model_a: str, model_b: str, console: Console) -> bool:
     """Ensure Ollama is running and models are downloaded."""
+    display = DisplayUtils(console)
     # Check if we need Ollama
     using_ollama = False
     models_to_check = set()
@@ -68,8 +72,12 @@ async def ensure_ollama_models_ready(model_a: str, model_b: str, console: Consol
     if not check_ollama_running():
         started = await start_ollama_server(console)
         if not started:
-            console.print("\n[#bf616a]Failed to start Ollama server[/#bf616a]")
-            console.print("Please start manually: [#88c0d0]ollama serve[/#88c0d0]")
+            console.print()  # Add newline
+            display.error(
+                "Failed to start Ollama server",
+                context="Please start manually: ollama serve",
+                use_panel=False
+            )
             return False
     
     # Check and download models
@@ -81,6 +89,7 @@ async def ensure_ollama_models_ready(model_a: str, model_b: str, console: Consol
 
 async def check_and_pull_model(model_name: str, console: Console) -> bool:
     """Check if model exists, download if needed."""
+    display = DisplayUtils(console)
     # Check if model exists - use array to avoid shell injection
     try:
         # Get list of models safely

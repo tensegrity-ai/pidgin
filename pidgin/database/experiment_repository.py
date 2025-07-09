@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Any
 
 from .base_repository import BaseRepository
 from ..io.logger import get_logger
+from ..constants import ExperimentStatus
 
 logger = get_logger("experiment_repository")
 
@@ -39,7 +40,7 @@ class ExperimentRepository(BaseRepository):
             experiment_id,
             name,
             json.dumps(config),
-            "created",
+            ExperimentStatus.CREATED,
             created_at,
             0,  # total_conversations
             0,  # completed_conversations 

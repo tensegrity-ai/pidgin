@@ -6,6 +6,7 @@ import asyncio
 import os
 from pathlib import Path
 import click
+from ..ui.display_utils import DisplayUtils
 
 
 def check_ollama_installed() -> bool:
@@ -24,7 +25,8 @@ def check_ollama_running() -> bool:
         result = sock.connect_ex(('localhost', 11434))
         sock.close()
         return result == 0
-    except:
+    except (OSError, socket.error):
+        # Socket creation or connection failed
         return False
 
 
@@ -97,15 +99,17 @@ async def auto_install_ollama(console) -> bool:
             )
             
             if result.returncode == 0:
-                console.print("\n[green][OK] Ollama installed successfully![/green]")
+                console.print()  # Add spacing
+                display.success("Ollama installed successfully!")
                 return True
             else:
-                console.print("\n[red]Installation failed[/red]")
-                console.print("[dim]Try running manually: brew install ollama[/dim]")
+                console.print()  # Add spacing
+                display.error("Installation failed", use_panel=False)
+                display.dim("Try running manually: brew install ollama")
                 return False
             
         elif system == "Linux":
-            console.print("[dim]Downloading and installing Ollama...[/dim]")
+            display.dim("Downloading and installing Ollama...")
             
             # Use the Linux install script
             install_cmd = "curl -fsSL https://ollama.ai/install.sh | sh"
@@ -118,27 +122,30 @@ async def auto_install_ollama(console) -> bool:
             )
             
             if result.returncode == 0:
-                console.print("\n[green][OK] Ollama installed successfully![/green]")
+                console.print()  # Add spacing
+                display.success("Ollama installed successfully!")
                 return True
             else:
                 console.print(f"\n[red]Installation failed[/red]")
                 return False
                 
         elif system == "Windows":
-            console.print("[yellow]Windows requires manual installation[/yellow]")
-            console.print(f"Download from: [cyan]https://ollama.ai/download/windows[/cyan]")
+            display.warning("Windows requires manual installation", use_panel=False)
+            display.info("Download from: https://ollama.ai/download/windows", use_panel=False)
             return False
             
     except KeyboardInterrupt:
-        console.print("\n[yellow]Installation cancelled[/yellow]")
+        console.print()  # Add spacing
+        display.warning("Installation cancelled", use_panel=False)
         return False
     except Exception as e:
-        console.print(f"[red]Install error: {str(e)}[/red]")
+        display.error(f"Install error: {str(e)}", use_panel=False)
         return False
 
 
 async def ensure_ollama_ready(console) -> bool:
     """Ensure Ollama is installed and running with graceful auto-install."""
+    display = DisplayUtils(console)
     
     # Step 1: Check if installed
     if not check_ollama_installed():
@@ -150,11 +157,13 @@ async def ensure_ollama_ready(console) -> bool:
             # Auto-install with progress
             success = await auto_install_ollama(console)
             if not success:
-                console.print("\n[yellow]Manual install required:[/yellow]")
-                console.print(f"  [cyan]{get_install_instructions()}[/cyan]")
+                console.print()  # Add spacing
+                display.warning("Manual install required:", use_panel=False)
+                display.info(f"  {get_install_instructions()}", use_panel=False)
                 return False
         else:
-            console.print("\n[dim]Using test model instead[/dim]")
+            console.print()  # Add spacing
+            display.dim("Using test model instead")
             return False
     
     # Step 2: Check if running, start automatically if not

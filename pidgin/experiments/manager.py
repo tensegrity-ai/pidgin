@@ -65,7 +65,8 @@ class ExperimentManager:
                         manifest = json.load(f)
                         if manifest.get("name") == name:
                             return manifest.get("experiment_id", exp_dir.name)
-                except:
+                except (json.JSONDecodeError, OSError):
+                    # Manifest might be corrupted or inaccessible
                     pass
                     
             # Only check manifest.json
@@ -287,7 +288,8 @@ class ExperimentManager:
         try:
             with open(pid_file) as f:
                 return int(f.read().strip())
-        except:
+        except (OSError, ValueError):
+            # PID file doesn't exist or contains invalid data
             return None
             
     def get_logs(self, experiment_id: str, lines: int = 50) -> List[str]:
