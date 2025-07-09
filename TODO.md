@@ -1,6 +1,6 @@
 # Pidgin Project TODO
 
-Last Updated: July 7, 2025
+Last Updated: July 9, 2025
 
 ## Overview
 
@@ -8,6 +8,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 
 **MAJOR UPDATE**: Comprehensive code audit completed on July 6, 2025. See CODE_AUDIT_REPORT.md for full details.
 **UPDATE July 7, 2025**: Completed EventStore repository refactoring and all Priority 1-2 code quality issues.
+**UPDATE July 9, 2025**: Completed constants module, API key management, Google error handling, and display system improvements.
 
 ## Priority 0: Critical Security Fixes (Immediate)
 
@@ -94,10 +95,12 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [ ] **Refactor event_store.import_experiment() (104 lines)**
 
 ### Inconsistent Error Handling
-- [ ] **Standardize Google provider error handling**
+- [x] **Standardize Google provider error handling** ✅ DONE (July 9, 2025)
+  - Now uses standardized error_utils.py with ProviderErrorHandler
+  - Consistent error messages across all providers
 - [ ] **Fix bare except clauses**
   - cli/helpers.py:105-110
-  - Multiple async_duckdb.py locations
+  - Note: async_duckdb.py no longer exists after repository refactoring
 
 ## Priority 3: Fix Critical Issues from Code Audit (Original)
 
@@ -139,10 +142,11 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 ## Priority 4: Medium Priority Code Quality Issues
 
 ### Magic Strings/Numbers
-- [ ] **Create comprehensive constants module**
-  - 250+ hardcoded status strings
-  - Extract all magic values
-  - Enforce usage across codebase
+- [x] **Create comprehensive constants module** ✅ DONE (July 9, 2025)
+  - Created 10-module constants package covering all domains
+  - Extracted 250+ hardcoded strings into organized constants
+  - Updated entire codebase to use constants
+  - Modules: agents, conversations, events, experiments, files, linguistic, manifests, metrics, providers, symbols
 
 ### Naming Consistency
 - [ ] **Standardize naming conventions**
@@ -151,16 +155,23 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Update all 127 files with mixed naming
 
 ### Missing Validation
-- [ ] **Add convergence weight validation**
-  - Ensure weights sum to 1.0
-  - Add config value schema validation
-  - Validate all user inputs
+- [x] **Add convergence weight validation** ✅ DONE (July 9, 2025)
+  - Added _validate_convergence_weights() in config.py
+  - Ensures weights sum to 1.0 (with floating point tolerance)
+  - Set "structural" as default convergence profile
+- [ ] **Add config value schema validation**
+  - Validate all config values on load
+  - Add Pydantic models for config schema
 
 ### API Key Management
-- [ ] **Centralize credential management**
-  - Create secure credential store
-  - Remove direct env var access from providers
-  - Consider keyring integration
+- [x] **Centralize credential management** ✅ DONE (July 9, 2025)
+  - Created APIKeyManager class for centralized key management
+  - All providers now use APIKeyManager.get_api_key()
+  - Pre-experiment validation ensures keys exist before starting
+  - Beautiful error panels guide users on missing keys
+- [ ] **Enhance with keyring integration**
+  - Add optional keyring support for secure storage
+  - Keep env vars as default for simplicity
 
 ## Priority 5: Complete Architecture Unification
 
@@ -228,6 +239,14 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Add more conversation pattern recognizers
 
 ## [DONE] Recently Completed
+
+### Display System Improvements (July 9, 2025)
+- [DONE] Enabled Rich logging for beautiful error formatting
+- [DONE] Replaced all console.print() calls with display utilities
+- [DONE] Enhanced experiment completion display with manifest data
+- [DONE] Added rate limit pacing messages in panels
+- [DONE] Fixed Google provider JSON serialization error
+- [DONE] Consistent panel-based UI throughout application
 
 ### Directory Structure Consolidation (July 6, 2025)
 - [DONE] Consolidated display/ into ui/ directory
@@ -299,15 +318,18 @@ From CLAUDE.md:
 - [ ] **Remove unused ConversationError exception**
 - [ ] **Document Router Protocol purpose or remove**
 
-## Quick Wins (Easy Fixes with High Impact)
+## Quick Wins (All Completed! ✅)
 
 1. **Create initial test files** - ✅ DONE
 2. **Add asyncio locks to EventBus** - ✅ DONE
 3. **Extract provider error constants** - ✅ DONE (created error_utils.py)
 4. **Split long methods in conductor.py** - ✅ DONE (refactored into helper methods)
-5. **Create constants.py with status strings** - ✅ DONE
+5. **Create constants.py with status strings** - ✅ DONE (comprehensive 10-module package)
 6. **Fix bare except in helpers.py** - ✅ DONE (fixed httpx exceptions)
 7. **Add convergence weight validation** - ✅ DONE (validates sum to 1.0)
+8. **Centralize API key management** - ✅ DONE (created APIKeyManager)
+9. **Enable Rich logging** - ✅ DONE (beautiful error formatting)
+10. **Standardize Google error handling** - ✅ DONE (uses error_utils.py)
 
 ---
 
