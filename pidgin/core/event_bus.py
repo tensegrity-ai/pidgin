@@ -55,6 +55,11 @@ class EventBus:
         if isinstance(value, dict):
             return {k: self._serialize_value(v) for k, v in value.items()}
 
+        # Special check for Google GenerativeModel objects
+        if hasattr(value, "_model_name") and hasattr(value, "_client"):
+            # This is a Google GenerativeModel, extract just the model name
+            return getattr(value, "_model_name", "unknown").replace("models/", "")
+
         # Handle specific object types
         if hasattr(value, "__dict__"):
             return self._serialize_object(value)
@@ -62,7 +67,7 @@ class EventBus:
         # Fallback to string representation
         return str(value)
     
-    def _serialize_object(self, obj: Any) -> dict:
+    def _serialize_object(self, obj: Any) -> Any:
         """Serialize an object to a dictionary."""
         # Special handling for Message objects
         if hasattr(obj, "role") and hasattr(obj, "content"):
@@ -75,8 +80,23 @@ class EventBus:
                 else None,
             }
         
+        # Special handling for Google's GenerativeModel
+        if hasattr(obj, "_model_name") and hasattr(obj, "_client"):
+            # This is a Google GenerativeModel object, just return the model name
+            return getattr(obj, "_model_name", str(obj))
+        
+        # Prevent serializing complex objects with sensitive data
+        class_name = obj.__class__.__name__
+        if any(sensitive in class_name.lower() for sensitive in ["client", "credential", "key", "token"]):
+            # Don't serialize objects that might contain credentials
+            return f"<{class_name} object>"
+        
         # Generic object serialization
-        return {k: self._serialize_value(v) for k, v in obj.__dict__.items()}
+        try:
+            return {k: self._serialize_value(v) for k, v in obj.__dict__.items()}
+        except Exception:
+            # If we can't serialize it, just return string representation
+            return str(obj)
     
     def _get_jsonl_file(self, conversation_id: str):
         """Get or create JSONL file handle for a conversation."""
@@ -102,15 +122,29 @@ class EventBus:
         if not conversation_id:
             return
             
-        try:
-            jsonl_file = self._get_jsonl_file(conversation_id)
-            if jsonl_file:
-                # Write event as single line
-                json.dump(event_data, jsonl_file)
-                jsonl_file.write('\n')
-                jsonl_file.flush()
-        except Exception as e:
-            logger.error(f"Error writing to JSONL: {e}")
+        with self._jsonl_lock:
+            try:
+                jsonl_file = self._get_jsonl_file(conversation_id)
+                if jsonl_file:
+                    # First try to serialize to string to catch any issues
+                    try:
+                        json_str = json.dumps(event_data, separators=(',', ':'))
+                    except Exception as e:
+                        logger.error(f"Failed to serialize event {type(event).__name__}: {e}")
+                        # Try to identify the problematic field
+                        for key, value in event_data.items():
+                            try:
+                                json.dumps({key: value})
+                            except:
+                                logger.error(f"  Field '{key}' with type {type(value)} cannot be serialized")
+                        return
+                    
+                    # Write the pre-serialized string
+                    jsonl_file.write(json_str)
+                    jsonl_file.write('\n')
+                    jsonl_file.flush()
+            except Exception as e:
+                logger.error(f"Error writing to JSONL: {e}")
 
     async def emit(self, event: Event) -> None:
         """Emit an event to all subscribers.
@@ -130,7 +164,24 @@ class EventBus:
         event_data = {}
         for k, v in event.__dict__.items():
             if k not in ["timestamp", "event_id"]:
-                event_data[k] = self._serialize_value(v)
+                # Skip attributes that shouldn't be serialized
+                if k == "model":
+                    # Special handling for model field to prevent GenerativeModel objects
+                    if hasattr(v, "_model_name"):
+                        # This is a Google GenerativeModel object
+                        event_data[k] = getattr(v, "_model_name", str(v))
+                    elif hasattr(v, "model_name"):
+                        # Alternative attribute name
+                        event_data[k] = getattr(v, "model_name", str(v))
+                    elif isinstance(v, str):
+                        # It's already a string, use it
+                        event_data[k] = v
+                    else:
+                        # Log warning and convert to string
+                        logger.warning(f"Unexpected type for model field in {type(event).__name__}: {type(v)}")
+                        event_data[k] = str(v)
+                else:
+                    event_data[k] = self._serialize_value(v)
 
         # Add timestamp and event_type to the data
         event_data["timestamp"] = event.timestamp.isoformat()

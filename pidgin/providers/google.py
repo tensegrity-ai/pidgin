@@ -126,6 +126,10 @@ class GoogleProvider(Provider):
         genai.configure(api_key=api_key)
         self.model_name = model  # Store the model name as string
         self.model = genai.GenerativeModel(model)
+        # Extra safety: ensure model_name is always a string
+        if not isinstance(self.model_name, str):
+            logger.error(f"GoogleProvider model_name is not a string: {type(self.model_name)}")
+            self.model_name = str(model)
         self._last_usage = None
         self.error_handler = create_google_error_handler()
 

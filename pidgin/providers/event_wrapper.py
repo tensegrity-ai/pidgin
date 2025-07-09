@@ -1,5 +1,6 @@
 """Event-aware wrapper for AI providers."""
 
+import logging
 import time
 from typing import List
 
@@ -14,6 +15,8 @@ from ..core.types import Message
 from .base import Provider
 from ..core.router import DirectRouter  # For message transformation
 from .token_utils import estimate_tokens, estimate_messages_tokens
+
+logger = logging.getLogger(__name__)
 
 
 class EventAwareProvider:
@@ -145,7 +148,21 @@ class EventAwareProvider:
             if usage_data and 'total_tokens' in usage_data:
                 # Extract provider name and model
                 provider_name = self.provider.__class__.__name__.replace("Provider", "")
-                model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', 'unknown')
+                # Get model name, ensuring we get a string not an object
+                model_name = getattr(self.provider, 'model_name', None)
+                if not model_name:
+                    model_obj = getattr(self.provider, 'model', None)
+                    if model_obj and hasattr(model_obj, 'model_name'):
+                        # Google's GenerativeModel has model_name attribute
+                        model_name = model_obj.model_name
+                    elif isinstance(model_obj, str):
+                        model_name = model_obj
+                    else:
+                        model_name = 'unknown'
+                
+                # Ensure model_name is a string
+                if not isinstance(model_name, str):
+                    model_name = str(model_name)
                 
                 # Get token tracker for rate limits
                 from ..providers.token_tracker import get_token_tracker
@@ -160,11 +177,27 @@ class EventAwareProvider:
                     tokens_per_minute_limit=usage_stats['rate_limit'],
                     current_usage_rate=usage_stats['current_rate'],
                 )
-                # Add model as custom attribute
-                token_event.model = model_name
+                # Add model as custom attribute (ensure it's a string)
+                # CRITICAL: Only set model if it's actually a string to prevent serialization issues
+                if isinstance(model_name, str) and model_name != 'unknown':
+                    # Double-check it's really a string and not an object
+                    if type(model_name) is str:
+                        token_event.model = model_name
+                        # Debug log to track what we're setting
+                        logger.debug(f"Set token_event.model to: {model_name} (type: {type(model_name)})")
+                    else:
+                        logger.warning(f"Model name is not a pure string: {type(model_name)}")
                 
                 # Handle different naming conventions (Anthropic vs OpenAI)
                 token_event.prompt_tokens = usage_data.get('prompt_tokens', 0) or usage_data.get('input_tokens', 0)
                 token_event.completion_tokens = usage_data.get('completion_tokens', 0) or usage_data.get('output_tokens', 0)
+                
+                # Final safety check before emitting
+                if hasattr(token_event, 'model'):
+                    model_val = getattr(token_event, 'model')
+                    if not isinstance(model_val, str):
+                        logger.error(f"CRITICAL: token_event.model is not a string! Type: {type(model_val)}")
+                        # Remove the problematic attribute
+                        delattr(token_event, 'model')
                 
                 await self.bus.emit(token_event)
