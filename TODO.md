@@ -233,10 +233,12 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Improved experiment resolution by name/ID
   - Better organization for research workflows
 
-- [ ] **Auto-generated Jupyter notebooks**
-  - Generate automatically when experiments complete
-  - Pre-populated with data and basic visualizations
-  - Save alongside transcripts and logs
+- [x] **Auto-generated Jupyter notebooks** ✅ DONE (July 10, 2025)
+  - Generates automatically when experiments complete
+  - Pre-populated with convergence, vocabulary, and length analysis
+  - Includes 6+ visualization types and statistical summaries
+  - Saved as analysis.ipynb in experiment directories
+  - Gracefully handles missing nbformat dependency
 
 - [ ] **GraphQL interface for analysis**
   - Launch with `pidgin analyze --serve`
