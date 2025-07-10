@@ -50,6 +50,10 @@ class StreamingRateLimiter:
             "requests_per_minute": 60,
             "tokens_per_minute": 60000,
         },
+        "local": {
+            "requests_per_minute": float('inf'),  # No limits for local models
+            "tokens_per_minute": float('inf'),
+        },
     }
 
     def __init__(self):
@@ -103,6 +107,10 @@ class StreamingRateLimiter:
         config = get_config()
         if not config.get("rate_limiting.enabled", True):
             return 0.0
+        
+        # Skip rate limiting for local models
+        if provider == "local" or provider.startswith("local"):
+            return 0.0
 
         start_time = time.time()
 
@@ -152,16 +160,32 @@ class StreamingRateLimiter:
         if wait_time > 0:
             # Use display utilities if available (for CLI), otherwise fall back to logger
             try:
-                from ..ui.display_utils import DisplayUtils
                 from rich.console import Console
                 console = Console()
-                display = DisplayUtils(console)
-                display.info(
-                    f"Rate limit pacing for {provider}: waiting {wait_time:.1f}s\n"
-                    f"Request interval: {request_interval:.1f}s, token cost: {token_interval:.1f}s",
-                    title="⏱ Rate Limit Pacing",
-                    use_panel=True
-                )
+                
+                # Create compact rate limit display similar to turn counter
+                nord3 = "#4c566a"  # Muted gray color
+                separator_width = min(console.width - 4, 60)
+                
+                # Build the rate limit info
+                rate_info = f"⏱ Rate limit pacing for {provider}: {wait_time:.1f}s"
+                timing_info = f"[{nord3}][dim]Request interval: {request_interval:.1f}s | Token cost: {token_interval:.1f}s[/dim][/{nord3}]"
+                
+                # Calculate padding for centering
+                plain_rate_info = f"⏱ Rate limit pacing for {provider}: {wait_time:.1f}s"
+                padding = max(0, (separator_width - len(plain_rate_info)) // 2)
+                centered_rate_info = " " * padding + rate_info
+                
+                plain_timing_info = f"Request interval: {request_interval:.1f}s | Token cost: {token_interval:.1f}s"
+                timing_padding = max(0, (separator_width - len(plain_timing_info)) // 2)
+                centered_timing_info = " " * timing_padding + timing_info
+                
+                # Print compact display
+                console.print(f"\n[{nord3}]{'─' * separator_width}[/{nord3}]")
+                console.print(f"[{nord3}]{centered_rate_info}[/{nord3}]")
+                console.print(centered_timing_info)
+                console.print(f"[{nord3}]{'─' * separator_width}[/{nord3}]\n")
+                
             except ImportError:
                 # Fallback for non-CLI contexts
                 logger.info(
