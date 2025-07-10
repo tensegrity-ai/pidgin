@@ -68,8 +68,75 @@ class ExperimentManager:
                 except (json.JSONDecodeError, OSError):
                     # Manifest might be corrupted or inaccessible
                     pass
-                    
-            # Only check manifest.json
+            
+            # Also check if the name is in the directory name itself
+            # Format: exp_id_name_date
+            if "_" in exp_dir.name:
+                parts = exp_dir.name.split("_")
+                if len(parts) >= 3:  # Has at least exp_id_name
+                    # Extract name part (between ID and date)
+                    dir_name_parts = parts[2:-1] if len(parts) > 3 else [parts[2]]
+                    dir_name = "_".join(dir_name_parts)
+                    # Compare with sanitized input name
+                    if dir_name == name.replace(" ", "-").replace("/", "-")[:30]:
+                        return f"{parts[0]}_{parts[1]}"  # Return exp_id
+        
+        return None
+    
+    def resolve_experiment_id(self, identifier: str) -> Optional[str]:
+        """Resolve an experiment identifier to a full experiment ID.
+        
+        Supports:
+        - Full experiment ID: exp_a1b2c3d4
+        - Shortened ID: a1b2c3d4
+        - Experiment name: curious-echo
+        - Directory name: exp_a1b2c3d4_curious-echo_2025-01-10
+        
+        Args:
+            identifier: Experiment identifier (ID, short ID, or name)
+            
+        Returns:
+            Full experiment ID if found, None otherwise
+        """
+        # First check if it's a directory name that exists
+        if (self.base_dir / identifier).exists():
+            # Extract experiment ID from directory name
+            if identifier.startswith("exp_"):
+                return identifier.split("_")[0] + "_" + identifier.split("_")[1]
+            return identifier
+        
+        # Check if it's already a full experiment ID
+        # Now we need to search for directories that start with this ID
+        if identifier.startswith("exp_"):
+            for exp_dir in self.base_dir.glob(f"{identifier}_*"):
+                if exp_dir.is_dir():
+                    return identifier
+        
+        # Check if it's a shortened ID (add exp_ prefix)
+        if len(identifier) == 8 and all(c in '0123456789abcdef' for c in identifier):
+            full_id = f"exp_{identifier}"
+            for exp_dir in self.base_dir.glob(f"{full_id}_*"):
+                if exp_dir.is_dir():
+                    return full_id
+        
+        # Try to find by name
+        found_by_name = self._find_experiment_by_name(identifier)
+        if found_by_name:
+            return found_by_name
+        
+        # Try partial ID match (e.g., user types just "a1b2")
+        matches = []
+        for exp_dir in self.base_dir.glob("exp_*"):
+            exp_id = exp_dir.name.split("_")[0] + "_" + exp_dir.name.split("_")[1] if "_" in exp_dir.name else exp_dir.name
+            if exp_id.startswith(f"exp_{identifier}"):
+                if exp_id not in matches:
+                    matches.append(exp_id)
+        
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            # Multiple matches, need more specific identifier
+            logging.warning(f"Multiple experiments match '{identifier}': {matches}")
         
         return None
         
@@ -83,17 +150,27 @@ class ExperimentManager:
         Returns:
             Experiment ID
         """
+        # Generate a name if not provided
+        if not config.name:
+            from ..cli.name_generator import generate_experiment_name
+            config.name = generate_experiment_name()
+            logging.info(f"Generated experiment name: {config.name}")
+        
         # Check for duplicate names
-        if config.name:
-            existing = self._find_experiment_by_name(config.name)
-            if existing:
-                raise ExperimentAlreadyExistsError(config.name, existing)
+        existing = self._find_experiment_by_name(config.name)
+        if existing:
+            raise ExperimentAlreadyExistsError(config.name, existing)
         
         # Generate experiment ID
         exp_id = f"exp_{uuid.uuid4().hex[:8]}"
         
-        # Create experiment directory and metadata
-        exp_dir = self.base_dir / exp_id
+        # Create experiment directory with enhanced naming
+        # Format: exp_id_name_date
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        safe_name = config.name.replace(" ", "-").replace("/", "-")[:30]  # Limit length
+        dir_name = f"{exp_id}_{safe_name}_{date_str}"
+        
+        exp_dir = self.base_dir / dir_name
         exp_dir.mkdir(parents=True, exist_ok=True)
         
         # Write initial metadata
@@ -173,12 +250,18 @@ class ExperimentManager:
         """Stop running experiment gracefully.
         
         Args:
-            experiment_id: Experiment to stop
+            experiment_id: Experiment to stop (ID, short ID, or name)
             
         Returns:
             True if stopped successfully
         """
-        pid_file = self.active_dir / f"{experiment_id}.pid"
+        # Resolve the identifier to a full experiment ID
+        resolved_id = self.resolve_experiment_id(experiment_id)
+        if not resolved_id:
+            logging.error(f"Could not resolve experiment identifier: {experiment_id}")
+            return False
+        
+        pid_file = self.active_dir / f"{resolved_id}.pid"
         
         if not pid_file.exists():
             return False
@@ -238,6 +321,10 @@ class ExperimentManager:
             if not exp_dir.is_dir() or exp_dir.name in ['active', 'logs']:
                 continue
                 
+            # Skip if it doesn't match our pattern (exp_*)
+            if not exp_dir.name.startswith('exp_'):
+                continue
+                
             manifest_path = exp_dir / 'manifest.json'
             if manifest_path.exists():
                 try:
@@ -249,6 +336,9 @@ class ExperimentManager:
                     exp_data['is_running'] = self.is_running(exp_id)
                     if exp_data['is_running']:
                         exp_data['pid'] = self._get_pid(exp_id)
+                        
+                    # Add directory name for display
+                    exp_data['directory'] = exp_dir.name
                         
                     experiments.append(exp_data)
                 except Exception as e:
@@ -309,13 +399,18 @@ class ExperimentManager:
         """Get recent log lines from experiment.
         
         Args:
-            experiment_id: Experiment ID
+            experiment_id: Experiment ID (ID, short ID, or name)
             lines: Number of lines to return
             
         Returns:
             List of log lines
         """
-        log_file = self.logs_dir / f"{experiment_id}.log"
+        # Resolve the identifier to a full experiment ID
+        resolved_id = self.resolve_experiment_id(experiment_id)
+        if not resolved_id:
+            return [f"Could not resolve experiment identifier: {experiment_id}"]
+            
+        log_file = self.logs_dir / f"{resolved_id}.log"
         
         if not log_file.exists():
             return [f"No log file found at: {log_file}"]
@@ -336,10 +431,16 @@ class ExperimentManager:
         """Tail experiment logs (like tail -f).
         
         Args:
-            experiment_id: Experiment ID
+            experiment_id: Experiment ID (ID, short ID, or name)
             follow: Whether to follow the file
         """
-        log_file = self.logs_dir / f"{experiment_id}.log"
+        # Resolve the identifier to a full experiment ID
+        resolved_id = self.resolve_experiment_id(experiment_id)
+        if not resolved_id:
+            print(f"Could not resolve experiment identifier: {experiment_id}")
+            return
+            
+        log_file = self.logs_dir / f"{resolved_id}.log"
         
         if not log_file.exists():
             print(f"No log file found at: {log_file}")

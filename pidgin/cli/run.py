@@ -541,13 +541,17 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
             # Use the original working directory captured at module import
             exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
             
-            # Show start message
-            console.print(f"\n[#a3be8c][OK] Experiment '{name}' started successfully[/#a3be8c]")
+            # Show start message with both name and ID
+            console.print(f"\n[#a3be8c][OK] Experiment started successfully[/#a3be8c]")
+            console.print(f"[#88c0d0]Name: {name}[/#88c0d0]")
+            console.print(f"[#88c0d0]ID: {exp_id}[/#88c0d0]")
             
             # Show where to find logs
-            console.print(f"[#4c566a]Running in background. Check progress:[/#4c566a]")
+            console.print(f"\n[#4c566a]Running in background. Check progress:[/#4c566a]")
             cmd_lines = []
-            cmd_lines.append(f"pidgin status {exp_id[:8]}")
+            cmd_lines.append(f"pidgin list                    # Show all running experiments")
+            cmd_lines.append(f"pidgin stop {name}       # Stop by name")
+            cmd_lines.append(f"pidgin stop {exp_id[:8]}      # Stop by ID")
             cmd_lines.append(f"tail -f {get_experiments_dir()}/{exp_id}/*.jsonl")
             display.info("\n".join(cmd_lines), title="Commands", use_panel=True)
                 

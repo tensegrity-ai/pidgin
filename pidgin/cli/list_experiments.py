@@ -98,4 +98,4 @@ def list_experiments(all):
     console.print(table)
     
     if not all:
-        display.dim("\nTip: Use 'pidgin attach <id>' to monitor a running experiment")
+        display.dim("\nTip: Use 'pidgin attach <id or name>' to monitor a running experiment")

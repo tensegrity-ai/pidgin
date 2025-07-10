@@ -28,6 +28,7 @@ from . import ORIGINAL_CWD
 def stop(experiment_id, all):
     """Stop a running experiment gracefully.
     
+    You can use the experiment ID, shortened ID, or name.
     Use --all to stop all running experiments at once.
     """
     if all:

@@ -399,6 +399,12 @@ class ExperimentRunner:
             exp_dir: Experiment directory
         """
         try:
+            # Generate README first
+            logging.info(f"Generating README for experiment {experiment_id}")
+            from .readme_generator import ExperimentReadmeGenerator
+            readme_gen = ExperimentReadmeGenerator(exp_dir)
+            readme_gen.generate()
+            
             logging.info(f"Auto-importing experiment {experiment_id} to database")
             
             # Get database path
