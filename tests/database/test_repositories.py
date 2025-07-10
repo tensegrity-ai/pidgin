@@ -581,8 +581,9 @@ class TestMetricsRepository:
                     )
                     assert result[0] == 150
                     assert result[1] == 0.015
-        except:
+        except (Exception,) as e:
             # Table doesn't exist or method doesn't exist, skip test
+            # This is expected if the metrics table hasn't been created yet
             pass
     
     def test_get_experiment_metrics(self, metrics_repo):

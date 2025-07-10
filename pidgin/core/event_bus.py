@@ -135,8 +135,8 @@ class EventBus:
                         for key, value in event_data.items():
                             try:
                                 json.dumps({key: value})
-                            except:
-                                logger.error(f"  Field '{key}' with type {type(value)} cannot be serialized")
+                            except (TypeError, ValueError) as e:
+                                logger.error(f"  Field '{key}' with type {type(value)} cannot be serialized: {e}")
                         return
                     
                     # Write the pre-serialized string
