@@ -20,10 +20,12 @@ class TestMetricsCalculator:
     
     def test_init(self, calculator):
         """Test calculator initialization."""
-        assert calculator.conversation_vocabulary == set()
+        assert calculator.cumulative_vocab == {'agent_a': set(), 'agent_b': set()}
         assert calculator.turn_vocabularies == []
         assert calculator.previous_messages == {'agent_a': [], 'agent_b': []}
-        assert calculator.all_words_seen == set()
+        assert calculator.all_agent_words == {'agent_a': set(), 'agent_b': set()}
+        assert hasattr(calculator, '_token_cache')
+        assert calculator._token_cache == {}
     
     def test_calculate_turn_metrics_basic(self, calculator):
         """Test basic turn metrics calculation."""
@@ -59,7 +61,8 @@ class TestMetricsCalculator:
         )
         
         # Check vocabulary growth
-        assert len(calculator.conversation_vocabulary) > 0
+        assert len(calculator.cumulative_vocab['agent_a']) > 0
+        assert len(calculator.cumulative_vocab['agent_b']) > 0
         assert len(calculator.turn_vocabularies) == 2
         
         # Check overlap calculation
@@ -219,14 +222,15 @@ class TestMetricsCalculator:
         """Test vocabulary state persistence across turns."""
         # Turn 1
         calculator.calculate_turn_metrics(0, "unique word one", "unique word two")
-        vocab_size_1 = len(calculator.conversation_vocabulary)
+        vocab_size_1 = len(calculator.cumulative_vocab['agent_a'] | calculator.cumulative_vocab['agent_b'])
         
         # Turn 2 - add more unique words
         calculator.calculate_turn_metrics(1, "unique word three", "unique word four")
-        vocab_size_2 = len(calculator.conversation_vocabulary)
+        vocab_size_2 = len(calculator.cumulative_vocab['agent_a'] | calculator.cumulative_vocab['agent_b'])
         
         assert vocab_size_2 > vocab_size_1
-        assert "unique" in calculator.conversation_vocabulary
+        combined_vocab = calculator.cumulative_vocab['agent_a'] | calculator.cumulative_vocab['agent_b']
+        assert "unique" in combined_vocab
         assert len(calculator.turn_vocabularies) == 2
     
     def test_turn_taking_balance(self, calculator):
@@ -275,6 +279,7 @@ class TestMetricsCalculator:
         
         # Check that state has been maintained
         assert len(calculator.turn_vocabularies) == 3
-        assert len(calculator.conversation_vocabulary) > 5  # Should have various words
+        total_vocab = len(calculator.cumulative_vocab['agent_a'] | calculator.cumulative_vocab['agent_b'])
+        assert total_vocab > 5  # Should have various words
         assert len(calculator.previous_messages['agent_a']) == 3
         assert len(calculator.previous_messages['agent_b']) == 3
