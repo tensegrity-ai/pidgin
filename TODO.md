@@ -98,9 +98,10 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [x] **Standardize Google provider error handling** ✅ DONE (July 9, 2025)
   - Now uses standardized error_utils.py with ProviderErrorHandler
   - Consistent error messages across all providers
-- [ ] **Fix bare except clauses**
-  - cli/helpers.py:105-110
+- [x] **Fix bare except clauses** ✅ DONE (July 10, 2025)
+  - cli/helpers.py:105-110 now catches specific httpx exceptions
   - Note: async_duckdb.py no longer exists after repository refactoring
+  - One bare except remains in readme_generator.py (needs fixing)
 
 ## Priority 3: Fix Critical Issues from Code Audit (Original)
 
@@ -113,9 +114,9 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - async_duckdb.py no longer exists after repository refactoring
   - Database connections now properly managed by repository pattern
   
-- [ ] **Add transaction boundaries**
-  - Wrap multi-table operations in transactions
-  - Prevent partial updates on failure
+- [x] **Add transaction boundaries** ✅ DONE (July 10, 2025)
+  - ImportService already wraps operations in db.begin()/commit()
+  - Prevents partial updates on failure
 
 ### Memory Leaks
 - [x] **Event history unbounded growth** (EventBus.event_history) [DONE]
@@ -138,9 +139,10 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Added `async def cleanup()` method to base Provider
   - Providers can now override to close connections properly
   
-- [ ] **Thread pool management**
-  - Ensure ThreadPoolExecutor shutdown in all cases
-  - Add proper cleanup in daemon processes
+- [x] **Thread pool management** ✅ NOT APPLICABLE (July 10, 2025)
+  - No ThreadPoolExecutor usage found in production code
+  - Only appears in tests and outdated documentation
+  - Database operations are synchronous, not async
 
 ## Priority 4: Medium Priority Code Quality Issues
 
@@ -162,9 +164,10 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Added _validate_convergence_weights() in config.py
   - Ensures weights sum to 1.0 (with floating point tolerance)
   - Set "structural" as default convergence profile
-- [ ] **Add config value schema validation**
-  - Validate all config values on load
-  - Add Pydantic models for config schema
+- [x] **Add config value schema validation** ✅ DONE (July 10, 2025)
+  - Created comprehensive Pydantic models in config/schema.py
+  - Validates all config values on load
+  - Includes ConvergenceWeights and ConversationConfig models
 
 ### API Key Management
 - [x] **Centralize credential management** ✅ DONE (July 9, 2025)
@@ -172,9 +175,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - All providers now use APIKeyManager.get_api_key()
   - Pre-experiment validation ensures keys exist before starting
   - Beautiful error panels guide users on missing keys
-- [ ] **Enhance with keyring integration**
-  - Add optional keyring support for secure storage
-  - Keep env vars as default for simplicity
 
 ## Priority 5: Complete Architecture Unification
 
@@ -227,6 +227,12 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 ## Priority 7: Analysis Infrastructure
 
 ### Features to Build
+- [x] **Enhanced experiment output** ✅ DONE (July 10, 2025)
+  - Experiment directories now use format: exp_id_name_date
+  - Auto-generated README.md for each experiment
+  - Improved experiment resolution by name/ID
+  - Better organization for research workflows
+
 - [ ] **Auto-generated Jupyter notebooks**
   - Generate automatically when experiments complete
   - Pre-populated with data and basic visualizations
@@ -242,6 +248,14 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Add more conversation pattern recognizers
 
 ## [DONE] Recently Completed
+
+### Experiment Organization Improvements (July 10, 2025)
+- [DONE] Enhanced directory naming: exp_id_name_date format
+- [DONE] Auto-generated README.md for each experiment
+- [DONE] Improved experiment resolution supporting names and partial IDs
+- [DONE] Fixed bare except clauses (except one in readme_generator.py)
+- [DONE] Added Pydantic config validation schemas
+- [DONE] Confirmed transaction boundaries already implemented
 
 ### Display System Improvements (July 9, 2025)
 - [DONE] Enabled Rich logging for beautiful error formatting
@@ -312,6 +326,13 @@ From CLAUDE.md:
   - Add .DS_Store to .gitignore
 
 ### Minor Code Issues
+- [ ] **Fix remaining bare except**
+  - readme_generator.py:195,219 (bare except clauses)
+
+- [ ] **Fix outdated documentation**
+  - database.md claims async operations with ThreadPoolExecutor (incorrect)
+  - Remove references to non-existent async_duckdb.py
+
 - [ ] **Address 5 TODO comments**
   - token_handler.py:89-91 (config from provider)
   - conversation_lifecycle.py:346 (gather metrics)

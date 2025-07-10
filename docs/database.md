@@ -257,15 +257,15 @@ GROUP BY provider, model;
 - **Default location**: `./pidgin_output/experiments/experiments.duckdb`
 - **Auto-creation**: Database and tables created automatically on first use
 - **Direct access**: `duckdb ./pidgin_output/experiments/experiments.duckdb`
-- **Python access**: Use the AsyncDuckDB wrapper in `pidgin.database.async_duckdb`
+- **Python access**: Use DuckDB Python API directly or through the repository classes in `pidgin.database`
 
 ## Architecture Notes
 
 1. **Event Sourcing**: All state changes flow through the `events` table, providing a complete audit trail
-2. **Async Operations**: Database operations use ThreadPoolExecutor to prevent blocking
+2. **Synchronous Operations**: Database operations are synchronous for simplicity and reliability
 3. **Batch Processing**: Metrics calculations can be batched for performance
 4. **JSON Flexibility**: Complex data stored as JSON for schema flexibility
-5. **Materialized Views**: Pre-computed aggregations for real-time monitoring
+5. **Repository Pattern**: Clean separation of concerns with dedicated repository classes
 
 ## Future Enhancements
 

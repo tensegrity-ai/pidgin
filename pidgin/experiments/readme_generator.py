@@ -192,7 +192,7 @@ class ExperimentReadmeGenerator:
         try:
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
-        except:
+        except (ValueError, AttributeError):
             return timestamp
     
     def _calculate_duration(self, start: str, end: str) -> Optional[str]:
@@ -216,7 +216,7 @@ class ExperimentReadmeGenerator:
                 hours = total_seconds // 3600
                 minutes = (total_seconds % 3600) // 60
                 return f"{hours}h {minutes}m"
-        except:
+        except (ValueError, AttributeError):
             return None
     
     def _format_status(self, status: str) -> str:
