@@ -76,8 +76,8 @@ def calculate_structural_similarity(messages_a: list[str],
         }
     
     # Average length ratio
-    avg_len_a = sum(len(m) for m in messages_a) / len(messages_a)
-    avg_len_b = sum(len(m) for m in messages_b) / len(messages_b)
+    avg_len_a = sum(len(m) for m in messages_a) / max(len(messages_a), 1)
+    avg_len_b = sum(len(m) for m in messages_b) / max(len(messages_b), 1)
     length_ratio = (
         min(avg_len_a, avg_len_b) / max(avg_len_a, avg_len_b)
         if max(avg_len_a, avg_len_b) > 0
@@ -85,8 +85,8 @@ def calculate_structural_similarity(messages_a: list[str],
     )
     
     # Sentence pattern similarity
-    avg_sent_a = sum(len(SENTENCE_ENDINGS.findall(m)) or 1 for m in messages_a) / len(messages_a)
-    avg_sent_b = sum(len(SENTENCE_ENDINGS.findall(m)) or 1 for m in messages_b) / len(messages_b)
+    avg_sent_a = sum(len(SENTENCE_ENDINGS.findall(m)) or 1 for m in messages_a) / max(len(messages_a), 1)
+    avg_sent_b = sum(len(SENTENCE_ENDINGS.findall(m)) or 1 for m in messages_b) / max(len(messages_b), 1)
     sentence_similarity = (
         min(avg_sent_a, avg_sent_b) / max(avg_sent_a, avg_sent_b)
         if max(avg_sent_a, avg_sent_b) > 0

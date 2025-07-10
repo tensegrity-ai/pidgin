@@ -1,6 +1,6 @@
 """Unified metrics system for conversation analysis."""
 
-from .calculator import MetricsCalculator
+from .optimized_calculator import OptimizedMetricsCalculator as MetricsCalculator
 from .display import (
     calculate_turn_metrics,
     calculate_structural_similarity,
