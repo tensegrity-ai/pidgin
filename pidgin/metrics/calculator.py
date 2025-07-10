@@ -1,4 +1,4 @@
-"""Comprehensive metrics calculator for conversation analysis with O(n) performance."""
+"""Comprehensive metrics calculator for conversation analysis."""
 
 from typing import Dict, List, Set, Any, Optional, Tuple
 from collections import defaultdict, Counter
@@ -10,10 +10,10 @@ from .linguistic_metrics import LinguisticAnalyzer
 
 
 class MetricsCalculator:
-    """Optimized calculator with caching and incremental updates for O(n) performance."""
+    """Calculates comprehensive metrics for conversation turns with efficient caching."""
     
     def __init__(self):
-        """Initialize calculator with optimized tracking structures."""
+        """Initialize calculator with tracking structures for efficient computation."""
         # Cumulative vocabulary tracking (incrementally updated)
         self.cumulative_vocab = {
             'agent_a': set(),
@@ -62,7 +62,7 @@ class MetricsCalculator:
     def calculate_turn_metrics(self, turn_number: int, 
                              agent_a_message: str, 
                              agent_b_message: str) -> Dict[str, Any]:
-        """Calculate all metrics for a turn with O(n) performance.
+        """Calculate all metrics for a turn.
         
         Args:
             turn_number: 0-indexed turn number
@@ -81,7 +81,7 @@ class MetricsCalculator:
         )
         
         # Calculate convergence metrics with optimization
-        convergence = self._calculate_convergence_optimized(
+        convergence = self._calculate_convergence(
             agent_a_message, agent_b_message, turn_number
         )
         
@@ -139,8 +139,8 @@ class MetricsCalculator:
         number_count = self.text_analyzer.count_numbers(message)
         proper_noun_count = self.text_analyzer.count_proper_nouns(words)
         
-        # Repetition (optimized O(1) calculation)
-        repetition = self._calculate_repetition_optimized(words, agent, turn_number)
+        # Repetition calculation
+        repetition = self._calculate_repetition(words, agent, turn_number)
         
         # Update agent's cumulative vocabulary
         self.cumulative_vocab[agent].update(unique_words)
@@ -184,9 +184,9 @@ class MetricsCalculator:
             'unique_word_ratio': vocab_size / max(word_count, 1)
         }
     
-    def _calculate_convergence_optimized(self, message_a: str, message_b: str,
-                                       turn_number: int) -> Dict[str, float]:
-        """Calculate convergence metrics with O(1) cumulative overlap."""
+    def _calculate_convergence(self, message_a: str, message_b: str,
+                               turn_number: int) -> Dict[str, float]:
+        """Calculate convergence metrics between messages."""
         # Get vocabularies for this turn
         words_a = set(self._tokenize_cached(message_a))
         words_b = set(self._tokenize_cached(message_b))
@@ -198,7 +198,7 @@ class MetricsCalculator:
         # Current turn overlap
         current_overlap = self.convergence_calc.calculate_vocabulary_overlap(words_a, words_b)
         
-        # Cumulative overlap (O(1) - using already updated cumulative sets)
+        # Cumulative overlap (using already updated cumulative sets)
         cumulative_overlap = self.convergence_calc.calculate_vocabulary_overlap(
             self.cumulative_vocab['agent_a'], 
             self.cumulative_vocab['agent_b']
@@ -225,9 +225,9 @@ class MetricsCalculator:
             'mutual_mimicry': mutual_mimicry
         }
     
-    def _calculate_repetition_optimized(self, current_words: List[str], 
-                                      agent: str, turn_number: int) -> float:
-        """Calculate repetition with O(1) performance using maintained sets."""
+    def _calculate_repetition(self, current_words: List[str], 
+                              agent: str, turn_number: int) -> float:
+        """Calculate repetition relative to previous messages."""
         if turn_number == 0:
             return 0.0
         
@@ -235,7 +235,7 @@ class MetricsCalculator:
         if not current_word_set:
             return 0.0
         
-        # O(1) lookup using maintained cumulative set
+        # Lookup using maintained cumulative set
         # Note: We exclude current words since they haven't been added yet
         previous_words = self.all_agent_words[agent] - current_word_set
         
