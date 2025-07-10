@@ -3,15 +3,17 @@
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
+from pydantic import ValidationError
 
 from ..io.logger import get_logger
 from rich.console import Console
-from ..ui.display_utils import warning, success, info, DisplayUtils
+from ..ui.display_utils import warning, success, info, DisplayUtils, error
 from ..constants import (
     ConvergenceProfiles, ConvergenceComponents, DEFAULT_CONVERGENCE_WEIGHTS,
     ConvergenceActions, DEFAULT_CONVERGENCE_THRESHOLD, DEFAULT_CONVERGENCE_PROFILE,
     DEFAULT_CONVERGENCE_ACTION
 )
+from .schema import PidginConfig, ConvergenceWeights
 
 logger = get_logger("config")
 
@@ -100,7 +102,15 @@ class Config:
 
     def __init__(self, config_path: Optional[Path] = None):
         """Initialize configuration."""
-        self.config = self.DEFAULT_CONFIG.copy()
+        # Validate default config
+        try:
+            validated_config = PidginConfig(**self.DEFAULT_CONFIG)
+            self.config = validated_config.model_dump()
+        except ValidationError as e:
+            # This should never happen with our defaults
+            logger.error("Default configuration is invalid!")
+            raise RuntimeError("Invalid default configuration") from e
+            
         self.config_path = config_path
 
         # Only load from explicit path if provided
@@ -195,8 +205,21 @@ experiments:
             user_config = yaml.safe_load(f)
 
         if user_config:
-            self.config = self._deep_merge(self.config, user_config)
-            self.config_path = path
+            # Merge with defaults first
+            merged_config = self._deep_merge(self.config, user_config)
+            
+            # Validate the merged configuration
+            try:
+                validated_config = PidginConfig(**merged_config)
+                # Convert back to dict for internal use
+                self.config = validated_config.model_dump()
+                self.config_path = path
+            except ValidationError as e:
+                error(f"Configuration validation failed: {path}")
+                for err in e.errors():
+                    field_path = " → ".join(str(loc) for loc in err['loc'])
+                    error(f"  {field_path}: {err['msg']}", use_panel=False)
+                raise ValueError(f"Invalid configuration in {path}") from e
 
     def _deep_merge(self, base: Dict, update: Dict) -> Dict:
         """Deep merge two dictionaries."""
@@ -229,8 +252,11 @@ experiments:
 
     def set(self, key_path: str, value: Any):
         """Set config value using dot notation."""
+        # Create a copy to validate
+        test_config = self.config.copy()
+        
         keys = key_path.split(".")
-        config = self.config
+        config = test_config
 
         # Navigate to the parent of the target key
         for key in keys[:-1]:
@@ -238,8 +264,22 @@ experiments:
                 config[key] = {}
             config = config[key]
 
-        # Set the value
+        # Set the value in test config
         config[keys[-1]] = value
+        
+        # Validate the entire config
+        try:
+            validated_config = PidginConfig(**test_config)
+            # If valid, apply to actual config
+            self.config = validated_config.model_dump()
+        except ValidationError as e:
+            # Find the relevant error for this field
+            for err in e.errors():
+                err_path = ".".join(str(loc) for loc in err['loc'])
+                if err_path == key_path or err_path.startswith(key_path):
+                    raise ValueError(f"Invalid value for {key_path}: {err['msg']}") from e
+            # If no specific error found, raise general validation error
+            raise ValueError(f"Configuration validation failed after setting {key_path}") from e
 
     def save(self, path: Optional[Path] = None):
         """Save configuration to file."""
