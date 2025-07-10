@@ -1,256 +1,224 @@
-"""Build experiment state from JSONL event streams."""
+# pidgin/experiments/state_builder.py
+"""State builder that uses manifests for efficient monitoring."""
 
 import json
+import os
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 
+from .state_types import ExperimentState, ConversationState
 from ..io.logger import get_logger
-from ..constants import ConversationStatus, ExperimentStatus
 
 logger = get_logger("state_builder")
 
 
-@dataclass
-class ConversationState:
-    """Lightweight state for a single conversation."""
-    conversation_id: str
-    experiment_id: str
-    status: str = ConversationStatus.CREATED
-    current_turn: int = 0
-    max_turns: int = 20
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    agent_a_model: str = "unknown"
-    agent_b_model: str = "unknown"
-    convergence_scores: List[float] = field(default_factory=list)
-    last_convergence: Optional[float] = None
-    error_message: Optional[str] = None
-
-
-@dataclass 
-class ExperimentState:
-    """Lightweight state for an experiment."""
-    experiment_id: str
-    name: str
-    status: str = ExperimentStatus.CREATED
-    total_conversations: int = 0
-    completed_conversations: int = 0
-    failed_conversations: int = 0
-    created_at: datetime = field(default_factory=datetime.now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    conversations: Dict[str, ConversationState] = field(default_factory=dict)
-    
-    @property
-    def active_conversations(self) -> int:
-        """Count of currently running conversations."""
-        return sum(1 for c in self.conversations.values() if c.status == ConversationStatus.RUNNING)
-    
-    @property
-    def progress(self) -> tuple[int, int]:
-        """Return (completed, total) conversations."""
-        completed = self.completed_conversations + self.failed_conversations
-        return (completed, self.total_conversations)
-
-
 class StateBuilder:
-    """Builds experiment and conversation state from JSONL event streams."""
+    """Builds experiment state efficiently using manifest files."""
     
-    @staticmethod
-    def from_experiment_dir(exp_dir: Path) -> Optional[ExperimentState]:
-        """Build experiment state from all JSONL files in experiment directory.
+    def __init__(self):
+        """Initialize with empty cache."""
+        self.cache: Dict[Path, Tuple[float, ExperimentState]] = {}
+    
+    def get_experiment_state(self, exp_dir: Path) -> Optional[ExperimentState]:
+        """Get experiment state from manifest with caching.
         
         Args:
-            exp_dir: Path to experiment directory
+            exp_dir: Experiment directory
             
         Returns:
-            ExperimentState or None if no valid events found
+            ExperimentState or None if not found
         """
-        if not exp_dir.exists():
-            return None
-            
-        # Find all conversation JSONL files
-        jsonl_files = list(exp_dir.glob("conv_*_events.jsonl"))
-        if not jsonl_files:
-            return None
-            
-        # Extract experiment ID from first conversation file
-        first_file = jsonl_files[0]
-        # Pattern: conv_{exp_id}_{uuid}_events.jsonl
-        parts = first_file.stem.split('_')
-        if len(parts) < 3:
-            return None
-            
-        exp_id = parts[1]  # Extract exp ID
+        manifest_path = exp_dir / "manifest.json"
         
-        # Initialize experiment state
-        state = ExperimentState(
-            experiment_id=exp_id,
-            name=exp_id  # Will be updated from events
-        )
+        # Check if manifest exists
+        if not manifest_path.exists():
+            # Fall back to legacy metadata.json
+            return self._get_legacy_state(exp_dir)
         
-        # Process each conversation's events
-        for jsonl_file in jsonl_files:
-            conv_state = StateBuilder._build_conversation_state(jsonl_file)
-            if conv_state:
-                state.conversations[conv_state.conversation_id] = conv_state
-                
-                # Update experiment-level counts
-                if conv_state.status == ConversationStatus.COMPLETED:
-                    state.completed_conversations += 1
-                elif conv_state.status == ConversationStatus.FAILED:
-                    state.failed_conversations += 1
-        
-        # Infer experiment status from conversations
-        state.total_conversations = len(state.conversations)
-        if state.active_conversations > 0:
-            state.status = ExperimentStatus.RUNNING
-        elif state.completed_conversations + state.failed_conversations == state.total_conversations:
-            state.status = ExperimentStatus.COMPLETED
-        
-        return state
-    
-    @staticmethod
-    def _build_conversation_state(jsonl_path: Path) -> Optional[ConversationState]:
-        """Build conversation state from JSONL file.
-        
-        Args:
-            jsonl_path: Path to conversation JSONL file
-            
-        Returns:
-            ConversationState or None if no valid events
-        """
-        if not jsonl_path.exists():
-            return None
-            
-        state = None
-        
+        # Check cache based on mtime
         try:
-            with open(jsonl_path, 'r') as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                        
-                    try:
-                        event = json.loads(line)
-                        
-                        # Initialize state from first event
-                        if state is None and 'conversation_id' in event:
-                            state = ConversationState(
-                                conversation_id=event['conversation_id'],
-                                experiment_id=event.get('experiment_id', 'unknown')
-                            )
-                        
-                        if state:
-                            StateBuilder._apply_event_to_conversation(state, event)
-                            
-                    except json.JSONDecodeError:
-                        logger.warning(f"Skipping invalid JSON line in {jsonl_path}")
-                        continue
-                        
-        except Exception as e:
-            logger.error(f"Error reading {jsonl_path}: {e}")
-            
+            current_mtime = manifest_path.stat().st_mtime
+        except OSError:
+            return None
+        
+        if exp_dir in self.cache:
+            cached_mtime, cached_state = self.cache[exp_dir]
+            if current_mtime == cached_mtime:
+                logger.debug(f"Using cached state for {exp_dir.name}")
+                return cached_state
+        
+        # Build from manifest
+        state = self._build_from_manifest(exp_dir, manifest_path)
+        if state:
+            # Update cache
+            self.cache[exp_dir] = (current_mtime, state)
+            logger.debug(f"Built and cached state for {exp_dir.name}")
+        
         return state
     
-    @staticmethod
-    def _apply_event_to_conversation(state: ConversationState, event: Dict[str, Any]):
-        """Apply an event to conversation state.
+    def list_experiments(self, base_dir: Path, 
+                        status_filter: Optional[List[str]] = None) -> List[ExperimentState]:
+        """List all experiments efficiently.
         
         Args:
-            state: ConversationState to update
-            event: Event dictionary
-        """
-        event_type = event.get('event_type')
-        
-        if event_type == 'ConversationCreated':
-            # Extract config
-            data = event.get('data', {})
-            state.agent_a_model = data.get('agent_a_model', state.agent_a_model)
-            state.agent_b_model = data.get('agent_b_model', state.agent_b_model)
-            state.max_turns = data.get('max_turns', state.max_turns)
-            
-        elif event_type == 'ConversationStartEvent':
-            state.status = ConversationStatus.RUNNING
-            state.started_at = StateBuilder._parse_timestamp(event.get('timestamp'))
-            
-        elif event_type == 'TurnCompleteEvent':
-            state.current_turn = event.get('turn_number', state.current_turn)
-            convergence = event.get('convergence_score')
-            if convergence is not None:
-                state.convergence_scores.append(convergence)
-                state.last_convergence = convergence
-                
-        elif event_type == 'ConversationEndEvent':
-            state.status = ConversationStatus.COMPLETED
-            state.completed_at = StateBuilder._parse_timestamp(event.get('timestamp'))
-            
-        elif event_type == 'ConversationStatusChanged':
-            data = event.get('data', {})
-            state.status = data.get('status', state.status)
-            if state.status == ConversationStatus.FAILED:
-                state.error_message = data.get('error_message')
-                
-    @staticmethod
-    def from_active_experiments(base_dir: Path) -> List[ExperimentState]:
-        """Build states for all active experiments.
-        
-        Args:
-            base_dir: Base directory containing experiments
+            base_dir: Base experiments directory
+            status_filter: Optional list of statuses to include
             
         Returns:
-            List of ExperimentState objects for active experiments
+            List of experiment states
         """
         experiments = []
         
-        # Look for experiment directories
+        # Find all experiment directories
         for exp_dir in base_dir.glob("exp_*"):
-            if exp_dir.is_dir():
-                state = StateBuilder.from_experiment_dir(exp_dir)
-                if state and state.status in [ExperimentStatus.RUNNING, ExperimentStatus.CREATED]:
+            if not exp_dir.is_dir():
+                continue
+            
+            state = self.get_experiment_state(exp_dir)
+            if state:
+                # Apply status filter if provided
+                if status_filter is None or state.status in status_filter:
                     experiments.append(state)
-                    
+        
         return experiments
     
-    @staticmethod
-    def _parse_timestamp(timestamp_str: Optional[str]) -> Optional[datetime]:
-        """Parse ISO format timestamp string."""
-        if not timestamp_str:
-            return None
-            
-        try:
-            return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        except Exception:
-            return None
+    def clear_cache(self) -> None:
+        """Clear the cache (useful after bulk operations)."""
+        self.cache.clear()
     
-    @staticmethod
-    def tail_events(jsonl_path: Path, callback):
-        """Tail a JSONL file for new events.
+    def _build_from_manifest(self, exp_dir: Path, manifest_path: Path) -> Optional[ExperimentState]:
+        """Build experiment state from manifest file.
         
         Args:
-            jsonl_path: Path to JSONL file
-            callback: Async function to call with each new event
+            exp_dir: Experiment directory
+            manifest_path: Path to manifest.json
+            
+        Returns:
+            ExperimentState or None if invalid
         """
-        import asyncio
+        try:
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to read manifest {manifest_path}: {e}")
+            return None
         
-        async def _tail():
-            """Async tail implementation."""
-            # Start at end of file
-            with open(jsonl_path, 'r') as f:
-                f.seek(0, 2)  # Go to end
-                
-                while True:
-                    line = f.readline()
-                    if line:
-                        try:
-                            event = json.loads(line)
-                            await callback(event)
-                        except json.JSONDecodeError:
-                            pass
-                    else:
-                        # No new data, wait a bit
-                        await asyncio.sleep(0.1)
-                        
-        return _tail()
+        # Extract experiment info
+        exp_id = manifest.get("experiment_id", exp_dir.name)
+        config = manifest.get("config", {})
+        
+        # Create experiment state
+        state = ExperimentState(
+            experiment_id=exp_id,
+            name=manifest.get("name", exp_id),
+            status=manifest.get("status", "unknown"),
+            total_conversations=manifest.get("total_conversations", 0),
+            completed_conversations=manifest.get("completed_conversations", 0),
+            failed_conversations=manifest.get("failed_conversations", 0)
+        )
+        
+        # Parse timestamps
+        if created_at := manifest.get("created_at"):
+            state.created_at = self._parse_timestamp(created_at)
+        if started_at := manifest.get("started_at"):
+            state.started_at = self._parse_timestamp(started_at)
+        if completed_at := manifest.get("completed_at"):
+            state.completed_at = self._parse_timestamp(completed_at)
+        
+        # Build conversation states
+        for conv_id, conv_info in manifest.get("conversations", {}).items():
+            conv_state = ConversationState(
+                conversation_id=conv_id,
+                experiment_id=exp_id,
+                status=conv_info.get("status", "unknown"),
+                current_turn=conv_info.get("turns_completed", 0),
+                max_turns=config.get("max_turns", 20)
+            )
+            
+            # Set model info from config
+            conv_state.agent_a_model = config.get("agent_a_model", "unknown")
+            conv_state.agent_b_model = config.get("agent_b_model", "unknown")
+            
+            # Parse timestamps
+            if updated := conv_info.get("last_updated"):
+                conv_state.started_at = self._parse_timestamp(updated)
+            
+            # Get convergence from last turn (would need JSONL for this)
+            # For now, we'll leave it empty
+            
+            state.conversations[conv_id] = conv_state
+        
+        return state
+    
+    def _get_legacy_state(self, exp_dir: Path) -> Optional[ExperimentState]:
+        """Get state from legacy metadata.json file.
+        
+        Args:
+            exp_dir: Experiment directory
+            
+        Returns:
+            ExperimentState or None if not found
+        """
+        metadata_path = exp_dir / "metadata.json"
+        if not metadata_path.exists():
+            return None
+        
+        try:
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+        except Exception:
+            return None
+        
+        # Create basic state from metadata
+        exp_id = metadata.get("experiment_id", exp_dir.name)
+        state = ExperimentState(
+            experiment_id=exp_id,
+            name=metadata.get("name", exp_id),
+            status=metadata.get("status", "unknown"),
+            total_conversations=metadata.get("total_conversations", 0),
+            completed_conversations=metadata.get("completed_conversations", 0),
+            failed_conversations=metadata.get("failed_conversations", 0)
+        )
+        
+        # Parse timestamps
+        if started := metadata.get("started_at"):
+            state.started_at = self._parse_timestamp(started)
+        if completed := metadata.get("completed_at"):
+            state.completed_at = self._parse_timestamp(completed)
+        
+        # We don't have conversation details in legacy format
+        # Would need to read JSONL files
+        
+        return state
+    
+    def _parse_timestamp(self, timestamp_str: str) -> datetime:
+        """Parse ISO format timestamp.
+        
+        Args:
+            timestamp_str: Timestamp string
+            
+        Returns:
+            datetime object
+        """
+        # Handle both with and without timezone
+        if timestamp_str.endswith('Z'):
+            timestamp_str = timestamp_str[:-1] + '+00:00'
+        
+        try:
+            return datetime.fromisoformat(timestamp_str)
+        except ValueError:
+            # Try without microseconds
+            try:
+                return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                return datetime.now()
+
+
+# Global instance for easy reuse
+_state_builder = StateBuilder()
+
+def get_state_builder() -> StateBuilder:
+    """Get the global state builder instance."""
+    return _state_builder

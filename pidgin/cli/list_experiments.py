@@ -8,7 +8,7 @@ from ..ui.display_utils import DisplayUtils
 
 from .constants import NORD_GREEN, NORD_RED, NORD_BLUE, NORD_YELLOW, NORD_CYAN
 from ..io.paths import get_experiments_dir
-from ..experiments.optimized_state_builder import get_state_builder
+from ..experiments.state_builder import get_state_builder
 from ..constants import ExperimentStatus
 from ..ui.display_utils import DisplayUtils
 
@@ -24,7 +24,7 @@ def list_experiments(all):
     
     Shows active experiment sessions with their status and progress.
     """
-    # Use optimized state builder
+    # Use state builder
     state_builder = get_state_builder()
     exp_base = get_experiments_dir()
     

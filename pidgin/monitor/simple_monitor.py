@@ -13,7 +13,7 @@ from rich.live import Live
 from rich.layout import Layout
 from rich.panel import Panel
 
-from ..experiments.optimized_state_builder import get_state_builder
+from ..experiments.state_builder import get_state_builder
 from ..io.paths import get_experiments_dir
 from ..io.logger import get_logger
 from ..constants import ExperimentStatus, ConversationStatus
