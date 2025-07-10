@@ -405,6 +405,12 @@ class ExperimentRunner:
             readme_gen = ExperimentReadmeGenerator(exp_dir)
             readme_gen.generate()
             
+            # Generate Jupyter notebook
+            logging.info(f"Generating analysis notebook for experiment {experiment_id}")
+            from ..analysis.notebook_generator import NotebookGenerator
+            notebook_gen = NotebookGenerator(exp_dir)
+            notebook_gen.generate()
+            
             logging.info(f"Auto-importing experiment {experiment_id} to database")
             
             # Get database path
