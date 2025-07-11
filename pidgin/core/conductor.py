@@ -325,8 +325,6 @@ class Conductor:
             conversation, final_turn, max_turns, self.start_time, end_reason
         )
         
-        # Save transcripts
-        await self.lifecycle.save_transcripts(conversation, self.output_manager, self.current_conv_dir)
         
         # Batch load to database for single chat sessions
         if conv_id and not conv_id.startswith('conv_exp_'):  # Only for standalone chats

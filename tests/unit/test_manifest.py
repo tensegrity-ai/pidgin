@@ -44,7 +44,7 @@ class TestManifestManager:
     def test_add_conversation(self, manifest_manager, tmp_path):
         """Test adding conversation to manifest."""
         # Create initial manifest
-        manifest_manager.create("exp_123", "test", {}, 5)
+        manifest_manager.create("experiment_123", "test", {}, 5)
         
         # Add conversation
         conversation_id = "conv_456"
@@ -70,7 +70,7 @@ class TestManifestManager:
     def test_update_conversation(self, manifest_manager, tmp_path):
         """Test updating conversation status."""
         # Setup
-        manifest_manager.create("exp_123", "test", {}, 5)
+        manifest_manager.create("experiment_123", "test", {}, 5)
         manifest_manager.add_conversation("conv_456", "conv_456.jsonl")
         
         # Update conversation
@@ -85,15 +85,15 @@ class TestManifestManager:
         with open(tmp_path / "manifest.json") as f:
             manifest = json.load(f)
         
-        conv = manifest["conversations"]["conv_456"]
-        assert conv["status"] == "completed"
-        assert conv["last_line"] == 100
-        assert conv["turns_completed"] == 50
+        conversation = manifest["conversations"]["conv_456"]
+        assert conversation["status"] == "completed"
+        assert conversation["last_line"] == 100
+        assert conversation["turns_completed"] == 50
     
     def test_update_experiment_status(self, manifest_manager, tmp_path):
         """Test updating experiment status."""
         # Setup
-        manifest_manager.create("exp_123", "test", {}, 2)
+        manifest_manager.create("experiment_123", "test", {}, 2)
         
         # Update status to completed
         manifest_manager.update_experiment_status("completed")
@@ -108,7 +108,7 @@ class TestManifestManager:
     def test_update_experiment_status_with_error(self, manifest_manager, tmp_path):
         """Test updating experiment status with error."""
         # Setup
-        manifest_manager.create("exp_123", "test", {}, 1)
+        manifest_manager.create("experiment_123", "test", {}, 1)
         
         # Update with error
         manifest_manager.update_experiment_status("failed", error="Test error message")
@@ -124,12 +124,12 @@ class TestManifestManager:
     def test_get_manifest(self, manifest_manager, tmp_path):
         """Test getting manifest data."""
         # Create manifest
-        manifest_manager.create("exp_123", "test-exp", {"key": "value"}, 3)
+        manifest_manager.create("experiment_123", "test-exp", {"key": "value"}, 3)
         
         # Get manifest
         manifest = manifest_manager.get_manifest()
         
-        assert manifest["experiment_id"] == "exp_123"
+        assert manifest["experiment_id"] == "experiment_123"
         assert manifest["name"] == "test-exp"
         assert manifest["config"] == {"key": "value"}
         assert manifest["total_conversations"] == 3
@@ -137,7 +137,7 @@ class TestManifestManager:
     def test_automatic_status_update(self, manifest_manager, tmp_path):
         """Test automatic experiment status update when all conversations complete."""
         # Setup experiment with 2 conversations
-        manifest_manager.create("exp_123", "test", {}, 2)
+        manifest_manager.create("experiment_123", "test", {}, 2)
         manifest_manager.add_conversation("conv_1", "conv_1.jsonl")
         manifest_manager.add_conversation("conv_2", "conv_2.jsonl")
         
@@ -154,7 +154,7 @@ class TestManifestManager:
     def test_status_with_failures(self, manifest_manager, tmp_path):
         """Test status update with some failed conversations."""
         # Setup
-        manifest_manager.create("exp_123", "test", {}, 3)
+        manifest_manager.create("experiment_123", "test", {}, 3)
         manifest_manager.add_conversation("conv_1", "conv_1.jsonl")
         manifest_manager.add_conversation("conv_2", "conv_2.jsonl")
         manifest_manager.add_conversation("conv_3", "conv_3.jsonl")
@@ -173,7 +173,7 @@ class TestManifestManager:
     def test_atomic_writes(self, manifest_manager, tmp_path):
         """Test atomic write operation."""
         # Create initial manifest
-        manifest_manager.create("exp_123", "test", {}, 1)
+        manifest_manager.create("experiment_123", "test", {}, 1)
         
         # Read original content
         with open(tmp_path / "manifest.json") as f:
@@ -195,7 +195,7 @@ class TestManifestManager:
         import threading
         
         # Create initial manifest
-        manifest_manager.create("exp_123", "test", {}, 10)
+        manifest_manager.create("experiment_123", "test", {}, 10)
         
         # Function to add conversations concurrently
         def add_conversation(conv_id):
@@ -222,7 +222,7 @@ class TestManifestManager:
     
     def test_error_handling(self, manifest_manager, tmp_path):
         """Test error information in manifest."""
-        manifest_manager.create("exp_123", "test", {}, 1)
+        manifest_manager.create("experiment_123", "test", {}, 1)
         manifest_manager.add_conversation("conv_1", "conv_1.jsonl")
         
         # Update with error
@@ -233,9 +233,9 @@ class TestManifestManager:
         with open(tmp_path / "manifest.json") as f:
             manifest = json.load(f)
         
-        conv = manifest["conversations"]["conv_1"]
-        assert conv["error"] == error_msg
-        assert conv["status"] == "failed"
+        conversation = manifest["conversations"]["conv_1"]
+        assert conversation["error"] == error_msg
+        assert conversation["status"] == "failed"
     
     def test_read_nonexistent_manifest(self, manifest_manager):
         """Test reading when manifest doesn't exist."""
@@ -245,7 +245,7 @@ class TestManifestManager:
     def test_experiment_stats_tracking(self, manifest_manager, tmp_path):
         """Test that experiment stats are properly tracked."""
         # Create experiment with multiple conversations
-        manifest_manager.create("exp_123", "test", {}, 4)
+        manifest_manager.create("experiment_123", "test", {}, 4)
         
         # Add conversations in different states
         manifest_manager.add_conversation("conv_1", "conv_1.jsonl")

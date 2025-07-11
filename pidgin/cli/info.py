@@ -13,10 +13,60 @@ console = Console()
 display = DisplayUtils(console)
 
 
+def _create_config_file(force):
+    """Create a configuration file with example settings."""
+    from pathlib import Path
+    from ..config import Config
+    
+    config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+    
+    if config_path.exists() and not force:
+        display.warning(f"Config file already exists at: {config_path}", use_panel=False)
+        display.info("Use --force to overwrite", use_panel=False)
+        return
+    
+    # Create config instance to access the write method
+    config = Config()
+    
+    # Create directory if needed
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Write example config
+    config._write_example_config(config_path)
+    
+    display.success("◆ Created configuration file")
+    display.info(f"Location: {config_path}", use_panel=False)
+    
+    profiles_info = [
+        "Available convergence profiles:",
+        "  • balanced   - Default, balanced weights",
+        "  • structural - Emphasizes structural patterns (2x weight)",
+        "  • semantic   - Emphasizes content/meaning",
+        "  • strict     - Higher standards for all metrics"
+    ]
+    display.info("\n".join(profiles_info), use_panel=False)
+    display.dim("\nEdit the file to customize settings")
+
+
 @click.group()
-def info():
-    """View information about models, dimensions, and configuration."""
-    pass
+@click.option('--create-config', is_flag=True, help='Create a configuration file with example settings')
+@click.option('--force', '-f', is_flag=True, help='Overwrite existing config (use with --create-config)')
+def info(create_config, force):
+    """View information about models, dimensions, and configuration.
+    
+    Use --create-config to create ~/.config/pidgin/pidgin.yaml with example settings.
+    """
+    if create_config:
+        _create_config_file(force)
+    elif force:
+        display.warning("--force flag only works with --create-config", use_panel=False)
+        return
+    
+    # If no subcommand and no create-config flag, show help
+    if not create_config:
+        ctx = click.get_current_context()
+        if ctx.invoked_subcommand is None:
+            click.echo(ctx.get_help())
 
 
 @info.command()
@@ -117,7 +167,7 @@ def config():
         console.print(f"[green]Config file:[/green] {found_config}")
     else:
         console.print("[yellow]No config file found[/yellow]")
-        console.print("[dim]Run 'pidgin init-config' to create one[/dim]")
+        console.print("[dim]Run 'pidgin info --create-config' to create one[/dim]")
     
     console.print("\n[bold]Current Settings:[/bold]")
     

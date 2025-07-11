@@ -152,6 +152,83 @@ class ImportService:
             return f"Database not initialized properly: {error_msg}"
         
         return error_msg
+    
+    def _batch_insert_events(self, events: List[tuple], experiment_id: str, conversation_id: str) -> None:
+        """Batch insert events for better performance.
+        
+        Args:
+            events: List of (line_num, event) tuples
+            experiment_id: Experiment ID
+            conversation_id: Conversation ID
+        """
+        if not events:
+            return
+        
+        # Prepare batch data
+        batch_data = []
+        for line_num, event in events:
+            # Serialize event back to JSON for storage
+            event_data = {
+                "event_type": event.__class__.__name__,
+                "timestamp": event.timestamp.isoformat(),
+                "event_id": event.event_id,
+                "conversation_id": conversation_id,
+                # Add event-specific fields
+                **{k: v for k, v in event.__dict__.items() 
+                   if k not in ["timestamp", "event_id"]}
+            }
+            
+            batch_data.append([
+                event.timestamp.isoformat(),
+                event.__class__.__name__,
+                conversation_id,
+                experiment_id,
+                json.dumps(event_data, default=str),
+                line_num
+            ])
+        
+        # Execute batch insert using DuckDB's executemany for better performance
+        query = """
+            INSERT INTO events (
+                timestamp, event_type, conversation_id, 
+                experiment_id, event_data, sequence
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """
+        
+        self.db.executemany(query, batch_data)
+        logger.debug(f"Batch inserted {len(batch_data)} events for conversation {conversation_id}")
+    
+    def _batch_insert_messages(self, messages: List[Dict[str, Any]]) -> None:
+        """Batch insert messages for better performance.
+        
+        Args:
+            messages: List of message dictionaries
+        """
+        if not messages:
+            return
+        
+        # Prepare batch data
+        batch_data = []
+        for msg in messages:
+            batch_data.append([
+                msg["conversation_id"],
+                msg["turn_number"],
+                msg["agent_id"],
+                msg["content"],
+                msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"],
+                msg["token_count"]
+            ])
+        
+        # Execute batch insert
+        query = """
+            INSERT INTO messages (
+                conversation_id, turn_number, agent_id, 
+                content, timestamp, token_count
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """
+        
+        self.db.executemany(query, batch_data)
+        logger.debug(f"Batch inserted {len(batch_data)} messages")
 
     def import_experiment_from_jsonl(self, exp_dir: Path) -> ImportResult:
         """Import experiment data from JSONL files into database.
@@ -209,8 +286,8 @@ class ImportService:
                 
                 duration = (datetime.now() - start_time).total_seconds()
                 
-                logger.info(f"Successfully imported {experiment_id}: "
-                          f"{events_count} events, {conversations_count} conversations")
+                logger.debug(f"Successfully imported {experiment_id}: "
+                           f"{events_count} events, {conversations_count} conversations")
                 
                 return ImportResult(
                     success=True,
@@ -339,32 +416,8 @@ class ImportService:
         replayer = EventReplay()
         state = replayer.replay_conversation(experiment_id, conversation_id, jsonl_path)
         
-        # Insert raw events with their JSON data
-        for line_num, event in state.events:
-            # Serialize event back to JSON for storage
-            event_data = {
-                "event_type": event.__class__.__name__,
-                "timestamp": event.timestamp.isoformat(),
-                "event_id": event.event_id,
-                "conversation_id": conversation_id,
-                # Add event-specific fields
-                **{k: v for k, v in event.__dict__.items() 
-                   if k not in ["timestamp", "event_id"]}
-            }
-            
-            self.db.execute("""
-                INSERT INTO events (
-                    timestamp, event_type, conversation_id, 
-                    experiment_id, event_data, sequence
-                ) VALUES (?, ?, ?, ?, ?, ?)
-            """, [
-                event.timestamp.isoformat(),
-                event.__class__.__name__,
-                conversation_id,
-                experiment_id,
-                json.dumps(event_data, default=str),
-                line_num
-            ])
+        # Batch insert all events for better performance
+        self._batch_insert_events(state.events, experiment_id, conversation_id)
         
         # Create/update conversation record
         if state.started_at:
@@ -416,21 +469,8 @@ class ImportService:
         for agent_id, name in state.agent_names.items():
             self.conversations.log_agent_name(conversation_id, agent_id, name)
         
-        # Insert messages
-        for msg in state.messages:
-            self.db.execute("""
-                INSERT INTO messages (
-                    conversation_id, turn_number, agent_id, 
-                    content, timestamp, token_count
-                ) VALUES (?, ?, ?, ?, ?, ?)
-            """, [
-                msg["conversation_id"],
-                msg["turn_number"],
-                msg["agent_id"],
-                msg["content"],
-                msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"],
-                msg["token_count"]
-            ])
+        # Batch insert messages for better performance
+        self._batch_insert_messages(state.messages)
         
         # Calculate and insert full turn metrics
         self._calculate_and_store_turn_metrics(state)
@@ -454,162 +494,154 @@ class ImportService:
                 agent_b_message=msg_b.content
             )
             
-            # Convert word frequencies to JSON
-            from collections import Counter
-            words_a = metrics['agent_a'].get('vocabulary', set())
-            words_b = metrics['agent_b'].get('vocabulary', set())
+            # Prepare metric values for insertion
+            metric_values = self._prepare_turn_metric_values(
+                state.conversation_id, turn_num, existing_metric, metrics, msg_a, msg_b
+            )
             
-            # Count frequencies
-            word_freq_a = dict(Counter(word for word in msg_a.content.lower().split() if word in words_a))
-            word_freq_b = dict(Counter(word for word in msg_b.content.lower().split() if word in words_b))
-            shared_vocab = list(words_a.intersection(words_b))
-            
-            # Insert full metrics
-            self.db.execute("""
-                INSERT INTO turn_metrics (
-                    conversation_id, turn_number, timestamp,
-                    -- Core convergence metrics
-                    convergence_score, vocabulary_overlap, structural_similarity,
-                    topic_similarity, style_match,
-                    -- Additional convergence metrics
-                    cumulative_overlap, cross_repetition,
-                    mimicry_a_to_b, mimicry_b_to_a, mutual_mimicry,
-                    -- Agent A metrics
-                    message_a_length, message_a_word_count, message_a_unique_words,
-                    message_a_type_token_ratio, message_a_avg_word_length,
-                    message_a_response_time_ms,
-                    message_a_sentence_count, message_a_paragraph_count,
-                    message_a_avg_sentence_length,
-                    message_a_question_count, message_a_exclamation_count,
-                    message_a_special_symbol_count, message_a_number_count,
-                    message_a_proper_noun_count,
-                    message_a_entropy, message_a_compression_ratio,
-                    message_a_lexical_diversity, message_a_punctuation_diversity,
-                    message_a_self_repetition, message_a_turn_repetition,
-                    message_a_formality_score, message_a_starts_with_ack,
-                    message_a_new_words,
-                    -- Agent A linguistic markers
-                    message_a_hedge_words, message_a_agreement_markers,
-                    message_a_disagreement_markers, message_a_politeness_markers,
-                    message_a_first_person_singular, message_a_first_person_plural,
-                    message_a_second_person,
-                    -- Agent B metrics
-                    message_b_length, message_b_word_count, message_b_unique_words,
-                    message_b_type_token_ratio, message_b_avg_word_length,
-                    message_b_response_time_ms,
-                    message_b_sentence_count, message_b_paragraph_count,
-                    message_b_avg_sentence_length,
-                    message_b_question_count, message_b_exclamation_count,
-                    message_b_special_symbol_count, message_b_number_count,
-                    message_b_proper_noun_count,
-                    message_b_entropy, message_b_compression_ratio,
-                    message_b_lexical_diversity, message_b_punctuation_diversity,
-                    message_b_self_repetition, message_b_turn_repetition,
-                    message_b_formality_score, message_b_starts_with_ack,
-                    message_b_new_words,
-                    -- Agent B linguistic markers
-                    message_b_hedge_words, message_b_agreement_markers,
-                    message_b_disagreement_markers, message_b_politeness_markers,
-                    message_b_first_person_singular, message_b_first_person_plural,
-                    message_b_second_person,
-                    -- Word frequencies
-                    word_frequencies_a, word_frequencies_b, shared_vocabulary,
-                    -- Timing information
-                    turn_start_time, turn_end_time, duration_ms
-                ) VALUES (
-                    ?, ?, ?,
-                    ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?
-                )
-            """, [
-                state.conversation_id,
-                turn_num,
-                existing_metric.get('timestamp', datetime.now()),
-                # Core convergence
-                existing_metric.get('convergence_score', 0.0),  # From live calculation
-                metrics['convergence'].get('vocabulary_overlap', 0.0),
-                metrics['convergence'].get('structural_similarity', 0.0),
-                0.0,  # topic_similarity - not implemented
-                0.0,  # style_match - not implemented
-                # Additional convergence
-                metrics['convergence'].get('cumulative_overlap', 0.0),
-                metrics['convergence'].get('cross_repetition', 0.0),
-                metrics['convergence'].get('mimicry_a_to_b', 0.0),
-                metrics['convergence'].get('mimicry_b_to_a', 0.0),
-                metrics['convergence'].get('mutual_mimicry', 0.0),
-                # Agent A
-                metrics['agent_a']['message_length'],
-                metrics['agent_a']['word_count'],
-                metrics['agent_a']['vocabulary_size'],
-                metrics['agent_a']['vocabulary_size'] / max(metrics['agent_a']['word_count'], 1),  # type_token_ratio
-                metrics['agent_a']['avg_word_length'],
-                0,  # response_time_ms - not available
-                metrics['agent_a']['sentence_count'],
-                metrics['agent_a']['paragraph_count'],
-                metrics['agent_a']['avg_sentence_length'],
-                metrics['agent_a']['question_count'],
-                metrics['agent_a']['exclamation_count'],
-                metrics['agent_a']['special_symbol_count'],
-                metrics['agent_a']['number_count'],
-                metrics['agent_a']['proper_noun_count'],
-                metrics['agent_a']['entropy'],
-                metrics['agent_a']['compression_ratio'],
-                metrics['agent_a']['lexical_diversity'],
-                metrics['agent_a']['punctuation_diversity'],
-                metrics['agent_a']['self_repetition'],
-                metrics['agent_a']['turn_repetition'],
-                metrics['agent_a']['formality_score'],
-                metrics['agent_a']['starts_with_acknowledgment'],
-                metrics['agent_a']['new_words'],
-                # Agent A linguistic
-                metrics['agent_a'].get('hedge_words', 0),
-                metrics['agent_a'].get('agreement_markers', 0),
-                metrics['agent_a'].get('disagreement_markers', 0),
-                metrics['agent_a'].get('politeness_markers', 0),
-                metrics['agent_a'].get('first_person_singular', 0),
-                metrics['agent_a'].get('first_person_plural', 0),
-                metrics['agent_a'].get('second_person', 0),
-                # Agent B
-                metrics['agent_b']['message_length'],
-                metrics['agent_b']['word_count'],
-                metrics['agent_b']['vocabulary_size'],
-                metrics['agent_b']['vocabulary_size'] / max(metrics['agent_b']['word_count'], 1),  # type_token_ratio
-                metrics['agent_b']['avg_word_length'],
-                0,  # response_time_ms
-                metrics['agent_b']['sentence_count'],
-                metrics['agent_b']['paragraph_count'],
-                metrics['agent_b']['avg_sentence_length'],
-                metrics['agent_b']['question_count'],
-                metrics['agent_b']['exclamation_count'],
-                metrics['agent_b']['special_symbol_count'],
-                metrics['agent_b']['number_count'],
-                metrics['agent_b']['proper_noun_count'],
-                metrics['agent_b']['entropy'],
-                metrics['agent_b']['compression_ratio'],
-                metrics['agent_b']['lexical_diversity'],
-                metrics['agent_b']['punctuation_diversity'],
-                metrics['agent_b']['self_repetition'],
-                metrics['agent_b']['turn_repetition'],
-                metrics['agent_b']['formality_score'],
-                metrics['agent_b']['starts_with_acknowledgment'],
-                metrics['agent_b']['new_words'],
-                # Agent B linguistic
-                metrics['agent_b'].get('hedge_words', 0),
-                metrics['agent_b'].get('agreement_markers', 0),
-                metrics['agent_b'].get('disagreement_markers', 0),
-                metrics['agent_b'].get('politeness_markers', 0),
-                metrics['agent_b'].get('first_person_singular', 0),
-                metrics['agent_b'].get('first_person_plural', 0),
-                metrics['agent_b'].get('second_person', 0),
-                # Word frequencies as JSON
-                json.dumps(word_freq_a),
-                json.dumps(word_freq_b),
-                json.dumps(shared_vocab),
-                # Timing information
-                None,  # turn_start_time
-                None,  # turn_end_time  
-                None   # duration_ms
-            ])
+            # Insert metrics using prepared values
+            self._insert_turn_metrics(metric_values)
+    
+    def _prepare_turn_metric_values(self, conversation_id: str, turn_num: int, 
+                                    existing_metric: dict, metrics: dict, 
+                                    msg_a, msg_b) -> list:
+        """Prepare metric values for database insertion."""
+        from collections import Counter
+        
+        # Extract vocabularies
+        words_a = metrics['agent_a'].get('vocabulary', set())
+        words_b = metrics['agent_b'].get('vocabulary', set())
+        
+        # Count word frequencies
+        word_freq_a = dict(Counter(word for word in msg_a.content.lower().split() if word in words_a))
+        word_freq_b = dict(Counter(word for word in msg_b.content.lower().split() if word in words_b))
+        shared_vocab = list(words_a.intersection(words_b))
+        
+        return [
+            conversation_id,
+            turn_num,
+            existing_metric.get('timestamp', datetime.now()),
+            # Core convergence
+            existing_metric.get('convergence_score', 0.0),  # From live calculation
+            metrics['convergence'].get('vocabulary_overlap', 0.0),
+            metrics['convergence'].get('structural_similarity', 0.0),
+            0.0,  # topic_similarity - not implemented
+            0.0,  # style_match - not implemented
+            # Additional convergence
+            metrics['convergence'].get('cumulative_overlap', 0.0),
+            metrics['convergence'].get('cross_repetition', 0.0),
+            metrics['convergence'].get('mimicry_a_to_b', 0.0),
+            metrics['convergence'].get('mimicry_b_to_a', 0.0),
+            metrics['convergence'].get('mutual_mimicry', 0.0),
+            # Agent A metrics
+            *self._extract_agent_metrics(metrics['agent_a']),
+            # Agent B metrics
+            *self._extract_agent_metrics(metrics['agent_b']),
+            # Word frequencies as JSON
+            json.dumps(word_freq_a),
+            json.dumps(word_freq_b),
+            json.dumps(shared_vocab),
+            # Timing information
+            None,  # turn_start_time
+            None,  # turn_end_time  
+            None   # duration_ms
+        ]
+    
+    def _extract_agent_metrics(self, agent_metrics: dict) -> list:
+        """Extract agent-specific metrics in the correct order."""
+        return [
+            agent_metrics['message_length'],
+            agent_metrics['word_count'],
+            agent_metrics['vocabulary_size'],
+            agent_metrics['vocabulary_size'] / max(agent_metrics['word_count'], 1),  # type_token_ratio
+            agent_metrics['avg_word_length'],
+            0,  # response_time_ms - not available
+            agent_metrics['sentence_count'],
+            agent_metrics['paragraph_count'],
+            agent_metrics['avg_sentence_length'],
+            agent_metrics['question_count'],
+            agent_metrics['exclamation_count'],
+            agent_metrics['special_symbol_count'],
+            agent_metrics['number_count'],
+            agent_metrics['proper_noun_count'],
+            agent_metrics['entropy'],
+            agent_metrics['compression_ratio'],
+            agent_metrics['lexical_diversity'],
+            agent_metrics['punctuation_diversity'],
+            agent_metrics['self_repetition'],
+            agent_metrics['turn_repetition'],
+            agent_metrics['formality_score'],
+            agent_metrics['starts_with_acknowledgment'],
+            agent_metrics['new_words'],
+            # Linguistic markers
+            agent_metrics.get('hedge_words', 0),
+            agent_metrics.get('agreement_markers', 0),
+            agent_metrics.get('disagreement_markers', 0),
+            agent_metrics.get('politeness_markers', 0),
+            agent_metrics.get('first_person_singular', 0),
+            agent_metrics.get('first_person_plural', 0),
+            agent_metrics.get('second_person', 0)
+        ]
+    
+    def _insert_turn_metrics(self, values: list) -> None:
+        """Execute the turn metrics INSERT statement."""
+        self.db.execute("""
+            INSERT INTO turn_metrics (
+                conversation_id, turn_number, timestamp,
+                -- Core convergence metrics
+                convergence_score, vocabulary_overlap, structural_similarity,
+                topic_similarity, style_match,
+                -- Additional convergence metrics
+                cumulative_overlap, cross_repetition,
+                mimicry_a_to_b, mimicry_b_to_a, mutual_mimicry,
+                -- Agent A metrics
+                message_a_length, message_a_word_count, message_a_unique_words,
+                message_a_type_token_ratio, message_a_avg_word_length,
+                message_a_response_time_ms,
+                message_a_sentence_count, message_a_paragraph_count,
+                message_a_avg_sentence_length,
+                message_a_question_count, message_a_exclamation_count,
+                message_a_special_symbol_count, message_a_number_count,
+                message_a_proper_noun_count,
+                message_a_entropy, message_a_compression_ratio,
+                message_a_lexical_diversity, message_a_punctuation_diversity,
+                message_a_self_repetition, message_a_turn_repetition,
+                message_a_formality_score, message_a_starts_with_ack,
+                message_a_new_words,
+                -- Agent A linguistic markers
+                message_a_hedge_words, message_a_agreement_markers,
+                message_a_disagreement_markers, message_a_politeness_markers,
+                message_a_first_person_singular, message_a_first_person_plural,
+                message_a_second_person,
+                -- Agent B metrics
+                message_b_length, message_b_word_count, message_b_unique_words,
+                message_b_type_token_ratio, message_b_avg_word_length,
+                message_b_response_time_ms,
+                message_b_sentence_count, message_b_paragraph_count,
+                message_b_avg_sentence_length,
+                message_b_question_count, message_b_exclamation_count,
+                message_b_special_symbol_count, message_b_number_count,
+                message_b_proper_noun_count,
+                message_b_entropy, message_b_compression_ratio,
+                message_b_lexical_diversity, message_b_punctuation_diversity,
+                message_b_self_repetition, message_b_turn_repetition,
+                message_b_formality_score, message_b_starts_with_ack,
+                message_b_new_words,
+                -- Agent B linguistic markers
+                message_b_hedge_words, message_b_agreement_markers,
+                message_b_disagreement_markers, message_b_politeness_markers,
+                message_b_first_person_singular, message_b_first_person_plural,
+                message_b_second_person,
+                -- Word frequencies
+                word_frequencies_a, word_frequencies_b, shared_vocabulary,
+                -- Timing information
+                turn_start_time, turn_end_time, duration_ms
+            ) VALUES (
+                ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?
+            )
+        """, values)

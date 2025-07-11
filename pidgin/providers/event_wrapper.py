@@ -204,7 +204,7 @@ class EventAwareProvider:
                     agent_id=self.agent_id,
                     provider=provider_name,
                     retryable=retryable,
-                    retry_count=0,  # TODO: Track retry count from provider retry logic
+                    retry_count=0,  # Retry tracking is handled internally by providers
                 )
             )
 

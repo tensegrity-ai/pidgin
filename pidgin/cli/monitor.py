@@ -31,12 +31,12 @@ def monitor():
     
     Press Ctrl+C to exit.
     """
-    from ..monitor.simple_monitor import SimpleMonitor
+    from ..monitor import Monitor
     
     display.info("◆ Starting system monitor...", use_panel=False)
     display.dim("Press Ctrl+C to exit\n")
     
-    monitor = SimpleMonitor()
+    monitor = Monitor()
     try:
         asyncio.run(monitor.run())
     except KeyboardInterrupt:

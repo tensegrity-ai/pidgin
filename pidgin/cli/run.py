@@ -118,10 +118,7 @@ from . import ORIGINAL_CWD
               help='Run in background with notification when complete')
 @click.option('--tail',
               is_flag=True,
-              help='Show raw event stream during conversation')
-@click.option('--verbose', '-v',
-              is_flag=True,
-              help='Show full messages with minimal metadata')
+              help='Show formatted event stream during conversation')
 @click.option('--notify',
               is_flag=True,
               help='Send notification when complete')
@@ -135,18 +132,18 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         temp_b, output, dimension, convergence_threshold,
         convergence_action, convergence_profile, first_speaker, choose_names, awareness,
         awareness_a, awareness_b, show_system_prompts, meditation,
-        quiet, tail, verbose, notify, name, max_parallel):
+        quiet, tail, notify, name, max_parallel):
     """Run AI conversations - single or multiple.
 
     This unified command runs conversations between two AI agents.
-    By default shows a centered progress panel with key metrics.
+    By default shows the conversation messages as they are generated.
 
     [bold]EXAMPLES:[/bold]
 
     [#4c566a]Basic conversation: [/#4c566a]
       pidgin run -a claude -b gpt
 
-    [#4c566a]Show raw events: [/#4c566a]
+    [#4c566a]Event stream:       [/#4c566a]
       pidgin run -a claude -b gpt --tail
 
     [#4c566a]Run in background:  [/#4c566a]
@@ -162,9 +159,9 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
       pidgin run -a claude --meditation
     """
     # Handle display mode flags
-    mode_count = sum([quiet, tail, verbose])
+    mode_count = sum([quiet, tail])
     if mode_count > 1:
-        console.print(f"[{NORD_RED}]Error: Can only use one of --quiet, --tail, or --verbose[/{NORD_RED}]")
+        console.print(f"[{NORD_RED}]Error: Can only use one of --quiet or --tail[/{NORD_RED}]")
         return
     
     if quiet:
@@ -173,11 +170,9 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         background = True
         notify = True
     elif tail:
-        display_mode = "tail"  # Show raw events
-    elif verbose:
-        display_mode = "verbose"  # Show messages only
+        display_mode = "tail"  # Show formatted event stream
     else:
-        display_mode = "progress"  # New default: centered progress panel
+        display_mode = "verbose"  # Default: show conversation messages
     
     # Handle meditation mode
     if meditation:
@@ -242,6 +237,10 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
 
     # Handle temperature settings
     temp_a, temp_b = resolve_temperatures(temperature, temp_a, temp_b)
+    
+    # Parse and validate dimensions
+    if dimension:
+        dimension = parse_dimensions(list(dimension))
     
     # Build initial prompt
     initial_prompt = build_initial_prompt(prompt, list(dimension))
@@ -320,7 +319,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
     # For parallel execution or background, we can't use interactive displays
     if max_parallel > 1 or not run_in_foreground:
         experiment_display_mode = 'none'
-        if display_mode in ['tail', 'verbose', 'progress'] and max_parallel > 1:
+        if display_mode in ['tail', 'verbose'] and max_parallel > 1:
             display.warning(
                 f"--{display_mode} is not supported with parallel execution",
                 use_panel=False

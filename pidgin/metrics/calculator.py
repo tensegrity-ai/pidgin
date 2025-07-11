@@ -130,6 +130,7 @@ class MetricsCalculator:
         # Text analysis metrics
         question_count = self.text_analyzer.count_questions(message)
         exclamation_count = self.text_analyzer.count_exclamations(message)
+        paragraph_count = self.text_analyzer.count_paragraphs(message)
         punctuation_diversity = self.text_analyzer.calculate_punctuation_diversity(message)
         starts_with_ack = self.text_analyzer.starts_with_acknowledgment(message)
         compression_ratio = self.convergence_calc.calculate_compression_ratio(message)
@@ -141,6 +142,10 @@ class MetricsCalculator:
         
         # Repetition calculation
         repetition = self._calculate_repetition(words, agent, turn_number)
+        
+        # Calculate new words (words not seen before by this agent)
+        new_words_set = unique_words - self.all_agent_words[agent]
+        new_words_count = len(new_words_set)
         
         # Update agent's cumulative vocabulary
         self.cumulative_vocab[agent].update(unique_words)
@@ -155,6 +160,7 @@ class MetricsCalculator:
             
             # Structure
             'sentence_count': sentence_count,
+            'paragraph_count': paragraph_count,
             'avg_word_length': avg_word_length,
             'avg_sentence_length': avg_sentence_length,
             
@@ -176,12 +182,15 @@ class MetricsCalculator:
             
             # Repetition
             'self_repetition': self_repetition,
-            'repetition': repetition,
+            'turn_repetition': repetition,  # This is what import_service expects
             
             # Style
             'formality_score': formality_score,
             'starts_with_acknowledgment': starts_with_ack,
-            'unique_word_ratio': vocab_size / max(word_count, 1)
+            'unique_word_ratio': vocab_size / max(word_count, 1),
+            
+            # New words
+            'new_words': new_words_count
         }
     
     def _calculate_convergence(self, message_a: str, message_b: str,

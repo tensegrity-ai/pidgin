@@ -23,11 +23,12 @@ The foundation of our event-sourcing architecture. Every significant action crea
 CREATE TABLE events (
     event_id UUID PRIMARY KEY,
     timestamp TIMESTAMP,
-    event_type TEXT,              -- e.g., 'ConversationStartEvent', 'TurnCompleteEvent'
+    event_type TEXT NOT NULL,         -- e.g., 'ConversationStartEvent', 'TurnCompleteEvent'
     conversation_id TEXT,
     experiment_id TEXT,
-    event_data JSON,              -- Full event payload
-    event_date DATE               -- For partitioning
+    event_data JSON,                  -- Full event payload
+    event_date DATE DEFAULT CAST(now() AS DATE),  -- For partitioning
+    sequence INTEGER                  -- Sequence number for ordering events
 )
 ```
 
@@ -41,7 +42,7 @@ CREATE TABLE experiments (
     created_at TIMESTAMP,
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
-    status TEXT,                      -- 'created', 'running', 'completed', 'failed'
+    status TEXT DEFAULT 'created',    -- 'created', 'running', 'completed', 'failed'
     config JSON,                      -- Full experiment configuration
     total_conversations INTEGER,
     completed_conversations INTEGER,
@@ -56,11 +57,11 @@ Each AI-to-AI conversation within an experiment.
 ```sql
 CREATE TABLE conversations (
     conversation_id TEXT PRIMARY KEY,  -- e.g., 'conv_e5f6g7h8'
-    experiment_id TEXT REFERENCES experiments,
+    experiment_id TEXT NOT NULL,
     created_at TIMESTAMP,
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
-    status TEXT,
+    status TEXT DEFAULT 'created',
     
     -- Agent configuration
     agent_a_model TEXT,               -- e.g., 'claude-3-5-sonnet'
@@ -79,16 +80,27 @@ CREATE TABLE conversations (
     first_speaker TEXT,               -- 'agent_a' or 'agent_b'
     
     -- Results
-    total_turns INTEGER,
+    total_turns INTEGER DEFAULT 0,
     final_convergence_score DOUBLE,
     convergence_reason TEXT,          -- Why conversation ended
     duration_ms INTEGER,
-    error_message TEXT
+    
+    -- Error information if failed
+    error_message TEXT,
+    error_type TEXT,
+    error_timestamp TIMESTAMP,
+    
+    -- Context truncation flag
+    had_truncation BOOLEAN DEFAULT FALSE
+    
+    -- DuckDB limitation: Removing foreign keys due to UPDATE issues
+    -- See: https://github.com/duckdb/duckdb/issues/10574
+    -- FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
 )
 ```
 
 #### 4. `turn_metrics` - Per-Turn Metrics
-Comprehensive metrics calculated after each conversation turn (~150 metrics per turn).
+Comprehensive metrics calculated after each conversation turn (~80 metrics per turn).
 
 ```sql
 CREATE TABLE turn_metrics (
@@ -103,6 +115,13 @@ CREATE TABLE turn_metrics (
     topic_similarity DOUBLE,
     style_match DOUBLE,
     
+    -- Additional convergence metrics
+    cumulative_overlap DOUBLE,
+    cross_repetition DOUBLE,
+    mimicry_a_to_b DOUBLE,
+    mimicry_b_to_a DOUBLE,
+    mutual_mimicry DOUBLE,
+    
     -- Word frequencies (stored as JSON)
     word_frequencies_a JSON,          -- {"hello": 2, "world": 1, ...}
     word_frequencies_b JSON,
@@ -115,15 +134,75 @@ CREATE TABLE turn_metrics (
     message_a_type_token_ratio DOUBLE,
     message_a_avg_word_length DOUBLE,
     message_a_response_time_ms INTEGER,
+    message_a_sentence_count INTEGER,
+    message_a_paragraph_count INTEGER,
+    message_a_avg_sentence_length DOUBLE,
+    message_a_question_count INTEGER,
+    message_a_exclamation_count INTEGER,
+    message_a_special_symbol_count INTEGER,
+    message_a_number_count INTEGER,
+    message_a_proper_noun_count INTEGER,
+    message_a_entropy DOUBLE,
+    message_a_compression_ratio DOUBLE,
+    message_a_lexical_diversity DOUBLE,
+    message_a_punctuation_diversity DOUBLE,
+    message_a_self_repetition DOUBLE,
+    message_a_turn_repetition DOUBLE,
+    message_a_formality_score DOUBLE,
+    message_a_starts_with_ack BOOLEAN,
+    message_a_new_words INTEGER,
     
-    -- Message metrics for agent B (same fields)
+    -- Linguistic markers for Agent A
+    message_a_hedge_words INTEGER,
+    message_a_agreement_markers INTEGER,
+    message_a_disagreement_markers INTEGER,
+    message_a_politeness_markers INTEGER,
+    message_a_first_person_singular INTEGER,
+    message_a_first_person_plural INTEGER,
+    message_a_second_person INTEGER,
+    
+    -- Message metrics for agent B (same fields as Agent A)
     message_b_length INTEGER,
-    -- ... etc ...
+    message_b_word_count INTEGER,
+    message_b_unique_words INTEGER,
+    message_b_type_token_ratio DOUBLE,
+    message_b_avg_word_length DOUBLE,
+    message_b_response_time_ms INTEGER,
+    message_b_sentence_count INTEGER,
+    message_b_paragraph_count INTEGER,
+    message_b_avg_sentence_length DOUBLE,
+    message_b_question_count INTEGER,
+    message_b_exclamation_count INTEGER,
+    message_b_special_symbol_count INTEGER,
+    message_b_number_count INTEGER,
+    message_b_proper_noun_count INTEGER,
+    message_b_entropy DOUBLE,
+    message_b_compression_ratio DOUBLE,
+    message_b_lexical_diversity DOUBLE,
+    message_b_punctuation_diversity DOUBLE,
+    message_b_self_repetition DOUBLE,
+    message_b_turn_repetition DOUBLE,
+    message_b_formality_score DOUBLE,
+    message_b_starts_with_ack BOOLEAN,
+    message_b_new_words INTEGER,
     
-    -- Extended metrics
-    extended_metrics JSON,            -- Additional calculated metrics
+    -- Linguistic markers for Agent B
+    message_b_hedge_words INTEGER,
+    message_b_agreement_markers INTEGER,
+    message_b_disagreement_markers INTEGER,
+    message_b_politeness_markers INTEGER,
+    message_b_first_person_singular INTEGER,
+    message_b_first_person_plural INTEGER,
+    message_b_second_person INTEGER,
+    
+    -- Timing information
+    turn_start_time TIMESTAMP,
+    turn_end_time TIMESTAMP,
+    duration_ms INTEGER,
     
     PRIMARY KEY (conversation_id, turn_number)
+    -- DuckDB limitation: Removing foreign keys due to UPDATE issues
+    -- FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
 )
 ```
 

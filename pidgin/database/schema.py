@@ -21,6 +21,8 @@ CREATE INDEX IF NOT EXISTS idx_events_conversation ON events(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_events_experiment ON events(experiment_id);
 CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
+CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_events_exp_conv ON events(experiment_id, conversation_id);
 """
 
 # Experiments schema with native types
@@ -98,6 +100,9 @@ CREATE TABLE IF NOT EXISTS conversations (
 -- Indexes for queries
 CREATE INDEX IF NOT EXISTS idx_conversations_experiment ON conversations(experiment_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_started_at ON conversations(started_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_exp_status ON conversations(experiment_id, status);
 """
 
 # Turn metrics with comprehensive columns
@@ -208,6 +213,8 @@ CREATE TABLE IF NOT EXISTS turn_metrics (
 -- Indexes for analytics
 CREATE INDEX IF NOT EXISTS idx_turn_metrics_conversation ON turn_metrics(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_turn_metrics_convergence ON turn_metrics(convergence_score);
+CREATE INDEX IF NOT EXISTS idx_turn_metrics_turn_number ON turn_metrics(turn_number);
+CREATE INDEX IF NOT EXISTS idx_turn_metrics_conv_turn ON turn_metrics(conversation_id, turn_number);
 """
 
 # Messages table for full-text search
@@ -228,6 +235,12 @@ CREATE TABLE IF NOT EXISTS messages (
     -- DuckDB limitation: Removing foreign keys due to UPDATE issues
     -- FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
 );
+
+-- Indexes for message queries
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_turn ON messages(turn_number);
+CREATE INDEX IF NOT EXISTS idx_messages_agent ON messages(agent_id);
+CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 
 -- Full-text index (if supported by DuckDB version)
 -- CREATE FULLTEXT INDEX IF NOT EXISTS idx_messages_content ON messages(content);

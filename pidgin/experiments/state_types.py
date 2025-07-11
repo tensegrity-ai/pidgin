@@ -22,6 +22,8 @@ class ConversationState:
     convergence_scores: List[float] = field(default_factory=list)
     last_convergence: Optional[float] = None
     error_message: Optional[str] = None
+    truncation_count: int = 0
+    last_truncation_turn: Optional[int] = None
 
 
 @dataclass 

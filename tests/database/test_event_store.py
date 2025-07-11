@@ -52,7 +52,7 @@ class TestEventStoreFull:
         )
         
         # Save event
-        event_store.save_event(event, "exp_123", "conv_123")
+        event_store.save_event(event, "experiment_123", "conv_123")
         
         # Get events
         events = event_store.get_events(
@@ -145,34 +145,34 @@ class TestEventStoreFull:
             "max_turns": 5
         }
         
-        event_store.create_conversation(exp_id, "conv_123", conv_config)
+        event_store.create_conversation(exp_id, "conversation_123", conv_config)
         
         # Get conversation
-        conv = event_store.get_conversation("conv_123")
+        conversation = event_store.get_conversation("conversation_123")
         
-        assert conv is not None
-        assert conv["conversation_id"] == "conv_123"
-        assert conv["experiment_id"] == exp_id
-        assert conv["status"] == "created"
+        assert conversation is not None
+        assert conversation["conversation_id"] == "conversation_123"
+        assert conversation["experiment_id"] == exp_id
+        assert conversation["status"] == "created"
     
     def test_update_conversation_status(self, event_store):
         """Test updating conversation status."""
         # Setup
         exp_id = event_store.create_experiment("test-exp", {})
-        event_store.create_conversation(exp_id, "conv_123", {})
+        event_store.create_conversation(exp_id, "conversation_123", {})
         
         # Update status
         event_store.update_conversation_status(
-            "conv_123", 
+            "conversation_123", 
             "completed",
             end_reason="max_turns",
             error_message=None
         )
         
         # Verify
-        conv = event_store.get_conversation("conv_123")
-        assert conv["status"] == "completed"
-        assert conv["convergence_reason"] == "max_turns"
+        conversation = event_store.get_conversation("conversation_123")
+        assert conversation["status"] == "completed"
+        assert conversation["convergence_reason"] == "max_turns"
     
     def test_get_conversation_history(self, event_store):
         """Test retrieving conversation message history."""
@@ -316,15 +316,15 @@ class TestEventStoreFull:
         
         # Create multiple conversations
         for i in range(3):
-            conv_id = f"conv_{i}"
-            event_store.create_conversation(exp_id, conv_id, {})
+            conversation_id = f"conversation_{i}"
+            event_store.create_conversation(exp_id, conversation_id, {})
             
             # Add some metrics
-            event_store.log_turn_metrics(conv_id, 1, {"convergence_score": 0.5 + i * 0.1})
-            event_store.log_turn_metrics(conv_id, 2, {"convergence_score": 0.6 + i * 0.1})
+            event_store.log_turn_metrics(conversation_id, 1, {"convergence_score": 0.5 + i * 0.1})
+            event_store.log_turn_metrics(conversation_id, 2, {"convergence_score": 0.6 + i * 0.1})
             
             # Complete conversations
-            event_store.update_conversation_status(conv_id, "completed")
+            event_store.update_conversation_status(conversation_id, "completed")
         
         # Get experiment metrics
         metrics = event_store.get_experiment_metrics(exp_id)

@@ -1,5 +1,5 @@
 """System monitoring components."""
 
-from .system_monitor import SystemMonitor
+from .monitor import Monitor
 
-__all__ = ["SystemMonitor"]
+__all__ = ["Monitor"]

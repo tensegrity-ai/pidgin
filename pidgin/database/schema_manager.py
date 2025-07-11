@@ -46,7 +46,7 @@ class SchemaManager:
             if cache_key in self._initialized_databases:
                 return
             
-            logger.info(f"Initializing schema for {cache_key}")
+            logger.debug(f"Initializing schema for {cache_key}")
             
             # Create all tables
             for schema_sql in get_all_schemas():
@@ -55,7 +55,7 @@ class SchemaManager:
             # Mark as initialized
             self._initialized_databases.add(cache_key)
             
-            logger.info(f"Schema initialized for {cache_key}")
+            logger.debug(f"Schema initialized for {cache_key}")
     
     def clear_cache(self) -> None:
         """Clear the schema cache (useful for testing)."""

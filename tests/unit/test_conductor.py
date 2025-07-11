@@ -99,7 +99,6 @@ class TestConductorConversation:
         conductor.lifecycle.add_initial_messages = AsyncMock()
         conductor.lifecycle.emit_start_events = AsyncMock()
         conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
-        conductor.lifecycle.save_transcripts = AsyncMock()
         conductor.lifecycle.initialize_event_system = AsyncMock()
         
         conductor.message_handler = Mock()  # Has both sync and async methods
@@ -189,7 +188,6 @@ class TestConductorConversation:
         conductor.lifecycle.add_initial_messages.assert_called_once()
         conductor.lifecycle.emit_start_events.assert_called_once()
         conductor.lifecycle.emit_end_event_with_reason.assert_called_once()
-        conductor.lifecycle.save_transcripts.assert_called_once()
         
         # Verify turn was executed
         conductor.turn_executor.run_single_turn.assert_called_once()

@@ -1,5 +1,7 @@
-"""Tail display for showing raw event stream in console."""
+"""Tail display for showing formatted event stream in console."""
 
+from datetime import datetime
+from typing import Dict, Any
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -15,19 +17,49 @@ from ..core.events import (
     MessageRequestEvent,
     MessageCompleteEvent,
     MessageChunkEvent,
+    SystemPromptEvent,
+    APIErrorEvent,
+    ContextTruncationEvent,
 )
 
 
 class TailDisplay:
-    """Display raw event stream in console (like tail -f for events)."""
+    """Display formatted event stream in console."""
+    
+    # Nord color palette
+    NORD_GREEN = "#a3be8c"
+    NORD_RED = "#bf616a"
+    NORD_BLUE = "#5e81ac"
+    NORD_CYAN = "#88c0d0"
+    NORD_YELLOW = "#ebcb8b"
+    NORD_ORANGE = "#d08770"
+    NORD_PURPLE = "#b48ead"
+    NORD_GRAY = "#4c566a"
+    NORD_LIGHT = "#d8dee9"
     
     EVENT_COLORS = {
-        ConversationStartEvent: "bold green",
-        ConversationEndEvent: "bold red",
-        TurnStartEvent: "cyan",
-        TurnCompleteEvent: "blue",
-        MessageRequestEvent: "yellow",
-        MessageCompleteEvent: "magenta",
+        ConversationStartEvent: NORD_GREEN,
+        ConversationEndEvent: NORD_RED,
+        TurnStartEvent: NORD_BLUE,
+        TurnCompleteEvent: NORD_BLUE,
+        MessageRequestEvent: NORD_YELLOW,
+        MessageCompleteEvent: NORD_CYAN,
+        SystemPromptEvent: NORD_GRAY,
+        APIErrorEvent: NORD_RED,
+        ContextTruncationEvent: NORD_ORANGE,
+    }
+    
+    EVENT_GLYPHS = {
+        ConversationStartEvent: "◆",
+        ConversationEndEvent: "◇",
+        TurnStartEvent: "▶",
+        TurnCompleteEvent: "■",
+        MessageRequestEvent: "→",
+        MessageCompleteEvent: "✓",
+        MessageChunkEvent: "·",
+        SystemPromptEvent: "⚙",
+        APIErrorEvent: "✗",
+        ContextTruncationEvent: "⚠",
     }
     
     def __init__(self, bus: EventBus, console: Console):
@@ -39,6 +71,7 @@ class TailDisplay:
         """
         self.bus = bus
         self.console = console
+        self.chunk_buffer = {}  # Buffer for message chunks
         
         # Subscribe to ALL events
         bus.subscribe(Event, self.log_event)
@@ -52,34 +85,224 @@ class TailDisplay:
         # Skip if no console provided (file-only logging)
         if self.console is None:
             return
+        
+        # Handle message chunks separately
+        if isinstance(event, MessageChunkEvent):
+            self._handle_message_chunk(event)
+            return
             
-        # Get color for this event type
-        color = self.EVENT_COLORS.get(type(event), "white")
+        # Get event type and metadata
+        event_type = type(event)
+        color = self.EVENT_COLORS.get(event_type, self.NORD_LIGHT)
+        glyph = self.EVENT_GLYPHS.get(event_type, "●")
         
         # Format timestamp
         timestamp = event.timestamp.strftime("%H:%M:%S.%f")[:-3]
         
         # Create title with event type
-        event_type = type(event).__name__
-        title = f"[{color}][{timestamp}] {event_type}[/{color}]"
+        event_name = event_type.__name__
         
-        # Build content based on event type
-        content = self._format_event_content(event)
+        # Build header
+        header = Text()
+        header.append(f"[{timestamp}] ", style=self.NORD_GRAY)
+        header.append(f"{glyph} {event_name}", style=color + " bold")
         
-        # Display based on event importance
-        if isinstance(event, (ConversationStartEvent, ConversationEndEvent)):
-            # Major events get panels
-            self.console.print(Panel(content, title=title, border_style=color))
-        elif isinstance(event, MessageChunkEvent):
-            # Chunks are inline for less noise (but still visible!)
-            self.console.print(f"{title} {content}", highlight=False)
+        # Display based on event type
+        if isinstance(event, ConversationStartEvent):
+            self._display_conversation_start(event, header, color)
+        elif isinstance(event, ConversationEndEvent):
+            self._display_conversation_end(event, header, color)
+        elif isinstance(event, TurnStartEvent):
+            self._display_turn_start(event, header)
+        elif isinstance(event, TurnCompleteEvent):
+            self._display_turn_complete(event, header)
+        elif isinstance(event, MessageRequestEvent):
+            self._display_message_request(event, header)
+        elif isinstance(event, MessageCompleteEvent):
+            self._display_message_complete(event, header, color)
+        elif isinstance(event, APIErrorEvent):
+            self._display_api_error(event, header, color)
+        elif isinstance(event, ContextTruncationEvent):
+            self._display_context_truncation(event, header, color)
+        elif isinstance(event, SystemPromptEvent):
+            self._display_system_prompt(event, header)
         else:
-            # Everything else gets nice formatting
-            self.console.print(f"\n{title}")
-            self.console.print(content)
+            # Generic event display
+            self._display_generic_event(event, header)
+    
+    def _display_conversation_start(self, event: ConversationStartEvent, header: Text, color: str) -> None:
+        """Display conversation start event."""
+        table = Table.grid(padding=1)
+        table.add_column(style=self.NORD_GRAY)
+        table.add_column()
+        
+        table.add_row("conversation_id:", event.conversation_id)
+        table.add_row("agent_a:", f"{event.agent_a_model} (temp: {event.temperature_a or 'default'})")
+        table.add_row("agent_b:", f"{event.agent_b_model} (temp: {event.temperature_b or 'default'})")
+        table.add_row("max_turns:", str(event.max_turns))
+        
+        panel = Panel(
+            table,
+            title=header,
+            title_align="left",
+            border_style=color,
+            expand=False
+        )
+        self.console.print(panel)
+        
+        # Show initial prompt separately if present
+        if event.initial_prompt:
+            prompt_panel = Panel(
+                event.initial_prompt,
+                title="Initial Prompt",
+                title_align="left",
+                border_style=self.NORD_CYAN,
+                padding=(1, 2)
+            )
+            self.console.print(prompt_panel)
+        self.console.print()
+    
+    def _display_conversation_end(self, event: ConversationEndEvent, header: Text, color: str) -> None:
+        """Display conversation end event."""
+        # Format reason nicely
+        reason_map = {
+            "max_turns_reached": "Max turns reached",
+            "high_convergence": "High convergence detected",
+            "interrupted": "User interrupted",
+            "error": "Error occurred"
+        }
+        reason_display = reason_map.get(event.reason, event.reason)
+        
+        content = f"Reason: {reason_display}\n"
+        content += f"Total turns: {event.total_turns}\n"
+        
+        # Format duration
+        if hasattr(event, 'duration_ms') and event.duration_ms:
+            duration_s = event.duration_ms / 1000
+            if duration_s < 60:
+                content += f"Duration: {duration_s:.1f}s"
+            else:
+                minutes = int(duration_s // 60)
+                seconds = int(duration_s % 60)
+                content += f"Duration: {minutes}m {seconds}s"
+        
+        # Add convergence if available
+        if hasattr(event, 'final_convergence') and event.final_convergence is not None:
+            content += f"\nFinal convergence: {event.final_convergence:.3f}"
+        
+        panel = Panel(
+            content,
+            title=header,
+            title_align="left",
+            border_style=color,
+            expand=False
+        )
+        self.console.print(panel)
+        self.console.print()
+    
+    def _display_turn_start(self, event: TurnStartEvent, header: Text) -> None:
+        """Display turn start event."""
+        self.console.print(header, f"Turn {event.turn_number}")
+    
+    def _display_turn_complete(self, event: TurnCompleteEvent, header: Text) -> None:
+        """Display turn complete event."""
+        content = f"turn: {event.turn_number}"
+        if event.convergence_score is not None:
+            content += f" | convergence: {event.convergence_score:.3f}"
+        self.console.print(header, content)
+        self.console.print()
+    
+    def _display_message_request(self, event: MessageRequestEvent, header: Text) -> None:
+        """Display message request event."""
+        self.console.print(header, f"{event.agent_id} thinking...")
+    
+    def _display_message_complete(self, event: MessageCompleteEvent, header: Text, color: str) -> None:
+        """Display message complete event."""
+        # Get agent color
+        agent_color = self.NORD_GREEN if event.agent_id == "agent_a" else self.NORD_BLUE
+        
+        # Format message content
+        content = Text()
+        content.append(f"{event.agent_id}: ", style=agent_color + " bold")
+        content.append(event.message.content if hasattr(event.message, 'content') else str(event.message))
+        
+        # Add metadata
+        metadata = []
+        if hasattr(event, 'duration_ms') and event.duration_ms is not None:
+            metadata.append(f"duration: {event.duration_ms/1000:.1f}s")
+        if hasattr(event, 'tokens_used') and event.tokens_used:
+            metadata.append(f"tokens: {event.tokens_used}")
+        
+        if metadata:
+            content.append(f"\n[{self.NORD_GRAY}]{' | '.join(metadata)}[/{self.NORD_GRAY}]")
+        
+        self.console.print(header)
+        self.console.print(content)
+        self.console.print()
+    
+    def _handle_message_chunk(self, event: MessageChunkEvent) -> None:
+        """Handle message chunks."""
+        # Show chunks inline with a subtle indicator
+        chunk_text = Text()
+        chunk_text.append("·", style=self.NORD_PURPLE)
+        chunk_text.append(event.content, style=self.NORD_GRAY)
+        self.console.print(chunk_text, end="")
+    
+    def _display_api_error(self, event: APIErrorEvent, header: Text, color: str) -> None:
+        """Display API error event."""
+        error_panel = Panel(
+            f"Provider: {event.provider}\nError: {event.error_type}\n{event.error_message}",
+            title=header,
+            title_align="left",
+            border_style=color,
+            expand=False
+        )
+        self.console.print(error_panel)
+        self.console.print()
+    
+    def _display_context_truncation(self, event: ContextTruncationEvent, header: Text, color: str) -> None:
+        """Display context truncation event."""
+        content = f"Agent: {event.agent_id}\n"
+        content += f"Messages removed: {event.messages_removed}\n"
+        content += f"Tokens before: {event.tokens_before} → after: {event.tokens_after}"
+        
+        panel = Panel(
+            content,
+            title=header,
+            title_align="left",
+            border_style=color,
+            expand=False
+        )
+        self.console.print(panel)
+        self.console.print()
+    
+    def _display_system_prompt(self, event: SystemPromptEvent, header: Text) -> None:
+        """Display system prompt event."""
+        # Show system prompts in a condensed format
+        self.console.print(header, f"{event.agent_id} system prompt configured")
+    
+    def _display_generic_event(self, event: Event, header: Text) -> None:
+        """Display generic event."""
+        # Convert event to dict and format key fields
+        event_dict = event.dict()
+        event_dict.pop('timestamp', None)  # Already in header
+        
+        # Format as simple key-value pairs
+        content = []
+        for key, value in event_dict.items():
+            if value is not None and value != "":
+                content.append(f"{key}: {value}")
+        
+        if content:
+            self.console.print(header)
+            for line in content:
+                self.console.print(f"  {line}", style=self.NORD_GRAY)
+            self.console.print()
+        else:
+            self.console.print(header)
     
     def _format_event_content(self, event: Event) -> str:
-        """Format event content based on type.
+        """Legacy format method for backward compatibility.
         
         Args:
             event: The event to format
@@ -98,63 +321,59 @@ class TailDisplay:
             if event.temperature_b is not None:
                 content += f" (temp: {event.temperature_b})"
             content += (
-                f"\n  max_turns: {event.max_turns}\n"
-                f"  initial_prompt: {event.initial_prompt[:50]}..."
+                f"\n  initial_prompt: {event.initial_prompt[:50]}..."
+                f"\n  max_turns: {event.max_turns}"
             )
             return content
-            
+        
         elif isinstance(event, ConversationEndEvent):
             return (
+                f"  conversation_id: {event.conversation_id}\n"
                 f"  reason: {event.reason}\n"
+                f"  final_convergence: {event.final_convergence}\n"
                 f"  total_turns: {event.total_turns}\n"
-                f"  duration: {event.duration_ms / 1000:.2f}s"
+                f"  duration: {event.duration_ms}ms"
             )
-            
+        
         elif isinstance(event, TurnStartEvent):
-            return (
-                f"  turn_number: {event.turn_number}"
-            )
-            
+            return f"  turn {event.turn_number} of {event.max_turns}"
+        
         elif isinstance(event, TurnCompleteEvent):
-            # Show message previews
-            a_preview = event.turn.agent_a_message.content[:50]
-            b_preview = event.turn.agent_b_message.content[:50]
-            return (
-                f"  turn_number: {event.turn_number}\n"
-                f"  agent_a: \"{a_preview}...\"\n"
-                f"  agent_b: \"{b_preview}...\""
-            )
-            
+            content = f"  turn {event.turn_number} complete\n"
+            if event.convergence_score is not None:
+                content += f"  convergence: {event.convergence_score:.3f}\n"
+            content += f"  messages: {event.turn_messages}"
+            return content
+        
         elif isinstance(event, MessageRequestEvent):
-            return (
-                f"  agent_id: {event.agent_id}\n"
-                f"  turn_number: {event.turn_number}\n"
-                f"  history_length: {len(event.conversation_history)}"
-            )
-            
-        elif isinstance(event, MessageChunkEvent):
-            # Inline format for chunks
-            chunk_display = repr(event.chunk)[:30]
-            return (
-                f"agent_id: {event.agent_id} | "
-                f"chunk[{event.chunk_index}]: {chunk_display} | "
-                f"elapsed: {event.elapsed_ms}ms"
-            )
-            
+            return f"  {event.agent_id} generating response..."
+        
         elif isinstance(event, MessageCompleteEvent):
-            preview = event.message.content[:80]
-            return (
-                f"  agent_id: {event.agent_id}\n"
-                f"  message_length: {len(event.message.content)}\n"
-                f"  tokens_used: {event.tokens_used}\n"
-                f"  duration: {event.duration_ms}ms\n"
-                f"  preview: \"{preview}...\""
-            )
+            msg = event.message
+            content = f"  agent: {event.agent_id}\n"
+            # Handle both string messages and Message objects
+            if hasattr(msg, 'content'):
+                content += f"  content: {msg.content[:100]}..."
+            else:
+                content += f"  content: {str(msg)[:100]}..."
             
+            if event.duration is not None:
+                content += f"\n  duration: {event.duration:.2f}s"
+            return content
+        
+        elif isinstance(event, MessageChunkEvent):
+            # For chunks, return just the content - these are displayed inline
+            return event.content
+        
         else:
-            # Generic formatting for any other events
-            attrs = []
-            for key, value in event.__dict__.items():
-                if key not in ['timestamp', 'event_id']:
-                    attrs.append(f"  {key}: {value}")
-            return "\n".join(attrs) if attrs else "  (no additional data)"
+            # Generic fallback - show all fields
+            event_dict = event.dict()
+            # Remove timestamp as it's in the header
+            event_dict.pop('timestamp', None)
+            
+            lines = []
+            for key, value in event_dict.items():
+                if value is not None:
+                    lines.append(f"  {key}: {value}")
+            
+            return "\n".join(lines) if lines else "  (no data)"

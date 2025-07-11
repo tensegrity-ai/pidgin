@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any
 from dataclasses import dataclass, field
 
 from .state_types import ExperimentState, ConversationState
@@ -71,16 +71,17 @@ class StateBuilder:
         """
         experiments = []
         
-        # Find all experiment directories
-        for exp_dir in base_dir.glob("exp_*"):
-            if not exp_dir.is_dir():
-                continue
-            
-            state = self.get_experiment_state(exp_dir)
-            if state:
-                # Apply status filter if provided
-                if status_filter is None or state.status in status_filter:
-                    experiments.append(state)
+        # Find all experiment directories (both exp_* and experiment_* patterns)
+        for pattern in ["exp_*", "experiment_*"]:
+            for exp_dir in base_dir.glob(pattern):
+                if not exp_dir.is_dir():
+                    continue
+                
+                state = self.get_experiment_state(exp_dir)
+                if state:
+                    # Apply status filter if provided
+                    if status_filter is None or state.status in status_filter:
+                        experiments.append(state)
         
         return experiments
     
@@ -143,10 +144,27 @@ class StateBuilder:
             
             # Parse timestamps
             if updated := conv_info.get("last_updated"):
+                # Use last_updated as a proxy for both started and completed
                 conv_state.started_at = self._parse_timestamp(updated)
+                if conv_state.status == "completed":
+                    conv_state.completed_at = self._parse_timestamp(updated)
             
-            # Get convergence from last turn (would need JSONL for this)
-            # For now, we'll leave it empty
+            # Try to get more accurate timestamps from JSONL if available
+            jsonl_timestamps = self._get_conversation_timestamps(exp_dir, conv_id)
+            if jsonl_timestamps:
+                if jsonl_timestamps.get('started_at'):
+                    conv_state.started_at = jsonl_timestamps['started_at']
+                if jsonl_timestamps.get('completed_at'):
+                    conv_state.completed_at = jsonl_timestamps['completed_at']
+            
+            # Get convergence from JSONL files
+            conv_state.last_convergence = self._get_last_convergence(exp_dir, conv_id)
+            
+            # Get truncation info from JSONL files
+            truncation_info = self._get_truncation_info(exp_dir, conv_id)
+            if truncation_info:
+                conv_state.truncation_count = truncation_info.get('count', 0)
+                conv_state.last_truncation_turn = truncation_info.get('last_turn')
             
             state.conversations[conv_id] = conv_state
         
@@ -214,6 +232,159 @@ class StateBuilder:
                 return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
             except ValueError:
                 return datetime.now()
+    
+    def _get_last_convergence(self, exp_dir: Path, conv_id: str) -> Optional[float]:
+        """Get the last convergence score for a conversation from JSONL files.
+        
+        Args:
+            exp_dir: Experiment directory
+            conv_id: Conversation ID
+            
+        Returns:
+            Last convergence score or None if not found
+        """
+        # Look for JSONL files in the experiment directory
+        jsonl_files = list(exp_dir.glob("*.jsonl"))
+        if not jsonl_files:
+            return None
+        
+        # Read the most recent JSONL file (typically there's only one per conversation)
+        last_convergence = None
+        for jsonl_file in jsonl_files:
+            if conv_id in jsonl_file.name:
+                try:
+                    with open(jsonl_file, 'r') as f:
+                        # Read file backwards to find the last TurnCompleteEvent
+                        lines = f.readlines()
+                        for line in reversed(lines):
+                            if not line.strip():
+                                continue
+                            try:
+                                event = json.loads(line.strip())
+                                if (event.get('event_type') == 'TurnCompleteEvent' and 
+                                    event.get('conversation_id') == conv_id and 
+                                    event.get('convergence_score') is not None):
+                                    last_convergence = event.get('convergence_score')
+                                    break
+                            except (json.JSONDecodeError, KeyError):
+                                continue
+                except (OSError, IOError):
+                    continue
+                
+                # If we found a convergence score, we're done
+                if last_convergence is not None:
+                    break
+        
+        return last_convergence
+    
+    def _get_conversation_timestamps(self, exp_dir: Path, conv_id: str) -> Dict[str, Optional[datetime]]:
+        """Get start and end timestamps for a conversation from JSONL files.
+        
+        Args:
+            exp_dir: Experiment directory
+            conv_id: Conversation ID
+            
+        Returns:
+            Dictionary with 'started_at' and 'completed_at' keys
+        """
+        jsonl_files = list(exp_dir.glob("*.jsonl"))
+        if not jsonl_files:
+            return {}
+        
+        started_at = None
+        completed_at = None
+        
+        for jsonl_file in jsonl_files:
+            if conv_id in jsonl_file.name:
+                try:
+                    with open(jsonl_file, 'r') as f:
+                        lines = f.readlines()
+                        
+                        # Find first ConversationStartEvent
+                        for line in lines:
+                            if not line.strip():
+                                continue
+                            try:
+                                event = json.loads(line.strip())
+                                if (event.get('event_type') == 'ConversationStartEvent' and 
+                                    event.get('conversation_id') == conv_id):
+                                    started_at = self._parse_timestamp(event.get('timestamp'))
+                                    break
+                            except (json.JSONDecodeError, KeyError):
+                                continue
+                        
+                        # Find last ConversationEndEvent
+                        for line in reversed(lines):
+                            if not line.strip():
+                                continue
+                            try:
+                                event = json.loads(line.strip())
+                                if (event.get('event_type') == 'ConversationEndEvent' and 
+                                    event.get('conversation_id') == conv_id):
+                                    completed_at = self._parse_timestamp(event.get('timestamp'))
+                                    break
+                            except (json.JSONDecodeError, KeyError):
+                                continue
+                                
+                except (OSError, IOError):
+                    continue
+                
+                # If we found timestamps, we're done
+                if started_at is not None:
+                    break
+        
+        return {
+            'started_at': started_at,
+            'completed_at': completed_at
+        }
+    
+    def _get_truncation_info(self, exp_dir: Path, conv_id: str) -> Dict[str, Any]:
+        """Get truncation information for a conversation from JSONL files.
+        
+        Args:
+            exp_dir: Experiment directory
+            conv_id: Conversation ID
+            
+        Returns:
+            Dictionary with 'count' and 'last_turn' keys
+        """
+        jsonl_files = list(exp_dir.glob("*.jsonl"))
+        if not jsonl_files:
+            return {}
+        
+        truncation_count = 0
+        last_truncation_turn = None
+        
+        for jsonl_file in jsonl_files:
+            if conv_id in jsonl_file.name:
+                try:
+                    with open(jsonl_file, 'r') as f:
+                        lines = f.readlines()
+                        
+                        # Count ContextTruncationEvent occurrences
+                        for line in lines:
+                            if not line.strip():
+                                continue
+                            try:
+                                event = json.loads(line.strip())
+                                if (event.get('event_type') == 'ContextTruncationEvent' and 
+                                    event.get('conversation_id') == conv_id):
+                                    truncation_count += 1
+                                    last_truncation_turn = event.get('turn_number')
+                            except (json.JSONDecodeError, KeyError):
+                                continue
+                                
+                except (OSError, IOError):
+                    continue
+                
+                # If we found truncations, we're done
+                if truncation_count > 0:
+                    break
+        
+        return {
+            'count': truncation_count,
+            'last_turn': last_truncation_turn
+        }
 
 
 # Global instance for easy reuse

@@ -50,7 +50,7 @@ class TranscriptGenerator:
         summary_path = transcripts_dir / "summary.md"
         with open(summary_path, "w") as f:
             f.write(self._generate_experiment_summary(exp_data))
-        logger.info(f"Generated experiment summary: {summary_path}")
+        logger.debug(f"Generated experiment summary: {summary_path}")
         
         # Get all conversations
         conversations = self._get_conversations(experiment_id)
@@ -64,7 +64,7 @@ class TranscriptGenerator:
             transcript_path = transcripts_dir / f"{conv_id}.md"
             with open(transcript_path, "w") as f:
                 f.write(transcript)
-            logger.info(f"Generated transcript: {transcript_path}")
+            logger.debug(f"Generated transcript: {transcript_path}")
     
     def generate_conversation_transcript(self, conversation_id: str) -> str:
         """Generate markdown transcript for a single conversation.

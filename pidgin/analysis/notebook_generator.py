@@ -8,6 +8,7 @@ from datetime import datetime
 try:
     import nbformat
     from nbformat.v4 import new_notebook, new_code_cell, new_markdown_cell
+
     NBFORMAT_AVAILABLE = True
 except ImportError:
     NBFORMAT_AVAILABLE = False
@@ -20,108 +21,112 @@ logger = get_logger("notebook_generator")
 
 class NotebookGenerator:
     """Generates Jupyter notebooks for experiment analysis."""
-    
+
     def __init__(self, experiment_dir: Path):
         """Initialize with experiment directory.
-        
+
         Args:
             experiment_dir: Path to experiment directory
         """
         self.experiment_dir = experiment_dir
         self.manifest_path = experiment_dir / "manifest.json"
         self.notebook_path = experiment_dir / "analysis.ipynb"
-    
+
     def generate(self) -> bool:
         """Generate analysis notebook from experiment data.
-        
+
         Returns:
             True if successful, False otherwise
         """
         if not NBFORMAT_AVAILABLE:
-            logger.info("Jupyter notebook generation skipped (nbformat not installed)")
-            logger.info("Install with: pip install nbformat jupyter")
+            logger.debug("Jupyter notebook generation skipped (nbformat not installed)")
+            # Don't log the install instruction - this is handled in the runner
             return False
-            
+
         try:
             # Load manifest
             if not self.manifest_path.exists():
                 logger.warning(f"No manifest.json found in {self.experiment_dir}")
                 return False
-            
-            with open(self.manifest_path, 'r') as f:
+
+            with open(self.manifest_path, "r") as f:
                 manifest = json.load(f)
-            
+
             # Create notebook
             nb = self._create_notebook(manifest)
-            
+
             # Write notebook
-            with open(self.notebook_path, 'w') as f:
+            with open(self.notebook_path, "w") as f:
                 nbformat.write(nb, f)
-            
-            logger.info(f"Generated analysis.ipynb for experiment {manifest.get('name', 'unknown')}")
+
+            logger.debug(
+                f"Generated analysis.ipynb for experiment {manifest.get('name', 'unknown')}"
+            )
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to generate notebook: {e}")
             return False
-    
-    def _create_notebook(self, manifest: Dict[str, Any]) -> Optional['nbformat.NotebookNode']:
+
+    def _create_notebook(
+        self, manifest: Dict[str, Any]
+    ) -> Optional["nbformat.NotebookNode"]:
         """Create notebook structure from manifest data.
-        
+
         Args:
             manifest: Experiment manifest data
-            
+
         Returns:
             Jupyter notebook object
         """
         cells = []
-        
+
         # Title and overview
         cells.append(self._create_title_cell(manifest))
-        
+
         # Setup and imports
         cells.append(self._create_setup_cell())
-        
+
         # Load experiment data
         cells.append(self._create_data_loading_cell(manifest))
-        
+
         # Basic statistics
         cells.append(self._create_statistics_cell())
-        
+
         # Convergence analysis
         cells.append(self._create_convergence_analysis_cell())
-        
+
         # Message length analysis
         cells.append(self._create_length_analysis_cell())
-        
+
         # Vocabulary analysis
         cells.append(self._create_vocabulary_analysis_cell())
-        
+
         # Turn-by-turn visualization
         cells.append(self._create_turn_visualization_cell())
-        
+
         # Export options
         cells.append(self._create_export_cell())
-        
+
         # Create notebook
         nb = new_notebook()
         nb.cells = cells
         nb.metadata = {
-            'kernelspec': {
-                'display_name': 'Python 3',
-                'language': 'python',
-                'name': 'python3'
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
             }
         }
-        
+
         return nb
-    
-    def _create_title_cell(self, manifest: Dict[str, Any]) -> 'nbformat.NotebookNode':
+
+    def _create_title_cell(self, manifest: Dict[str, Any]) -> "nbformat.NotebookNode":
         """Create title and overview markdown cell."""
         exp_name = manifest.get("name", "Unknown Experiment")
         exp_id = manifest.get("experiment_id", "unknown")
         created_at = manifest.get("created_at", "")
-        
+
         content = f"""# Experiment Analysis: {exp_name}
 
 **Experiment ID**: `{exp_id}`  
@@ -135,12 +140,12 @@ class NotebookGenerator:
 - **Conversations**: {manifest.get("total_conversations", 0)}
 
 This notebook provides automated analysis of the experiment results."""
-        
+
         return new_markdown_cell(content)
-    
-    def _create_setup_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_setup_cell(self) -> "nbformat.NotebookNode":
         """Create setup and imports code cell."""
-        code = '''# Import required libraries
+        code = """# Import required libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -160,14 +165,16 @@ pd.set_option('display.float_format', '{:.3f}'.format)
 
 # Define experiment directory
 exp_dir = Path(".")
-print(f"Analyzing experiment in: {exp_dir.resolve()}")'''
-        
+print(f"Analyzing experiment in: {exp_dir.resolve()}")"""
+
         return new_code_cell(code)
-    
-    def _create_data_loading_cell(self, manifest: Dict[str, Any]) -> 'nbformat.NotebookNode':
+
+    def _create_data_loading_cell(
+        self, manifest: Dict[str, Any]
+    ) -> "nbformat.NotebookNode":
         """Create data loading code cell."""
         exp_id = manifest.get("experiment_id", "unknown")
-        
+
         code = f'''# Load experiment data from DuckDB
 db_path = Path("../../experiments.duckdb")
 
@@ -214,12 +221,12 @@ else:
     # Load from JSONL files
     jsonl_files = list(Path(".").glob("conv_*.jsonl"))
     print(f"Found {{len(jsonl_files)}} conversation files")'''
-        
+
         return new_code_cell(code)
-    
-    def _create_statistics_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_statistics_cell(self) -> "nbformat.NotebookNode":
         """Create basic statistics markdown and code cells."""
-        code = '''# Basic Statistics
+        code = """# Basic Statistics
 if 'turn_metrics' in locals():
     # Summary statistics
     print("\\n=== Conversation Summary ===")
@@ -236,19 +243,19 @@ if 'turn_metrics' in locals():
     # Convergence statistics
     if 'convergence_score' in turn_metrics.columns:
         print(f"\\nAverage convergence score: {turn_metrics['convergence_score'].mean():.3f}")
-        print(f"Final convergence scores: {turn_metrics.groupby('conversation_id')['convergence_score'].last().mean():.3f}")'''
-        
+        print(f"Final convergence scores: {turn_metrics.groupby('conversation_id')['convergence_score'].last().mean():.3f}")"""
+
         return new_code_cell(code)
-    
-    def _create_convergence_analysis_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_convergence_analysis_cell(self) -> "nbformat.NotebookNode":
         """Create convergence analysis visualization."""
-        code = '''# Convergence Analysis
+        code = """# Convergence Analysis
 if 'turn_metrics' in locals() and 'convergence_score' in turn_metrics.columns:
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     
     # 1. Convergence over turns (all conversations)
     ax = axes[0, 0]
-    for conv_id in turn_metrics['conversation_id'].unique()[:10]:  # First 10 convs
+    for conversation_id in turn_metrics['conversation_id'].unique()[:10]:  # First 10 conversations
         conv_data = turn_metrics[turn_metrics['conversation_id'] == conv_id]
         ax.plot(conv_data['turn_number'], conv_data['convergence_score'], 
                 alpha=0.5, linewidth=1)
@@ -294,13 +301,13 @@ if 'turn_metrics' in locals() and 'convergence_score' in turn_metrics.columns:
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
     
     plt.tight_layout()
-    plt.show()'''
-        
+    plt.show()"""
+
         return new_code_cell(code)
-    
-    def _create_length_analysis_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_length_analysis_cell(self) -> "nbformat.NotebookNode":
         """Create message length analysis."""
-        code = '''# Message Length Analysis
+        code = """# Message Length Analysis
 if 'turn_metrics' in locals():
     fig, axes = plt.subplots(1, 2, figsize=(15, 5))
     
@@ -336,13 +343,13 @@ if 'turn_metrics' in locals():
         # Statistics
         print(f"Average message length - Agent A: {agent_a_lengths.mean():.1f} chars")
         print(f"Average message length - Agent B: {agent_b_lengths.mean():.1f} chars")
-        print(f"Length correlation: {agent_a_lengths.corr(agent_b_lengths):.3f}")'''
-        
+        print(f"Length correlation: {agent_a_lengths.corr(agent_b_lengths):.3f}")"""
+
         return new_code_cell(code)
-    
-    def _create_vocabulary_analysis_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_vocabulary_analysis_cell(self) -> "nbformat.NotebookNode":
         """Create vocabulary analysis."""
-        code = '''# Vocabulary Analysis
+        code = """# Vocabulary Analysis
 if 'turn_metrics' in locals() and 'vocabulary_size_a' in turn_metrics.columns:
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     
@@ -388,13 +395,13 @@ if 'turn_metrics' in locals() and 'vocabulary_size_a' in turn_metrics.columns:
         ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()'''
-        
+    plt.show()"""
+
         return new_code_cell(code)
-    
-    def _create_turn_visualization_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_turn_visualization_cell(self) -> "nbformat.NotebookNode":
         """Create turn-by-turn visualization."""
-        code = '''# Turn-by-Turn Metrics Visualization
+        code = """# Turn-by-Turn Metrics Visualization
 if 'turn_metrics' in locals():
     # Select a sample conversation for detailed view
     sample_conv_id = turn_metrics['conversation_id'].iloc[0]
@@ -435,13 +442,13 @@ if 'turn_metrics' in locals():
         sample_messages = messages[messages['conversation_id'] == sample_conv_id].head(10)
         print(f"\\nFirst 10 messages from conversation {sample_conv_id[:8]}:")
         for _, msg in sample_messages.iterrows():
-            print(f"\\n[{msg['role']}]: {msg['content'][:100]}...")'''
-        
+            print(f"\\n[{msg['role']}]: {msg['content'][:100]}...")"""
+
         return new_code_cell(code)
-    
-    def _create_export_cell(self) -> 'nbformat.NotebookNode':
+
+    def _create_export_cell(self) -> "nbformat.NotebookNode":
         """Create data export options."""
-        code = '''# Export Options
+        code = """# Export Options
 # Export key metrics to CSV for further analysis
 if 'turn_metrics' in locals():
     # Summary by conversation
@@ -473,16 +480,16 @@ if 'conversations' in locals():
     print("\\n=== Experiment Report ===")
     for key, value in report.items():
         if value is not None:
-            print(f"{key}: {value:.3f}" if isinstance(value, float) else f"{key}: {value}")'''
-        
+            print(f"{key}: {value:.3f}" if isinstance(value, float) else f"{key}: {value}")"""
+
         return new_code_cell(code)
-    
+
     def _format_timestamp(self, timestamp: str) -> str:
         """Format ISO timestamp to readable format."""
         if not timestamp:
             return "Unknown"
         try:
-            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
         except (ValueError, AttributeError):
             return timestamp

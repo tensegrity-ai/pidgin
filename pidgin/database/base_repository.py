@@ -10,6 +10,13 @@ from ..io.logger import get_logger
 
 logger = get_logger("base_repository")
 
+# Optional query profiling (imported only when needed)
+try:
+    from .query_profiler import query_profiler
+    PROFILING_AVAILABLE = True
+except ImportError:
+    PROFILING_AVAILABLE = False
+
 
 class BaseRepository:
     """Base repository with common database operations.
@@ -18,13 +25,15 @@ class BaseRepository:
     for all repository implementations.
     """
     
-    def __init__(self, db: duckdb.DuckDBPyConnection):
+    def __init__(self, db: duckdb.DuckDBPyConnection, enable_profiling: bool = False):
         """Initialize with DuckDB connection.
         
         Args:
             db: Active DuckDB connection
+            enable_profiling: Whether to enable query profiling
         """
         self.db = db
+        self.enable_profiling = enable_profiling and PROFILING_AVAILABLE
     
     def execute(self, query: str, params: Optional[List[Any]] = None):
         """Execute a query with optional parameters.
@@ -36,9 +45,15 @@ class BaseRepository:
         Returns:
             Query result
         """
-        if params is None:
-            return self.db.execute(query)
-        return self.db.execute(query, params)
+        if self.enable_profiling:
+            with query_profiler.profile_query(query, params):
+                if params is None:
+                    return self.db.execute(query)
+                return self.db.execute(query, params)
+        else:
+            if params is None:
+                return self.db.execute(query)
+            return self.db.execute(query, params)
     
     def fetchone(self, query: str, params: Optional[List[Any]] = None) -> Optional[Tuple]:
         """Execute query and fetch one result.

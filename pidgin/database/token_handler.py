@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from ..core.events import TokenUsageEvent, MessageCompleteEvent
 from .event_store import EventStore
 from ..providers.token_tracker import get_token_tracker
+from ..core.rate_limiter import StreamingRateLimiter
 from ..io.logger import get_logger
 
 logger = get_logger("token_handler")
@@ -86,9 +87,9 @@ class TokenUsageHandler:
                 'total_tokens': total_tokens
             },
             rate_limits={
-                'requests_per_minute': 60,  # TODO: Get from provider config
+                'requests_per_minute': self._get_rpm_limit(provider),
                 'tokens_per_minute': event.tokens_per_minute_limit,
-                'current_rpm_usage': 0,  # TODO: Track requests per minute
+                'current_rpm_usage': 0,  # RPM tracking handled by StreamingRateLimiter
                 'current_tpm_usage': event.current_usage_rate
             },
             cost=costs
@@ -102,6 +103,15 @@ class TokenUsageHandler:
             f"(prompt: {prompt_tokens}, completion: {completion_tokens}) "
             f"Cost: ${costs['total_cost']/100:.4f}"
         )
+    
+    def _get_rpm_limit(self, provider: str) -> int:
+        """Get requests per minute limit for provider."""
+        provider_key = provider.split(':')[0]  # Handle "anthropic:cached" format
+        limits = StreamingRateLimiter.DEFAULT_RATE_LIMITS.get(
+            provider_key, 
+            {'requests_per_minute': 60}  # Default fallback
+        )
+        return limits.get('requests_per_minute', 60)
     
     def handle_message_complete(self, event: MessageCompleteEvent):
         """Enhanced handler that extracts provider-specific usage data."""

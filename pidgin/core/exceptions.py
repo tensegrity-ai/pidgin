@@ -6,10 +6,6 @@ class PidginError(Exception):
     pass
 
 
-class ConversationError(PidginError):
-    """Base exception for conversation-related errors."""
-    pass
-
 
 class RateLimitError(PidginError):
     """Raised when rate limits are exceeded."""

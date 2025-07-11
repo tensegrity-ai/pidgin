@@ -349,7 +349,7 @@ class ExperimentRunner:
         
         # Check if we need a console for display modes
         console = None
-        if config.display_mode in ['verbose', 'tail', 'progress']:
+        if config.display_mode in ['verbose', 'tail']:
             from rich.console import Console
             console = Console()
             
@@ -399,19 +399,27 @@ class ExperimentRunner:
             exp_dir: Experiment directory
         """
         try:
+            # Track what we're doing for a clean summary at the end
+            steps_completed = []
+            
             # Generate README first
-            logging.info(f"Generating README for experiment {experiment_id}")
+            logging.debug(f"Generating README for experiment {experiment_id}")
             from .readme_generator import ExperimentReadmeGenerator
             readme_gen = ExperimentReadmeGenerator(exp_dir)
             readme_gen.generate()
+            steps_completed.append("README")
             
             # Generate Jupyter notebook
-            logging.info(f"Generating analysis notebook for experiment {experiment_id}")
+            logging.debug(f"Generating analysis notebook for experiment {experiment_id}")
             from ..analysis.notebook_generator import NotebookGenerator
             notebook_gen = NotebookGenerator(exp_dir)
-            notebook_gen.generate()
+            try:
+                notebook_gen.generate()
+                steps_completed.append("Jupyter notebook")
+            except ImportError:
+                logging.debug("Jupyter notebook generation skipped (nbformat not installed)")
             
-            logging.info(f"Auto-importing experiment {experiment_id} to database")
+            logging.debug(f"Auto-importing experiment {experiment_id} to database")
             
             # Get database path
             db_path = get_database_path()
@@ -421,15 +429,21 @@ class ExperimentRunner:
                 result = event_store.import_experiment_from_jsonl(exp_dir)
             
             if result.success:
-                logging.info(f"Successfully imported {result.events_imported} events, "
-                           f"{result.conversations_imported} conversations")
+                steps_completed.append(f"Database ({result.events_imported} events)")
                 
                 # Generate transcripts
-                logging.info(f"Generating transcripts for {experiment_id}")
+                logging.debug(f"Generating transcripts for {experiment_id}")
                 with TranscriptGenerator(db_path) as generator:
                     generator.generate_experiment_transcripts(experiment_id, exp_dir)
                 
-                logging.info(f"Transcripts generated in {exp_dir}/transcripts/")
+                steps_completed.append("Transcripts")
+                
+                # Show clean summary instead of multiple log lines
+                summary = f"✓ Post-processing complete: {', '.join(steps_completed)}"
+                
+                # Show summary in display mode appropriate way
+                if self.console:
+                    self.display.info(summary, use_panel=False)
             else:
                 # Display error in a nice panel
                 error_message = f"Database Import Failed\n\n"

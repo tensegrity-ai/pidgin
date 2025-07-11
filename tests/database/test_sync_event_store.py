@@ -38,6 +38,9 @@ class TestEventStore:
         exp_dir = tmp_path / "exp_test123"
         exp_dir.mkdir()
         
+        # Use current naming convention for conversation ID
+        conversation_id = "conversation_exp_test123_abc123"
+        
         # Create manifest
         manifest = {
             "experiment_id": "exp_test123",
@@ -53,10 +56,12 @@ class TestEventStore:
             "completed_conversations": 1,
             "failed_conversations": 0,
             "conversations": {
-                "conv_test123": {
+                conversation_id: {
                     "status": "completed",
-                    "jsonl": "conv_test123_events.jsonl",
-                    "turns_completed": 2
+                    "jsonl": f"{conversation_id}_events.jsonl",
+                    "turns_completed": 2,
+                    "last_line": 5,
+                    "last_updated": datetime.now().isoformat()
                 }
             }
         }
@@ -68,7 +73,7 @@ class TestEventStore:
         events = [
             {
                 "event_type": "ConversationStartEvent",
-                "conversation_id": "conv_test123",
+                "conversation_id": conversation_id,
                 "agent_a_model": "test-model-a",
                 "agent_b_model": "test-model-b",
                 "max_turns": 2,
@@ -77,7 +82,7 @@ class TestEventStore:
             },
             {
                 "event_type": "MessageCompleteEvent",
-                "conversation_id": "conv_test123",
+                "conversation_id": conversation_id,
                 "agent_id": "agent_a",
                 "message": {"content": "Hello from agent A"},
                 "tokens_used": 5,
@@ -85,7 +90,7 @@ class TestEventStore:
             },
             {
                 "event_type": "MessageCompleteEvent",
-                "conversation_id": "conv_test123",
+                "conversation_id": conversation_id,
                 "agent_id": "agent_b",
                 "message": {"content": "Hello from agent B"},
                 "tokens_used": 5,
@@ -93,7 +98,7 @@ class TestEventStore:
             },
             {
                 "event_type": "TurnCompleteEvent",
-                "conversation_id": "conv_test123",
+                "conversation_id": conversation_id,
                 "turn_number": 1,
                 "turn": {
                     "agent_a_message": {
@@ -110,14 +115,14 @@ class TestEventStore:
             },
             {
                 "event_type": "ConversationEndEvent",
-                "conversation_id": "conv_test123",
+                "conversation_id": conversation_id,
                 "reason": "max_turns",
                 "total_turns": 1,
                 "timestamp": datetime.now().isoformat()
             }
         ]
         
-        with open(exp_dir / "conv_test123_events.jsonl", "w") as f:
+        with open(exp_dir / f"{conversation_id}_events.jsonl", "w") as f:
             for event in events:
                 f.write(json.dumps(event) + "\n")
         
@@ -185,7 +190,7 @@ class TestEventStore:
         messages = event_store.db.execute("""
             SELECT agent_id, content, turn_number 
             FROM messages 
-            WHERE conversation_id = 'conv_test123'
+            WHERE conversation_id = 'conversation_exp_test123_abc123'
             ORDER BY agent_id
         """).fetchall()
         
@@ -202,7 +207,7 @@ class TestEventStore:
         metrics = event_store.db.execute("""
             SELECT turn_number, convergence_score 
             FROM turn_metrics 
-            WHERE conversation_id = 'conv_test123'
+            WHERE conversation_id = 'conversation_exp_test123_abc123'
         """).fetchall()
         
         assert len(metrics) == 1
@@ -256,7 +261,7 @@ class TestEventStore:
         assert conv_count == 0
         
         msg_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM messages WHERE conversation_id = 'conv_test123'"
+            "SELECT COUNT(*) FROM messages WHERE conversation_id = 'conversation_exp_test123_abc123'"
         ).fetchone()[0]
         assert msg_count == 0
     
@@ -284,8 +289,12 @@ class TestEventStore:
             "experiment_id": "exp_missing_jsonl",
             "name": "Missing JSONL Test",
             "conversations": {
-                "conv_missing": {
-                    "jsonl": "missing_file.jsonl"  # This file doesn't exist
+                "conversation_exp_missing_jsonl_abc": {
+                    "status": "completed",
+                    "jsonl": "missing_file.jsonl",  # This file doesn't exist
+                    "turns_completed": 0,
+                    "last_line": 0,
+                    "last_updated": datetime.now().isoformat()
                 }
             }
         }

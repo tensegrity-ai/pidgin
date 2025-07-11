@@ -45,7 +45,7 @@ class ExperimentReadmeGenerator:
             with open(self.readme_path, 'w') as f:
                 f.write(content)
             
-            logger.info(f"Generated README.md for experiment {manifest.get('name', 'unknown')}")
+            logger.debug(f"Generated README.md for experiment {manifest.get('name', 'unknown')}")
             return True
             
         except Exception as e:

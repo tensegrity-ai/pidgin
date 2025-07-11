@@ -45,7 +45,7 @@ class ExperimentConfig:
     convergence_action: str = 'stop'  # 'stop', 'warn', or 'continue'
     
     # Display settings
-    display_mode: str = 'none'  # Display mode for conversations: none, normal, quiet, progress, tail, verbose
+    display_mode: str = 'none'  # Display mode for conversations: none, quiet, tail, verbose
     
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)

@@ -37,6 +37,8 @@ class ConversationLifecycle:
         self.base_providers = {}
         self.wrapped_providers = {}
         self._end_event_emitted = False
+        self.verbose_display = None
+        self.tail_display = None
     
     def set_providers(self, base_providers):
         """Set base providers for wrapping.
@@ -84,25 +86,10 @@ class ConversationLifecycle:
         if display_mode == "tail":
             # Use tail display for showing raw events
             self.tail_display = TailDisplay(self.bus, self.console)
-            self.progress_display = None
         elif display_mode == "verbose":
             # Use verbose display for minimal message viewing
             from ..ui.verbose_display import VerboseDisplay
             self.verbose_display = VerboseDisplay(self.bus, self.console, agents)
-            self.progress_display = None
-        elif display_mode == "progress":
-            # Use progress panel display
-            from ..ui.progress_display import ProgressDisplay
-            self.progress_display = ProgressDisplay(
-                self.bus, self.console, agents,
-                experiment_name=conv_dir.parent.name
-            )
-            # Start the live display
-            import asyncio
-            asyncio.create_task(self.progress_display.start())
-            # Still create event logger for file logging
-            self.tail_display = TailDisplay(self.bus, None)
-            self.display_filter = None
         else:
             # Use display filter for normal/quiet modes
             if self.console is not None and display_mode != 'none':
@@ -114,7 +101,6 @@ class ConversationLifecycle:
                 self.display_filter = None
             # Still create event logger but without console output (for file logging)
             self.tail_display = TailDisplay(self.bus, None)
-            self.progress_display = None
         
         # Wrap providers with event awareness now that bus exists
         # Create wrapped providers for agent_a and agent_b
@@ -321,23 +307,7 @@ class ConversationLifecycle:
     async def cleanup(self):
         """Clean up resources without emitting end event."""
         # Stop progress display if active
-        if hasattr(self, 'progress_display') and self.progress_display:
-            self.progress_display.stop()
         
         # Stop event bus if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()
-    
-    async def save_transcripts(self, conversation: Conversation, output_manager, conv_dir: Path):
-        """Save conversation transcripts.
-        
-        Args:
-            conversation: Conversation to save
-            output_manager: Output manager for saving
-            conv_dir: Conversation directory
-        """
-        if output_manager and conv_dir:
-            # The output manager saves files, not transcripts directly
-            # Transcripts are saved via the event log which has already been written
-            # TODO: Gather metrics if needed
-            pass
