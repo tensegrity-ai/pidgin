@@ -33,18 +33,18 @@ class DimensionalPromptGenerator:
         debate:language:analytical → "I strongly disagree about how we communicate and create meaning. Here's why: Let's systematically analyze what we discover."
     """
 
-    # Core dimension definitions (simplified to 3)
-    CONTEXT_DIMENSION = Dimension(
-        name="context",
+    # Core dimension definitions (expanded to 6x6x6)
+    RELATIONSHIP_DIMENSION = Dimension(
+        name="relationship",
         description="The conversational relationship",
         required=True,
         values={
             "peers": "Hello! I'm excited to explore {topic} together.",
-            "teaching": "Let's explore {topic} with one of you teaching the other.",
+            "mentor": "Let's explore {topic} with one of you guiding and teaching the other.",
             "debate": "I'd love to see you debate different perspectives on {topic}.",
             "interview": "I'm curious to see one of you interview the other about {topic}.",
             "collaboration": "Please work together to explore {topic}.",
-            "neutral": "Hello! I'm looking forward to seeing you discuss {topic}.",
+            "socratic": "Let's explore {topic} through thoughtful questioning and dialogue.",
         },
     )
 
@@ -57,19 +57,22 @@ class DimensionalPromptGenerator:
             "language": "how we communicate and create meaning",
             "science": "how the universe works",
             "creativity": "the creative process and imagination",
+            "ethics": "moral reasoning and ethical questions",
             "meta": "our own conversation and thinking"
         },
     )
 
-    MODE_DIMENSION = Dimension(
-        name="mode",
-        description="The analytical approach",
+    MODIFIER_DIMENSION = Dimension(
+        name="modifier",
+        description="The conversational style or approach",
         required=False,
         values={
             "analytical": "Let's see you systematically analyze what you discover.",
             "intuitive": "I have a feeling that fascinating patterns will emerge as you explore.",
             "exploratory": "I wonder what happens if you follow your curiosity wherever it leads.",
-            "focused": "Please concentrate specifically on the essential elements.",
+            "critical": "Please examine this topic with careful scrutiny and questioning.",
+            "playful": "Have fun with this exploration and see where creativity takes you!",
+            "supportive": "I encourage you to build on each other's ideas constructively.",
         },
     )
 
@@ -77,9 +80,9 @@ class DimensionalPromptGenerator:
     def __init__(self):
         """Initialize the generator with the three core dimensions."""
         self.dimensions = {
-            "context": self.CONTEXT_DIMENSION,
+            "relationship": self.RELATIONSHIP_DIMENSION,
             "topic": self.TOPIC_DIMENSION,
-            "mode": self.MODE_DIMENSION,
+            "modifier": self.MODIFIER_DIMENSION,
         }
 
     def generate(
@@ -116,9 +119,9 @@ class DimensionalPromptGenerator:
         # Map positional arguments based on common patterns
         parsed = {}
 
-        # First is always context if provided
+        # First is always relationship if provided
         if len(parts) >= 1:
-            parsed["context"] = parts[0]
+            parsed["relationship"] = parts[0]
 
         # Second is topic if provided
         if len(parts) >= 2:
@@ -128,7 +131,7 @@ class DimensionalPromptGenerator:
         for i, part in enumerate(parts[2:]):
             # Try to identify which dimension this is
             for dim_name, dim in self.dimensions.items():
-                if dim_name in ["context", "topic"]:
+                if dim_name in ["relationship", "topic"]:
                     continue
                 if part in dim.values:
                     parsed[dim_name] = part
@@ -138,11 +141,11 @@ class DimensionalPromptGenerator:
 
     def _validate_dimensions(self, parsed: Dict[str, str]):
         """Validate that all required dimensions are present and valid."""
-        # Check required dimensions (context and topic)
-        if "context" not in parsed:
+        # Check required dimensions (relationship and topic)
+        if "relationship" not in parsed:
             raise ValueError(
-                f"Missing required dimension 'context'. "
-                f"Available values: {', '.join(self.CONTEXT_DIMENSION.values.keys())}"
+                f"Missing required dimension 'relationship'. "
+                f"Available values: {', '.join(self.RELATIONSHIP_DIMENSION.values.keys())}"
             )
         
         if "topic" not in parsed:
@@ -163,14 +166,14 @@ class DimensionalPromptGenerator:
 
     def _build_prompt(self, parsed: Dict[str, str], topic_value: str) -> str:
         """Build the prompt from dimensions using simplified composition logic."""
-        # 1. Get context template (required)
-        context = parsed.get("context", "peers")
-        prompt = self.CONTEXT_DIMENSION.values[context].format(topic=topic_value)
+        # 1. Get relationship template (required)
+        relationship = parsed.get("relationship", "peers")
+        prompt = self.RELATIONSHIP_DIMENSION.values[relationship].format(topic=topic_value)
         
-        # 2. Add mode if specified (optional)
-        if "mode" in parsed:
-            mode_sentence = self.MODE_DIMENSION.values[parsed["mode"]]
-            prompt = f"{prompt} {mode_sentence}"
+        # 2. Add modifier if specified (optional)
+        if "modifier" in parsed:
+            modifier_sentence = self.MODIFIER_DIMENSION.values[parsed["modifier"]]
+            prompt = f"{prompt} {modifier_sentence}"
         
         # 3. Ensure proper ending
         if not prompt.rstrip().endswith((".", "!", "?", ":")):

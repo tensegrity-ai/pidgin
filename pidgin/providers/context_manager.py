@@ -83,7 +83,9 @@ class ProviderContextManager:
         final_tokens = int(sum(len(m.content) + 20 for m in result) / self.CHARS_PER_TOKEN)
         
         if len(result) < len(messages):
-            logger.info(
+            # Log at INFO level with a minimal message for visibility
+            logger.info(f"✂ Context truncated: {len(messages)} → {len(result)} messages")
+            logger.debug(
                 f"Truncated {provider} context: {len(messages)} → {len(result)} messages "
                 f"(~{estimated_tokens:,} → {final_tokens:,} tokens, limit: {limit:,})"
             )

@@ -3,16 +3,13 @@
 
 import os
 import signal
-import asyncio
 from pathlib import Path
 
 import rich_click as click
 from rich.console import Console
 
 from .constants import NORD_GREEN, NORD_RED, NORD_YELLOW, NORD_CYAN
-from ..database.event_store import EventStore
 from ..experiments import ExperimentManager
-from ..constants import ExperimentStatus
 from ..ui.display_utils import DisplayUtils
 
 console = Console()
@@ -64,25 +61,6 @@ def stop(experiment_id, all):
                 display.dim(f"  ! {exp_id} already dead (PID: {pid})")
             except Exception as e:
                 display.error(f"Failed to stop {exp_id}: {e}", use_panel=False)
-        
-        # Clean up database
-        console.print()  # Add spacing
-        display.status("Updating database...", style="nord8")
-        
-        # Mark all running experiments as failed
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            storage = EventStore(
-                db_path=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "experiments.duckdb"
-            )
-            experiments = loop.run_until_complete(storage.list_experiments(status_filter=ExperimentStatus.RUNNING))
-            for exp in experiments:
-                loop.run_until_complete(storage.update_experiment_status(exp['experiment_id'], ExperimentStatus.FAILED))
-                display.success(f"Marked '{exp['name']}' as failed")
-            loop.run_until_complete(storage.close())
-        finally:
-            loop.close()
         
         console.print()  # Add spacing
         display.success("All experiments stopped")

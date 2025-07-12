@@ -19,7 +19,7 @@ OPENAI_MODELS = {
     "gpt-4.1": ModelConfig(
         model_id="gpt-4.1",
         shortname="GPT-4.1",
-        aliases=["gpt4.1", "coding", "4.1"],
+        aliases=["gpt-4.1"],
         provider="openai",
         context_window=1000000,
         pricing_tier="premium",
@@ -34,7 +34,7 @@ OPENAI_MODELS = {
     "gpt-4.1-mini": ModelConfig(
         model_id="gpt-4.1-mini",
         shortname="GPT-Mini",
-        aliases=["gpt4.1-mini", "coding-mini", "gpt-mini"],
+        aliases=["gpt"],
         provider="openai",
         context_window=1000000,
         pricing_tier="standard",
@@ -48,7 +48,7 @@ OPENAI_MODELS = {
     "gpt-4.1-nano": ModelConfig(
         model_id="gpt-4.1-nano",
         shortname="GPT-Nano",
-        aliases=["gpt4.1-nano", "coding-fast", "nano"],
+        aliases=["nano"],
         provider="openai",
         context_window=1000000,
         pricing_tier="economy",
@@ -62,7 +62,7 @@ OPENAI_MODELS = {
     "o3": ModelConfig(
         model_id="o3",
         shortname="O3",
-        aliases=["reasoning-premium"],
+        aliases=["o3"],
         provider="openai",
         context_window=128000,
         pricing_tier="premium",
@@ -77,7 +77,7 @@ OPENAI_MODELS = {
     "o3-mini": ModelConfig(
         model_id="o3-mini",
         shortname="O3-Mini",
-        aliases=["reasoning-small"],
+        aliases=["o3-mini"],
         provider="openai",
         context_window=128000,
         pricing_tier="standard",
@@ -92,7 +92,7 @@ OPENAI_MODELS = {
     "o4-mini": ModelConfig(
         model_id="o4-mini",
         shortname="O4",
-        aliases=["reasoning", "o4"],
+        aliases=["o4-mini"],
         provider="openai",
         context_window=128000,
         pricing_tier="standard",
@@ -107,7 +107,7 @@ OPENAI_MODELS = {
     "o4-mini-high": ModelConfig(
         model_id="o4-mini-high",
         shortname="O4-High",
-        aliases=["reasoning-high", "o4-high"],
+        aliases=["o4-mini-high"],
         provider="openai",
         context_window=128000,
         pricing_tier="premium",
@@ -122,7 +122,7 @@ OPENAI_MODELS = {
     "gpt-4.5": ModelConfig(
         model_id="gpt-4.5",
         shortname="GPT-4.5",
-        aliases=["gpt4.5", "4.5"],
+        aliases=["gpt-4.5"],
         provider="openai",
         context_window=128000,
         pricing_tier="premium",
@@ -139,7 +139,7 @@ OPENAI_MODELS = {
     "gpt-4o": ModelConfig(
         model_id="gpt-4o",
         shortname="GPT-4o",
-        aliases=["gpt4o", "4o", "multimodal", "gpt"],
+        aliases=["4o"],
         provider="openai",
         context_window=128000,
         pricing_tier="standard",
@@ -154,7 +154,7 @@ OPENAI_MODELS = {
     "gpt-4o-mini": ModelConfig(
         model_id="gpt-4o-mini",
         shortname="GPT-4o-Mini",
-        aliases=["gpt4o-mini", "4o-mini"],
+        aliases=["4o-mini"],
         provider="openai",
         context_window=128000,
         pricing_tier="economy",
@@ -165,21 +165,6 @@ OPENAI_MODELS = {
             conversation_style="concise",
         ),
         notes="Fast multimodal model",
-    ),
-    "gpt-image-1": ModelConfig(
-        model_id="gpt-image-1",
-        shortname="DALL-E",
-        aliases=["image", "dalle"],
-        provider="openai",
-        context_window=0,  # Not applicable for image generation
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=0,
-            avg_response_length="short",
-            recommended_pairings=[],
-            conversation_style="creative",
-        ),
-        notes="Latest image generation model - not for conversations",
     ),
 }
 

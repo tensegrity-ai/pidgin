@@ -13,10 +13,25 @@ from ..config.models import ModelConfig, ModelCharacteristics
 
 # Google model definitions
 GOOGLE_MODELS = {
+    "gemini-2.5-pro": ModelConfig(
+        model_id="gemini-2.5-pro",
+        shortname="Gemini-2.5-Pro",
+        aliases=["gemini"],
+        provider="google",
+        context_window=2097152,  # 2M context
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=7,
+            avg_response_length="long",
+            recommended_pairings=["gpt-4.1", "claude-4-opus-20250514"],
+            conversation_style="balanced",
+        ),
+        notes="Latest Gemini flagship model",
+    ),
     "gemini-2.0-flash-exp": ModelConfig(
         model_id="gemini-2.0-flash-exp",
         shortname="Flash",
-        aliases=["gemini-flash", "flash", "gemini"],
+        aliases=["gemini-flash", "flash"],
         provider="google",
         context_window=1048576,
         pricing_tier="economy",

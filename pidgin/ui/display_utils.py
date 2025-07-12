@@ -357,7 +357,7 @@ class DisplayUtils:
         lines.append(f"[bold]◇ Experiment Complete[/bold]")
         lines.append("")
         lines.append(f"Name: {name}")
-        lines.append(f"ID: {experiment_id[:8]}")
+        lines.append(f"ID: {experiment_id}")
         lines.append("")
 
         # Conversation summary

@@ -46,6 +46,8 @@ class VerboseDisplay:
         self.agents = agents
         self.current_turn = 0
         self.max_turns = 0
+        self.truncation_occurred = False
+        self.conversation_count = 0
         
         # Subscribe to relevant events
         bus.subscribe(ConversationStartEvent, self.handle_start)
@@ -60,7 +62,17 @@ class VerboseDisplay:
         Args:
             event: Conversation start event
         """
+        # Reset state for new conversation
+        self.current_turn = 0
         self.max_turns = event.max_turns
+        self.truncation_occurred = False
+        self.conversation_count += 1
+        
+        # Add separator if this is not the first conversation
+        if self.conversation_count > 1:
+            self.console.print()
+            self.console.print(Rule(style=self.COLORS["dim"]))
+            self.console.print()
         
         # Build header
         agent_a_name = event.agent_a_display_name or "Agent A"
@@ -190,6 +202,12 @@ class VerboseDisplay:
                     info.append(" →", style=conv_color)
             
             self._last_convergence = event.convergence_score
+        
+        # Add truncation indicator if truncation occurred
+        if self.truncation_occurred:
+            info.append(" • ", style=self.COLORS["dim"])
+            info.append("✂", style="yellow")
+            self.truncation_occurred = False  # Reset for next turn
         
         # Create a turn panel
         turn_panel = Panel(

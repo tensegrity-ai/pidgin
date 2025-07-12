@@ -50,7 +50,6 @@ import rich_click as click
 
 from .constants import BANNER
 from .run import run
-from .list_experiments import list_experiments
 from .stop import stop
 from .monitor import monitor
 from .info import info
@@ -82,8 +81,7 @@ def cli():
         pidgin run -a claude -b gpt -d peers:philosophy:analytical
 
     [#4c566a]Monitor experiments:[/#4c566a]
-        pidgin list
-        pidgin monitor exp_abc123
+        pidgin monitor
 
     [bold]CONFIGURATION:[/bold]
 
@@ -92,23 +90,12 @@ def cli():
     pass
 
 
-@cli.command()
-def analyze():
-    """Launch analysis tools for experiments.
-    
-    Coming soon: Jupyter notebook and GraphQL interfaces for 
-    exploring experiment data.
-    """
-    display.info("Coming soon!", use_panel=False)
-    display.dim("This will launch Jupyter notebooks and GraphQL tools for analysis.")
 
 
 # Register commands
 cli.add_command(run)
-cli.add_command(list_experiments)
 cli.add_command(stop)
 cli.add_command(monitor)
-cli.add_command(analyze)
 cli.add_command(info)
 
 def main():

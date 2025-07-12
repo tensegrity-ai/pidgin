@@ -12,10 +12,25 @@ from ..config.models import ModelConfig, ModelCharacteristics
 
 # xAI model definitions
 XAI_MODELS = {
+    "grok-3": ModelConfig(
+        model_id="grok-3",
+        shortname="Grok-3",
+        aliases=["grok"],
+        provider="xai",
+        context_window=131072,
+        pricing_tier="premium",
+        characteristics=ModelCharacteristics(
+            verbosity_level=8,
+            avg_response_length="long",
+            recommended_pairings=["gpt-4.1", "claude-4-opus-20250514"],
+            conversation_style="analytical",
+        ),
+        notes="Latest Grok model with impressive HLE scores",
+    ),
     "grok-beta": ModelConfig(
         model_id="grok-beta",
-        shortname="Grok",
-        aliases=["grok", "xai"],
+        shortname="Grok-Beta",
+        aliases=["grok-beta", "xai"],
         provider="xai",
         context_window=131072,
         pricing_tier="premium",
@@ -30,7 +45,7 @@ XAI_MODELS = {
     "grok-2-1212": ModelConfig(
         model_id="grok-2-1212",
         shortname="Grok-2",
-        aliases=["grok-2", "grok2"],
+        aliases=["grok-2"],
         provider="xai",
         context_window=131072,
         pricing_tier="premium",
@@ -41,21 +56,6 @@ XAI_MODELS = {
             conversation_style="analytical",
         ),
         notes="Latest Grok model",
-    ),
-    "grok-2-vision-1212": ModelConfig(
-        model_id="grok-2-vision-1212",
-        shortname="Grok-Vision",
-        aliases=["grok-vision", "grok-2-vision"],
-        provider="xai",
-        context_window=131072,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=8,
-            avg_response_length="medium",
-            recommended_pairings=["gpt-4o", "gemini-1.5-pro"],
-            conversation_style="analytical",
-        ),
-        notes="Multimodal Grok model",
     ),
 }
 

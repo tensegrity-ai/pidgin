@@ -54,7 +54,7 @@ def apply_context_truncation(
     
     # Log if truncation occurred
     if len(truncated_messages) < len(messages):
-        log.info(
+        log.debug(
             f"Truncated from {len(messages)} to {len(truncated_messages)} messages "
             f"for {model or provider}"
         )

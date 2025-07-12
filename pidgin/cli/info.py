@@ -4,6 +4,7 @@
 import rich_click as click
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 
 from ..config.models import MODELS
 from .constants import PROVIDER_COLORS, MODEL_GLYPHS
@@ -75,8 +76,48 @@ def models():
     
     Shows models grouped by provider with their configurations.
     """
-    display.info("Available Models", use_panel=False)
-    console.print()
+    # No title panel needed
+    
+    # Approximate costs per 1M tokens (input + output averaged)
+    MODEL_COSTS = {
+        # OpenAI
+        "gpt-4.1": 30.0,
+        "gpt-4.1-mini": 0.6,
+        "gpt-4.1-nano": 0.15,
+        "o3": 60.0,
+        "o3-mini": 12.0,
+        "o4-mini": 0.6,
+        "gpt-4o": 5.0,
+        "gpt-4o-mini": 0.6,
+        "gpt-3.5-turbo": 1.5,
+        # Anthropic
+        "claude-4-opus-20250514": 30.0,
+        "claude-4-sonnet-20250514": 10.0,
+        "claude-3-5-sonnet-20241022": 3.0,
+        "claude-3-5-haiku-20241022": 0.25,
+        "claude-3-haiku-20240307": 0.25,
+        # Google
+        "gemini-2.5-pro": 10.0,
+        "gemini-2.0-flash-exp": 0.15,
+        "gemini-2.0-flash-thinking-exp": 1.0,
+        "gemini-exp-1206": 10.0,
+        "gemini-1.5-pro": 3.5,
+        "gemini-1.5-flash": 0.35,
+        "gemini-1.5-flash-8b": 0.15,
+        # xAI
+        "grok-3": 15.0,
+        "grok-beta": 15.0,
+        "grok-2-1212": 10.0,
+        # Local
+        "local:qwen2.5:0.5b": 0.0,
+        "local:qwen2.5:1.5b": 0.0,
+        "local:qwen2.5:3b": 0.0,
+        "local:llama3.2:1b": 0.0,
+        "local:llama3.2:3b": 0.0,
+        "local:mixtral:8x7b": 0.0,
+        "local:test": 0.0,
+        "silent": 0.0,
+    }
     
     # Group models by provider
     providers = {}
@@ -90,16 +131,13 @@ def models():
         if provider not in providers:
             continue
             
-        # Provider header
-        color = PROVIDER_COLORS.get(provider, "white")
-        display.info(provider.title(), use_panel=False)
-        
         # Create table for this provider
-        table = Table(box=None, padding=(0, 2))
-        table.add_column("Model", style=color)
-        table.add_column("ID", style="dim")
+        color = PROVIDER_COLORS.get(provider, "white")
+        table = Table(box=None, padding=(0, 2), show_header=True, header_style=f"bold {color}")
+        table.add_column("Model ID", style=color)
+        table.add_column("Alias", style=color)
         table.add_column("Context", justify="right", style="dim")
-        table.add_column("Tier", style="dim")
+        table.add_column("$/1M tokens", justify="right", style="dim")
         
         for model_id, config in sorted(providers[provider], key=lambda x: x[0]):
             glyph = MODEL_GLYPHS.get(model_id, "●")
@@ -115,27 +153,41 @@ def models():
             else:
                 context = "∞"
             
-            # Show pricing tier
-            tier_display = {
-                "economy": "economy",
-                "standard": "standard",
-                "premium": "premium",
-                "free": "free"
-            }.get(config.pricing_tier, config.pricing_tier)
+            # Get cost
+            cost = MODEL_COSTS.get(model_id, 0.0)
+            if cost == 0.0:
+                cost_display = "free"
+            else:
+                cost_display = f"${cost:.2f}"
+            
+            # Get the primary alias (first one) or show "-"
+            primary_alias = config.aliases[0] if config.aliases else "-"
             
             table.add_row(
-                f"{glyph} {config.shortname}",
-                model_id,
+                f"{glyph} {model_id}",
+                primary_alias,
                 context,
-                tier_display
+                cost_display
             )
         
-        console.print(table)
+        # Wrap table in a panel with provider name
+        provider_panel = Panel(
+            table,
+            title=f"[bold {color}]{provider.title()}[/bold {color}]",
+            border_style=color,
+            expand=False
+        )
+        console.print(provider_panel)
         console.print()  # Blank line between providers
     
-    # Add note about local models
-    console.print("[dim]Note: Local models require Ollama to be running[/dim]")
-    console.print("[dim]Custom local models can be used with format: local:model-name[/dim]\n")
+    # Add notes about using models
+    notes = (
+        "• Use the model names shown above when running (e.g., 'gpt', 'claude', 'gemini')\n"
+        "• Local models require Ollama to be running\n"
+        "• Custom local models can be used with format: local:model-name\n"
+        "• Common usage: pidgin run -a gpt -b claude"
+    )
+    display.dim(notes)
 
 
 
@@ -210,8 +262,8 @@ def dimensions():
         "peers": "Equal partners in exploration",
         "mentor": "One guides, one learns",
         "debate": "Opposing viewpoints",
-        "socratic": "Through questioning",
-        "collaborative": "Working together",
+        "socratic": "Through questioning and dialogue",
+        "collaboration": "Working together",
         "interview": "Q&A format"
     }
     for rel, desc in relationships.items():
@@ -219,32 +271,24 @@ def dimensions():
     
     console.print("\n[bold green]Topics:[/bold green]")
     topics = {
-        "philosophy": "Fundamental questions",
-        "science": "Natural phenomena",
-        "ethics": "Moral reasoning",
-        "creativity": "Artistic expression",
-        "mathematics": "Abstract patterns",
-        "psychology": "Mind and behavior",
-        "technology": "Tools and systems",
-        "history": "Past events",
-        "language": "Communication itself",
-        "consciousness": "Awareness and experience"
+        "philosophy": "Fundamental nature of reality",
+        "language": "How we communicate and create meaning",
+        "science": "How the universe works",
+        "creativity": "Creative process and imagination",
+        "ethics": "Moral reasoning and ethical questions",
+        "meta": "Our own conversation and thinking"
     }
     for topic, desc in topics.items():
         console.print(f"  • [green]{topic}[/green]: {desc}")
     
     console.print("\n[bold yellow]Modifiers:[/bold yellow] (optional)")
     modifiers = {
-        "analytical": "Logic-focused",
-        "creative": "Imaginative",
-        "critical": "Questioning",
-        "supportive": "Encouraging",
-        "challenging": "Provocative",
-        "playful": "Light-hearted",
-        "formal": "Professional",
-        "casual": "Relaxed",
-        "patient": "Thoughtful",
-        "rapid": "Quick exchange"
+        "analytical": "Systematic analysis",
+        "intuitive": "Pattern-focused exploration",
+        "exploratory": "Curiosity-driven",
+        "critical": "Careful scrutiny and questioning",
+        "playful": "Creative and fun",
+        "supportive": "Constructive and encouraging"
     }
     for mod, desc in modifiers.items():
         console.print(f"  • [yellow]{mod}[/yellow]: {desc}")

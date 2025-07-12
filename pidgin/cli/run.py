@@ -32,7 +32,7 @@ from .helpers import (
 from ..config.resolution import resolve_temperatures
 from ..config.defaults import get_smart_convergence_defaults
 from .constants import (
-    NORD_BLUE, NORD_YELLOW, NORD_RED, NORD_GREEN, NORD_CYAN,
+    NORD_BLUE, NORD_YELLOW, NORD_RED, NORD_GREEN, NORD_CYAN, NORD_DARK,
     DEFAULT_TURNS, DEFAULT_TEMPERATURE,
     MODEL_EMOJIS, PROVIDER_COLORS
 )
@@ -264,21 +264,13 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     if convergence_action is None:
         convergence_action = 'stop'  # Always use 'stop' as default
     
-    # Determine execution mode
-    is_single = repetitions == 1
-    
-    # Determine if we run in foreground
-    if quiet:
-        run_in_foreground = False  # --quiet always means background
-    elif max_parallel > 1:
-        run_in_foreground = False  # Parallel execution requires background
+    # Force quiet mode if parallel execution
+    if max_parallel > 1 and not quiet:
+        quiet = True
         display.warning(
-            f"Parallel execution (max_parallel={max_parallel}) runs in background",
+            f"Parallel execution (max_parallel={max_parallel}) requires quiet mode",
             use_panel=False
         )
-    else:
-        # Default behavior: foreground for single conversations
-        run_in_foreground = True
     
     # Generate fun name if not provided
     if not name:
@@ -301,7 +293,7 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         name, max_parallel,
         convergence_threshold, convergence_action,
         awareness, awareness_a, awareness_b,
-        choose_names, run_in_foreground, notify,
+        choose_names, quiet, notify,
         display_mode, first_speaker_id, output
     )
 
@@ -312,12 +304,12 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                       initial_prompt, dimensions, name, max_parallel,
                       convergence_threshold, convergence_action,
                       awareness, awareness_a, awareness_b,
-                      choose_names, run_in_foreground, notify,
+                      choose_names, quiet, notify,
                       display_mode, first_speaker_id, output_dir):
     """Run conversations using the unified execution path."""
     # Determine display mode for experiments
-    # For parallel execution or background, we can't use interactive displays
-    if max_parallel > 1 or not run_in_foreground:
+    # For parallel execution or quiet mode, don't use interactive displays
+    if max_parallel > 1 or quiet:
         experiment_display_mode = 'none'
         if display_mode in ['tail', 'verbose'] and max_parallel > 1:
             display.warning(
@@ -325,7 +317,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                 use_panel=False
             )
     else:
-        # Single conversation in foreground can use any display mode
+        # Non-quiet mode can use any display mode
         experiment_display_mode = display_mode
     
     # Create experiment configuration
@@ -361,7 +353,10 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         config_lines.append(f"Parallel execution: {max_parallel}")
     
     if initial_prompt != "Hello":
-        config_lines.append(f"Initial prompt: {initial_prompt[:50]}...")
+        if len(initial_prompt) > 50:
+            config_lines.append(f"Initial prompt: {initial_prompt[:50]}...")
+        else:
+            config_lines.append(f"Initial prompt: {initial_prompt}")
     
     if temp_a is not None or temp_b is not None:
         temp_parts = []
@@ -399,164 +394,101 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         display.error(error_msg.rstrip(), use_panel=True)
         return
     
-    if run_in_foreground:
-        # Run in foreground (debug mode)
-        # Show starting info
-        start_lines = []
-        if name:
-            start_lines.append(f"Starting '{name}' in foreground")
-        else:
-            start_lines.append("Starting experiment in foreground")
-        start_lines.append(f"\nModels: {agent_a_name} vs {agent_b_name}")
-        start_lines.append(f"Conversations: {repetitions}")
-        start_lines.append(f"Max turns: {max_turns}")
+    # Always run via daemon
+    base_dir = get_experiments_dir()
+    manager = ExperimentManager(base_dir=base_dir)
+    
+    try:
+        # Always start via manager (creates daemon + PID file)
+        exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
         
-        display.info("\n".join(start_lines), title="◆ Experiment Starting", use_panel=True)
-        console.print()
-        display.warning("Running in foreground - press Ctrl+C to stop", use_panel=True)
-        console.print()
+        # Show start message
+        console.print(f"\n[#a3be8c]✓ Started: {exp_id}[/#a3be8c]")
         
-        # Run directly without daemon
-        runner = ExperimentRunner(get_experiments_dir(), daemon=None)
-        
-        # Generate experiment ID
-        exp_id = f"exp_{uuid.uuid4().hex[:8]}"
-        
-        async def run_foreground_experiment():
-            try:
-                await runner.run_experiment_with_id(exp_id, config)
-                return True
-            except Exception:
-                raise
-        
-        try:
-            start_time = time.time()
-            success = asyncio.run(run_foreground_experiment())
-            duration = time.time() - start_time
-            console.print()  # Add spacing
-            
-            # Read manifest to get completion statistics
-            exp_dir = get_experiments_dir() / exp_id
-            manifest_path = exp_dir / "manifest.json"
-            
-            if manifest_path.exists():
-                try:
-                    with open(manifest_path, 'r') as f:
-                        manifest = json.load(f)
-                    
-                    # Extract statistics from manifest
-                    completed = manifest.get("completed_conversations", 0)
-                    failed = manifest.get("failed_conversations", 0)
-                    total = manifest.get("total_conversations", repetitions)
-                    status = manifest.get("status", "completed")
-                    
-                    # Display comprehensive completion panel
-                    display.experiment_complete(
-                        name=name or exp_id,
-                        experiment_id=exp_id,
-                        completed=completed,
-                        failed=failed,
-                        total=total,
-                        duration_seconds=duration,
-                        status=status,
-                        exp_dir=str(exp_dir)
-                    )
-                except Exception as e:
-                    # Fallback to simple message if manifest read fails
-                    if name:
-                        display.success(f"Experiment '{name}' completed")
-                    else:
-                        display.success("Experiment completed")
-            else:
-                # Fallback if no manifest
-                if name:
-                    display.success(f"Experiment '{name}' completed")
-                else:
-                    display.success("Experiment completed")
-            
-            if notify:
-                send_notification(
-                    title="Pidgin Experiment Complete",
-                    message=f"Experiment '{name}' has finished ({repetitions} conversations)"
-                )
-            else:
-                # Terminal bell notification
-                print('\a', end='', flush=True)
-        except KeyboardInterrupt:
-            duration = time.time() - start_time
-            console.print()  # Add spacing
-            
-            # Try to read manifest for partial results
-            exp_dir = get_experiments_dir() / exp_id
-            manifest_path = exp_dir / "manifest.json"
-            
-            if manifest_path.exists():
-                try:
-                    with open(manifest_path, 'r') as f:
-                        manifest = json.load(f)
-                    
-                    completed = manifest.get("completed_conversations", 0)
-                    failed = manifest.get("failed_conversations", 0)
-                    total = manifest.get("total_conversations", repetitions)
-                    
-                    # Display interruption panel with statistics
-                    display.experiment_complete(
-                        name=name or exp_id,
-                        experiment_id=exp_id,
-                        completed=completed,
-                        failed=failed,
-                        total=total,
-                        duration_seconds=duration,
-                        status="interrupted",
-                        exp_dir=str(exp_dir)
-                    )
-                except Exception:
-                    display.warning("Experiment interrupted by user", use_panel=False)
-            else:
-                display.warning("Experiment interrupted by user", use_panel=False)
-        except APIKeyError as e:
-            console.print()  # Add spacing
-            display.api_key_error(str(e))
-            # Terminal bell for failure
-            print('\a', end='', flush=True)
-        except Exception as e:
-            console.print()  # Add spacing
-            display.error(f"Experiment failed: {e}", use_panel=False)
-            import traceback
-            traceback.print_exc()
-            # Terminal bell for failure too
-            print('\a', end='', flush=True)
-    else:
-        # Run as daemon (background)
-        base_dir = get_experiments_dir()
-        manager = ExperimentManager(base_dir=base_dir)
-        
-        console.print(f"[#8fbcbb]◆ Starting experiment '{name}'[/#8fbcbb]")
-        console.print(f"[#4c566a]  Models: {agent_a_name} vs {agent_b_name}[/#4c566a]")
-        console.print(f"[#4c566a]  Conversations: {repetitions}[/#4c566a]")
-        console.print(f"[#4c566a]  Max turns: {max_turns}[/#4c566a]")
-        
-        try:
-            # Use the original working directory captured at module import
-            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-            
-            # Show start message with both name and ID
-            console.print(f"\n[#a3be8c][OK] Experiment started successfully[/#a3be8c]")
-            console.print(f"[#88c0d0]Name: {name}[/#88c0d0]")
-            console.print(f"[#88c0d0]ID: {exp_id}[/#88c0d0]")
-            
-            # Show where to find logs
+        if quiet:
+            # Quiet mode: just show commands and exit
             console.print(f"\n[#4c566a]Running in background. Check progress:[/#4c566a]")
             cmd_lines = []
-            cmd_lines.append(f"pidgin list                    # Show all running experiments")
-            cmd_lines.append(f"pidgin stop {name}       # Stop by name")
-            cmd_lines.append(f"pidgin stop {exp_id[:8]}      # Stop by ID")
+            cmd_lines.append(f"pidgin monitor              # Monitor all experiments")
+            cmd_lines.append(f"pidgin stop {name}    # Stop by name")
+            cmd_lines.append(f"pidgin stop {exp_id[:8]}  # Stop by ID")
             cmd_lines.append(f"tail -f {get_experiments_dir()}/{exp_id}/*.jsonl")
             display.info("\n".join(cmd_lines), title="Commands", use_panel=True)
+        else:
+            # Non-quiet mode: show live display
+            console.print(f"[{NORD_DARK}]Ctrl+C to exit display • experiment continues[/{NORD_DARK}]")
+            console.print()
+            
+            # Import the display runners
+            from ..experiments.display_runner import run_display
+            
+            try:
+                # Run the display (this will tail JSONL files and show live updates)
+                asyncio.run(run_display(exp_id, display_mode))
                 
-        except Exception as e:
-            display.error(f"Failed to start experiment: {str(e)}", use_panel=True)
-            raise
+                # After display exits, show completion info
+                exp_dir = get_experiments_dir() / exp_id
+                manifest_path = exp_dir / "manifest.json"
+                
+                if manifest_path.exists():
+                    try:
+                        with open(manifest_path, 'r') as f:
+                            manifest = json.load(f)
+                        
+                        # Extract statistics from manifest
+                        completed = manifest.get("completed_conversations", 0)
+                        failed = manifest.get("failed_conversations", 0)
+                        total = manifest.get("total_conversations", repetitions)
+                        status = manifest.get("status", "completed")
+                        
+                        # Calculate duration
+                        start_time = manifest.get("started_at")
+                        end_time = manifest.get("completed_at")
+                        if start_time and end_time:
+                            from datetime import datetime
+                            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                            duration = (end_dt - start_dt).total_seconds()
+                        else:
+                            duration = 0
+                        
+                        # Display completion info
+                        display.experiment_complete(
+                            name=name,
+                            experiment_id=exp_id,
+                            completed=completed,
+                            failed=failed,
+                            total=total,
+                            duration_seconds=duration,
+                            status=status,
+                            experiment_dir=str(exp_dir)
+                        )
+                        
+                        if notify and status == "completed":
+                            send_notification(
+                                title="Pidgin Experiment Complete",
+                                message=f"Experiment '{name}' has finished ({completed}/{total} conversations)"
+                            )
+                        else:
+                            # Terminal bell notification
+                            print('\a', end='', flush=True)
+                    except Exception:
+                        # If can't read manifest, just note that display exited
+                        display.info("Display exited. Experiment continues running in background.", use_panel=False)
+                else:
+                    display.info("Display exited. Experiment continues running in background.", use_panel=False)
+                    
+            except KeyboardInterrupt:
+                # Ctrl+C just exits display, not the experiment
+                console.print()
+                display.info("Display exited. Experiment continues running in background.", use_panel=False)
+                console.print(f"\n[#4c566a]Check progress with:[/#4c566a]")
+                console.print(f"  pidgin monitor")
+                console.print(f"  pidgin stop {name}")
+                
+    except Exception as e:
+        display.error(f"Failed to start experiment: {str(e)}", use_panel=True)
+        raise
 
 
 def _prompt_for_model(prompt_text: str) -> Optional[str]:

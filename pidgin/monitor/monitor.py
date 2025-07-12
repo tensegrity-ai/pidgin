@@ -26,6 +26,11 @@ from ..cli.constants import (
 logger = get_logger("monitor")
 console = Console()
 
+# Monitor refresh settings
+REFRESH_INTERVAL_SECONDS = 1
+LIVE_REFRESH_PER_SECOND = 0.5  # How often Rich Live updates the display
+ERROR_RETRY_DELAY_SECONDS = 5  # Wait time after errors before retrying
+
 
 class Monitor:
     """Monitor system state from JSONL files with error tracking."""
@@ -44,7 +49,7 @@ class Monitor:
         
     async def run(self):
         """Run the monitor loop."""
-        with Live(self.build_display(), refresh_per_second=0.5) as live:
+        with Live(self.build_display(), refresh_per_second=LIVE_REFRESH_PER_SECOND) as live:
             while self.running:
                 try:
                     # Check if directory has been created
@@ -57,14 +62,14 @@ class Monitor:
                     # For now, just update display
                     self.refresh_count += 1
                     live.update(self.build_display())
-                    await asyncio.sleep(2)  # Update every 2 seconds
+                    await asyncio.sleep(REFRESH_INTERVAL_SECONDS)
                     
                 except KeyboardInterrupt:
                     self.running = False
                     break
                 except Exception as e:
                     logger.error(f"Monitor error: {e}")
-                    await asyncio.sleep(5)  # Wait longer on error
+                    await asyncio.sleep(ERROR_RETRY_DELAY_SECONDS)  # Wait longer on error
     
     def build_display(self) -> Layout:
         """Build the display layout."""
@@ -96,37 +101,14 @@ class Monitor:
         errors_panel = self.build_errors_panel()
         experiments_panel = self.build_experiments_panel(experiments)
         conversations_panel = self.build_conversations_panel(experiments)
-        stats_panel = self.build_stats_panel(experiments)
         
-        # Calculate dynamic sizes based on content
-        # Header is always 3
-        header_size = 3
-        
-        # Errors: 4 if no errors, 6-10 if errors exist
-        error_count = len(self.get_recent_errors(minutes=10))
-        errors_size = 4 if error_count == 0 else min(6 + error_count, 10)
-        
-        # Experiments: 4 + 2 per active experiment (max 12)
-        active_exp_count = len([e for e in experiments if e.status in ["running", "created"]])
-        exp_size = min(4 + active_exp_count * 2, 12) if active_exp_count > 0 else 4
-        
-        # Conversations: 4 + 2 per conversation shown (max 14)
-        conv_count = sum(1 for exp in experiments 
-                        for conv in exp.conversations.values() 
-                        if conv.status == ConversationStatus.RUNNING or 
-                        (conv.completed_at and self._is_recent(conv.completed_at)))
-        conv_size = min(4 + max(conv_count, min(5, sum(len(exp.conversations) for exp in experiments))) * 2, 14)
-        
-        # Stats gets the rest, but at least 6
-        stats_size = max(6, 40 - header_size - errors_size - exp_size - conv_size)
-        
-        # Arrange layout with dynamic sizes
+        # Let all panels auto-size to their content
+        # Only fix the header size
         layout.split_column(
-            Layout(header, size=header_size),
-            Layout(errors_panel, size=errors_size),
-            Layout(experiments_panel, size=exp_size),
-            Layout(conversations_panel, size=conv_size),
-            Layout(stats_panel, size=stats_size)
+            Layout(header, size=3),      # Fixed header
+            Layout(errors_panel),        # Auto-size to content
+            Layout(experiments_panel),   # Auto-size to content  
+            Layout(conversations_panel)  # Auto-size to content
         )
         
         return layout
@@ -386,76 +368,6 @@ class Monitor:
         title = "Active Conversations" if any(c[1].status == ConversationStatus.RUNNING for c in all_convs) else "Recent Conversations"
         return Panel(table, title=title)
     
-    def build_stats_panel(self, experiments: List[Any]) -> Panel:
-        """Build statistics panel."""
-        # Create a compact grid layout
-        table = Table.grid(padding=1)
-        table.add_column(style=NORD_LIGHT, justify="right")
-        table.add_column(style="bold")
-        
-        # Total experiments with breakdown
-        running_exps = len([e for e in experiments if e.status == "running"])
-        completed_exps = len([e for e in experiments if e.status == "completed"])
-        if running_exps > 0:
-            table.add_row("Experiments:", f"{len(experiments)} ({running_exps} active)")
-        else:
-            table.add_row("Experiments:", f"{len(experiments)} ({completed_exps} complete)")
-        
-        # Conversation stats
-        total_convs = sum(exp.total_conversations for exp in experiments)
-        completed_convs = sum(exp.completed_conversations for exp in experiments)
-        failed_convs = sum(exp.failed_conversations for exp in experiments)
-        active_convs = sum(exp.active_conversations for exp in experiments)
-        
-        table.add_row("Conversations:", f"{completed_convs + failed_convs}/{total_convs}")
-        
-        # Status breakdown in one line
-        status_parts = []
-        if completed_convs > 0:
-            status_parts.append(f"[{NORD_GREEN}]✓ {completed_convs}[/{NORD_GREEN}]")
-        if active_convs > 0:
-            status_parts.append(f"[{NORD_YELLOW}]◐ {active_convs}[/{NORD_YELLOW}]")
-        if failed_convs > 0:
-            status_parts.append(f"[{NORD_RED}]✗ {failed_convs}[/{NORD_RED}]")
-        
-        if status_parts:
-            table.add_row("Status:", " ".join(status_parts))
-        
-        # Average turns completed
-        total_turns = sum(conv.current_turn for exp in experiments for conv in exp.conversations.values())
-        avg_turns = total_turns / max(total_convs, 1)
-        table.add_row("Avg Turns:", f"{avg_turns:.1f}")
-        
-        # Convergence stats
-        high_conv = sum(1 for exp in experiments for conv in exp.conversations.values() 
-                       if conv.last_convergence and conv.last_convergence > 0.7)
-        if high_conv > 0:
-            table.add_row("High Convergence:", f"[{NORD_ORANGE}]▲ {high_conv}[/{NORD_ORANGE}]")
-        
-        # System load with visual indicator
-        if active_convs > 0:
-            load_bar = "█" * min(active_convs, 10)
-            if active_convs < 5:
-                load_color = NORD_GREEN
-            elif active_convs < 10:
-                load_color = NORD_YELLOW
-            else:
-                load_color = NORD_RED
-            table.add_row("Load:", f"[{load_color}]{load_bar}[/{load_color}] ({active_convs})")
-        
-        # Model distribution
-        model_counts = defaultdict(int)
-        for exp in experiments:
-            for conv in exp.conversations.values():
-                model_counts[conv.agent_a_model] += 1
-                model_counts[conv.agent_b_model] += 1
-        
-        if model_counts:
-            top_models = sorted(model_counts.items(), key=lambda x: x[1], reverse=True)[:3]
-            model_str = ", ".join(f"{m[:8]} ({c})" for m, c in top_models)
-            table.add_row("Models:", model_str)
-        
-        return Panel(table, title="System Statistics")
     
     def tail_file(self, file_path: Path, lines: int = 200) -> List[str]:
         """Efficiently read last N lines from a file."""

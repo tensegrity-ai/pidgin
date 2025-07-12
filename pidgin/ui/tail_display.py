@@ -150,16 +150,15 @@ class TailDisplay:
         )
         self.console.print(panel)
         
-        # Show initial prompt separately if present
+        # Show initial prompt as a regular event if present
         if event.initial_prompt:
-            prompt_panel = Panel(
-                event.initial_prompt,
-                title="Initial Prompt",
-                title_align="left",
-                border_style=self.NORD_CYAN,
-                padding=(1, 2)
-            )
-            self.console.print(prompt_panel)
+            # Create a fake event-style display for initial prompt
+            prompt_header = Text()
+            prompt_header.append(f"[{event.timestamp.strftime('%H:%M:%S.%f')[:-3]}] ", style=self.NORD_GRAY)
+            prompt_header.append("◆ ", style=self.NORD_CYAN)
+            prompt_header.append("InitialPrompt", style=self.NORD_CYAN)
+            
+            self.console.print(prompt_header, event.initial_prompt)
         self.console.print()
     
     def _display_conversation_end(self, event: ConversationEndEvent, header: Text, color: str) -> None:
@@ -234,7 +233,7 @@ class TailDisplay:
             metadata.append(f"tokens: {event.tokens_used}")
         
         if metadata:
-            content.append(f"\n[{self.NORD_GRAY}]{' | '.join(metadata)}[/{self.NORD_GRAY}]")
+            content.append(f"\n{' | '.join(metadata)}", style=self.NORD_GRAY)
         
         self.console.print(header)
         self.console.print(content)
@@ -278,8 +277,11 @@ class TailDisplay:
     
     def _display_system_prompt(self, event: SystemPromptEvent, header: Text) -> None:
         """Display system prompt event."""
-        # Show system prompts in a condensed format
-        self.console.print(header, f"{event.agent_id} system prompt configured")
+        # Show the actual system prompt content
+        if hasattr(event, 'prompt') and event.prompt:
+            self.console.print(header, f"{event.agent_id}: {event.prompt}")
+        else:
+            self.console.print(header, f"{event.agent_id} system prompt configured")
     
     def _display_generic_event(self, event: Event, header: Text) -> None:
         """Display generic event."""
