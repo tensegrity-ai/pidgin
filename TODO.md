@@ -202,7 +202,7 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
 - [DONE] Removed direct database writes during conversations
 - [DONE] Created manifest.json for efficient state tracking
 - [DONE] Built OptimizedStateBuilder with mtime caching
-- [DONE] Added `pidgin import` command for batch loading to DuckDB
+- [DONE] Automatic import to DuckDB after experiments complete
 - [DONE] Eliminated database lock contention
 
 ### Benefits Achieved:
@@ -242,10 +242,6 @@ This document tracks the ongoing refactoring and enhancement work for Pidgin. Th
   - Saved as analysis.ipynb in experiment directories
   - Gracefully handles missing nbformat dependency
 
-- [ ] **GraphQL interface for analysis**
-  - Launch with `pidgin analyze --serve`
-  - Flexible querying for researchers
-  - Automatic enrichment on query
 
 ## [DONE] Recently Completed
 
@@ -287,7 +283,6 @@ These items have been explicitly decided against:
 - **Real-time dashboards** - Adds complexity without sufficient value
 - **Live experiment monitoring** - Static status commands are sufficient  
 - **Complex visualizations** - Let researchers use their own tools
-- **Separate enrichment commands** - Will be handled transparently via GraphQL
 - **Screen-like attach/detach** - Use standard Unix tools instead
 
 ## Architecture Notes
@@ -337,7 +332,6 @@ From CLAUDE.md:
   - token_handler.py:91 - Clarified that RPM tracking is handled by StreamingRateLimiter
   - conversation_lifecycle.py:342 - Removed TODO, clarified transcripts saved via JSONL
   - event_wrapper.py:207 - Clarified retry tracking is internal to providers
-  - event_handler.py:384 (gratitude spiral detection)
   - event_wrapper.py:94 (track retry count)
 
 - [x] **Remove unused ConversationError exception** ✅ DONE (July 10, 2025)

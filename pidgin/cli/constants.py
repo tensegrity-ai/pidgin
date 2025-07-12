@@ -61,8 +61,6 @@ MODEL_GLYPHS = {
     "local:qwen": "◑",
 }
 
-# Legacy alias for compatibility
-MODEL_EMOJIS = MODEL_GLYPHS
 
 # Provider colors
 PROVIDER_COLORS = {

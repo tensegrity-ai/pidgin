@@ -15,7 +15,7 @@ from ..config.models import get_model_config, MODELS
 from ..providers.builder import build_provider
 from ..config.prompts import build_initial_prompt
 from ..config.dimensional_prompts import DimensionalPromptGenerator
-from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_EMOJIS, PROVIDER_COLORS
+from .constants import NORD_YELLOW, NORD_RED, NORD_GREEN, MODEL_GLYPHS, PROVIDER_COLORS
 from ..ui.display_utils import DisplayUtils
 
 console = Console()
@@ -119,7 +119,7 @@ def format_model_display(model_id: str) -> str:
     if not config:
         return model_id
     
-    glyph = MODEL_EMOJIS.get(model_id, "●")
+    glyph = MODEL_GLYPHS.get(model_id, "●")
     color = PROVIDER_COLORS.get(config.provider, "white")
     
     return f"{glyph} [{color}]{config.shortname}[/{color}]"

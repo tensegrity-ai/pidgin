@@ -28,9 +28,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Jupyter Integration**: Auto-generated notebooks planned
 
 ### ■ What's Missing
-- **Automated pattern detection**: Statistical validation tools
 - **Report generation**: Publication-ready outputs
-- **GraphQL interface**: Flexible querying for research
 
 ## Quick Start
 
@@ -74,11 +72,7 @@ Pidgin uses a JSONL-first architecture:
 - **State tracking**: manifest.json for efficient monitoring
 - **Analytics**: DuckDB for post-experiment analysis
 
-Experiments are automatilly imported into DuckDB, but it can be done manually:
-```bash
-pidgin import --all  # Import all unimported experiments
-pidgin import exp_abc123  # Import specific experiment
-```
+Experiments are automatically imported into DuckDB when they complete. No manual import step is needed.
 
 ## API Key Management
 
@@ -261,10 +255,8 @@ Pidgin is a comprehensive research tool with:
 
 This is early-stage research. We need:
 - Statistical analysis tools
-- Pattern validation methods
 - More observations from different model combinations
 - Automated report generation
-- GraphQL interface for flexible querying
 
 ## Not a Competition
 

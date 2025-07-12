@@ -34,7 +34,7 @@ from ..config.defaults import get_smart_convergence_defaults
 from .constants import (
     NORD_BLUE, NORD_YELLOW, NORD_RED, NORD_GREEN, NORD_CYAN, NORD_DARK,
     DEFAULT_TURNS, DEFAULT_TEMPERATURE,
-    MODEL_EMOJIS, PROVIDER_COLORS
+    MODEL_GLYPHS, PROVIDER_COLORS
 )
 from .name_generator import generate_experiment_name
 from ..core import Conductor, Agent, Conversation
@@ -516,7 +516,7 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
         display.dim(f"\n{provider.title()}:")
         
         for model_id, config in providers[provider]:
-            glyph = MODEL_EMOJIS.get(model_id, "●")
+            glyph = MODEL_GLYPHS.get(model_id, "●")
             display.dim(f"  {idx}. {glyph} {config.shortname}")
             model_map[str(idx)] = model_id
             idx += 1

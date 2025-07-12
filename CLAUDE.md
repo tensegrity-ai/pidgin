@@ -211,17 +211,16 @@ pidgin run -a local:test -b local:test -t 5
 With JSONL-first architecture, database concurrency is no longer an issue:
 - JSONL files are append-only (no locks)
 - Manifest.json uses atomic writes
-- DuckDB is only used for post-experiment analysis
+- DuckDB is only used for post-experiment analysis (auto-imported when experiments complete)
 - Batch import happens after experiments complete
 
 ## Current State
 
 The core architecture is complete with JSONL-first data flow. We're now focused on:
 
-1. **Analysis infrastructure** - GraphQL server and auto-generated Jupyter notebooks
-2. **Pattern detection** - Gratitude spirals and other research features
-3. **Performance optimization** - Token caching, metric calculation
-4. **Statistical validation** - Proper significance testing for observations
+1. **Analysis infrastructure** - Auto-generated Jupyter notebooks
+2. **Performance optimization** - Token caching, metric calculation
+3. **Statistical validation** - Proper significance testing for observations
 
 ## Note on TODOs
 
