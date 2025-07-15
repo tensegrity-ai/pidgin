@@ -269,11 +269,71 @@ def mock_event_store(mocker):
 
 
 @pytest.fixture
-def in_memory_duckdb():
-    """Create an in-memory DuckDB for testing."""
+def in_memory_db():
+    """Create an in-memory DuckDB connection for fast unit tests."""
+    import duckdb
+    
+    conn = duckdb.connect(':memory:')
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+def in_memory_db_with_schema(in_memory_db):
+    """In-memory DuckDB with schema already set up."""
+    # Read the schema file and execute it
+    schema_path = Path(__file__).parent.parent / "pidgin" / "database" / "schema.sql"
+    if schema_path.exists():
+        with open(schema_path) as f:
+            schema_sql = f.read()
+            # Execute each statement separately
+            for statement in schema_sql.split(';'):
+                if statement.strip():
+                    in_memory_db.execute(statement)
+    
+    return in_memory_db
+
+
+@pytest.fixture
+def temp_db_path(temp_dir):
+    """Create a temporary database file path for persistence tests."""
+    return temp_dir / "test_pidgin.duckdb"
+
+
+@pytest.fixture
+def file_based_db(temp_db_path):
+    """File-based DuckDB for testing persistence and concurrent access."""
+    import duckdb
+    
+    conn = duckdb.connect(str(temp_db_path))
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+def event_store_memory():
+    """Create an EventStore with in-memory database for fast tests."""
+    from pidgin.database.event_store import EventStore
+    import duckdb
+    
+    # Create a custom EventStore that uses in-memory connection
+    class InMemoryEventStore(EventStore):
+        def __init__(self):
+            self.db_path = Path(":memory:")  # For compatibility
+            self._conn = duckdb.connect(':memory:')
+            self._init_database()
+    
+    store = InMemoryEventStore()
+    yield store
+    store.close()
+
+
+@pytest.fixture
+def event_store_file(temp_db_path):
+    """Create an EventStore with file-based database for persistence tests."""
     from pidgin.database.event_store import EventStore
     
-    store = EventStore(Path(":memory:"))
+    store = EventStore(temp_db_path)
     yield store
     store.close()
 
@@ -369,6 +429,176 @@ def make_experiment():
     return _make
 
 
+# ===== Data Generation with Faker =====
+
+@pytest.fixture
+def faker_factory():
+    """Create a Faker instance for generating test data."""
+    from faker import Faker
+    return Faker()
+
+
+@pytest.fixture
+def realistic_conversation_generator(faker_factory):
+    """Generate realistic conversation data using Faker."""
+    from pidgin.core.types import Message, Conversation
+    
+    def _generate(num_turns=10, topic=None):
+        """Generate a realistic conversation between two agents."""
+        fake = faker_factory
+        
+        # Define conversation topics and patterns
+        topics = {
+            "technical": [
+                "Can you explain {concept}?",
+                "How does {technology} work?",
+                "What are the benefits of {approach}?",
+                "I'm having trouble with {problem}. Any suggestions?"
+            ],
+            "casual": [
+                "What do you think about {topic}?",
+                "Have you heard about {event}?",
+                "I've been wondering about {question}.",
+                "Do you have any recommendations for {activity}?"
+            ],
+            "creative": [
+                "Can you help me write a {type} about {subject}?",
+                "I need ideas for {project}.",
+                "What's your take on {creative_work}?",
+                "How would you approach {challenge}?"
+            ]
+        }
+        
+        if not topic:
+            topic = fake.random_element(list(topics.keys()))
+        
+        templates = topics.get(topic, topics["casual"])
+        messages = []
+        
+        for i in range(num_turns):
+            is_user_turn = i % 2 == 0
+            
+            if is_user_turn:
+                # Generate user message
+                template = fake.random_element(templates)
+                content = template.format(
+                    concept=fake.bs(),
+                    technology=fake.company(),
+                    approach=fake.catch_phrase(),
+                    problem=fake.sentence(nb_words=6),
+                    topic=fake.sentence(nb_words=4),
+                    event=fake.catch_phrase(),
+                    question=fake.sentence(nb_words=8),
+                    activity=fake.job(),
+                    type=fake.random_element(["story", "poem", "article"]),
+                    subject=fake.word(),
+                    project=fake.bs(),
+                    creative_work=fake.catch_phrase(),
+                    challenge=fake.sentence(nb_words=5)
+                )
+            else:
+                # Generate assistant response
+                responses = [
+                    f"That's an interesting question about {fake.word()}. {fake.paragraph(nb_sentences=3)}",
+                    f"I understand your concern. {fake.paragraph(nb_sentences=2)} Would you like me to elaborate?",
+                    f"Based on my understanding, {fake.paragraph(nb_sentences=4)}",
+                    f"Here's what I think: {fake.paragraph(nb_sentences=3)} Does this help?"
+                ]
+                content = fake.random_element(responses)
+            
+            messages.append(Message(
+                role="user" if is_user_turn else "assistant",
+                content=content,
+                agent_id="agent_a" if is_user_turn else "agent_b",
+                timestamp=fake.date_time_between(start_date="-1hour")
+            ))
+        
+        # Sort messages by timestamp
+        messages.sort(key=lambda m: m.timestamp)
+        
+        return Conversation(
+            id=f"conv_{fake.uuid4()}",
+            agents=["agent_a", "agent_b"],
+            messages=messages,
+            metadata={
+                "topic": topic,
+                "generated_by": "faker",
+                "seed": fake.random_int()
+            }
+        )
+    
+    return _generate
+
+
+@pytest.fixture
+def metrics_test_data_generator(faker_factory):
+    """Generate test data specifically for metrics testing."""
+    from pidgin.core.types import Message
+    
+    def _generate_messages_with_pattern(pattern_type="convergent"):
+        """Generate messages with specific linguistic patterns for testing metrics."""
+        fake = faker_factory
+        
+        patterns = {
+            "convergent": {
+                # Messages that should show high convergence
+                "vocabulary": ["understand", "agree", "exactly", "yes", "right", "correct"],
+                "style": "short_formal",
+                "length_trend": "decreasing"
+            },
+            "divergent": {
+                # Messages that should show low convergence
+                "vocabulary": ["disagree", "however", "actually", "but", "different", "wrong"],
+                "style": "varied",
+                "length_trend": "increasing"
+            },
+            "stable": {
+                # Messages that maintain consistent patterns
+                "vocabulary": fake.words(nb=20),
+                "style": "consistent",
+                "length_trend": "stable"
+            }
+        }
+        
+        pattern = patterns.get(pattern_type, patterns["stable"])
+        messages = []
+        base_length = 50
+        
+        for i in range(20):
+            is_agent_a = i % 2 == 0
+            
+            # Calculate message length based on trend
+            if pattern["length_trend"] == "decreasing":
+                length = base_length - (i * 2)
+            elif pattern["length_trend"] == "increasing":
+                length = base_length + (i * 3)
+            else:
+                length = base_length
+            
+            # Build message with pattern vocabulary
+            if pattern_type == "convergent" and i > 10:
+                # Later messages use more shared vocabulary
+                words = fake.random_elements(
+                    elements=pattern["vocabulary"],
+                    length=min(5, length // 10),
+                    unique=False
+                )
+                content = " ".join(words) + " " + fake.sentence(nb_words=max(1, length // 10 - 5))
+            else:
+                content = fake.sentence(nb_words=max(1, length // 10))
+            
+            messages.append(Message(
+                role="user" if is_agent_a else "assistant",
+                content=content,
+                agent_id="agent_a" if is_agent_a else "agent_b",
+                timestamp=fake.date_time_between(start_date="-1hour")
+            ))
+        
+        return messages, pattern_type
+    
+    return _generate_messages_with_pattern
+
+
 # ===== Cleanup Fixtures =====
 
 @pytest.fixture(autouse=True)
@@ -411,3 +641,4 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: marks tests as slow")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
+    config.addinivalue_line("markers", "database: marks tests that require a real database connection")

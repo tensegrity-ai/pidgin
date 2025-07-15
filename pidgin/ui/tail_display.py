@@ -20,6 +20,12 @@ from ..core.events import (
     SystemPromptEvent,
     APIErrorEvent,
     ContextTruncationEvent,
+    RateLimitPaceEvent,
+    TokenUsageEvent,
+    ProviderTimeoutEvent,
+    InterruptRequestEvent,
+    ConversationPausedEvent,
+    ConversationResumedEvent,
 )
 
 
@@ -47,6 +53,12 @@ class TailDisplay:
         SystemPromptEvent: NORD_GRAY,
         APIErrorEvent: NORD_RED,
         ContextTruncationEvent: NORD_ORANGE,
+        RateLimitPaceEvent: NORD_PURPLE,
+        TokenUsageEvent: NORD_CYAN,
+        ProviderTimeoutEvent: NORD_ORANGE,
+        InterruptRequestEvent: NORD_RED,
+        ConversationPausedEvent: NORD_YELLOW,
+        ConversationResumedEvent: NORD_GREEN,
     }
     
     EVENT_GLYPHS = {
@@ -60,6 +72,12 @@ class TailDisplay:
         SystemPromptEvent: "⚙",
         APIErrorEvent: "✗",
         ContextTruncationEvent: "⚠",
+        RateLimitPaceEvent: "⧖",
+        TokenUsageEvent: "◉",
+        ProviderTimeoutEvent: "⟡",
+        InterruptRequestEvent: "⚡",
+        ConversationPausedEvent: "⏸",
+        ConversationResumedEvent: "▶",
     }
     
     def __init__(self, bus: EventBus, console: Console):
@@ -75,6 +93,18 @@ class TailDisplay:
         
         # Subscribe to ALL events
         bus.subscribe(Event, self.log_event)
+    
+    def _format_agent_id(self, agent_id: str) -> str:
+        """Format agent ID with consistent color.
+        
+        Args:
+            agent_id: The agent identifier
+            
+        Returns:
+            Formatted agent ID with color markup
+        """
+        agent_color = self.NORD_GREEN if agent_id == "agent_a" else self.NORD_BLUE
+        return f"[{agent_color}]{agent_id}[/{agent_color}]"
         
     def log_event(self, event: Event) -> None:
         """Display an event with beautiful Rich formatting.
@@ -126,78 +156,82 @@ class TailDisplay:
             self._display_context_truncation(event, header, color)
         elif isinstance(event, SystemPromptEvent):
             self._display_system_prompt(event, header)
+        elif isinstance(event, RateLimitPaceEvent):
+            self._display_rate_limit(event, header)
+        elif isinstance(event, TokenUsageEvent):
+            self._display_token_usage(event, header)
+        elif isinstance(event, ProviderTimeoutEvent):
+            self._display_provider_timeout(event, header, color)
+        elif isinstance(event, InterruptRequestEvent):
+            self._display_interrupt_request(event, header)
+        elif isinstance(event, ConversationPausedEvent):
+            self._display_conversation_paused(event, header)
+        elif isinstance(event, ConversationResumedEvent):
+            self._display_conversation_resumed(event, header)
         else:
             # Generic event display
             self._display_generic_event(event, header)
     
     def _display_conversation_start(self, event: ConversationStartEvent, header: Text, color: str) -> None:
         """Display conversation start event."""
-        table = Table.grid(padding=1)
-        table.add_column(style=self.NORD_GRAY)
-        table.add_column()
+        # Format as single line with key info
+        content = f"id: {event.conversation_id[:12]}... | "
+        content += f"{event.agent_a_model} ↔ {event.agent_b_model} | "
+        content += f"max_turns: {event.max_turns}"
         
-        table.add_row("conversation_id:", event.conversation_id)
-        table.add_row("agent_a:", f"{event.agent_a_model} (temp: {event.temperature_a or 'default'})")
-        table.add_row("agent_b:", f"{event.agent_b_model} (temp: {event.temperature_b or 'default'})")
-        table.add_row("max_turns:", str(event.max_turns))
+        self.console.print(header, content)
         
-        panel = Panel(
-            table,
-            title=header,
-            title_align="left",
-            border_style=color,
-            expand=False
-        )
-        self.console.print(panel)
-        
-        # Show initial prompt as a regular event if present
+        # Show initial prompt on next line if present (with human tag as agents see it)
         if event.initial_prompt:
-            # Create a fake event-style display for initial prompt
+            # Get human tag from config
+            from ..config import Config
+            config = Config()
+            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+            
+            # Format prompt as agents see it
+            if human_tag:
+                full_prompt = f"{human_tag}: {event.initial_prompt}"
+            else:
+                full_prompt = event.initial_prompt
+            
+            prompt_truncated = full_prompt.strip().replace('\n', ' ')
+            if len(prompt_truncated) > 100:  # Increased limit to accommodate human tag
+                prompt_truncated = prompt_truncated[:97] + "..."
+            
             prompt_header = Text()
             prompt_header.append(f"[{event.timestamp.strftime('%H:%M:%S.%f')[:-3]}] ", style=self.NORD_GRAY)
-            prompt_header.append("◆ ", style=self.NORD_CYAN)
-            prompt_header.append("InitialPrompt", style=self.NORD_CYAN)
+            prompt_header.append("◆ InitialPrompt", style=self.NORD_CYAN + " bold")
             
-            self.console.print(prompt_header, event.initial_prompt)
-        self.console.print()
+            self.console.print(prompt_header, prompt_truncated)
     
     def _display_conversation_end(self, event: ConversationEndEvent, header: Text, color: str) -> None:
         """Display conversation end event."""
         # Format reason nicely
         reason_map = {
-            "max_turns_reached": "Max turns reached",
-            "high_convergence": "High convergence detected",
-            "interrupted": "User interrupted",
-            "error": "Error occurred"
+            "max_turns_reached": "max_turns",
+            "high_convergence": "convergence",
+            "interrupted": "interrupted",
+            "error": "error"
         }
         reason_display = reason_map.get(event.reason, event.reason)
         
-        content = f"Reason: {reason_display}\n"
-        content += f"Total turns: {event.total_turns}\n"
-        
         # Format duration
+        duration_str = ""
         if hasattr(event, 'duration_ms') and event.duration_ms:
             duration_s = event.duration_ms / 1000
             if duration_s < 60:
-                content += f"Duration: {duration_s:.1f}s"
+                duration_str = f"{duration_s:.1f}s"
             else:
                 minutes = int(duration_s // 60)
                 seconds = int(duration_s % 60)
-                content += f"Duration: {minutes}m {seconds}s"
+                duration_str = f"{minutes}m {seconds}s"
         
-        # Add convergence if available
-        if hasattr(event, 'final_convergence') and event.final_convergence is not None:
-            content += f"\nFinal convergence: {event.final_convergence:.3f}"
+        # Format as single line
+        content = f"reason: {reason_display} | turns: {event.total_turns}"
+        if duration_str:
+            content += f" | duration: {duration_str}"
         
-        panel = Panel(
-            content,
-            title=header,
-            title_align="left",
-            border_style=color,
-            expand=False
-        )
-        self.console.print(panel)
-        self.console.print()
+        self.console.print(header, content)
     
     def _display_turn_start(self, event: TurnStartEvent, header: Text) -> None:
         """Display turn start event."""
@@ -209,99 +243,144 @@ class TailDisplay:
         if event.convergence_score is not None:
             content += f" | convergence: {event.convergence_score:.3f}"
         self.console.print(header, content)
-        self.console.print()
     
     def _display_message_request(self, event: MessageRequestEvent, header: Text) -> None:
         """Display message request event."""
-        self.console.print(header, f"{event.agent_id} thinking...")
+        self.console.print(header, f"{self._format_agent_id(event.agent_id)} thinking...")
     
     def _display_message_complete(self, event: MessageCompleteEvent, header: Text, color: str) -> None:
         """Display message complete event."""
-        # Get agent color
-        agent_color = self.NORD_GREEN if event.agent_id == "agent_a" else self.NORD_BLUE
+        # Get message content
+        msg_content = event.message.content if hasattr(event.message, 'content') else str(event.message)
         
-        # Format message content
-        content = Text()
-        content.append(f"{event.agent_id}: ", style=agent_color + " bold")
-        content.append(event.message.content if hasattr(event.message, 'content') else str(event.message))
+        # Truncate message to first line, max 20 chars
+        msg_lines = msg_content.strip().replace('\n', ' ').split()
+        truncated_msg = ' '.join(msg_lines)
+        if len(truncated_msg) > 20:
+            truncated_msg = truncated_msg[:17] + "..."
         
-        # Add metadata
+        # Build metadata
         metadata = []
         if hasattr(event, 'duration_ms') and event.duration_ms is not None:
-            metadata.append(f"duration: {event.duration_ms/1000:.1f}s")
+            metadata.append(f"{event.duration_ms/1000:.1f}s")
         if hasattr(event, 'tokens_used') and event.tokens_used:
-            metadata.append(f"tokens: {event.tokens_used}")
+            metadata.append(f"{event.tokens_used}tok")
         
+        # Format as single line
+        content = f"{self._format_agent_id(event.agent_id)}: {truncated_msg}"
         if metadata:
-            content.append(f"\n{' | '.join(metadata)}", style=self.NORD_GRAY)
+            content += f" [{self.NORD_GRAY}]({' | '.join(metadata)})[/{self.NORD_GRAY}]"
         
-        self.console.print(header)
-        self.console.print(content)
-        self.console.print()
+        self.console.print(header, content)
     
     def _handle_message_chunk(self, event: MessageChunkEvent) -> None:
         """Handle message chunks."""
-        # Show chunks inline with a subtle indicator
-        chunk_text = Text()
-        chunk_text.append("·", style=self.NORD_PURPLE)
-        chunk_text.append(event.content, style=self.NORD_GRAY)
-        self.console.print(chunk_text, end="")
+        # Get chunk content with correct attribute name
+        chunk_content = event.chunk if hasattr(event, 'chunk') else getattr(event, 'content', '')
+        
+        # Format as single line with timestamp
+        timestamp = event.timestamp.strftime("%H:%M:%S.%f")[:-3]
+        header = Text()
+        header.append(f"[{timestamp}] ", style=self.NORD_GRAY)
+        header.append("· MessageChunk", style=self.NORD_PURPLE + " bold")
+        
+        # Truncate chunk to 20 chars
+        truncated_chunk = chunk_content.strip().replace('\n', ' ')
+        if len(truncated_chunk) > 20:
+            truncated_chunk = truncated_chunk[:17] + "..."
+            
+        content = f"{self._format_agent_id(event.agent_id)}: {truncated_chunk}"
+        self.console.print(header, content)
     
     def _display_api_error(self, event: APIErrorEvent, header: Text, color: str) -> None:
         """Display API error event."""
-        error_panel = Panel(
-            f"Provider: {event.provider}\nError: {event.error_type}\n{event.error_message}",
-            title=header,
-            title_align="left",
-            border_style=color,
-            expand=False
-        )
-        self.console.print(error_panel)
-        self.console.print()
+        # Truncate error message for single line
+        error_msg = event.error_message.strip().replace('\n', ' ')
+        if len(error_msg) > 60:
+            error_msg = error_msg[:57] + "..."
+        
+        content = f"{event.provider} | {event.error_type}: {error_msg}"
+        self.console.print(header, content)
     
     def _display_context_truncation(self, event: ContextTruncationEvent, header: Text, color: str) -> None:
         """Display context truncation event."""
-        content = f"Agent: {event.agent_id}\n"
-        content += f"Messages removed: {event.messages_removed}\n"
-        content += f"Tokens before: {event.tokens_before} → after: {event.tokens_after}"
-        
-        panel = Panel(
-            content,
-            title=header,
-            title_align="left",
-            border_style=color,
-            expand=False
-        )
-        self.console.print(panel)
-        self.console.print()
+        content = f"{self._format_agent_id(event.agent_id)} | removed {event.messages_dropped} msgs | "
+        content += f"{event.original_message_count} → {event.truncated_message_count} msgs"
+        self.console.print(header, content)
     
     def _display_system_prompt(self, event: SystemPromptEvent, header: Text) -> None:
         """Display system prompt event."""
-        # Show the actual system prompt content
+        # Truncate system prompt for single line display
         if hasattr(event, 'prompt') and event.prompt:
-            self.console.print(header, f"{event.agent_id}: {event.prompt}")
+            prompt_truncated = event.prompt.strip().replace('\n', ' ')
+            if len(prompt_truncated) > 60:
+                prompt_truncated = prompt_truncated[:57] + "..."
+            self.console.print(header, f"{self._format_agent_id(event.agent_id)}: {prompt_truncated}")
         else:
-            self.console.print(header, f"{event.agent_id} system prompt configured")
+            self.console.print(header, f"{self._format_agent_id(event.agent_id)} system prompt configured")
     
     def _display_generic_event(self, event: Event, header: Text) -> None:
         """Display generic event."""
         # Convert event to dict and format key fields
         event_dict = event.dict()
         event_dict.pop('timestamp', None)  # Already in header
+        event_dict.pop('event_id', None)  # Not useful for display
         
-        # Format as simple key-value pairs
-        content = []
+        # Format as single line with key values
+        content_parts = []
         for key, value in event_dict.items():
             if value is not None and value != "":
-                content.append(f"{key}: {value}")
+                if isinstance(value, str) and len(value) > 30:
+                    value = value[:27] + "..."
+                content_parts.append(f"{key}: {value}")
         
-        if content:
-            self.console.print(header)
-            for line in content:
-                self.console.print(f"  {line}", style=self.NORD_GRAY)
-            self.console.print()
+        if content_parts:
+            content = " | ".join(content_parts[:3])  # Limit to 3 most important fields
+            self.console.print(header, content)
         else:
-            self.console.print(header)
+            self.console.print(header, "(no data)")
+    
+    def _display_rate_limit(self, event: RateLimitPaceEvent, header: Text) -> None:
+        """Display rate limit event."""
+        # Make reason more human-readable
+        if event.reason == "mixed":
+            reason_str = "(request + token limits)"
+        elif event.reason == "request_rate":
+            reason_str = "(request limit)"
+        elif event.reason == "token_rate":
+            reason_str = "(token limit)"
+        else:
+            reason_str = f"({event.reason})"
+        
+        content = f"Waiting {event.wait_time:.1f}s for {event.provider} {reason_str}"
+        self.console.print(header, content)
+    
+    def _display_token_usage(self, event: TokenUsageEvent, header: Text) -> None:
+        """Display token usage event."""
+        usage_rate_pct = (event.current_usage_rate / event.tokens_per_minute_limit * 100) if event.tokens_per_minute_limit > 0 else 0
+        content = f"{event.provider}: {event.tokens_used} tokens | {usage_rate_pct:.0f}% of limit ({event.tokens_per_minute_limit}/min)"
+        self.console.print(header, content)
+    
+    
+    def _display_provider_timeout(self, event: ProviderTimeoutEvent, header: Text, color: str) -> None:
+        """Display provider timeout event."""
+        content = f"{self._format_agent_id(event.agent_id)} | {event.error_type}: {event.error_message} (timeout: {event.timeout_seconds}s)"
+        self.console.print(header, content)
+    
+    def _display_interrupt_request(self, event: InterruptRequestEvent, header: Text) -> None:
+        """Display interrupt request event."""
+        content = f"Interrupt from {event.interrupt_source} at turn {event.turn_number}"
+        self.console.print(header, content)
+    
+    def _display_conversation_paused(self, event: ConversationPausedEvent, header: Text) -> None:
+        """Display conversation paused event."""
+        content = f"Paused at turn {event.turn_number} ({event.paused_during})"
+        self.console.print(header, content)
+    
+    def _display_conversation_resumed(self, event: ConversationResumedEvent, header: Text) -> None:
+        """Display conversation resumed event."""
+        content = f"Resumed at turn {event.turn_number}"
+        self.console.print(header, content)
     
     def _format_event_content(self, event: Event) -> str:
         """Legacy format method for backward compatibility.

@@ -71,8 +71,67 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=pidgin --cov-report=html --cov-report=term"
+addopts = "--cov=pidgin --cov-report=term --cov-report=html"
 filterwarnings = [
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
     "ignore::RuntimeWarning:coverage.parser",
 ]
+markers = [
+    "unit: Unit tests that run in isolation",
+    "integration: Integration tests that use real components",
+    "slow: Tests that take more than 1 second to run",
+    "database: Tests that require a real database connection",
+    "benchmark: Performance benchmark tests",
+]
+
+[tool.coverage.run]
+source = ["pidgin"]
+omit = [
+    "*/tests/*",
+    "*/conftest.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+# Overall project minimum
+fail_under = 70
+
+# Show missing lines
+show_missing = true
+
+# Skip files with no executable code
+skip_empty = true
+
+# Exclude lines from coverage
+exclude_lines = [
+    # Standard pragma
+    "pragma: no cover",
+    
+    # Don't complain about missing debug-only code
+    "def __repr__",
+    "def __str__",
+    
+    # Don't complain if tests don't hit defensive assertion code
+    "raise AssertionError",
+    "raise NotImplementedError",
+    
+    # Don't complain if non-runnable code isn't run
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    
+    # Don't complain about abstract methods
+    "@abstractmethod",
+    "@abc.abstractmethod",
+    
+    # Defensive programming
+    "except ImportError:",
+    "except KeyError:",
+    "except AttributeError:",
+    
+    # Platform-specific code
+    "if sys.platform",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
