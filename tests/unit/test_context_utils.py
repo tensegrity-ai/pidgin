@@ -65,8 +65,8 @@ class TestContextUtils:
                 )
                 
                 assert result == truncated_messages
-                mock_logger.info.assert_called_once()
-                log_message = mock_logger.info.call_args[0][0]
+                mock_logger.debug.assert_called_once()
+                log_message = mock_logger.debug.call_args[0][0]
                 assert "Truncated from 5 to 3 messages" in log_message
                 assert "gpt-4" in log_message
     

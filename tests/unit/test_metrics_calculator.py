@@ -283,3 +283,77 @@ class TestMetricsCalculator:
         assert total_vocab > 5  # Should have various words
         assert len(calculator.previous_messages['agent_a']) == 3
         assert len(calculator.previous_messages['agent_b']) == 3
+    
+    def test_calculate_repetition_edge_cases(self, calculator):
+        """Test repetition calculation edge cases."""
+        # Test with empty message (should return 0.0)
+        # This tests line 302-303 in _calculate_repetition
+        empty_words = []
+        repetition = calculator._calculate_repetition(empty_words, "agent_a", 1)
+        assert repetition == 0.0
+        
+        # Test with first turn (turn_number=0, should return 0.0)
+        repetition = calculator._calculate_repetition(["hello", "world"], "agent_a", 0)
+        assert repetition == 0.0
+        
+        # Test with no previous words (should return 0.0)
+        # This tests line 309-310 in _calculate_repetition
+        # Agent has no previous vocabulary, so previous_words will be empty
+        repetition = calculator._calculate_repetition(["new", "words"], "agent_a", 1)
+        assert repetition == 0.0
+        
+        # Test case where previous_words becomes empty after subtraction
+        # This tests line 309-310 in _calculate_repetition
+        # Add vocabulary to agent_a
+        calculator.all_agent_words['agent_a'].add("hello")
+        
+        # Now test with current words that completely overlap with previous
+        # previous_words = {'hello'} - {'hello'} = {} (empty set)
+        repetition = calculator._calculate_repetition(["hello"], "agent_a", 1)
+        assert repetition == 0.0  # Should return 0.0 when previous_words is empty
+        
+        # Test normal repetition calculation
+        # First, add some vocabulary to the agent
+        calculator.calculate_turn_metrics(0, "hello world", "goodbye world")
+        
+        # Now test repetition with partial overlap
+        # Agent A has: {'hello', 'world'}
+        # Current: {'world', 'new'}
+        # Previous after subtraction: {'hello'} (removed 'world')
+        # Overlap: {} (no overlap between {'world', 'new'} and {'hello'})
+        repetition = calculator._calculate_repetition(["world", "new"], "agent_a", 1)
+        assert repetition == 0.0
+        
+        # Test with actual overlap
+        # Current: {'hello', 'new'}
+        # Previous after subtraction: {'world'} (removed 'hello')
+        # Overlap: {} (no overlap)
+        repetition = calculator._calculate_repetition(["hello", "new"], "agent_a", 1)
+        assert repetition == 0.0
+    
+    def test_reset_functionality(self, calculator):
+        """Test that reset clears all state."""
+        # Add some state
+        calculator.calculate_turn_metrics(0, "hello world", "goodbye world")
+        calculator.calculate_turn_metrics(1, "another message", "another response")
+        
+        # Verify state exists
+        assert len(calculator.cumulative_vocab['agent_a']) > 0
+        assert len(calculator.all_agent_words['agent_a']) > 0
+        assert len(calculator.previous_messages['agent_a']) > 0
+        assert len(calculator.turn_vocabularies) > 0
+        assert len(calculator.all_messages) > 0
+        
+        # Reset
+        calculator.reset()
+        
+        # Verify state is cleared
+        assert len(calculator.cumulative_vocab['agent_a']) == 0
+        assert len(calculator.cumulative_vocab['agent_b']) == 0
+        assert len(calculator.all_agent_words['agent_a']) == 0
+        assert len(calculator.all_agent_words['agent_b']) == 0
+        assert len(calculator.previous_messages['agent_a']) == 0
+        assert len(calculator.previous_messages['agent_b']) == 0
+        assert len(calculator.turn_vocabularies) == 0
+        assert len(calculator._token_cache) == 0
+        assert len(calculator.all_messages) == 0

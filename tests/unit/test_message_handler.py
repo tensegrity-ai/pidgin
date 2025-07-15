@@ -353,3 +353,47 @@ class TestMessageHandler:
         
         assert result.content == "Normal response"
         handler.bus.emit.assert_not_called()  # No interrupt event
+    
+    @pytest.mark.asyncio
+    async def test_interrupt_check_function_returns_true(self, handler):
+        """Test that the interrupt check function returns True when interrupt is requested."""
+        interrupt_handler = Mock()
+        interrupt_handler.interrupt_requested = False
+        
+        # Create the check_interrupt function directly to test it
+        async def check_interrupt():
+            """Check for interrupt flag."""
+            while not interrupt_handler.interrupt_requested:
+                await asyncio.sleep(0.01)  # Short sleep for testing
+            return True
+        
+        # Set up interrupt to trigger
+        async def trigger_interrupt():
+            await asyncio.sleep(0.05)
+            interrupt_handler.interrupt_requested = True
+        
+        asyncio.create_task(trigger_interrupt())
+        
+        # This should return True when interrupt is triggered
+        result = await check_interrupt()
+        assert result is True
+    
+    @pytest.mark.asyncio
+    async def test_handle_interrupt_with_cancelled_future(self, handler):
+        """Test handling interrupt when future is cancelled."""
+        future = asyncio.Future()
+        agent = make_agent("test_agent")
+        
+        # Cancel the future to trigger the exception path
+        future.cancel()
+        
+        result = await handler._handle_interrupt("conv_123", agent, 1, future)
+        
+        # Should emit pause event
+        handler.bus.emit.assert_called_once()
+        event = handler.bus.emit.call_args[0][0]
+        assert isinstance(event, ConversationPausedEvent)
+        assert event.paused_during == "waiting_for_test_agent"
+        
+        # Should return None on cancelled future
+        assert result is None

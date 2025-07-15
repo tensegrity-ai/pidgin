@@ -8,6 +8,7 @@ import uuid
 import signal
 import time
 import json
+import yaml
 from typing import Optional, List
 from pathlib import Path
 from datetime import datetime
@@ -52,6 +53,8 @@ from . import ORIGINAL_CWD
 
 
 @click.command()
+@click.argument('spec_file', required=False, type=click.Path(exists=True), 
+                metavar='[SPEC_FILE]')
 @click.option('--agent-a', '-a', 
               help='* First agent model (e.g., gpt-4, claude, gemini-1.5-pro)')
 @click.option('--agent-b', '-b', 
@@ -98,15 +101,12 @@ from . import ORIGINAL_CWD
               is_flag=True,
               help='Let agents choose their own names')
 @click.option('-w', '--awareness',
-              type=click.Choice(['none', 'basic', 'firm', 'research']),
               default='basic',
-              help='Awareness level for both agents')
+              help='Awareness level (none/basic/firm/research) or custom YAML file')
 @click.option('--awareness-a',
-              type=click.Choice(['none', 'basic', 'firm', 'research']),
-              help='Awareness level for agent A only')
-@click.option('--awareness-b',
-              type=click.Choice(['none', 'basic', 'firm', 'research']),
-              help='Awareness level for agent B only')
+              help='Override awareness for agent A (level or YAML file)')
+@click.option('--awareness-b', 
+              help='Override awareness for agent B (level or YAML file)')
 @click.option('--show-system-prompts',
               is_flag=True,
               help='Display system prompts at start')
@@ -128,17 +128,23 @@ from . import ORIGINAL_CWD
               type=click.IntRange(1, 50),
               default=1,
               help='Max parallel conversations (default: 1, sequential)')
-def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a, 
+@click.option('--prompt-tag',
+              default="[HUMAN]",
+              help='Tag to prefix the initial prompt (default: "[HUMAN]", use "" to disable)')
+def run(spec_file, agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a, 
         temp_b, output, dimension, convergence_threshold,
         convergence_action, convergence_profile, first_speaker, choose_names, awareness,
         awareness_a, awareness_b, show_system_prompts, meditation,
-        quiet, tail, notify, name, max_parallel):
+        quiet, tail, notify, name, max_parallel, prompt_tag):
     """Run AI conversations - single or multiple.
 
     This unified command runs conversations between two AI agents.
     By default shows the conversation messages as they are generated.
 
     [bold]EXAMPLES:[/bold]
+
+    [#4c566a]From YAML spec:     [/#4c566a]
+      pidgin run experiment.yaml
 
     [#4c566a]Basic conversation: [/#4c566a]
       pidgin run -a claude -b gpt
@@ -158,6 +164,26 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
     [#4c566a]Meditation mode:    [/#4c566a]
       pidgin run -a claude --meditation
     """
+    # Check if a YAML spec file was provided
+    if spec_file and spec_file.endswith(('.yaml', '.yml')):
+        try:
+            # Load YAML spec
+            with open(spec_file, 'r') as f:
+                spec = yaml.safe_load(f)
+            
+            # Run from spec
+            _run_from_spec(spec, spec_file)
+            return
+        except FileNotFoundError:
+            display.error(f"Spec file not found: {spec_file}")
+            return
+        except yaml.YAMLError as e:
+            display.error(f"Invalid YAML in {spec_file}: {e}")
+            return
+        except Exception as e:
+            display.error(f"Error loading spec: {e}")
+            return
+    
     # Handle display mode flags
     mode_count = sum([quiet, tail])
     if mode_count > 1:
@@ -294,9 +320,103 @@ def run(agent_a, agent_b, prompt, turns, repetitions, temperature, temp_a,
         convergence_threshold, convergence_action,
         awareness, awareness_a, awareness_b,
         choose_names, quiet, notify,
-        display_mode, first_speaker_id, output
+        display_mode, first_speaker_id, output, prompt_tag
     )
 
+
+
+def _run_from_spec(spec, spec_file):
+    """Run experiment from YAML specification.
+    
+    Args:
+        spec: Loaded YAML specification dictionary
+        spec_file: Path to the spec file (for error messages)
+    """
+    # Map YAML fields to ExperimentConfig fields
+    # Handle both direct field names and nested structures
+    
+    # Required fields
+    if 'agent_a_model' not in spec or 'agent_b_model' not in spec:
+        # Also check for shorthand
+        if 'agent_a' in spec and 'agent_b' in spec:
+            spec['agent_a_model'] = spec.pop('agent_a')
+            spec['agent_b_model'] = spec.pop('agent_b')
+        else:
+            display.error(
+                f"Missing required fields in {spec_file}",
+                context="Must specify agent_a_model and agent_b_model (or agent_a and agent_b)"
+            )
+            return
+    
+    # Handle model validation
+    try:
+        agent_a_id = validate_model_id(spec['agent_a_model'])
+        agent_b_id = validate_model_id(spec['agent_b_model'])
+    except ValueError as e:
+        display.error(f"Invalid model in {spec_file}: {e}")
+        return
+    
+    # Get model configs for display names
+    agent_a_config = get_model_config(agent_a_id)
+    agent_b_config = get_model_config(agent_b_id)
+    agent_a_name = agent_a_config.get('display_name', agent_a_id)
+    agent_b_name = agent_b_config.get('display_name', agent_b_id)
+    
+    # Map other fields with defaults
+    name = spec.get('name', generate_experiment_name())
+    repetitions = spec.get('repetitions', 1)
+    max_turns = spec.get('max_turns', spec.get('turns', DEFAULT_TURNS))
+    
+    # Temperature handling
+    temp_a = spec.get('temperature_a', spec.get('temperature'))
+    temp_b = spec.get('temperature_b', spec.get('temperature'))
+    
+    # Prompt handling
+    initial_prompt = spec.get('custom_prompt', spec.get('prompt', 'Hello'))
+    dimensions = spec.get('dimensions', spec.get('dimension'))
+    
+    # Convergence settings
+    convergence_threshold = spec.get('convergence_threshold')
+    convergence_action = spec.get('convergence_action', 'stop' if convergence_threshold else None)
+    
+    # Awareness settings
+    awareness = spec.get('awareness', 'basic')
+    awareness_a = spec.get('awareness_a')
+    awareness_b = spec.get('awareness_b')
+    
+    # Other settings
+    choose_names = spec.get('choose_names', False)
+    max_parallel = spec.get('max_parallel', 1)
+    first_speaker = spec.get('first_speaker', 'agent_a')
+    display_mode = spec.get('display_mode', 'verbose')
+    prompt_tag = spec.get('prompt_tag', "[HUMAN]")
+    
+    # Notification settings
+    quiet = display_mode == 'quiet'
+    notify = spec.get('notify', quiet)
+    
+    # Output directory
+    output_dir = spec.get('output')
+    
+    # Show spec info
+    display.info(
+        f"Loading experiment from: {spec_file}",
+        context=f"Name: {name}\nAgents: {agent_a_name} ↔ {agent_b_name}\nRepetitions: {repetitions}"
+    )
+    
+    # Run the experiment
+    _run_conversations(
+        agent_a_id, agent_b_id,
+        agent_a_name, agent_b_name,
+        repetitions, max_turns,
+        temp_a, temp_b,
+        initial_prompt, dimensions,
+        name, max_parallel,
+        convergence_threshold, convergence_action,
+        awareness, awareness_a, awareness_b,
+        choose_names, quiet, notify,
+        display_mode, first_speaker, output_dir, prompt_tag
+    )
 
 
 def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
@@ -305,7 +425,7 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
                       convergence_threshold, convergence_action,
                       awareness, awareness_a, awareness_b,
                       choose_names, quiet, notify,
-                      display_mode, first_speaker_id, output_dir):
+                      display_mode, first_speaker_id, output_dir, prompt_tag):
     """Run conversations using the unified execution path."""
     # Determine display mode for experiments
     # For parallel execution or quiet mode, don't use interactive displays
@@ -339,7 +459,8 @@ def _run_conversations(agent_a_id, agent_b_id, agent_a_name, agent_b_name,
         awareness_b=awareness_b,
         choose_names=choose_names,
         first_speaker=first_speaker_id,
-        display_mode=experiment_display_mode
+        display_mode=experiment_display_mode,
+        prompt_tag=prompt_tag
     )
     
     # Show configuration

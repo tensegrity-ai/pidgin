@@ -1,0 +1,137 @@
+.TH PIDGIN-BRANCH 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin-branch \- Branch from existing conversation states
+.SH SYNOPSIS
+.B pidgin branch
+\fICONVERSATION_ID\fR [\fIOPTIONS\fR]
+.SH DESCRIPTION
+The \fBbranch\fR command creates a new conversation that continues from a
+specific point in an existing conversation. This allows exploring alternate
+conversation paths by changing prompts, models, or parameters while preserving
+the conversation history up to the branch point.
+.PP
+Branching is useful for:
+.IP \(bu 3
+Testing how different prompts affect conversation direction
+.IP \(bu 3
+Comparing different model responses to the same context
+.IP \(bu 3
+Exploring "what if" scenarios in conversation development
+.IP \(bu 3
+Creating conversation trees for analysis
+.SH ARGUMENTS
+.TP
+.I CONVERSATION_ID
+The conversation to branch from. Can be the full ID or a unique prefix.
+.SH OPTIONS
+.TP
+.BR \-\-turn " " \fIN\fR
+Turn number to branch from (required).
+The new conversation will include all messages up to and including this turn.
+.TP
+.BR \-\-prompt " " \fITEXT\fR
+Custom prompt to inject at the branch point.
+If not provided, continues with normal message flow.
+.TP
+.BR \-\-agent\-a " " \fIMODEL\fR
+Override agent A model for the branched conversation.
+Default: use the same model as the original.
+.TP
+.BR \-\-agent\-b " " \fIMODEL\fR
+Override agent B model for the branched conversation.
+Default: use the same model as the original.
+.TP
+.BR \-\-max\-turns " " \fIN\fR
+Maximum turns for the branched conversation.
+Default: same as original conversation.
+.TP
+.BR \-\-temperature " " \fIFLOAT\fR
+Set temperature for both agents in the branch.
+.TP
+.BR \-\-temp\-a " " \fIFLOAT\fR
+Set temperature for agent A only.
+.TP
+.BR \-\-temp\-b " " \fIFLOAT\fR
+Set temperature for agent B only.
+.TP
+.BR \-\-speaker " " \fIAGENT\fR
+Which agent speaks next (agent-a or agent-b).
+Default: follows natural turn order.
+.TP
+.BR \-\-name " " \fINAME\fR
+Name for the branched conversation.
+Default: auto-generated based on original name.
+.TP
+.BR \-\-tail
+Show live conversation output (same as run --tail).
+.SH BEHAVIOR
+When branching:
+.RS
+.IP 1. 3
+The original conversation's history up to the branch turn is copied
+.IP 2. 3
+System prompts and configurations are preserved unless overridden
+.IP 3. 3
+A new conversation ID is generated with branch metadata
+.IP 4. 3
+The branch continues from the specified turn with new parameters
+.IP 5. 3
+Both conversations remain independent and can be analyzed separately
+.RE
+.SH EXAMPLES
+.PP
+Branch from turn 10 of a conversation:
+.RS
+.nf
+pidgin branch conv_abc123 --turn 10
+.fi
+.RE
+.PP
+Branch with a custom prompt injection:
+.RS
+.nf
+pidgin branch conv_abc123 --turn 15 \\
+    --prompt "Let's explore a different perspective on this topic"
+.fi
+.RE
+.PP
+Branch with different models:
+.RS
+.nf
+pidgin branch conv_abc123 --turn 20 \\
+    --agent-a gpt-4 --agent-b claude
+.fi
+.RE
+.PP
+Branch with modified temperature:
+.RS
+.nf
+pidgin branch conv_abc123 --turn 10 \\
+    --temperature 1.2 --name "high-temp-branch"
+.fi
+.RE
+.SH OUTPUT
+Branched conversations are saved with metadata indicating:
+.IP \(bu 3
+Original conversation ID
+.IP \(bu 3
+Branch point (turn number)
+.IP \(bu 3
+Timestamp of branch creation
+.IP \(bu 3
+Any parameter overrides
+.PP
+The branch appears as a new conversation in experiments and can be analyzed
+independently or compared with the original.
+.SH NOTES
+Branching does not modify the original conversation. All branches are
+independent conversations that happen to share initial history.
+.PP
+Multiple branches can be created from the same conversation at different
+turns or even the same turn with different parameters.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR pidgin-info (1)
+.SH AUTHOR
+Nicholas Lange and contributors

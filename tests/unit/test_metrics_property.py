@@ -159,7 +159,9 @@ class TestLinguisticAnalyzerProperties:
         assert entropy >= 0.0
         unique_chars = len(set(text))
         if unique_chars > 0:
-            assert entropy <= math.log2(unique_chars)
+            # Allow for small floating point precision errors
+            max_entropy = math.log2(unique_chars)
+            assert entropy <= max_entropy + 1e-10
     
     @given(word_list_strategy())
     def test_self_repetition_range(self, words):
@@ -265,8 +267,9 @@ class TestMetricsCalculatorProperties:
         return MetricsCalculator()
     
     @given(st.integers(min_value=0), message_strategy(), message_strategy())
-    def test_calculate_turn_metrics_structure(self, calculator, turn_number, msg_a, msg_b):
+    def test_calculate_turn_metrics_structure(self, turn_number, msg_a, msg_b):
         """Turn metrics should have the expected structure."""
+        calculator = MetricsCalculator()
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
         
         # Check top-level keys
@@ -279,8 +282,9 @@ class TestMetricsCalculatorProperties:
         assert metrics['turn_number'] == turn_number
     
     @given(st.integers(min_value=0), message_strategy(), message_strategy())
-    def test_metrics_non_negative(self, calculator, turn_number, msg_a, msg_b):
+    def test_metrics_non_negative(self, turn_number, msg_a, msg_b):
         """All count-based metrics should be non-negative."""
+        calculator = MetricsCalculator()
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
         
         # Check agent metrics
@@ -303,8 +307,9 @@ class TestMetricsCalculatorProperties:
                     assert agent_metrics[metric] >= 0
     
     @given(st.integers(min_value=0), message_strategy(), message_strategy())
-    def test_metrics_bounded(self, calculator, turn_number, msg_a, msg_b):
+    def test_metrics_bounded(self, turn_number, msg_a, msg_b):
         """All ratio/probability metrics should be bounded."""
+        calculator = MetricsCalculator()
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
         
         # Check agent metrics
@@ -335,8 +340,9 @@ class TestMetricsCalculatorProperties:
                 assert 0.0 <= metrics['convergence'][metric] <= 1.0
     
     @given(st.integers(min_value=0), st.text(), st.text())
-    def test_vocabulary_tracking(self, calculator, turn_number, msg_a, msg_b):
+    def test_vocabulary_tracking(self, turn_number, msg_a, msg_b):
         """Vocabulary should be tracked correctly across turns."""
+        calculator = MetricsCalculator()
         initial_vocab_size = len(calculator.cumulative_vocab['agent_a'] | calculator.cumulative_vocab['agent_b'])
         
         metrics = calculator.calculate_turn_metrics(turn_number, msg_a, msg_b)
@@ -351,8 +357,9 @@ class TestMetricsCalculatorProperties:
         assert isinstance(metrics['agent_b']['vocabulary'], set)
     
     @given(message_strategy())
-    def test_tokenization_caching(self, calculator, message):
+    def test_tokenization_caching(self, message):
         """Tokenization caching should work correctly."""
+        calculator = MetricsCalculator()
         # First tokenization
         tokens1 = calculator._tokenize_cached(message)
         
@@ -371,8 +378,9 @@ class TestMetricsCalculatorProperties:
         min_size=1,
         max_size=5
     ))
-    def test_conversation_flow(self, calculator, conversation):
+    def test_conversation_flow(self, conversation):
         """Test metrics calculation across a full conversation."""
+        calculator = MetricsCalculator()
         all_metrics = []
         
         for turn_num, (msg_a, msg_b) in enumerate(conversation):
@@ -390,8 +398,9 @@ class TestMetricsCalculatorProperties:
         # Check that turn vocabularies are tracked
         assert len(calculator.turn_vocabularies) == len(conversation)
     
-    def test_reset_clears_state(self, calculator):
+    def test_reset_clears_state(self):
         """Reset should clear all state."""
+        calculator = MetricsCalculator()
         # Add some state
         calculator.calculate_turn_metrics(0, "hello world", "goodbye world")
         

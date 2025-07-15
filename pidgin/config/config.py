@@ -45,6 +45,7 @@ class Config:
             "max_turns": 20,
             "manual_mode": False,
             "streaming_interrupts": False,  # Removed - using Ctrl+C signals instead
+            "human_tag": "[HUMAN]",  # Tag for human/researcher prompts
         },
         "experiments": {
             "unattended": {

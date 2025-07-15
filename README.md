@@ -15,20 +15,24 @@ Pidgin records conversations between AI models to study how they communicate. We
 
 ### ◆ What Works
 - **Recording**: JSONL-based event capture for every interaction
-- **Models**: 15+ models across Anthropic, OpenAI, Google, xAI
-- **Display**: Progress panel with convergence and cost tracking (default), verbose messages, or raw event stream
+- **Models**: 20+ models across Anthropic, OpenAI, Google, xAI, and local (Ollama)
+- **Display**: Real-time observability with convergence tracking, verbose mode, or raw event stream
 - **Output**: JSONL events, markdown transcripts, manifest tracking
-- **Experiments**: Run hundreds of conversations (sequential or parallel)
-- **Background**: Daemon processes with meaningful names (pidgin-exp123)
-- **Analysis**: ~150 metrics per turn, batch import to DuckDB
-- **Monitoring**: Use standard Unix tools (tail, grep, jq)
+- **Experiments**: Run hundreds of conversations with smart parallelism
+- **Background**: Daemon processes with meaningful names and system-wide monitoring
+- **Analysis**: 150+ metrics per turn in DuckDB wide-table format
+- **Monitoring**: Live system monitor and standard Unix tools (tail, grep, jq)
+- **Jupyter Notebooks**: Auto-generated analysis notebooks for each experiment
+- **Branching**: Create alternate conversation paths from any turn
+- **Stop Command**: Gracefully stop experiments by ID or name
 
 ### ▶ What's Partial
-- **Statistical Analysis**: Basic queries work, full analysis tools coming
-- **Jupyter Integration**: Auto-generated notebooks planned
+- **Advanced Metrics**: Placeholder columns for semantic similarity, sentiment (calculate post-hoc)
+- **Statistical Validation**: Basic analysis works, significance testing coming
 
 ### ■ What's Missing
-- **Report generation**: Publication-ready outputs
+- **Multi-modal Support**: Text-only for now
+- **Multi-party**: Conversations are limited to two participants
 
 ## Quick Start
 
@@ -55,15 +59,51 @@ pidgin run -a claude -b gpt -t 20 --quiet
 # Run multiple conversations (10 repetitions)
 pidgin run -a claude -b gpt -r 10 --name my_experiment
 
-# Check experiment status
-pidgin status
-pidgin status my_experiment
+# Run from YAML specification
+pidgin run experiment.yaml
 
-# Monitor experiments with tail
-tail -f pidgin_output/experiments/my_experiment/*.jsonl
+# Use custom awareness with turn-based prompts
+pidgin run -a claude -b gpt --awareness custom_awareness.yaml
+
+# Monitor all running experiments (live dashboard)
+pidgin monitor
+
+# Stop a specific experiment
+pidgin stop my_experiment
+pidgin stop --all  # Stop all experiments
+
+# List available models
+pidgin info models
+
+# View standard prompt dimensions
+pidgin info dimensions
+
+# Branch from an existing conversation
+pidgin branch conv_abc123 --turn 10
 
 # Output saved to ./pidgin_output/
 ```
+
+### YAML Specifications
+
+For complex experiments, you can define configurations in YAML:
+
+```yaml
+# experiment.yaml
+name: "temperature-differential"
+agent_a: claude-3-opus
+agent_b: gpt-4
+max_turns: 50
+repetitions: 10
+temperature_a: 0.3
+temperature_b: 0.9
+convergence_threshold: 0.85
+prompt: "Discuss the nature of consciousness"
+```
+
+Then run with: `pidgin run experiment.yaml`
+
+See [docs/yaml-specs.md](docs/yaml-specs.md) for all available options.
 
 ### Data Storage
 
@@ -120,11 +160,6 @@ echo ".envrc" >> .gitignore
 direnv allow
 ```
 
-### Other Options
-- **AWS Secrets Manager** - For cloud deployments
-- **HashiCorp Vault** - For enterprise environments
-- **age** - Modern encryption tool for secrets
-
 ■ **Never commit API keys to git**, even in private repositories.
 
 ## Local Models
@@ -151,7 +186,7 @@ Models download automatically on first use.
 
 ## Why This Matters
 
-When AIs talk to each other millions of times daily, do they develop more efficient protocols? We don't know. That's what we're trying to find out.
+When AIs talk to each other millions of times daily, might they develop more efficient protocols? We don't know. That's one thing we're trying to find out.
 
 ## Examples of What We've Seen
 

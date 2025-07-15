@@ -8,11 +8,11 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict, Counter
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.table import Table
 from rich.live import Live
-from rich.layout import Layout
 from rich.panel import Panel
+from rich import box
 
 from ..experiments.state_builder import get_state_builder
 from ..io.paths import get_experiments_dir
@@ -31,24 +31,44 @@ REFRESH_INTERVAL_SECONDS = 1
 LIVE_REFRESH_PER_SECOND = 0.5  # How often Rich Live updates the display
 ERROR_RETRY_DELAY_SECONDS = 5  # Wait time after errors before retrying
 
+# Display settings
+# PANEL_WIDTH will be dynamically calculated based on terminal width
+
 
 class Monitor:
     """Monitor system state from JSONL files with error tracking."""
     
-    def __init__(self):
+    def __init__(self, console_instance=None):
         self.exp_base = get_experiments_dir()
         self.running = True
         self.state_builder = get_state_builder()
         self.refresh_count = 0
         self.no_output_dir = False
+        self.console = console_instance or console  # Use provided console or default
         
         # Check if experiments directory exists
         if not self.exp_base.exists():
             self.no_output_dir = True
-            logger.info(f"Experiments directory not found: {self.exp_base}")
+    
+    def get_panel_width(self) -> int:
+        """Calculate panel width based on current terminal size.
+        
+        This method is called every time a panel is created, allowing
+        the monitor to automatically adapt to terminal resizing.
+        
+        Returns:
+            Panel width constrained between 60 and 150 characters
+        """
+        terminal_width = self.console.size.width
+        # Leave some margin for borders and scrollbars
+        # Minimum width of 60, maximum of 150 for readability
+        return max(60, min(terminal_width - 4, 150))
         
     async def run(self):
         """Run the monitor loop."""
+        # Clear screen initially
+        console.clear()
+        
         with Live(self.build_display(), refresh_per_second=LIVE_REFRESH_PER_SECOND) as live:
             while self.running:
                 try:
@@ -71,10 +91,8 @@ class Monitor:
                     logger.error(f"Monitor error: {e}")
                     await asyncio.sleep(ERROR_RETRY_DELAY_SECONDS)  # Wait longer on error
     
-    def build_display(self) -> Layout:
-        """Build the display layout."""
-        layout = Layout()
-        
+    def build_display(self) -> Group:
+        """Build the display as a group of panels."""
         # Always build header first
         header = self.build_header()
         
@@ -86,13 +104,10 @@ class Monitor:
                 f"[{NORD_LIGHT}]{self.exp_base}[/{NORD_LIGHT}]\n\n"
                 f"[{NORD_DARK}]Run 'pidgin run' to create your first experiment.[/{NORD_DARK}]",
                 title="No Experiments Found",
-                border_style=NORD_YELLOW
+                border_style=NORD_YELLOW,
+                width=self.get_panel_width()
             )
-            layout.split_column(
-                Layout(header, size=3),
-                Layout(message_panel)
-            )
-            return layout
+            return Group(header, message_panel)
         
         # Get current states
         experiments = self.get_experiment_states()
@@ -102,16 +117,13 @@ class Monitor:
         experiments_panel = self.build_experiments_panel(experiments)
         conversations_panel = self.build_conversations_panel(experiments)
         
-        # Let all panels auto-size to their content
-        # Only fix the header size
-        layout.split_column(
-            Layout(header, size=3),      # Fixed header
-            Layout(errors_panel),        # Auto-size to content
-            Layout(experiments_panel),   # Auto-size to content  
-            Layout(conversations_panel)  # Auto-size to content
+        # Return a group of panels that will auto-size to their content
+        return Group(
+            header,
+            errors_panel,
+            experiments_panel,
+            conversations_panel
         )
-        
-        return layout
     
     def _is_recent(self, timestamp: datetime, minutes: int = 5) -> bool:
         """Check if a timestamp is recent."""
@@ -147,7 +159,8 @@ class Monitor:
         
         return Panel(
             f"[bold {NORD_BLUE}]◆ PIDGIN MONITOR[/bold {NORD_BLUE}] | [{NORD_DARK}]{timestamp}[/{NORD_DARK}] | [{NORD_GREEN}]{indicator}[/{NORD_GREEN}] | [{NORD_DARK}]Press Ctrl+C to exit[/{NORD_DARK}]",
-            style=NORD_CYAN
+            style=NORD_CYAN,
+            width=self.get_panel_width()
         )
     
     def build_experiments_panel(self, experiments: List[Any]) -> Panel:
@@ -156,16 +169,16 @@ class Monitor:
         active_experiments = [exp for exp in experiments if exp.status in ["running", "created"]]
         
         if not active_experiments:
-            return Panel(f"[{NORD_DARK}]No active experiments[/{NORD_DARK}]", title="Active Experiments")
+            return Panel(f"[{NORD_DARK}]No active experiments[/{NORD_DARK}]", title="Active Experiments", width=self.get_panel_width())
         
-        table = Table(show_header=True, header_style=f"bold {NORD_BLUE}")
-        table.add_column("ID", style=NORD_CYAN, width=10)
+        table = Table(show_header=True, header_style=f"bold {NORD_BLUE}", box=box.ROUNDED)
+        table.add_column("ID", style=NORD_CYAN, width=12)
         table.add_column("Name", style=NORD_GREEN, width=20)
-        table.add_column("Status", width=12)
-        table.add_column("Progress", width=20)
-        table.add_column("Current", width=20)
-        table.add_column("Tokens", width=12)
-        table.add_column("Cost", width=10)
+        table.add_column("Status", width=10)
+        table.add_column("Progress", width=15)
+        table.add_column("Current", width=15)
+        table.add_column("Tokens", width=10)
+        table.add_column("Cost", width=8)
         
         for exp in active_experiments:
             # Calculate progress
@@ -216,30 +229,33 @@ class Monitor:
                 f"${cost_estimate:.2f}"
             )
         
-        return Panel(table, title=f"Active Experiments ({len(active_experiments)})")
+        return Panel(table, title=f"Active Experiments ({len(active_experiments)})", width=self.get_panel_width())
     
     def build_conversations_panel(self, experiments: List[Any]) -> Panel:
         """Build detailed conversations panel."""
-        # Get all active or recent conversations
+        # Get all conversations from active experiments
         all_convs = []
         for exp in experiments:
-            for conv in exp.conversations.values():
-                # Show running conversations and recently completed ones
-                show_conv = conv.status == ConversationStatus.RUNNING
-                if not show_conv and conv.completed_at:
-                    # Check if completed in last 5 minutes
-                    try:
-                        now = datetime.now(timezone.utc)
-                        completed = conv.completed_at
-                        if completed.tzinfo is None:
-                            completed = completed.replace(tzinfo=timezone.utc)
-                        if (now - completed).total_seconds() < 300:
-                            show_conv = True
-                    except:
-                        pass
-                
-                if show_conv:
+            # If experiment is active, show ALL its conversations (running or completed)
+            if exp.status in ["running", "created"]:
+                for conv in exp.conversations.values():
                     all_convs.append((exp, conv))
+            else:
+                # For completed experiments, only show recent completions
+                for conv in exp.conversations.values():
+                    if conv.status == ConversationStatus.RUNNING:
+                        all_convs.append((exp, conv))
+                    elif conv.completed_at:
+                        # Check if completed in last 5 minutes
+                        try:
+                            now = datetime.now(timezone.utc)
+                            completed = conv.completed_at
+                            if completed.tzinfo is None:
+                                completed = completed.replace(tzinfo=timezone.utc)
+                            if (now - completed).total_seconds() < 300:
+                                all_convs.append((exp, conv))
+                        except:
+                            pass
         
         if not all_convs:
             # If no active/recent, show last few completed from any experiment
@@ -253,14 +269,14 @@ class Monitor:
             all_convs = all_convs[:5]  # Show last 5
             
             if not all_convs:
-                return Panel(f"[{NORD_DARK}]No conversations found[/{NORD_DARK}]", title="Conversation Details")
+                return Panel(f"[{NORD_DARK}]No conversations found[/{NORD_DARK}]", title="Conversation Details", width=self.get_panel_width())
         
-        table = Table(show_header=True, header_style=f"bold {NORD_BLUE}")
+        table = Table(show_header=True, header_style=f"bold {NORD_BLUE}", box=box.ROUNDED)
         table.add_column("Experiment", style=NORD_CYAN, width=15)
         table.add_column("Conv ID", style=NORD_GREEN, width=12)
         table.add_column("Status", width=10)
         table.add_column("Turn", width=10)
-        table.add_column("Models", width=25)
+        table.add_column("Models", width=20)
         table.add_column("Convergence", width=12)
         table.add_column("Truncation", width=10)
         table.add_column("Duration", width=10)
@@ -332,18 +348,28 @@ class Monitor:
             
             # Duration
             if conv.started_at:
+                # Ensure started_at is timezone-aware
+                started = conv.started_at
+                if started.tzinfo is None:
+                    # Assume UTC for naive timestamps
+                    started = started.replace(tzinfo=timezone.utc)
+                
                 if conv.completed_at:
-                    duration = conv.completed_at - conv.started_at
+                    completed = conv.completed_at
+                    if completed.tzinfo is None:
+                        completed = completed.replace(tzinfo=timezone.utc)
+                    duration = completed - started
                 else:
                     # Still running
                     now = datetime.now(timezone.utc)
-                    if conv.started_at.tzinfo is None:
-                        conv.started_at = conv.started_at.replace(tzinfo=timezone.utc)
-                    duration = now - conv.started_at
+                    duration = now - started
                 
-                # Format duration
+                # Sanity check - if duration is negative or unreasonably large (>24h), 
+                # it's likely a timezone issue. Show a placeholder instead.
                 total_seconds = int(duration.total_seconds())
-                if total_seconds < 60:
+                if total_seconds < 0 or total_seconds > 86400:
+                    duration_str = "-"
+                elif total_seconds < 60:
                     duration_str = f"{total_seconds}s"
                 elif total_seconds < 3600:
                     duration_str = f"{total_seconds // 60}m {total_seconds % 60}s"
@@ -365,8 +391,18 @@ class Monitor:
                 duration_str
             )
         
-        title = "Active Conversations" if any(c[1].status == ConversationStatus.RUNNING for c in all_convs) else "Recent Conversations"
-        return Panel(table, title=title)
+        # Determine title based on what we're showing
+        has_running = any(c[1].status == ConversationStatus.RUNNING for c in all_convs)
+        has_active_exp = any(c[0].status in ["running", "created"] for c in all_convs[:10])
+        
+        if has_active_exp:
+            title = "Experiment Conversations"
+        elif has_running:
+            title = "Active Conversations"
+        else:
+            title = "Recent Conversations"
+            
+        return Panel(table, title=title, width=self.get_panel_width())
     
     
     def tail_file(self, file_path: Path, lines: int = 200) -> List[str]:
@@ -465,7 +501,7 @@ class Monitor:
         errors = self.get_recent_errors(minutes=10)
         
         if not errors:
-            return Panel(f"[{NORD_GREEN}]● No recent errors[/{NORD_GREEN}]", title="Recent Errors (10m)")
+            return Panel(f"[{NORD_GREEN}]● No recent errors[/{NORD_GREEN}]", title="Recent Errors (10m)", width=self.get_panel_width())
         
         # Group errors by provider and type
         provider_errors = defaultdict(list)
@@ -502,7 +538,7 @@ class Monitor:
         
         content = "\n".join(error_lines) if error_lines else f"[{NORD_GREEN}]● No recent errors[/{NORD_GREEN}]"
         title = f"Recent Errors ({len(errors)})" if errors else "Recent Errors (10m)"
-        return Panel(content, title=title)
+        return Panel(content, title=title, width=self.get_panel_width())
     
     def get_failed_conversations(self) -> List[Dict[str, Any]]:
         """Get failed conversations from manifest files."""

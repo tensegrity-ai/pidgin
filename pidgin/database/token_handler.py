@@ -95,8 +95,8 @@ class TokenUsageHandler:
             cost=costs
         )
         
-        # Update token tracker
-        self.token_tracker.record_usage(provider, total_tokens, model or 'unknown')
+        # Token tracker usage is now recorded in event_wrapper.py before emitting the event
+        # This ensures current_usage_rate includes the current request
         
         logger.debug(
             f"Logged token usage for {conv_id}: {total_tokens} tokens "

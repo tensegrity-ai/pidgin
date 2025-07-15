@@ -102,3 +102,107 @@ class ConvergenceCalculator:
         compressed_size = len(zlib.compress(text.encode('utf-8')))
         
         return compressed_size / original_size if original_size > 0 else 0.0
+    
+    @staticmethod
+    def calculate_overall_convergence_score(metrics: Dict[str, float], 
+                                          weights: Dict[str, float] = None) -> float:
+        """Calculate weighted average of multiple convergence metrics."""
+        if not weights:
+            # Default equal weights
+            weights = {
+                'vocabulary_overlap': 0.25,
+                'cross_repetition': 0.25,
+                'structural_similarity': 0.25,
+                'mutual_mimicry': 0.25
+            }
+        
+        score = 0.0
+        total_weight = 0.0
+        
+        for metric, weight in weights.items():
+            if metric in metrics and metrics[metric] is not None:
+                score += metrics[metric] * weight
+                total_weight += weight
+        
+        return score / total_weight if total_weight > 0 else 0.0
+    
+    @staticmethod
+    def calculate_message_length_ratio(len_a: int, len_b: int) -> float:
+        """Calculate length ratio between messages."""
+        if len_a == 0 and len_b == 0:
+            return 1.0
+        
+        max_len = max(len_a, len_b)
+        if max_len == 0:
+            return 1.0
+        
+        return min(len_a, len_b) / max_len
+    
+    @staticmethod
+    def calculate_sentence_pattern_similarity(sentences_a: List[str], 
+                                            sentences_b: List[str]) -> float:
+        """Calculate similarity of sentence count distributions."""
+        if not sentences_a and not sentences_b:
+            return 1.0
+        
+        # Get sentence length distributions
+        lengths_a = [len(s.split()) for s in sentences_a]
+        lengths_b = [len(s.split()) for s in sentences_b]
+        
+        # Create frequency distributions
+        max_len = max(lengths_a + lengths_b) if (lengths_a or lengths_b) else 0
+        if max_len == 0:
+            return 1.0
+        
+        dist_a = [0] * (max_len + 1)
+        dist_b = [0] * (max_len + 1)
+        
+        for length in lengths_a:
+            dist_a[length] += 1
+        for length in lengths_b:
+            dist_b[length] += 1
+        
+        # Normalize
+        total_a = sum(dist_a)
+        total_b = sum(dist_b)
+        
+        if total_a > 0:
+            dist_a = [x / total_a for x in dist_a]
+        if total_b > 0:
+            dist_b = [x / total_b for x in dist_b]
+        
+        # Calculate cosine similarity
+        dot_product = sum(a * b for a, b in zip(dist_a, dist_b))
+        norm_a = math.sqrt(sum(a * a for a in dist_a))
+        norm_b = math.sqrt(sum(b * b for b in dist_b))
+        
+        if norm_a * norm_b == 0:
+            return 0.0
+        
+        return dot_product / (norm_a * norm_b)
+    
+    @staticmethod
+    def calculate_repetition_ratio(messages: List[str], min_phrase_length: int = 3) -> float:
+        """Calculate ratio of repeated phrases across messages."""
+        if len(messages) < 2:
+            return 0.0
+        
+        # Collect all n-grams of specified length or longer
+        all_phrases = []
+        
+        for message in messages:
+            words = TextAnalyzer.tokenize(message.lower())
+            if len(words) >= min_phrase_length:
+                # Extract phrases of minimum length
+                for i in range(len(words) - min_phrase_length + 1):
+                    phrase = tuple(words[i:i + min_phrase_length])
+                    all_phrases.append(phrase)
+        
+        if not all_phrases:
+            return 0.0
+        
+        # Count repeated phrases
+        phrase_counter = Counter(all_phrases)
+        repeated_phrases = sum(1 for count in phrase_counter.values() if count > 1)
+        
+        return repeated_phrases / len(all_phrases)

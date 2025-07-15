@@ -99,3 +99,23 @@ class TextAnalyzer:
         """Get word frequency counter and vocabulary set."""
         words = TextAnalyzer.tokenize(message)
         return Counter(words), set(words)
+    
+    @staticmethod
+    def calculate_symbol_density(text: str) -> float:
+        """Calculate non-alphabetic character density."""
+        if not text:
+            return 0.0
+        
+        # Count non-alphabetic characters (excluding spaces)
+        non_alpha = sum(1 for char in text if not char.isalpha() and not char.isspace())
+        return non_alpha / len(text)
+    
+    @staticmethod
+    def count_emojis(text: str) -> int:
+        """Count Unicode emoji characters."""
+        return len(EMOJI_PATTERN.findall(text))
+    
+    @staticmethod
+    def count_arrows(text: str) -> int:
+        """Count arrow symbols (both ASCII and Unicode)."""
+        return len(ARROW_PATTERN.findall(text))

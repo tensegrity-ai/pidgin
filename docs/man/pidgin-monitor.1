@@ -1,0 +1,127 @@
+.TH PIDGIN-MONITOR 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin-monitor \- System-wide health monitor for running experiments
+.SH SYNOPSIS
+.B pidgin monitor
+.SH DESCRIPTION
+The \fBmonitor\fR command provides a real-time, system-wide view of all active
+experiments. It displays a live dashboard that updates every 2 seconds, showing
+experiment progress, system load, convergence warnings, and completion estimates.
+.PP
+The monitor reads directly from JSONL event files, avoiding database locks and
+ensuring it doesn't interfere with running experiments. It provides a read-only
+view of system activity.
+.SH DISPLAY
+The monitor shows:
+.SS Experiment Overview
+.IP \(bu 3
+Experiment name and ID
+.IP \(bu 3
+Start time and duration
+.IP \(bu 3
+Number of conversations (completed/total)
+.IP \(bu 3
+Overall progress percentage
+.IP \(bu 3
+Estimated time to completion
+.SS Active Conversations
+.IP \(bu 3
+Conversation IDs currently processing
+.IP \(bu 3
+Current turn number
+.IP \(bu 3
+Agent models in use
+.IP \(bu 3
+Latest convergence scores
+.SS System Metrics
+.IP \(bu 3
+Total active conversations
+.IP \(bu 3
+System load indicator
+.IP \(bu 3
+Token usage rates
+.IP \(bu 3
+API response times
+.SS Convergence Warnings
+.IP \(bu 3
+High convergence alerts (>0.95)
+.IP \(bu 3
+Stalled conversations
+.IP \(bu 3
+Repetition patterns detected
+.SH CONTROLS
+.TP
+.B Ctrl+C
+Exit the monitor
+.TP
+.B Space
+Pause/resume updates
+.TP
+.B R
+Force refresh
+.SH FEATURES
+.SS Lock-Free Operation
+The monitor reads JSONL files directly without acquiring locks, ensuring it
+never blocks or slows down running experiments.
+.SS Auto-Discovery
+Automatically discovers all experiments in the output directory without requiring
+explicit configuration.
+.SS Resource Efficient
+Minimal CPU and memory usage through efficient file reading and caching
+strategies.
+.SH EXAMPLES
+.PP
+Start the system monitor:
+.RS
+.nf
+pidgin monitor
+.fi
+.RE
+.PP
+The monitor will display something like:
+.RS
+.nf
+╭─ Pidgin System Monitor ────────────────────╮
+│ 3 Active Experiments │ Load: ████░░░░ 45%  │
+╰────────────────────────────────────────────╯
+
+▶ radiant-lake (experiment_a1b2c3d4)
+  Started: 10:45 AM │ Duration: 0:23:45
+  Progress: ████████░░ 78% (39/50)
+  ETA: ~6 minutes
+  
+  Active: conv_12345678 (turn 18/20)
+         Models: claude ↔ gpt-4
+         Convergence: 0.89 ↑
+
+▶ crystal-peak (experiment_e5f6g7h8)
+  Started: 11:02 AM │ Duration: 0:06:30
+  Progress: ██░░░░░░░░ 20% (2/10)
+  ETA: ~26 minutes
+  
+⚠ High Convergence: conv_87654321 (0.97)
+
+[Updated: 11:08:45 AM]
+.fi
+.RE
+.SH ENVIRONMENT
+.TP
+.B PIDGIN_MONITOR_INTERVAL
+Update interval in seconds (default: 2)
+.TP
+.B PIDGIN_OUTPUT_DIR
+Directory to monitor (default: ./pidgin_output)
+.SH NOTES
+The monitor is designed to be left running continuously during experiments.
+It has negligible performance impact and provides valuable real-time insight
+into experiment progress.
+.PP
+For detailed analysis of completed experiments, use \fBpidgin info experiments\fR
+or analyze the generated Jupyter notebooks.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR pidgin-stop (1),
+.BR pidgin-info (1)
+.SH AUTHOR
+Nicholas Lange and contributors

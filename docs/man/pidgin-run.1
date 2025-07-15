@@ -1,0 +1,190 @@
+.TH PIDGIN-RUN 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin-run \- Run conversations between AI agents
+.SH SYNOPSIS
+.B pidgin run
+[\fIOPTIONS\fR] [\fISPEC_FILE\fR]
+.SH DESCRIPTION
+The \fBrun\fR command initiates conversations between two AI agents, either as
+single conversations or multi-conversation experiments. It supports both
+command-line configuration and YAML specification files.
+.PP
+Conversations are recorded in real-time to JSONL files, with automatic database
+import upon completion. The command displays conversation progress by default,
+with options for quiet operation or detailed monitoring.
+.SH ARGUMENTS
+.TP
+.I SPEC_FILE
+Optional YAML specification file defining the experiment configuration.
+If provided, command-line options are ignored in favor of the spec file.
+.SH OPTIONS
+.SS Agent Selection
+.TP
+.BR \-a ", " \-\-agent\-a " " \fIMODEL\fR
+First agent model (required unless using spec file).
+Examples: claude, gpt-4, gemini, local:llama3.
+.TP
+.BR \-b ", " \-\-agent\-b " " \fIMODEL\fR
+Second agent model (required unless using spec file).
+.SS Conversation Parameters
+.TP
+.BR \-p ", " \-\-prompt " " \fITEXT\fR
+Initial prompt to start the conversation.
+Default: "Let's have a fascinating discussion."
+.TP
+.BR \-t ", " \-\-turns " " \fIN\fR
+Maximum number of turns (message exchanges) per conversation.
+Default: 20
+.TP
+.BR \-r ", " \-\-repetitions " " \fIN\fR
+Number of conversations to run (creates an experiment).
+Default: 1 (single conversation)
+.SS Temperature Settings
+.TP
+.BR \-\-temperature " " \fIFLOAT\fR
+Set temperature for both agents (0.0-2.0).
+.TP
+.BR \-\-temp\-a " " \fIFLOAT\fR
+Set temperature for agent A only.
+.TP
+.BR \-\-temp\-b " " \fIFLOAT\fR
+Set temperature for agent B only.
+.SS Convergence Control
+.TP
+.BR \-\-convergence\-threshold " " \fIFLOAT\fR
+Threshold for convergence detection (0.0-1.0).
+Default: 0.95
+.TP
+.BR \-\-convergence\-action " " \fIACTION\fR
+Action when convergence threshold is reached.
+Choices: stop, continue, notify.
+Default: stop
+.TP
+.BR \-\-convergence\-profile " " \fIPROFILE\fR
+Predefined convergence profile.
+Choices: research, exploratory, fun.
+.SS Advanced Options
+.TP
+.BR \-d ", " \-\-dimension " " \fISPEC\fR
+Use dimensional prompt generation.
+Format: perspective:topic:style
+Example: peers:philosophy:analytical
+.TP
+.BR \-\-first\-speaker " " \fIMODEL\fR
+Which agent speaks first (agent-a or agent-b).
+Default: agent-a
+.TP
+.BR \-\-awareness " " \fILEVEL\fR
+Set system prompt awareness level for both agents.
+Choices: none, basic, enhanced, full.
+.TP
+.BR \-\-awareness\-a " " \fILEVEL\fR
+Set awareness level for agent A only.
+.TP
+.BR \-\-awareness\-b " " \fILEVEL\fR
+Set awareness level for agent B only.
+.TP
+.BR \-\-prompt\-tag " " \fITAG\fR
+Load prompt from CLAUDE.md by HTML comment tag.
+.SS Display Options
+.TP
+.BR \-o ", " \-\-output " " \fIMODE\fR
+Output display mode.
+Choices: default, minimal, none, markdown, json.
+Default: default
+.TP
+.BR \-\-show\-system\-prompts
+Display system prompts before starting.
+.TP
+.BR \-\-meditation
+Increase pause between messages (3-10 seconds).
+.TP
+.BR \-q ", " \-\-quiet
+Minimal output (same as --output minimal).
+.TP
+.BR \-\-tail
+For experiments, show live tail view of all conversations.
+.SS Experiment Options
+.TP
+.BR \-\-name " " \fINAME\fR
+Custom name for the experiment (auto-generated if not provided).
+.TP
+.BR \-\-max\-parallel " " \fIN\fR
+Maximum parallel conversations (default: 20).
+.TP
+.BR \-\-choose\-names
+Interactively choose agent names.
+.TP
+.BR \-\-notify
+Send desktop notification when complete.
+.SH EXAMPLES
+.PP
+Simple conversation between Claude and GPT-4:
+.RS
+.nf
+pidgin run -a claude -b gpt-4 -t 30
+.fi
+.RE
+.PP
+Experiment with 10 conversations:
+.RS
+.nf
+pidgin run -a haiku -b gpt-4o-mini -r 10 -t 50 --name "efficiency-test"
+.fi
+.RE
+.PP
+Using dimensional prompts:
+.RS
+.nf
+pidgin run -a claude -b gemini -d teacher:mathematics:patient
+.fi
+.RE
+.PP
+Custom temperatures and convergence:
+.RS
+.nf
+pidgin run -a gpt-4 -b gpt-4 --temp-a 0.3 --temp-b 0.9 \\
+    --convergence-threshold 0.8 --convergence-action notify
+.fi
+.RE
+.PP
+From YAML specification:
+.RS
+.nf
+pidgin run experiment.yaml
+.fi
+.RE
+.PP
+With custom awareness levels:
+.RS
+.nf
+pidgin run -a claude -b llama3 --awareness-a full --awareness-b none
+.fi
+.RE
+.SH YAML SPECIFICATION
+When using a YAML file, all command-line options are ignored. See
+\fBpidgin-yaml\fR(5) for the specification format.
+.SH OUTPUT
+Conversations are saved to:
+.RS
+.nf
+./pidgin_output/experiments/<experiment_id>/
+    manifest.json           # Experiment metadata
+    conv_<id>_events.jsonl  # Event logs per conversation
+    experiment.db           # DuckDB database (post-import)
+    analysis.ipynb          # Auto-generated Jupyter notebook
+.fi
+.RE
+.SH NOTES
+Temperature affects response randomness (0=deterministic, 2=very random).
+Different models have different optimal temperature ranges.
+.PP
+Convergence detection monitors vocabulary overlap, structural similarity,
+and other metrics to determine when agents have reached a stable communication
+pattern.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-yaml (5),
+.BR pidgin-metrics (7)
+.SH AUTHOR
+Nicholas Lange and contributors

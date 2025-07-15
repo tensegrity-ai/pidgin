@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 from typing import AsyncIterator
 
-from pidgin.core.router import DirectRouter
+from pidgin.core.router import DirectRouter, Router
 from pidgin.core.types import Message
 from tests.builders import make_message
 
@@ -265,3 +265,40 @@ class TestDirectRouter:
         assert response_b.agent_id == "agent_b"
         assert response_a.content == "Hello from agent A "
         assert response_b.content == "Hello from agent B "
+
+
+class TestRouterProtocol:
+    """Test Router protocol for completeness."""
+    
+    def test_router_protocol_methods_exist(self):
+        """Test that Router protocol has required methods."""
+        # This tests that the protocol methods exist and are callable
+        import inspect
+        
+        # Check that all protocol methods are defined
+        assert hasattr(Router, 'stream_response')
+        assert hasattr(Router, 'get_next_response')
+        assert hasattr(Router, 'get_next_response_stream')
+        
+        # Check that they are coroutines
+        assert inspect.iscoroutinefunction(Router.stream_response)
+        assert inspect.iscoroutinefunction(Router.get_next_response)
+        assert inspect.iscoroutinefunction(Router.get_next_response_stream)
+    
+    def test_direct_router_implements_protocol(self):
+        """Test that DirectRouter implements the Router protocol."""
+        # This confirms DirectRouter has all required methods
+        mock_providers = {"agent_a": MockProvider()}
+        router = DirectRouter(mock_providers)
+        
+        # Check that DirectRouter has all protocol methods
+        assert hasattr(router, 'get_next_response')
+        assert hasattr(router, 'get_next_response_stream')
+        
+        # Note: DirectRouter doesn't implement stream_response directly,
+        # but it uses provider.stream_response internally
+        
+        # Verify the methods are callable
+        import inspect
+        assert inspect.iscoroutinefunction(router.get_next_response)
+        assert inspect.isasyncgenfunction(router.get_next_response_stream)

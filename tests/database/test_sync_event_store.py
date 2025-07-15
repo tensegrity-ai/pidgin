@@ -21,9 +21,8 @@ class TestEventStore:
         db_path = Path(temp_dir) / "test.duckdb"
         yield db_path
         # Cleanup
-        if db_path.exists():
-            os.unlink(db_path)
-        os.rmdir(temp_dir)
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
     
     @pytest.fixture
     def event_store(self, temp_db_path):
@@ -151,12 +150,11 @@ class TestEventStore:
         
         assert result.success is True
         assert result.experiment_id == "exp_test123"
-        assert result.events_imported == 5  # All events from JSONL
+        assert result.turns_imported == 1  # One turn from the test data
         assert result.conversations_imported == 1
         assert result.error is None
         
-        # Verify imported marker was created
-        assert (sample_experiment_dir / ".imported").exists()
+        # ImportService doesn't create .imported marker anymore
     
     def test_import_experiment_no_manifest(self, event_store, tmp_path):
         """Test import fails gracefully when manifest is missing."""
@@ -174,11 +172,11 @@ class TestEventStore:
         result1 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result1.success is True
         
-        # Second import should skip
+        # Second import should fail due to duplicate key constraint
         result2 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
-        assert result2.success is True
-        assert result2.error == "Already imported"
-        assert result2.events_imported == 0
+        assert result2.success is False
+        assert "Duplicate key" in result2.error or "primary key constraint" in result2.error
+        assert result2.turns_imported == 0
     
     
     def test_messages_extracted_correctly(self, event_store, sample_experiment_dir):
@@ -186,27 +184,27 @@ class TestEventStore:
         result = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result.success is True
         
-        # Check messages were imported
-        messages = event_store.db.execute("""
-            SELECT agent_id, content, turn_number 
-            FROM messages 
+        # Check messages were imported into conversation_turns
+        turns = event_store.db.execute("""
+            SELECT agent_a_message, agent_b_message, turn_number 
+            FROM conversation_turns 
             WHERE conversation_id = 'conversation_exp_test123_abc123'
-            ORDER BY agent_id
         """).fetchall()
         
-        assert len(messages) == 2
-        assert messages[0] == ("agent_a", "Hello from agent A", 1)
-        assert messages[1] == ("agent_b", "Hello from agent B", 1)
+        assert len(turns) == 1
+        assert turns[0][0] == "Hello from agent A"  # agent_a_message
+        assert turns[0][1] == "Hello from agent B"  # agent_b_message
+        assert turns[0][2] == 1  # turn_number
     
     def test_turn_metrics_imported(self, event_store, sample_experiment_dir):
         """Test that turn metrics are imported correctly."""
         result = event_store.import_experiment_from_jsonl(sample_experiment_dir)
         assert result.success is True
         
-        # Check turn metrics
+        # Check turn metrics in conversation_turns
         metrics = event_store.db.execute("""
-            SELECT turn_number, convergence_score 
-            FROM turn_metrics 
+            SELECT turn_number, overall_convergence 
+            FROM conversation_turns 
             WHERE conversation_id = 'conversation_exp_test123_abc123'
         """).fetchall()
         
@@ -228,15 +226,12 @@ class TestEventStore:
         with open(exp_dir / "manifest.json", "w") as f:
             json.dump(manifest, f)
         
+        # Create empty JSONL file
+        (exp_dir / "conv_test.jsonl").touch()
+        
         result = event_store.import_experiment_from_jsonl(exp_dir)
         assert result.success is True
-        
-        # Verify experiment was created with ID as name
-        exp = event_store.db.execute(
-            "SELECT name FROM experiments WHERE experiment_id = ?",
-            ["exp_null_name"]
-        ).fetchone()
-        assert exp[0] == "exp_null_name"
+        assert result.turns_imported == 0  # No events in empty JSONL
     
     def test_delete_experiment(self, event_store, sample_experiment_dir):
         """Test that delete_experiment removes all related data."""
@@ -247,37 +242,23 @@ class TestEventStore:
         # Delete the experiment
         event_store.delete_experiment("exp_test123")
         
-        # Verify all data is gone
-        exp_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM experiments WHERE experiment_id = ?",
+        # Verify data removed from conversation_turns
+        turn_count = event_store.db.execute(
+            "SELECT COUNT(*) FROM conversation_turns WHERE experiment_id = ?",
             ["exp_test123"]
         ).fetchone()[0]
-        assert exp_count == 0
-        
-        conv_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM conversations WHERE experiment_id = ?",
-            ["exp_test123"]
-        ).fetchone()[0]
-        assert conv_count == 0
-        
-        msg_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM messages WHERE conversation_id = 'conversation_exp_test123_abc123'"
-        ).fetchone()[0]
-        assert msg_count == 0
+        assert turn_count == 0
     
     def test_concurrent_import_protection(self, event_store, sample_experiment_dir):
-        """Test that concurrent imports are prevented."""
-        # Create importing marker manually
-        importing_marker = sample_experiment_dir / ".importing"
-        importing_marker.touch()
+        """Test that duplicate imports fail with constraint error."""
+        # First import
+        result1 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
+        assert result1.success is True
         
-        result = event_store.import_experiment_from_jsonl(sample_experiment_dir)
-        
-        assert result.success is False
-        assert result.error == "Import in progress"
-        
-        # Clean up
-        importing_marker.unlink()
+        # Second import should fail due to primary key constraint
+        result2 = event_store.import_experiment_from_jsonl(sample_experiment_dir)
+        assert result2.success is False
+        assert "Duplicate key" in result2.error or "primary key constraint" in result2.error
     
     def test_import_missing_jsonl_succeeds_with_zero_events(self, event_store, tmp_path):
         """Test that import succeeds even with missing JSONL files (zero events imported)."""
@@ -304,14 +285,9 @@ class TestEventStore:
         
         result = event_store.import_experiment_from_jsonl(exp_dir)
         
-        # Import should succeed with 0 events
-        assert result.success is True
-        assert result.events_imported == 0
+        # Import should fail with no JSONL files found
+        assert result.success is False
+        assert result.error == "No JSONL files found"
+        assert result.turns_imported == 0
         assert result.conversations_imported == 0
         
-        # Verify experiment was created
-        exp_count = event_store.db.execute(
-            "SELECT COUNT(*) FROM experiments WHERE experiment_id = ?",
-            ["exp_missing_jsonl"]
-        ).fetchone()[0]
-        assert exp_count == 1

@@ -121,11 +121,18 @@ class MetricsCalculator:
         word_counter = Counter(words)
         linguistic_markers = self.linguistic_analyzer.count_linguistic_markers(words)
         entropy = self.linguistic_analyzer.calculate_entropy(word_counter)
+        char_entropy = self.linguistic_analyzer.calculate_character_entropy(message)
         lexical_diversity = self.linguistic_analyzer.calculate_lexical_diversity_index(
             word_count, vocab_size
         )
         self_repetition = self.linguistic_analyzer.calculate_self_repetition(words)
         formality_score = self.linguistic_analyzer.calculate_formality_score(message, words)
+        
+        # New linguistic metrics
+        hapax_ratio = self.linguistic_analyzer.calculate_hapax_legomena_ratio(word_counter)
+        ldi_ngrams = self.linguistic_analyzer.calculate_lexical_diversity_index_ngrams(words)
+        repeated_ngrams = self.linguistic_analyzer.count_repeated_ngrams(words)
+        densities = self.linguistic_analyzer.calculate_densities(words, sentences)
         
         # Text analysis metrics
         question_count = self.text_analyzer.count_questions(message)
@@ -139,6 +146,11 @@ class MetricsCalculator:
         special_symbol_count = self.text_analyzer.count_special_symbols(message)
         number_count = self.text_analyzer.count_numbers(message)
         proper_noun_count = self.text_analyzer.count_proper_nouns(words)
+        
+        # New symbol metrics
+        symbol_density = self.text_analyzer.calculate_symbol_density(message)
+        emoji_count = self.text_analyzer.count_emojis(message)
+        arrow_count = self.text_analyzer.count_arrows(message)
         
         # Repetition calculation
         repetition = self._calculate_repetition(words, agent, turn_number)
@@ -170,19 +182,27 @@ class MetricsCalculator:
             'special_symbol_count': special_symbol_count,
             'number_count': number_count,
             'proper_noun_count': proper_noun_count,
+            'emoji_count': emoji_count,
+            'arrow_count': arrow_count,
+            'symbol_density': symbol_density,
+            **densities,  # question_density, hedge_density
             
             # Linguistic markers
             **linguistic_markers,
             
             # Complexity
             'entropy': entropy,
+            'char_entropy': char_entropy,
             'compression_ratio': compression_ratio,
             'lexical_diversity': lexical_diversity,
+            'lexical_diversity_index': ldi_ngrams,
             'punctuation_diversity': punctuation_diversity,
+            'hapax_ratio': hapax_ratio,
             
             # Repetition
             'self_repetition': self_repetition,
             'turn_repetition': repetition,  # This is what import_service expects
+            **repeated_ngrams,  # repeated_bigrams, repeated_trigrams
             
             # Style
             'formality_score': formality_score,
@@ -224,6 +244,40 @@ class MetricsCalculator:
         # Safe division for mutual mimicry
         mutual_mimicry = (mimicry_a_to_b + mimicry_b_to_a) / 2 if mimicry_a_to_b is not None and mimicry_b_to_a is not None else 0.0
         
+        # New convergence metrics
+        length_ratio = self.convergence_calc.calculate_message_length_ratio(
+            len(message_a), len(message_b)
+        )
+        
+        sentences_a = self.text_analyzer.split_sentences(message_a)
+        sentences_b = self.text_analyzer.split_sentences(message_b)
+        sentence_pattern_similarity = self.convergence_calc.calculate_sentence_pattern_similarity(
+            sentences_a, sentences_b
+        )
+        
+        # Calculate overall convergence score
+        convergence_metrics = {
+            'vocabulary_overlap': current_overlap,
+            'cross_repetition': cross_repetition,
+            'structural_similarity': structural_similarity,
+            'mutual_mimicry': mutual_mimicry
+        }
+        overall_convergence = self.convergence_calc.calculate_overall_convergence_score(
+            convergence_metrics
+        )
+        
+        # Track messages for repetition ratio calculation
+        if not hasattr(self, 'all_messages'):
+            self.all_messages = []
+        self.all_messages.extend([message_a, message_b])
+        
+        # Calculate repetition ratio if we have enough messages
+        repetition_ratio = 0.0
+        if len(self.all_messages) >= 4:  # At least 2 turns
+            repetition_ratio = self.convergence_calc.calculate_repetition_ratio(
+                self.all_messages[-10:]  # Use last 5 turns (10 messages)
+            )
+        
         return {
             'vocabulary_overlap': current_overlap,
             'cumulative_overlap': cumulative_overlap,
@@ -231,7 +285,11 @@ class MetricsCalculator:
             'structural_similarity': structural_similarity,
             'mimicry_a_to_b': mimicry_a_to_b,
             'mimicry_b_to_a': mimicry_b_to_a,
-            'mutual_mimicry': mutual_mimicry
+            'mutual_mimicry': mutual_mimicry,
+            'length_ratio': length_ratio,
+            'sentence_pattern_similarity': sentence_pattern_similarity,
+            'overall_convergence_score': overall_convergence,
+            'repetition_ratio': repetition_ratio
         }
     
     def _calculate_repetition(self, current_words: List[str], 
@@ -261,3 +319,4 @@ class MetricsCalculator:
         self.previous_messages = {'agent_a': [], 'agent_b': []}
         self.turn_vocabularies = []
         self._token_cache.clear()
+        self.all_messages = []

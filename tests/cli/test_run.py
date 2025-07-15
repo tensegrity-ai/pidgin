@@ -129,11 +129,18 @@ class TestRunCommandValidation:
         assert result.exit_code != 0
         assert "--first-speaker" in result.output and "is not one of" in result.output
     
-    def test_awareness_validation(self, cli_runner):
-        """Test awareness level validation."""
-        result = cli_runner.invoke(run, ['--awareness', 'invalid_awareness'])
-        assert result.exit_code != 0
-        assert "--awareness" in result.output and "is not one of" in result.output
+    def test_awareness_validation(self, cli_runner, mock_dependencies):
+        """Test awareness level validation now happens in ExperimentConfig."""
+        # Awareness validation now happens at the ExperimentConfig level,
+        # not at the CLI level since it can accept YAML files too
+        result = cli_runner.invoke(run, [
+            '--awareness', 'invalid_awareness',
+            '--agent-a', 'claude',
+            '--agent-b', 'gpt-4',
+            '--turns', '2'
+        ])
+        # The command itself should succeed at the CLI level
+        assert result.exit_code == 0
     
     def test_convergence_action_validation(self, cli_runner):
         """Test convergence action validation."""
@@ -188,11 +195,10 @@ class TestRunCommandModes:
         assert 'quiet' in str(call_args) or result.exit_code == 0
     
     def test_verbose_mode(self, cli_runner, mock_dependencies):
-        """Test verbose mode execution."""
+        """Test verbose mode execution (default mode)."""
         result = cli_runner.invoke(run, [
             '--agent-a', 'claude',
             '--agent-b', 'gpt-4',
-            '--verbose',
             '--turns', '2'
         ])
         
@@ -215,7 +221,7 @@ class TestRunCommandModes:
             '--agent-a', 'claude',
             '--agent-b', 'gpt-4',
             '--quiet',
-            '--verbose',
+            '--tail',
             '--turns', '2'
         ])
         

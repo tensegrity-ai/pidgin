@@ -9,7 +9,6 @@ from pidgin.core.events import (
     TurnCompletedEvent,
     ConversationCompletedEvent,
     AgentResponseEvent,
-    MetricsCalculatedEvent,
     ErrorEvent
 )
 
@@ -70,20 +69,6 @@ def sample_turn_completed_event():
     )
 
 
-@pytest.fixture
-def sample_metrics_calculated_event():
-    """Sample MetricsCalculatedEvent."""
-    return MetricsCalculatedEvent(
-        conversation_id="test_conv_123",
-        experiment_id="test_exp_456",
-        turn_number=1,
-        metrics={
-            "agent_a_length": 18,
-            "agent_b_length": 18,
-            "vocabulary_overlap": 0.5,
-            "message_similarity": 0.8
-        }
-    )
 
 
 @pytest.fixture

@@ -12,6 +12,7 @@ from pidgin.core.events import (
     TurnStartEvent,
     TurnCompleteEvent,
     ConversationEndEvent,
+    SystemPromptEvent,
 )
 from pidgin.core.constants import EndReason
 from tests.builders import make_conversation, make_agent, make_message
@@ -370,3 +371,293 @@ class TestTurnExecutor:
         # Verify complete event has correct convergence score
         complete_event = mock_bus.emit.call_args_list[1][0][0]
         assert complete_event.convergence_score == 0.3
+    
+    def test_set_custom_awareness(self, executor):
+        """Test setting custom awareness objects."""
+        mock_awareness_a = Mock()
+        mock_awareness_b = Mock()
+        
+        custom_awareness = {
+            "agent_a": mock_awareness_a,
+            "agent_b": mock_awareness_b
+        }
+        
+        executor.set_custom_awareness(custom_awareness)
+        
+        assert executor.custom_awareness == custom_awareness
+        assert executor.custom_awareness["agent_a"] == mock_awareness_a
+        assert executor.custom_awareness["agent_b"] == mock_awareness_b
+    
+    def test_set_custom_awareness_partial(self, executor):
+        """Test setting custom awareness with only one agent."""
+        mock_awareness_a = Mock()
+        
+        custom_awareness = {
+            "agent_a": mock_awareness_a,
+            "agent_b": None
+        }
+        
+        executor.set_custom_awareness(custom_awareness)
+        
+        assert executor.custom_awareness["agent_a"] == mock_awareness_a
+        assert executor.custom_awareness["agent_b"] is None
+    
+    @pytest.mark.asyncio
+    async def test_custom_awareness_injection_agent_a(self, executor, mock_bus, mock_message_handler):
+        """Test custom awareness injection for agent A."""
+        conversation = make_conversation(id="conv-custom-a", num_turns=0)
+        agent_a = make_agent(id="agent_a")
+        agent_b = make_agent(id="agent_b")
+        interrupt_handler = Mock()
+        
+        # Mock custom awareness for agent A
+        mock_awareness_a = Mock()
+        mock_awareness_a.get_turn_prompts.return_value = {
+            "agent_a": "Special instructions for turn 5",
+            "agent_b": ""  # Empty for agent B
+        }
+        
+        executor.set_custom_awareness({
+            "agent_a": mock_awareness_a,
+            "agent_b": None
+        })
+        
+        # Mock messages
+        msg_a = make_message(content="Response A", agent_id="agent_a", role="assistant")
+        msg_b = make_message(content="Response B", agent_id="agent_b", role="assistant")
+        mock_message_handler.get_agent_message.side_effect = [msg_a, msg_b]
+        
+        # Run turn
+        turn = await executor.run_single_turn(
+            conversation, 5, agent_a, agent_b, interrupt_handler
+        )
+        
+        # Verify turn succeeded
+        assert turn is not None
+        
+        # Verify custom awareness was called
+        mock_awareness_a.get_turn_prompts.assert_called_once_with(5)
+        
+        # Verify system message was injected
+        assert len(conversation.messages) == 3  # system + msg_a + msg_b
+        system_msg = conversation.messages[0]
+        assert system_msg.role == "system"
+        assert system_msg.content == "Special instructions for turn 5"
+        assert system_msg.agent_id == "system"
+        
+        # Verify SystemPromptEvent was emitted
+        assert mock_bus.emit.call_count == 3  # TurnStart + SystemPrompt + TurnComplete
+        
+        # Check SystemPromptEvent
+        system_event = mock_bus.emit.call_args_list[1][0][0]
+        assert isinstance(system_event, SystemPromptEvent)
+        assert system_event.conversation_id == "conv-custom-a"
+        assert system_event.agent_id == "agent_a"
+        assert system_event.prompt == "Special instructions for turn 5"
+        assert system_event.agent_display_name == "Turn 5 injection for Agent A"
+    
+    @pytest.mark.asyncio
+    async def test_custom_awareness_injection_agent_b(self, executor, mock_bus, mock_message_handler):
+        """Test custom awareness injection for agent B."""
+        conversation = make_conversation(id="conv-custom-b", num_turns=0)
+        agent_a = make_agent(id="agent_a")
+        agent_b = make_agent(id="agent_b")
+        interrupt_handler = Mock()
+        
+        # Mock custom awareness for agent B
+        mock_awareness_b = Mock()
+        mock_awareness_b.get_turn_prompts.return_value = {
+            "agent_a": "",  # Empty for agent A
+            "agent_b": "Special instructions for agent B at turn 3"
+        }
+        
+        executor.set_custom_awareness({
+            "agent_a": None,
+            "agent_b": mock_awareness_b
+        })
+        
+        # Mock messages
+        msg_a = make_message(content="Response A", agent_id="agent_a", role="assistant")
+        msg_b = make_message(content="Response B", agent_id="agent_b", role="assistant")
+        mock_message_handler.get_agent_message.side_effect = [msg_a, msg_b]
+        
+        # Run turn
+        turn = await executor.run_single_turn(
+            conversation, 3, agent_a, agent_b, interrupt_handler
+        )
+        
+        # Verify turn succeeded
+        assert turn is not None
+        
+        # Verify custom awareness was called
+        mock_awareness_b.get_turn_prompts.assert_called_once_with(3)
+        
+        # Verify system message was injected
+        assert len(conversation.messages) == 3  # system + msg_a + msg_b
+        system_msg = conversation.messages[0]
+        assert system_msg.role == "system"
+        assert system_msg.content == "Special instructions for agent B at turn 3"
+        assert system_msg.agent_id == "system"
+        
+        # Verify SystemPromptEvent was emitted
+        assert mock_bus.emit.call_count == 3  # TurnStart + SystemPrompt + TurnComplete
+        
+        # Check SystemPromptEvent
+        system_event = mock_bus.emit.call_args_list[1][0][0]
+        assert isinstance(system_event, SystemPromptEvent)
+        assert system_event.conversation_id == "conv-custom-b"
+        assert system_event.agent_id == "agent_b"
+        assert system_event.prompt == "Special instructions for agent B at turn 3"
+        assert system_event.agent_display_name == "Turn 3 injection for Agent B"
+    
+    @pytest.mark.asyncio
+    async def test_custom_awareness_injection_both_agents(self, executor, mock_bus, mock_message_handler):
+        """Test custom awareness injection for both agents."""
+        conversation = make_conversation(id="conv-custom-both", num_turns=0)
+        agent_a = make_agent(id="agent_a")
+        agent_b = make_agent(id="agent_b")
+        interrupt_handler = Mock()
+        
+        # Mock custom awareness for both agents
+        mock_awareness_a = Mock()
+        mock_awareness_a.get_turn_prompts.return_value = {
+            "agent_a": "Instructions for A",
+            "agent_b": ""  # Empty for B in A's awareness
+        }
+        
+        mock_awareness_b = Mock()
+        mock_awareness_b.get_turn_prompts.return_value = {
+            "agent_a": "",  # Empty for A in B's awareness
+            "agent_b": "Instructions for B"
+        }
+        
+        executor.set_custom_awareness({
+            "agent_a": mock_awareness_a,
+            "agent_b": mock_awareness_b
+        })
+        
+        # Mock messages
+        msg_a = make_message(content="Response A", agent_id="agent_a", role="assistant")
+        msg_b = make_message(content="Response B", agent_id="agent_b", role="assistant")
+        mock_message_handler.get_agent_message.side_effect = [msg_a, msg_b]
+        
+        # Run turn
+        turn = await executor.run_single_turn(
+            conversation, 1, agent_a, agent_b, interrupt_handler
+        )
+        
+        # Verify turn succeeded
+        assert turn is not None
+        
+        # Verify both custom awareness objects were called
+        mock_awareness_a.get_turn_prompts.assert_called_once_with(1)
+        mock_awareness_b.get_turn_prompts.assert_called_once_with(1)
+        
+        # Verify two system messages were injected
+        assert len(conversation.messages) == 4  # system_a + system_b + msg_a + msg_b
+        
+        system_msg_a = conversation.messages[0]
+        assert system_msg_a.role == "system"
+        assert system_msg_a.content == "Instructions for A"
+        assert system_msg_a.agent_id == "system"
+        
+        system_msg_b = conversation.messages[1]
+        assert system_msg_b.role == "system"
+        assert system_msg_b.content == "Instructions for B"
+        assert system_msg_b.agent_id == "system"
+        
+        # Verify SystemPromptEvents were emitted
+        assert mock_bus.emit.call_count == 4  # TurnStart + SystemPrompt_A + SystemPrompt_B + TurnComplete
+        
+        # Check first SystemPromptEvent (agent A)
+        system_event_a = mock_bus.emit.call_args_list[1][0][0]
+        assert isinstance(system_event_a, SystemPromptEvent)
+        assert system_event_a.agent_id == "agent_a"
+        assert system_event_a.prompt == "Instructions for A"
+        
+        # Check second SystemPromptEvent (agent B)
+        system_event_b = mock_bus.emit.call_args_list[2][0][0]
+        assert isinstance(system_event_b, SystemPromptEvent)
+        assert system_event_b.agent_id == "agent_b"
+        assert system_event_b.prompt == "Instructions for B"
+    
+    @pytest.mark.asyncio
+    async def test_custom_awareness_no_prompts(self, executor, mock_bus, mock_message_handler):
+        """Test custom awareness when no prompts are returned."""
+        conversation = make_conversation(id="conv-no-prompts", num_turns=0)
+        agent_a = make_agent(id="agent_a")
+        agent_b = make_agent(id="agent_b")
+        interrupt_handler = Mock()
+        
+        # Mock custom awareness that returns empty prompts
+        mock_awareness_a = Mock()
+        mock_awareness_a.get_turn_prompts.return_value = {
+            "agent_a": "",  # Empty
+            "agent_b": ""   # Empty
+        }
+        
+        executor.set_custom_awareness({
+            "agent_a": mock_awareness_a,
+            "agent_b": None
+        })
+        
+        # Mock messages
+        msg_a = make_message(content="Response A", agent_id="agent_a", role="assistant")
+        msg_b = make_message(content="Response B", agent_id="agent_b", role="assistant")
+        mock_message_handler.get_agent_message.side_effect = [msg_a, msg_b]
+        
+        # Run turn
+        turn = await executor.run_single_turn(
+            conversation, 2, agent_a, agent_b, interrupt_handler
+        )
+        
+        # Verify turn succeeded
+        assert turn is not None
+        
+        # Verify custom awareness was called
+        mock_awareness_a.get_turn_prompts.assert_called_once_with(2)
+        
+        # Verify no system messages were injected
+        assert len(conversation.messages) == 2  # only msg_a + msg_b
+        assert conversation.messages[0] == msg_a
+        assert conversation.messages[1] == msg_b
+        
+        # Verify no SystemPromptEvents were emitted
+        assert mock_bus.emit.call_count == 2  # only TurnStart + TurnComplete
+        assert isinstance(mock_bus.emit.call_args_list[0][0][0], TurnStartEvent)
+        assert isinstance(mock_bus.emit.call_args_list[1][0][0], TurnCompleteEvent)
+    
+    @pytest.mark.asyncio
+    async def test_custom_awareness_none_agents(self, executor, mock_bus, mock_message_handler):
+        """Test custom awareness when no agents have custom awareness."""
+        conversation = make_conversation(id="conv-none-agents", num_turns=0)
+        agent_a = make_agent(id="agent_a")
+        agent_b = make_agent(id="agent_b")
+        interrupt_handler = Mock()
+        
+        # No custom awareness set (default None values)
+        assert executor.custom_awareness["agent_a"] is None
+        assert executor.custom_awareness["agent_b"] is None
+        
+        # Mock messages
+        msg_a = make_message(content="Response A", agent_id="agent_a", role="assistant")
+        msg_b = make_message(content="Response B", agent_id="agent_b", role="assistant")
+        mock_message_handler.get_agent_message.side_effect = [msg_a, msg_b]
+        
+        # Run turn
+        turn = await executor.run_single_turn(
+            conversation, 8, agent_a, agent_b, interrupt_handler
+        )
+        
+        # Verify turn succeeded
+        assert turn is not None
+        
+        # Verify no system messages were injected
+        assert len(conversation.messages) == 2  # only msg_a + msg_b
+        assert conversation.messages[0] == msg_a
+        assert conversation.messages[1] == msg_b
+        
+        # Verify no SystemPromptEvents were emitted
+        assert mock_bus.emit.call_count == 2  # only TurnStart + TurnComplete
+        assert isinstance(mock_bus.emit.call_args_list[0][0][0], TurnStartEvent)
+        assert isinstance(mock_bus.emit.call_args_list[1][0][0], TurnCompleteEvent)

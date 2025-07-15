@@ -84,14 +84,24 @@ class VerboseDisplay:
         header.append("↔ ", style=self.COLORS["dim"])
         header.append(f"{agent_b_name}", style=self.COLORS["agent_b"] + " bold")
         
-        # Show initial prompt in a nice panel
+        # Show initial prompt as agents see it (with human tag)
+        from ..config import Config
+        config = Config()
+        human_tag = config.get("defaults.human_tag", "[HUMAN]")
+        
+        # Format prompt as agents see it
+        if human_tag:
+            prompt_content = f"{human_tag}: {event.initial_prompt}"
+        else:
+            prompt_content = event.initial_prompt
+        
         prompt_panel = Panel(
-            event.initial_prompt,
+            prompt_content,
             title="[bold]Initial Prompt[/bold]",
             title_align="left",
             border_style=self.COLORS["header"],
             padding=(1, 2),
-            width=80,
+            width=120,  # Allow wider display for longer prompts
             expand=False
         )
         

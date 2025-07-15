@@ -25,7 +25,6 @@ class EventTypes:
     PROVIDER_ERROR = "ProviderErrorEvent"
     
     # Analysis events
-    METRICS_CALCULATED = "MetricsCalculatedEvent"
     CONVERGENCE_DETECTED = "ConvergenceDetectedEvent"
     
     # Agent events
@@ -82,7 +81,6 @@ ALL_EVENT_TYPES = [
     EventTypes.TOKEN_USAGE,
     EventTypes.API_ERROR,
     EventTypes.PROVIDER_ERROR,
-    EventTypes.METRICS_CALCULATED,
     EventTypes.CONVERGENCE_DETECTED,
     EventTypes.AGENT_NAME_CHOSEN,
     EventTypes.AGENT_THINKING,

@@ -1,17 +1,25 @@
 """Test model for offline development and testing."""
 import json
 import hashlib
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 
 from ..core.types import Message
+from .base import Provider
 
 
-class LocalTestModel:
+class LocalTestModel(Provider):
     """Deterministic test model that simulates conversation dynamics."""
     
-    def __init__(self):
+    def __init__(self, responses=None):
         """Initialize test model with response patterns."""
-        self.responses = self._load_response_patterns()
+        if responses is not None:
+            # If custom responses are provided, use them in a simple cycle
+            self.custom_responses = responses
+            self.custom_response_index = 0
+            self.responses = self._load_response_patterns()
+        else:
+            self.custom_responses = None
+            self.responses = self._load_response_patterns()
         
     def _load_response_patterns(self) -> dict:
         """Load response patterns from bundled data."""
@@ -44,6 +52,26 @@ class LocalTestModel:
             ]
         }
         
+    async def stream_response(
+        self, 
+        messages: List[Message], 
+        temperature: Optional[float] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream response chunks from the model.
+        
+        Args:
+            messages: Conversation history
+            temperature: Temperature setting (ignored for deterministic model)
+            
+        Yields:
+            Response chunks
+        """
+        # Generate the full response
+        response = await self.generate(messages, temperature)
+        
+        # Yield the response as a single chunk (simulating streaming)
+        yield response
+    
     async def generate(
         self, 
         messages: List[Message], 
@@ -58,6 +86,12 @@ class LocalTestModel:
         Returns:
             Generated response
         """
+        # If custom responses are provided, cycle through them
+        if self.custom_responses:
+            response = self.custom_responses[self.custom_response_index % len(self.custom_responses)]
+            self.custom_response_index += 1
+            return response
+        
         if not messages:
             return self._get_greeting()
             

@@ -3,12 +3,13 @@
 import time
 from typing import Optional
 
-from .types import Agent, Conversation
+from .types import Agent, Conversation, Message
 from .events import (
     Turn,
     TurnStartEvent,
     TurnCompleteEvent,
     ConversationEndEvent,
+    SystemPromptEvent,
 )
 from .constants import EndReason
 
@@ -38,6 +39,9 @@ class TurnExecutor:
         
         # Track stop reason if conversation ends early
         self.stop_reason = None
+        
+        # Custom awareness for turn-based prompt injection
+        self.custom_awareness = {"agent_a": None, "agent_b": None}
     
     def set_convergence_overrides(self, threshold=None, action=None):
         """Set convergence threshold and action overrides.
@@ -48,6 +52,14 @@ class TurnExecutor:
         """
         self._convergence_threshold_override = threshold
         self._convergence_action_override = action
+    
+    def set_custom_awareness(self, custom_awareness):
+        """Set custom awareness objects for turn-based prompt injection.
+        
+        Args:
+            custom_awareness: Dict with agent_a and agent_b CustomAwareness objects
+        """
+        self.custom_awareness = custom_awareness
     
     async def run_single_turn(
         self,
@@ -76,6 +88,9 @@ class TurnExecutor:
                 turn_number=turn_number,
             )
         )
+        
+        # Check for custom awareness prompts to inject at this turn
+        await self._inject_turn_prompts(conversation, turn_number)
         
         # Get Agent A message
         agent_a_message = await self.message_handler.get_agent_message(
@@ -133,3 +148,54 @@ class TurnExecutor:
                 pass
         
         return turn
+    
+    async def _inject_turn_prompts(self, conversation: Conversation, turn_number: int):
+        """Inject custom system prompts at specific turns.
+        
+        Args:
+            conversation: The conversation to inject prompts into
+            turn_number: Current turn number
+        """
+        # Check agent A custom awareness
+        if self.custom_awareness.get("agent_a"):
+            prompts = self.custom_awareness["agent_a"].get_turn_prompts(turn_number)
+            if prompts["agent_a"]:
+                # Add system message for agent A
+                system_msg = Message(
+                    role="system",
+                    content=prompts["agent_a"],
+                    agent_id="system"
+                )
+                conversation.messages.append(system_msg)
+                
+                # Emit event for tracking
+                await self.bus.emit(
+                    SystemPromptEvent(
+                        conversation_id=conversation.id,
+                        agent_id="agent_a",
+                        prompt=prompts["agent_a"],
+                        agent_display_name=f"Turn {turn_number} injection for Agent A"
+                    )
+                )
+        
+        # Check agent B custom awareness (might be same file or different)
+        if self.custom_awareness.get("agent_b"):
+            prompts = self.custom_awareness["agent_b"].get_turn_prompts(turn_number)
+            if prompts["agent_b"]:
+                # Add system message for agent B
+                system_msg = Message(
+                    role="system", 
+                    content=prompts["agent_b"],
+                    agent_id="system"
+                )
+                conversation.messages.append(system_msg)
+                
+                # Emit event for tracking
+                await self.bus.emit(
+                    SystemPromptEvent(
+                        conversation_id=conversation.id,
+                        agent_id="agent_b",
+                        prompt=prompts["agent_b"],
+                        agent_display_name=f"Turn {turn_number} injection for Agent B"
+                    )
+                )

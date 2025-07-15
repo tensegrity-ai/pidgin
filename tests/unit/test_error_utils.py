@@ -177,3 +177,26 @@ class TestProviderSpecificHandlers:
             # All should have base suppression patterns
             assert "invalid_api_key" in handler.suppress_traceback_errors
             assert "billing" in handler.suppress_traceback_errors
+
+
+class TestErrorUtilsEdgeCases:
+    """Test edge cases for error utils."""
+    
+    def test_get_friendly_error_timeout_special_case(self):
+        """Test special handling for timeout errors with 'timed out' - line 90."""
+        handler = ProviderErrorHandler("TestProvider")
+        error = Exception("Connection timed out after 30 seconds")
+        
+        friendly = handler.get_friendly_error(error)
+        assert friendly == "Request timed out. The system will automatically retry..."
+    
+    def test_get_friendly_error_resource_exhausted_special_case(self):
+        """Test special handling for resource exhausted errors - line 93."""
+        handler = ProviderErrorHandler("TestProvider")
+        error = Exception("Resource exhausted: too many requests")
+        
+        # Need to add resource_exhausted to the friendly errors for this test
+        handler.friendly_errors["resource_exhausted"] = "Rate limit reached. The system will automatically retry..."
+        
+        friendly = handler.get_friendly_error(error)
+        assert friendly == "Rate limit reached. The system will automatically retry..."

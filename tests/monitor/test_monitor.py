@@ -4,7 +4,7 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch, MagicMock
 
 from rich.console import Console
@@ -15,7 +15,7 @@ from pidgin.constants import ExperimentStatus, ConversationStatus
 
 def render_to_text(renderable):
     """Helper to render Rich objects to text for testing."""
-    console = Console(width=80, legacy_windows=False)
+    console = Console(width=120, legacy_windows=False)
     with console.capture() as capture:
         console.print(renderable)
     return capture.get()
@@ -42,12 +42,12 @@ def sample_experiment_dir(temp_experiments_dir):
         "conversations": {
             "conv_1": {
                 "status": "completed",
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             },
             "conv_2": {
                 "status": "failed",
                 "error": "Rate limit exceeded",
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             }
         }
     }
@@ -55,22 +55,24 @@ def sample_experiment_dir(temp_experiments_dir):
         json.dump(manifest, f)
     
     # Create JSONL file with events
+    # Use timezone-aware timestamps
+    now = datetime.now(timezone.utc)
     events = [
         {
             "event_type": "APIErrorEvent",
             "provider": "openai",
             "error_type": "rate_limit",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": now.isoformat()
         },
         {
             "event_type": "ErrorEvent",
             "error_type": "auth_error",
             "provider": "anthropic",
-            "timestamp": (datetime.now() - timedelta(minutes=5)).isoformat()
+            "timestamp": (now - timedelta(minutes=5)).isoformat()
         },
         {
             "event_type": "MessageSentEvent",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": now.isoformat()
         }
     ]
     
@@ -84,14 +86,22 @@ def sample_experiment_dir(temp_experiments_dir):
 @pytest.fixture
 def monitor(temp_experiments_dir):
     """Create a Monitor instance with mocked dependencies."""
+    # Create a test console with wider width to accommodate full table
+    test_console = Console(width=120, legacy_windows=False)
+    
     with patch('pidgin.monitor.monitor.get_experiments_dir', return_value=temp_experiments_dir), \
          patch('pidgin.monitor.monitor.get_state_builder') as mock_state_builder:
         
         # Mock state builder
         mock_builder = Mock()
+        mock_builder.list_experiments = Mock(return_value=[])
+        mock_builder.clear_cache = Mock()
         mock_state_builder.return_value = mock_builder
         
-        monitor = Monitor()
+        monitor = Monitor(console_instance=test_console)
+        # Ensure monitor uses the right directory and knows it exists
+        monitor.exp_base = temp_experiments_dir
+        monitor.no_output_dir = False
         return monitor
 
 
@@ -138,6 +148,8 @@ class TestMonitor:
     
     def test_get_recent_errors_with_sample_data(self, monitor, sample_experiment_dir):
         """Test getting recent errors with sample data."""
+        # The sample_experiment_dir is created inside temp_experiments_dir
+        # which monitor is already using
         result = monitor.get_recent_errors(minutes=10)
         
         # Should find error events
@@ -155,15 +167,16 @@ class TestMonitor:
         exp_dir.mkdir()
         
         # Create events with different timestamps
+        # Use timezone-aware timestamps
         old_event = {
             "event_type": "APIErrorEvent",
             "provider": "openai",
-            "timestamp": (datetime.now() - timedelta(minutes=30)).isoformat()
+            "timestamp": (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
         }
         recent_event = {
             "event_type": "ErrorEvent",
             "provider": "anthropic",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         with open(exp_dir / "events.jsonl", "w") as f:
@@ -204,17 +217,29 @@ class TestMonitor:
         """Test building experiments panel with no running experiments."""
         panel = monitor.build_experiments_panel([])
         panel_text = render_to_text(panel)
-        assert "No running experiments" in panel_text
+        assert "No active experiments" in panel_text
     
     def test_build_experiments_panel_with_experiments(self, monitor):
         """Test building experiments panel with mock experiments."""
-        # Create mock experiment
+        # Create mock experiment with all required attributes
+        mock_conv = Mock()
+        mock_conv.status = ConversationStatus.RUNNING
+        mock_conv.current_turn = 5
+        mock_conv.agent_a_model = "gpt-4"
+        
         mock_exp = Mock()
         mock_exp.experiment_id = "test_exp_123"
         mock_exp.name = "Test Experiment"
+        mock_exp.status = "running"  # Need to set status for filtering
         mock_exp.progress = (5, 10)  # completed, total
-        mock_exp.conversations = {"conv1": Mock(status=ConversationStatus.RUNNING)}
+        mock_exp.completed_conversations = 5
+        mock_exp.total_conversations = 10
+        mock_exp.conversations = {"conv1": mock_conv}
         mock_exp.started_at = datetime.now() - timedelta(hours=1)
+        
+        # Add methods for token estimation
+        monitor._estimate_tokens_for_experiment = Mock(return_value=1500)
+        monitor._estimate_cost_for_experiment = Mock(return_value=0.45)
         
         panel = monitor.build_experiments_panel([mock_exp])
         panel_text = render_to_text(panel)
@@ -251,31 +276,11 @@ class TestMonitor:
             assert "Openai" in panel_text or "openai" in panel_text
             assert "Anthropic" in panel_text or "anthropic" in panel_text
     
-    def test_build_stats_panel(self, monitor):
-        """Test building statistics panel."""
-        # Create mock experiments
-        mock_exp1 = Mock()
-        mock_exp1.total_conversations = 10
-        mock_exp1.completed_conversations = 7
-        mock_exp1.failed_conversations = 2
-        mock_exp1.active_conversations = 1
-        mock_exp1.conversations = {}
-        
-        mock_exp2 = Mock()
-        mock_exp2.total_conversations = 5
-        mock_exp2.completed_conversations = 3
-        mock_exp2.failed_conversations = 1
-        mock_exp2.active_conversations = 1
-        mock_exp2.conversations = {}
-        
-        panel = monitor.build_stats_panel([mock_exp1, mock_exp2])
+    def test_build_conversations_panel_empty(self, monitor):
+        """Test building conversations panel with no data."""
+        panel = monitor.build_conversations_panel([])
         panel_text = render_to_text(panel)
-        
-        # Check total stats
-        assert "13/15" in panel_text  # (completed+failed)/total conversations
-        assert "Completed:" in panel_text and "10" in panel_text
-        assert "Failed:" in panel_text and "3" in panel_text
-        assert "Active:" in panel_text and "2" in panel_text
+        assert "No conversations found" in panel_text
     
     def test_get_experiment_states_calls_state_builder(self, monitor):
         """Test that get_experiment_states calls the state builder correctly."""
@@ -288,7 +293,7 @@ class TestMonitor:
         monitor.state_builder.clear_cache.assert_called_once()
         monitor.state_builder.list_experiments.assert_called_once_with(
             monitor.exp_base,
-            status_filter=[ExperimentStatus.RUNNING]
+            status_filter=None
         )
         assert result == mock_experiments
     
@@ -299,7 +304,7 @@ class TestMonitor:
              patch.object(monitor, 'build_header', return_value=Mock()), \
              patch.object(monitor, 'build_errors_panel', return_value=Mock()), \
              patch.object(monitor, 'build_experiments_panel', return_value=Mock()), \
-             patch.object(monitor, 'build_stats_panel', return_value=Mock()):
+             patch.object(monitor, 'build_conversations_panel', return_value=Mock()):
             
             layout = monitor.build_display()
             
@@ -308,7 +313,7 @@ class TestMonitor:
             monitor.build_header.assert_called_once()
             monitor.build_errors_panel.assert_called_once()
             monitor.build_experiments_panel.assert_called_once()
-            monitor.build_stats_panel.assert_called_once()
+            monitor.build_conversations_panel.assert_called_once()
             
             # Should return a layout
             assert layout is not None
@@ -323,19 +328,21 @@ class TestMonitorErrorHandling:
         exp_dir.mkdir()
         
         # Create JSONL with malformed JSON
+        # Use timezone-aware timestamp
+        now = datetime.now(timezone.utc)
         with open(exp_dir / "events.jsonl", "w") as f:
-            f.write('{"valid": "json"}\n')
-            f.write('malformed json line\n')
+            f.write('{"valid": "json"}\n')  # Valid JSON but not an error event
+            f.write('malformed json line\n')  # Invalid JSON
             f.write(json.dumps({
                 "another": "valid", 
                 "event_type": "ErrorEvent",
-                "timestamp": datetime.now().isoformat()
-            }) + '\n')
+                "timestamp": now.isoformat()
+            }) + '\n')  # Valid error event
         
         # Should handle malformed JSON gracefully
         result = monitor.get_recent_errors(minutes=10)
         
-        # Should only get valid events with proper timestamps and error types
+        # Should only get valid error events with proper timestamps
         assert len(result) == 1
         assert result[0]['another'] == 'valid'
     

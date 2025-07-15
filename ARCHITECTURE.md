@@ -2,7 +2,7 @@
 
 ## Overview
 
-Pidgin is an event-driven system for recording and analyzing AI-to-AI conversations. Every action emits events, providing complete observability while maintaining clean separation of concerns.
+Pidgin is an event-driven system for conducting and recording AI-to-AI conversations. Every action emits events, providing complete observability while maintaining clean separation of concerns.
 
 ## Core Principles
 
@@ -96,33 +96,62 @@ Pidgin uses a JSONL-first architecture that eliminates database contention:
 ┌──────────────┐     ┌─────────────┐
 │    JSONL     │────▶│  manifest   │
 │   (append)   │     │   .json     │
-└──────────────┘     └─────────────┘
+└──────┬───────┘     └─────────────┘
+       │
+       ▼ (events)
+┌──────────────┐
+│  EventStore  │
+│  (in-memory) │
+└──────┬───────┘
        │
        │ (post-experiment)
        ▼
 ┌──────────────┐
 │   DuckDB     │
 │  (analysis)  │
-└──────────────┘
+└──────┬───────┘
+       │
+       ▼ (generated outputs)
+┌─────────────────────────┐
+│ • Transcripts (.md)     │
+│ • Jupyter Notebooks     │
+│ • Metrics/Analysis      │
+└─────────────────────────┘
 ```
 
 ### Key Benefits:
 - **No lock contention**: JSONL files are append-only
+- **Complete observability**: Every event recorded and accessible
 - **Instant monitoring**: manifest.json provides efficient state
 - **Standard tools**: Use tail, grep, jq for debugging
 - **Batch import**: Load to DuckDB when convenient
+- **Reproducible analysis**: Generate notebooks and transcripts on-demand
 
 ### File Structure:
 ```
-experiments/
-├── exp_abc123/
-│   ├── manifest.json       # Experiment metadata & state
-│   ├── conv_001.jsonl      # Conversation events
-│   ├── conv_002.jsonl      # Conversation events
-│   └── transcripts/        # Human-readable output
-└── active/
-    └── exp_abc123.pid      # Daemon process ID
+pidgin_output/
+├── experiments/
+│   ├── exp_abc123/
+│   │   ├── manifest.json       # Experiment metadata & state
+│   │   ├── conv_001.jsonl      # Conversation events
+│   │   ├── conv_002.jsonl      # Conversation events
+│   │   ├── transcripts/        # Human-readable output
+│   │   │   ├── conv_001.md
+│   │   │   └── conv_002.md
+│   │   └── notebooks/          # Analysis notebooks
+│   │       └── experiment_analysis.ipynb
+│   └── active/
+│       └── exp_abc123.pid      # Daemon process ID
+└── db/
+    └── pidgin.duckdb           # Analysis database (post-experiment)
 ```
+
+### Data Processing Pipeline:
+1. **Record**: Conversations emit events to JSONL files in real-time
+2. **Track**: Manifest tracks experiment state and conversation metadata
+3. **Process**: EventStore maintains in-memory view for live monitoring
+4. **Analyze**: Post-experiment batch load to DuckDB for metrics
+5. **Generate**: Create transcripts and notebooks for research
 
 ## Event System
 
@@ -138,9 +167,9 @@ MessageCompleteEvent
 TurnCompleteEvent
 ConversationEndEvent
 
-# Metrics events  
-ConvergenceCalculatedEvent
-MetricsCalculatedEvent
+# Analysis events
+ConvergenceWarningEvent
+ExperimentCompleteEvent
 
 # Error events
 APIErrorEvent

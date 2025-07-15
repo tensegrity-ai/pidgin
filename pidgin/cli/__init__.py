@@ -53,6 +53,7 @@ from .run import run
 from .stop import stop
 from .monitor import monitor
 from .info import info
+from .branch import branch
 from ..ui.display_utils import DisplayUtils
 
 console = Console()
@@ -70,6 +71,9 @@ def cli():
     pidgin run -a claude -b gpt
 
     [bold]EXAMPLES:[/bold]
+
+    [#4c566a]From YAML spec:[/#4c566a]
+        pidgin run experiment.yaml
 
     [#4c566a]Single conversation:[/#4c566a]
         pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
@@ -97,6 +101,7 @@ cli.add_command(run)
 cli.add_command(stop)
 cli.add_command(monitor)
 cli.add_command(info)
+cli.add_command(branch)
 
 def main():
     """Main entry point."""

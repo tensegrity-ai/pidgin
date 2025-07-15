@@ -225,6 +225,9 @@ class TestEventAwareProvider:
         # Create a provider without get_last_usage
         provider_no_usage = Mock(spec=Provider)
         provider_no_usage.model = "test-model"
+        # Ensure the provider doesn't have get_last_usage method
+        if hasattr(provider_no_usage, 'get_last_usage'):
+            delattr(provider_no_usage, 'get_last_usage')
         
         async def mock_stream(messages, temperature=None):
             yield "Test response"

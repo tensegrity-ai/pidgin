@@ -99,8 +99,61 @@ CREATE TABLE conversations (
 )
 ```
 
-#### 4. `turn_metrics` - Per-Turn Metrics
-Comprehensive metrics calculated after each conversation turn (~80 metrics per turn).
+#### 4. `conversation_turns` - Wide-Table Metrics (New)
+Optimized wide-table format with 150+ columns for efficient analytical queries. This replaces the normalized turn_metrics table.
+
+```sql
+CREATE TABLE conversation_turns (
+    -- Primary identifiers
+    experiment_id VARCHAR NOT NULL,
+    conversation_id VARCHAR NOT NULL,
+    turn_number SMALLINT NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    
+    -- Model context
+    agent_a_model VARCHAR NOT NULL,
+    agent_b_model VARCHAR NOT NULL,
+    awareness_a VARCHAR,
+    awareness_b VARCHAR,
+    temperature_a DOUBLE,
+    temperature_b DOUBLE,
+    
+    -- Message content
+    agent_a_message TEXT,
+    agent_b_message TEXT,
+    
+    -- 60+ metrics per agent (prefixed with a_ or b_)
+    a_message_length INTEGER,
+    a_word_count SMALLINT,
+    a_vocabulary_size SMALLINT,
+    -- ... many more
+    
+    -- 30+ convergence metrics (no prefix)
+    vocabulary_overlap DOUBLE,
+    structural_similarity DOUBLE,
+    overall_convergence DOUBLE,
+    -- ... many more
+    
+    PRIMARY KEY (conversation_id, turn_number)
+)
+```
+
+Key benefits of wide-table format:
+- Single row per turn (no joins needed)
+- Optimized for DuckDB's columnar storage
+- 10-100x faster analytical queries
+- All metrics pre-calculated during import
+
+**Note on Placeholder Metrics**: Some advanced metrics are stored as placeholders (0.0 values):
+- `semantic_similarity` - Requires sentence transformers
+- `sentiment_convergence` - Requires sentiment analysis libraries
+- `emotional_intensity` - Requires emotion lexicons
+- `topic_consistency` - Requires topic modeling
+
+These can be calculated post-hoc using the message text. See the auto-generated Jupyter notebooks for examples.
+
+#### 5. `turn_metrics` - Legacy Per-Turn Metrics (Deprecated)
+The previous normalized format. Still supported but will be removed in future versions.
 
 ```sql
 CREATE TABLE turn_metrics (

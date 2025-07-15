@@ -4,12 +4,13 @@
 import json
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, List, Tuple, Any
 from dataclasses import dataclass, field
 
 from .state_types import ExperimentState, ConversationState
 from ..io.logger import get_logger
+from ..core.types import Message
 
 logger = get_logger("state_builder")
 
@@ -218,20 +219,26 @@ class StateBuilder:
             timestamp_str: Timestamp string
             
         Returns:
-            datetime object
+            datetime object (always timezone-aware)
         """
         # Handle both with and without timezone
         if timestamp_str.endswith('Z'):
             timestamp_str = timestamp_str[:-1] + '+00:00'
         
         try:
-            return datetime.fromisoformat(timestamp_str)
+            dt = datetime.fromisoformat(timestamp_str)
+            # Ensure timezone awareness
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
         except ValueError:
             # Try without microseconds
             try:
-                return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
+                dt = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
+                # Make timezone aware
+                return dt.replace(tzinfo=timezone.utc)
             except ValueError:
-                return datetime.now()
+                return datetime.now(timezone.utc)
     
     def _get_last_convergence(self, exp_dir: Path, conv_id: str) -> Optional[float]:
         """Get the last convergence score for a conversation from JSONL files.
@@ -385,6 +392,101 @@ class StateBuilder:
             'count': truncation_count,
             'last_turn': last_truncation_turn
         }
+    
+    def get_conversation_state(self, exp_dir: Path, conversation_id: str, 
+                                up_to_turn: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """Extract conversation state up to a specific turn for branching.
+        
+        Args:
+            exp_dir: Experiment directory
+            conversation_id: Conversation ID
+            up_to_turn: Turn number to extract up to (None for all)
+            
+        Returns:
+            Dictionary with messages and configuration
+        """
+        # Find JSONL file for this conversation
+        jsonl_files = list(exp_dir.glob(f"*{conversation_id}*.jsonl"))
+        if not jsonl_files:
+            logger.error(f"No JSONL file found for conversation {conversation_id}")
+            return None
+        
+        jsonl_file = jsonl_files[0]  # Should only be one
+        
+        messages = []
+        config = {}
+        metadata = {}
+        
+        try:
+            with open(jsonl_file, 'r') as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    
+                    try:
+                        event = json.loads(line.strip())
+                        event_type = event.get('event_type')
+                        
+                        # Extract configuration from start event
+                        if event_type == 'ConversationStartEvent':
+                            config = {
+                                'agent_a_model': event.get('agent_a_model'),
+                                'agent_b_model': event.get('agent_b_model'),
+                                'initial_prompt': event.get('initial_prompt'),
+                                'max_turns': event.get('max_turns'),
+                                'temperature_a': event.get('temperature_a'),
+                                'temperature_b': event.get('temperature_b'),
+                                'awareness_a': event.get('awareness_a'),
+                                'awareness_b': event.get('awareness_b'),
+                                'first_speaker': event.get('first_speaker', 'agent_a'),
+                                'prompt_tag': event.get('prompt_tag'),
+                            }
+                            metadata['original_experiment_id'] = event.get('experiment_id')
+                            metadata['started_at'] = event.get('timestamp')
+                        
+                        # Collect messages
+                        elif event_type == 'MessageCompleteEvent':
+                            turn_number = event.get('turn_number', 0)
+                            
+                            # Check if we've reached the turn limit
+                            if up_to_turn is not None and turn_number > up_to_turn:
+                                break
+                            
+                            message = Message(
+                                role=event.get('agent_id', 'assistant'),
+                                content=event.get('content', ''),
+                                turn_number=turn_number
+                            )
+                            messages.append(message)
+                        
+                        # Track system prompts
+                        elif event_type == 'SystemPromptEvent':
+                            # Store system prompts separately
+                            if 'system_prompts' not in metadata:
+                                metadata['system_prompts'] = {}
+                            agent_id = event.get('agent_id')
+                            if agent_id:
+                                metadata['system_prompts'][agent_id] = event.get('prompt')
+                    
+                    except json.JSONDecodeError:
+                        continue
+            
+            # Validate we have enough data
+            if not config or not messages:
+                logger.error(f"Incomplete data for conversation {conversation_id}")
+                return None
+            
+            return {
+                'conversation_id': conversation_id,
+                'messages': messages,
+                'config': config,
+                'metadata': metadata,
+                'branch_point': up_to_turn or len(messages)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error reading conversation state: {e}")
+            return None
 
 
 # Global instance for easy reuse

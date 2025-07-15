@@ -119,6 +119,10 @@ class DefaultsConfig(BaseModel):
         default=False,
         description="Enable streaming interrupts (deprecated)"
     )
+    human_tag: str = Field(
+        default="[HUMAN]",
+        description="Tag to prefix human/researcher prompts (use empty string to disable)"
+    )
 
 
 class ExperimentProfileConfig(BaseModel):

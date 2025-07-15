@@ -1,7 +1,7 @@
 """Event types for the event-driven conversation system."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from uuid import uuid4
 
@@ -12,7 +12,7 @@ from .types import Message
 class Event:
     """Base event with timestamp and ID."""
 
-    timestamp: datetime = field(default_factory=datetime.now, init=False)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc), init=False)
     event_id: str = field(default_factory=lambda: uuid4().hex[:8], init=False)
 
 
@@ -193,14 +193,6 @@ class TokenUsageEvent(Event):
     current_usage_rate: float
 
 
-@dataclass
-class MetricsCalculatedEvent(Event):
-    """Metrics have been calculated for a turn."""
-
-    conversation_id: str
-    turn_number: int
-    metrics: Dict[str, Any]
-    experiment_id: Optional[str] = None
 
 
 @dataclass
@@ -215,3 +207,14 @@ class ContextTruncationEvent(Event):
     original_message_count: int
     truncated_message_count: int
     messages_dropped: int
+
+
+@dataclass
+class ConversationBranchedEvent(Event):
+    """Emitted when a conversation is branched from another."""
+    
+    conversation_id: str  # New conversation ID
+    source_conversation_id: str  # Original conversation ID
+    branch_point: int  # Turn number where branch occurred
+    parameter_changes: Dict[str, Any]  # What parameters were changed
+    experiment_id: Optional[str] = None  # New experiment ID

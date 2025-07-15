@@ -57,14 +57,7 @@ class EventStore:
         self.metrics = MetricsRepository(self.db)
 
         # Initialize import service
-        self.importer = ImportService(
-            self.db,
-            self.events,
-            self.experiments,
-            self.conversations,
-            self.messages,
-            self.metrics,
-        )
+        self.importer = ImportService(db_path)
 
         logger.debug(f"Initialized EventStore with database: {db_path}")
 
@@ -78,6 +71,14 @@ class EventStore:
         """Close database connection."""
         if hasattr(self, "db") and self.db:
             self.db.close()
+        if hasattr(self, "importer") and hasattr(self.importer, "db"):
+            self.importer.db.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     # Event Operations (delegate to EventRepository)
     def save_event(self, event: Event, experiment_id: str, conversation_id: str):
@@ -267,6 +268,12 @@ class EventStore:
 
             # Delete experiment-level events
             self.events.delete_events_for_experiment(experiment_id)
+            
+            # Delete from conversation_turns table (for imported data)
+            self.db.execute(
+                "DELETE FROM conversation_turns WHERE experiment_id = ?",
+                [experiment_id]
+            )
 
             # Finally delete experiment
             self.experiments.delete_experiment(experiment_id)

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import json
 import duckdb
+import sys
 
 from pidgin.database.base_repository import BaseRepository
 from pidgin.database.event_repository import EventRepository
@@ -84,17 +85,34 @@ def test_db_path():
         yield db_path_str
 
 
+@pytest.mark.database
 class TestBaseRepository:
     """Test the base repository functionality."""
 
     @pytest.fixture
-    def db_conn(self):
+    def db_conn(self, monkeypatch):
         """Create a temporary database connection."""
-        import duckdb
+        # Clear any mocked modules before importing
+        mocked_modules = [mod for mod in sys.modules.keys() if 'mock' in str(type(sys.modules[mod]))]
+        for mod in mocked_modules:
+            if mod.startswith('duckdb'):
+                del sys.modules[mod]
+        
+        # Import a fresh duckdb to avoid any mocking issues
+        import duckdb as real_duckdb
+        
+        # Ensure we're not getting a mock
+        if hasattr(real_duckdb.connect, '_mock_name'):
+            pytest.skip("duckdb is mocked in this test run")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
-            conn = duckdb.connect(str(db_path))
+            conn = real_duckdb.connect(str(db_path))
+            
+            # Verify it's a real connection
+            assert hasattr(conn, 'execute'), "Connection should have execute method"
+            assert not hasattr(conn.execute, '_mock_name'), "Execute method should not be mocked"
+            
             yield conn
             conn.close()
 

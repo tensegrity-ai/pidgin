@@ -22,6 +22,7 @@ from ..core.events import (
     ConversationPausedEvent,
     ConversationResumedEvent,
 )
+from ..config import Config
 
 
 class DisplayFilter:
@@ -47,6 +48,7 @@ class DisplayFilter:
         mode: str = "normal",
         show_timing: bool = False,
         agents: Optional[dict] = None,
+        prompt_tag: Optional[str] = None,
     ):
         """Initialize display filter.
 
@@ -55,6 +57,7 @@ class DisplayFilter:
             mode: Display mode ('normal', 'quiet', 'verbose')
             show_timing: Whether to show timing information
             agents: Dict mapping agent_id to Agent objects
+            prompt_tag: Optional tag to prefix prompts with
         """
         self.console = console
         self.mode = mode
@@ -62,6 +65,7 @@ class DisplayFilter:
         self.current_turn = 0
         self.max_turns = 0
         self.agents = agents or {}
+        self.prompt_tag = prompt_tag
     
     def _calculate_panel_width(self, content: str, title: str = "", min_width: int = 40, max_width: int = 80) -> int:
         """Calculate appropriate panel width based on content.
@@ -155,11 +159,22 @@ class DisplayFilter:
         content += f"◈ Max turns: {event.max_turns}\n"
         content += f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause[/{self.COLORS['nord3']}]\n\n"
 
-        # Show initial prompt
-        content += f"[bold]Initial Prompt:[/bold]\n{event.initial_prompt}"
+        # Get human tag - use instance value or fall back to config
+        if self.prompt_tag is None:
+            config = Config()
+            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+        else:
+            human_tag = self.prompt_tag
+        
+        # Show initial prompt as agents will see it
+        content += f"[bold]Initial Prompt (as agents see it):[/bold]\n"
+        if human_tag:
+            content += f"{human_tag}: {event.initial_prompt}"
+        else:
+            content += f"{event.initial_prompt}"
 
-        # Calculate appropriate width
-        width = self._calculate_panel_width(content, "⬡ Conversation Setup")
+        # Calculate appropriate width - allow wider panels for initial prompt display
+        width = self._calculate_panel_width(content, "⬡ Conversation Setup", max_width=120)
 
         self.console.print(
             Panel(

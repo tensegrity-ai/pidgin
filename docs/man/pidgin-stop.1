@@ -1,0 +1,109 @@
+.TH PIDGIN-STOP 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin-stop \- Stop running experiments gracefully
+.SH SYNOPSIS
+.B pidgin stop
+[\fIEXPERIMENT_ID\fR]
+.br
+.B pidgin stop
+.BR \-\-all
+.SH DESCRIPTION
+The \fBstop\fR command gracefully terminates running experiments. It ensures
+that any in-progress conversations are completed and data is properly saved
+before shutting down the experiment daemon.
+.PP
+You can stop a specific experiment by providing its ID (full or shortened)
+or name, or stop all running experiments at once with the --all flag.
+.SH ARGUMENTS
+.TP
+.I EXPERIMENT_ID
+The experiment to stop. Can be:
+.RS
+.IP \(bu 3
+Full experiment ID (e.g., experiment_7a8b9c0d)
+.IP \(bu 3
+Shortened ID (e.g., 7a8b9c0d or even 7a8b)
+.IP \(bu 3
+Experiment name (e.g., "bright-horizon")
+.RE
+.SH OPTIONS
+.TP
+.BR \-\-all
+Stop all running experiments. This option cannot be used with an experiment ID.
+.SH BEHAVIOR
+When stopping an experiment:
+.RS
+.IP 1. 3
+The stop signal is sent to the experiment daemon
+.IP 2. 3
+Any conversations currently processing a turn are allowed to complete
+.IP 3. 3
+Pending conversations are cancelled
+.IP 4. 3
+All JSONL event files are properly closed
+.IP 5. 3
+The experiment status is updated to "stopped"
+.IP 6. 3
+Database import is triggered for completed conversations
+.RE
+.PP
+The command will wait for graceful shutdown (up to 30 seconds) before
+forcing termination if necessary.
+.SH EXAMPLES
+.PP
+Stop a specific experiment by ID:
+.RS
+.nf
+pidgin stop experiment_7a8b9c0d
+.fi
+.RE
+.PP
+Stop using shortened ID:
+.RS
+.nf
+pidgin stop 7a8b
+.fi
+.RE
+.PP
+Stop by experiment name:
+.RS
+.nf
+pidgin stop bright-horizon
+.fi
+.RE
+.PP
+Stop all running experiments:
+.RS
+.nf
+pidgin stop --all
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+.B 0
+Successfully stopped the experiment(s)
+.TP
+.B 1
+Error occurred (experiment not found, already stopped, etc.)
+.SH FILES
+.TP
+.I ./pidgin_output/experiments/*/manifest.json
+Updated with stop timestamp and final status
+.TP
+.I ./pidgin_output/experiments/*/daemon.pid
+PID file removed after successful stop
+.SH NOTES
+Stopping an experiment does not delete any data. All conversations completed
+before the stop are preserved and can be analyzed. The experiment can be
+viewed with \fBpidgin info experiments\fR after stopping.
+.PP
+If an experiment appears to be hung, you can force-terminate it by manually
+killing the process using the PID from the daemon.pid file, though this is
+not recommended as it may result in incomplete data.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR pidgin-monitor (1),
+.BR pidgin-info (1)
+.SH AUTHOR
+Nicholas Lange and contributors

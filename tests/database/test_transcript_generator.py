@@ -21,9 +21,8 @@ class TestTranscriptGenerator:
         db_path = Path(temp_dir) / "test.duckdb"
         yield db_path
         # Cleanup
-        if db_path.exists():
-            os.unlink(db_path)
-        os.rmdir(temp_dir)
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
     
     @pytest.fixture
     def populated_db(self, temp_db_path):

@@ -106,8 +106,7 @@ class TestConversationFlow:
             # Emit various event types
             from pidgin.core.events import (
                 TurnStartEvent, 
-                MessageCompleteEvent,
-                MetricsCalculatedEvent
+                MessageCompleteEvent
             )
             
             conversation_id = "test_conv_456"
@@ -133,16 +132,6 @@ class TestConversationFlow:
                 duration_ms=1500
             ))
             
-            # Metrics
-            await bus.emit(MetricsCalculatedEvent(
-                conversation_id=conversation_id,
-                turn_number=1,
-                metrics={
-                    "length_a": 10,
-                    "length_b": 15,
-                    "similarity": 0.75
-                }
-            ))
             
             # Close the conversation log to flush
             bus.close_conversation_log(conversation_id)
@@ -154,7 +143,7 @@ class TestConversationFlow:
             with open(jsonl_file) as f:
                 lines = f.readlines()
             
-            assert len(lines) == 3
+            assert len(lines) == 2  # Only 2 events now (TurnStart + MessageComplete)
             
             # Verify each event
             for i, line in enumerate(lines):
@@ -170,9 +159,6 @@ class TestConversationFlow:
                     assert event_data["event_type"] == "MessageCompleteEvent"
                     assert event_data["message"]["content"] == "Test response"
                     assert event_data["tokens_used"] == 30
-                elif i == 2:
-                    assert event_data["event_type"] == "MetricsCalculatedEvent"
-                    assert event_data["metrics"]["similarity"] == 0.75
                     
         finally:
             await bus.stop()

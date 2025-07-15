@@ -9,11 +9,22 @@ from ..core.events import (
     Event,
     ConversationStartEvent,
     ConversationEndEvent,
+    TurnStartEvent,
     TurnCompleteEvent,
+    MessageRequestEvent,
+    MessageChunkEvent,
     MessageCompleteEvent,
     Turn,
     SystemPromptEvent,
     ErrorEvent,
+    APIErrorEvent,
+    ProviderTimeoutEvent,
+    InterruptRequestEvent,
+    ConversationPausedEvent,
+    ConversationResumedEvent,
+    RateLimitPaceEvent,
+    TokenUsageEvent,
+    ContextTruncationEvent,
 )
 from ..core.types import Message
 from ..io.logger import get_logger
@@ -28,10 +39,21 @@ class EventDeserializer:
     EVENT_TYPES: Dict[str, Type[Event]] = {
         "ConversationStartEvent": ConversationStartEvent,
         "ConversationEndEvent": ConversationEndEvent,
+        "TurnStartEvent": TurnStartEvent,
         "TurnCompleteEvent": TurnCompleteEvent,
+        "MessageRequestEvent": MessageRequestEvent,
+        "MessageChunkEvent": MessageChunkEvent,
         "MessageCompleteEvent": MessageCompleteEvent,
         "SystemPromptEvent": SystemPromptEvent,
         "ErrorEvent": ErrorEvent,
+        "APIErrorEvent": APIErrorEvent,
+        "ProviderTimeoutEvent": ProviderTimeoutEvent,
+        "InterruptRequestEvent": InterruptRequestEvent,
+        "ConversationPausedEvent": ConversationPausedEvent,
+        "ConversationResumedEvent": ConversationResumedEvent,
+        "RateLimitPaceEvent": RateLimitPaceEvent,
+        "TokenUsageEvent": TokenUsageEvent,
+        "ContextTruncationEvent": ContextTruncationEvent,
         # Handle legacy names
         "ConversationCreated": ConversationStartEvent,
     }
@@ -46,6 +68,16 @@ class EventDeserializer:
         Returns:
             Event instance or None if unknown event type
         """
+        # Handle legacy format where event data is nested under "data" key
+        if "data" in event_data and "event_type" in event_data:
+            # Legacy format: {"timestamp": "...", "event_type": "...", "data": {...}}
+            data_payload = event_data["data"]
+            # Copy event_type and timestamp to data payload for consistent processing
+            data_payload["event_type"] = event_data["event_type"]
+            if "timestamp" in event_data:
+                data_payload["timestamp"] = event_data["timestamp"]
+            event_data = data_payload
+        
         event_type = event_data.get("event_type")
         if not event_type:
             logger.warning("Event missing event_type field")
@@ -67,14 +99,36 @@ class EventDeserializer:
                 return cls._build_conversation_start(event_data, timestamp)
             elif event_type == "ConversationEndEvent":
                 return cls._build_conversation_end(event_data, timestamp)
+            elif event_type == "TurnStartEvent":
+                return cls._build_turn_start(event_data, timestamp)
             elif event_type == "TurnCompleteEvent":
                 return cls._build_turn_complete(event_data, timestamp)
+            elif event_type == "MessageRequestEvent":
+                return cls._build_message_request(event_data, timestamp)
+            elif event_type == "MessageChunkEvent":
+                return cls._build_message_chunk(event_data, timestamp)
             elif event_type == "MessageCompleteEvent":
                 return cls._build_message_complete(event_data, timestamp)
             elif event_type == "SystemPromptEvent":
                 return cls._build_system_prompt(event_data, timestamp)
             elif event_type == "ErrorEvent":
                 return cls._build_error(event_data, timestamp)
+            elif event_type == "APIErrorEvent":
+                return cls._build_api_error(event_data, timestamp)
+            elif event_type == "ProviderTimeoutEvent":
+                return cls._build_provider_timeout(event_data, timestamp)
+            elif event_type == "InterruptRequestEvent":
+                return cls._build_interrupt_request(event_data, timestamp)
+            elif event_type == "ConversationPausedEvent":
+                return cls._build_conversation_paused(event_data, timestamp)
+            elif event_type == "ConversationResumedEvent":
+                return cls._build_conversation_resumed(event_data, timestamp)
+            elif event_type == "RateLimitPaceEvent":
+                return cls._build_rate_limit_pace(event_data, timestamp)
+            elif event_type == "TokenUsageEvent":
+                return cls._build_token_usage(event_data, timestamp)
+            elif event_type == "ContextTruncationEvent":
+                return cls._build_context_truncation(event_data, timestamp)
             else:
                 logger.warning(f"No builder for event type: {event_type}")
                 return None
@@ -127,6 +181,17 @@ class EventDeserializer:
         return event
     
     @classmethod
+    def _build_turn_start(cls, data: Dict[str, Any], timestamp: datetime) -> TurnStartEvent:
+        """Build TurnStartEvent from JSON data."""
+        event = TurnStartEvent(
+            conversation_id=data.get("conversation_id", ""),
+            turn_number=data.get("turn_number", 0),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
     def _build_turn_complete(cls, data: Dict[str, Any], timestamp: datetime) -> TurnCompleteEvent:
         """Build TurnCompleteEvent from JSON data."""
         turn_data = data.get("turn", {})
@@ -156,6 +221,45 @@ class EventDeserializer:
             turn_number=data.get("turn_number", 0),
             turn=turn,
             convergence_score=data.get("convergence_score"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_message_request(cls, data: Dict[str, Any], timestamp: datetime) -> MessageRequestEvent:
+        """Build MessageRequestEvent from JSON data."""
+        # Parse conversation history
+        conversation_history = []
+        for msg_data in data.get("conversation_history", []):
+            message = Message(
+                role=msg_data.get("role", "user"),
+                content=msg_data.get("content", ""),
+                agent_id=msg_data.get("agent_id", ""),
+                timestamp=cls._parse_timestamp(msg_data.get("timestamp", "")) if msg_data.get("timestamp") else timestamp
+            )
+            conversation_history.append(message)
+        
+        event = MessageRequestEvent(
+            conversation_id=data.get("conversation_id", ""),
+            agent_id=data.get("agent_id", ""),
+            turn_number=data.get("turn_number", 0),
+            conversation_history=conversation_history,
+            temperature=data.get("temperature"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_message_chunk(cls, data: Dict[str, Any], timestamp: datetime) -> MessageChunkEvent:
+        """Build MessageChunkEvent from JSON data."""
+        event = MessageChunkEvent(
+            conversation_id=data.get("conversation_id", ""),
+            agent_id=data.get("agent_id", ""),
+            chunk=data.get("chunk", ""),
+            chunk_index=data.get("chunk_index", 0),
+            elapsed_ms=data.get("elapsed_ms", 0),
         )
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
@@ -205,6 +309,118 @@ class EventDeserializer:
             error_type=data.get("error_type", "unknown"),
             error_message=data.get("error_message", ""),
             context=data.get("context"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_api_error(cls, data: Dict[str, Any], timestamp: datetime) -> APIErrorEvent:
+        """Build APIErrorEvent from JSON data."""
+        event = APIErrorEvent(
+            conversation_id=data.get("conversation_id", ""),
+            error_type=data.get("error_type", "unknown"),
+            error_message=data.get("error_message", ""),
+            agent_id=data.get("agent_id", ""),
+            provider=data.get("provider", ""),
+            context=data.get("context"),
+            retryable=data.get("retryable", False),
+            retry_count=data.get("retry_count", 0),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_provider_timeout(cls, data: Dict[str, Any], timestamp: datetime) -> ProviderTimeoutEvent:
+        """Build ProviderTimeoutEvent from JSON data."""
+        event = ProviderTimeoutEvent(
+            conversation_id=data.get("conversation_id", ""),
+            error_type=data.get("error_type", "timeout"),
+            error_message=data.get("error_message", ""),
+            agent_id=data.get("agent_id", ""),
+            timeout_seconds=data.get("timeout_seconds", 0.0),
+            context=data.get("context"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_interrupt_request(cls, data: Dict[str, Any], timestamp: datetime) -> InterruptRequestEvent:
+        """Build InterruptRequestEvent from JSON data."""
+        event = InterruptRequestEvent(
+            conversation_id=data.get("conversation_id", ""),
+            turn_number=data.get("turn_number", 0),
+            interrupt_source=data.get("interrupt_source", "user"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_conversation_paused(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationPausedEvent:
+        """Build ConversationPausedEvent from JSON data."""
+        event = ConversationPausedEvent(
+            conversation_id=data.get("conversation_id", ""),
+            turn_number=data.get("turn_number", 0),
+            paused_during=data.get("paused_during", ""),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_conversation_resumed(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationResumedEvent:
+        """Build ConversationResumedEvent from JSON data."""
+        event = ConversationResumedEvent(
+            conversation_id=data.get("conversation_id", ""),
+            turn_number=data.get("turn_number", 0),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_rate_limit_pace(cls, data: Dict[str, Any], timestamp: datetime) -> RateLimitPaceEvent:
+        """Build RateLimitPaceEvent from JSON data."""
+        event = RateLimitPaceEvent(
+            conversation_id=data.get("conversation_id", ""),
+            provider=data.get("provider", ""),
+            wait_time=data.get("wait_time", 0.0),
+            reason=data.get("reason", ""),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    @classmethod
+    def _build_token_usage(cls, data: Dict[str, Any], timestamp: datetime) -> TokenUsageEvent:
+        """Build TokenUsageEvent from JSON data."""
+        event = TokenUsageEvent(
+            conversation_id=data.get("conversation_id", ""),
+            provider=data.get("provider", ""),
+            tokens_used=data.get("tokens_used", 0),
+            tokens_per_minute_limit=data.get("tokens_per_minute_limit", 0),
+            current_usage_rate=data.get("current_usage_rate", 0.0),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+    
+    
+    @classmethod
+    def _build_context_truncation(cls, data: Dict[str, Any], timestamp: datetime) -> ContextTruncationEvent:
+        """Build ContextTruncationEvent from JSON data."""
+        event = ContextTruncationEvent(
+            conversation_id=data.get("conversation_id", ""),
+            agent_id=data.get("agent_id", ""),
+            provider=data.get("provider", ""),
+            model=data.get("model", ""),
+            turn_number=data.get("turn_number", 0),
+            original_message_count=data.get("original_message_count", 0),
+            truncated_message_count=data.get("truncated_message_count", 0),
+            messages_dropped=data.get("messages_dropped", 0),
         )
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)

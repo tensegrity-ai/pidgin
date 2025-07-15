@@ -124,6 +124,8 @@ class Conductor:
         temperature_a: Optional[float] = None,
         temperature_b: Optional[float] = None,
         conversation_id: Optional[str] = None,
+        prompt_tag: Optional[str] = None,
+        branch_messages: Optional[list] = None,
     ) -> Conversation:
         """Run a complete conversation using events.
 
@@ -147,14 +149,15 @@ class Conductor:
         # Setup phase
         conv_id, conv_dir = await self._setup_conversation(
             agent_a, agent_b, initial_prompt, display_mode, show_timing,
-            choose_names, conversation_id
+            choose_names, conversation_id, prompt_tag
         )
         
         # Initialize conversation
         conversation = await self._initialize_conversation(
             conv_id, conv_dir, agent_a, agent_b, initial_prompt,
             awareness_a, awareness_b, choose_names,
-            temperature_a, temperature_b, max_turns
+            temperature_a, temperature_b, max_turns, prompt_tag,
+            branch_messages
         )
         
         # Run conversation turns
@@ -177,7 +180,8 @@ class Conductor:
         display_mode: str,
         show_timing: bool,
         choose_names: bool,
-        conversation_id: Optional[str]
+        conversation_id: Optional[str],
+        prompt_tag: Optional[str]
     ) -> tuple[str, Path]:
         """Setup conversation infrastructure."""
         # Initialize name mode
@@ -194,7 +198,9 @@ class Conductor:
             display_mode,
             show_timing,
             {"agent_a": agent_a, "agent_b": agent_b},
-            self.bus
+            self.bus,
+            None,  # db_store
+            prompt_tag
         )
         
         # Update components with bus
@@ -231,23 +237,30 @@ class Conductor:
         choose_names: bool,
         temperature_a: Optional[float],
         temperature_b: Optional[float],
-        max_turns: int
+        max_turns: int,
+        prompt_tag: Optional[str],
+        branch_messages: Optional[list] = None
     ) -> Conversation:
         """Initialize conversation and emit start events."""
         # Create conversation
         conversation = self.lifecycle.create_conversation(
-            conv_id, agent_a, agent_b, initial_prompt
+            conv_id, agent_a, agent_b, initial_prompt, branch_messages
         )
         
         # Get system prompts and add initial messages
-        system_prompts = get_system_prompts(
+        system_prompts, custom_awareness = get_system_prompts(
             awareness_a=awareness_a,
             awareness_b=awareness_b,
             choose_names=choose_names,
             model_a_name=agent_a.model,
             model_b_name=agent_b.model,
         )
-        await self.lifecycle.add_initial_messages(conversation, system_prompts, initial_prompt)
+        # Only add initial messages if not branching
+        if not branch_messages:
+            await self.lifecycle.add_initial_messages(conversation, system_prompts, initial_prompt, prompt_tag)
+        
+        # Store custom awareness for turn injection
+        self.turn_executor.set_custom_awareness(custom_awareness)
         
         # Set up interrupt handling
         self.interrupt_handler.setup_interrupt_handler()
@@ -265,6 +278,7 @@ class Conductor:
             system_prompts,
             temperature_a,
             temperature_b,
+            prompt_tag,
         )
         
         return conversation

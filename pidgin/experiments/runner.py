@@ -22,7 +22,8 @@ from ..core.events import (
     TurnCompleteEvent,
     ConversationEndEvent,
     MessageCompleteEvent,
-    SystemPromptEvent
+    SystemPromptEvent,
+    ConversationBranchedEvent
 )
 from ..database.event_store import EventStore
 from ..database.transcript_generator import TranscriptGenerator
@@ -266,6 +267,22 @@ class ExperimentRunner:
                 config, exp_dir, conversation_id
             )
             
+            # Emit branch event if this is a branched conversation
+            if config.branch_from_conversation:
+                branch_event = ConversationBranchedEvent(
+                    conversation_id=conversation_id,
+                    source_conversation_id=config.branch_from_conversation,
+                    branch_point=config.branch_from_turn or 0,
+                    parameter_changes={
+                        'agent_a_model': config.agent_a_model,
+                        'agent_b_model': config.agent_b_model,
+                        'temperature_a': config.temperature_a,
+                        'temperature_b': config.temperature_b,
+                    },
+                    experiment_id=experiment_id
+                )
+                await event_bus.emit(branch_event)
+            
             # Create and run conductor
             await self._create_and_run_conductor(
                 config=config,
@@ -388,7 +405,9 @@ class ExperimentRunner:
             awareness_b=config.awareness_b or config.awareness,
             temperature_a=config.temperature_a or config.temperature,
             temperature_b=config.temperature_b or config.temperature,
-            conversation_id=conversation_id
+            conversation_id=conversation_id,
+            prompt_tag=config.prompt_tag,
+            branch_messages=config.branch_messages
         )
     
     async def _import_and_generate_transcripts(self, experiment_id: str, exp_dir: Path):

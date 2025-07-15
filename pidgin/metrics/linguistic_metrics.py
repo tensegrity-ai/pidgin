@@ -1,7 +1,7 @@
 """Linguistic and stylistic metrics for conversation analysis."""
 
 import math
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Tuple
 from collections import Counter
 
 from .constants import (
@@ -27,6 +27,24 @@ class LinguisticAnalyzer:
         
         entropy = 0.0
         for count in counter.values():
+            if count > 0:
+                prob = count / total
+                entropy -= prob * math.log2(prob)
+        
+        return entropy
+    
+    @staticmethod
+    def calculate_character_entropy(text: str) -> float:
+        """Calculate Shannon entropy of character distribution."""
+        if not text:
+            return 0.0
+        
+        # Count character frequencies
+        char_counter = Counter(text)
+        total = len(text)
+        
+        entropy = 0.0
+        for count in char_counter.values():
             if count > 0:
                 prob = count / total
                 entropy -= prob * math.log2(prob)
@@ -95,3 +113,91 @@ class LinguisticAnalyzer:
         
         # Normalize to 0-1 range
         return max(0.0, min(1.0, 0.5 + formal_score))
+    
+    @staticmethod
+    def calculate_hapax_legomena_ratio(word_counter: Counter) -> float:
+        """Calculate ratio of words appearing only once."""
+        if not word_counter:
+            return 0.0
+        
+        hapax_count = sum(1 for count in word_counter.values() if count == 1)
+        total_unique = len(word_counter)
+        
+        if total_unique == 0:
+            return 0.0
+        
+        return hapax_count / total_unique
+    
+    @staticmethod
+    def calculate_lexical_diversity_index_ngrams(words: List[str]) -> float:
+        """Calculate LDI using bigrams and trigrams."""
+        if len(words) < 3:
+            return 0.0
+        
+        # Generate bigrams
+        bigrams = [(words[i], words[i+1]) for i in range(len(words)-1)]
+        unique_bigrams = len(set(bigrams))
+        total_bigrams = len(bigrams)
+        
+        # Generate trigrams
+        trigrams = [(words[i], words[i+1], words[i+2]) for i in range(len(words)-2)]
+        unique_trigrams = len(set(trigrams))
+        total_trigrams = len(trigrams)
+        
+        total = total_bigrams + total_trigrams
+        if total == 0:
+            return 0.0
+        
+        return (unique_bigrams + unique_trigrams) / total
+    
+    @staticmethod
+    def count_repeated_ngrams(words: List[str]) -> Dict[str, int]:
+        """Count repeated bigrams and trigrams in the message."""
+        result = {
+            'repeated_bigrams': 0,
+            'repeated_trigrams': 0
+        }
+        
+        if len(words) < 2:
+            return result
+        
+        # Count bigrams
+        bigram_counter = Counter()
+        for i in range(len(words) - 1):
+            bigram = (words[i].lower(), words[i+1].lower())
+            bigram_counter[bigram] += 1
+        
+        # Count bigrams appearing 2+ times
+        result['repeated_bigrams'] = sum(1 for count in bigram_counter.values() if count >= 2)
+        
+        # Count trigrams if enough words
+        if len(words) >= 3:
+            trigram_counter = Counter()
+            for i in range(len(words) - 2):
+                trigram = (words[i].lower(), words[i+1].lower(), words[i+2].lower())
+                trigram_counter[trigram] += 1
+            
+            # Count trigrams appearing 2+ times
+            result['repeated_trigrams'] = sum(1 for count in trigram_counter.values() if count >= 2)
+        
+        return result
+    
+    @staticmethod
+    def calculate_densities(words: List[str], sentences: List[str]) -> Dict[str, float]:
+        """Calculate various linguistic densities."""
+        word_count = len(words)
+        sentence_count = len(sentences)
+        
+        # Count questions (sentences ending with ?)
+        question_sentences = sum(1 for s in sentences if s.strip().endswith('?'))
+        question_density = question_sentences / max(sentence_count, 1)
+        
+        # Hedge word density
+        words_lower = [w.lower() for w in words]
+        hedge_count = sum(1 for w in words_lower if w in HEDGE_WORDS)
+        hedge_density = hedge_count / max(word_count, 1)
+        
+        return {
+            'question_density': question_density,
+            'hedge_density': hedge_density
+        }

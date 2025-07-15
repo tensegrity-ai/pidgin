@@ -102,6 +102,10 @@ class NotebookGenerator:
         # Vocabulary analysis
         cells.append(self._create_vocabulary_analysis_cell())
 
+        # Advanced metrics information
+        cells.append(self._create_advanced_metrics_markdown_cell())
+        cells.append(self._create_advanced_metrics_code_cell())
+
         # Turn-by-turn visualization
         cells.append(self._create_turn_visualization_cell())
 
@@ -397,6 +401,75 @@ if 'turn_metrics' in locals() and 'vocabulary_size_a' in turn_metrics.columns:
     plt.tight_layout()
     plt.show()"""
 
+        return new_code_cell(code)
+
+    def _create_advanced_metrics_markdown_cell(self) -> "nbformat.NotebookNode":
+        """Create markdown explanation about advanced metrics."""
+        content = """## Advanced Metrics (Post-Processing)
+
+The following metrics are stored as placeholders (0.0) in the database and can be calculated post-hoc:
+
+### Semantic & Linguistic Metrics
+- **semantic_similarity**: Requires sentence-transformers (~500MB with models)
+- **sentiment_convergence**: Requires TextBlob or VADER sentiment analysis
+- **emotional_intensity**: Requires NRCLex or similar emotion lexicons
+- **formality_convergence**: Requires linguistic formality markers analysis
+
+### Advanced Convergence Metrics
+- **topic_consistency**: Requires topic modeling (LDA, BERT-based models)
+- **rhythm_convergence**: Requires prosodic analysis tools
+- **convergence_velocity**: Rate of change in convergence metrics
+
+These metrics are intentionally not calculated by Pidgin to keep it lightweight and focused on conversation orchestration. Researchers can calculate them using the raw message text stored in the database.
+
+### Example: Calculating Semantic Similarity
+
+Here's how you might calculate semantic similarity post-hoc:"""
+        
+        return new_markdown_cell(content)
+    
+    def _create_advanced_metrics_code_cell(self) -> "nbformat.NotebookNode":
+        """Create code example for calculating advanced metrics."""
+        code = """# Example: Calculate semantic similarity for a conversation
+# Note: This requires installing sentence-transformers: pip install sentence-transformers
+
+# Uncomment to run:
+# from sentence_transformers import SentenceTransformer
+# import numpy as np
+# 
+# # Load a pre-trained model
+# model = SentenceTransformer('all-MiniLM-L6-v2')
+# 
+# # Get messages for a specific conversation
+# if 'turn_metrics' in locals():
+#     sample_conv = turn_metrics['conversation_id'].iloc[0]
+#     conv_turns = turn_metrics[turn_metrics['conversation_id'] == sample_conv]
+#     
+#     # Calculate embeddings for each turn
+#     semantic_similarities = []
+#     
+#     for _, turn in conv_turns.iterrows():
+#         # Get message texts (you would need to join with messages table)
+#         msg_a = turn.get('agent_a_message', '')  # Would need actual message text
+#         msg_b = turn.get('agent_b_message', '')
+#         
+#         if msg_a and msg_b:
+#             # Encode messages
+#             embeddings = model.encode([msg_a, msg_b])
+#             
+#             # Calculate cosine similarity
+#             similarity = np.dot(embeddings[0], embeddings[1]) / (
+#                 np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
+#             )
+#             semantic_similarities.append(similarity)
+#     
+#     # Add to your analysis
+#     conv_turns['semantic_similarity_calculated'] = semantic_similarities
+#     print(f"Average semantic similarity: {np.mean(semantic_similarities):.3f}")
+
+# For now, these metrics remain at 0.0 in the database
+print("Advanced metrics are placeholders. Use the example above as a starting point for post-hoc analysis.")"""
+        
         return new_code_cell(code)
 
     def _create_turn_visualization_cell(self) -> "nbformat.NotebookNode":

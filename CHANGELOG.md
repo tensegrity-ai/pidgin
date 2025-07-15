@@ -2,22 +2,33 @@
 
 All notable changes to Pidgin will be documented in this file.
 
-## [Unreleased]
+## [0.1.0] - 2025-07-15 (Pre-release)
+
+### Added
+- **Wide-table metrics schema** with 150+ columns for optimal DuckDB performance
+- **Auto-generated Jupyter notebooks** for each experiment
+- **Man pages** for all commands (Section 1, 5, and 7)
+- **API documentation** with examples and docstrings
+- **System-wide monitor** command with live dashboard
+- **Branch command** for exploring alternate conversation paths
+- **Stop command** for graceful experiment termination
+- **Support for 20+ models** including local models via Ollama
 
 ### Changed
-- **Renamed display mode flags for clarity**
-  - `--verbose` now shows conversation messages with minimal metadata (was `--observe`)
-  - `--tail` shows raw event stream (renamed from `--verbose`)
-  - Standardized class names: `EventLogger` → `TailDisplay`, `ObserveDisplay` → `VerboseDisplay`
-  
-- **Removed redundant `pidgin status` command**
-  - Use `pidgin list` and `pidgin monitor` instead
-  
-- **Improved progress panel display**
-  - Added blank space above panel for better visual balance
-  
-- **Event display cleanup**
-  - Removed `conversation_id` from most events in tail mode (shown once at start)
+- **Metrics overhaul**: Removed MetricsCalculatedEvent, calculate only convergence live
+- **Database schema**: New `conversation_turns` wide table replaces normalized schema
+- **Import service**: Batch metrics calculation during import
+- **Documentation**: Complete overhaul of README, ARCHITECTURE, metrics, and database docs
+
+### Fixed
+- **OpenAI import**: Resolved circular import issues
+- **Test files**: Cleaned up orphaned test files in root
+- **Placeholder metrics**: Added back for schema compatibility
+
+### Security
+- All command injection vulnerabilities fixed
+- Input validation added for all user inputs
+- Path traversal protection implemented
 
 ## [0.8.0] - 2025-07-05
 

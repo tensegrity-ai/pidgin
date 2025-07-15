@@ -98,6 +98,7 @@ class DisplayUtils:
             title = title or "! Error"
             width = self._calculate_panel_width(content, title)
 
+            self.console.print()  # Add blank line before panel
             self.console.print(
                 Panel(
                     content,
@@ -143,6 +144,7 @@ class DisplayUtils:
             title = title or "⚠ Warning"
             width = self._calculate_panel_width(content, title, max_width=70)
 
+            self.console.print()  # Add blank line before panel
             self.console.print(
                 Panel(
                     content,
@@ -180,6 +182,7 @@ class DisplayUtils:
             title = title or "◆ Info"
             width = self._calculate_panel_width(content, title, max_width=70)
 
+            self.console.print()  # Add blank line before panel
             self.console.print(
                 Panel(
                     content,
@@ -209,6 +212,7 @@ class DisplayUtils:
             content = f"[bold {NORD_COLORS['nord14']}]{message}[/bold {NORD_COLORS['nord14']}]"
             width = self._calculate_panel_width(content, "✓ Success", max_width=60)
 
+            self.console.print()  # Add blank line before panel
             self.console.print(
                 Panel(
                     content,
@@ -276,6 +280,7 @@ class DisplayUtils:
 
         width = self._calculate_panel_width(content, title)
 
+        self.console.print()  # Add blank line before panel
         self.console.print(
             Panel(
                 content,
@@ -387,6 +392,7 @@ class DisplayUtils:
 
         # Create panel
         content = "\n".join(lines)
+        self.console.print()  # Add blank line before panel
         self.console.print(
             Panel(
                 content,
@@ -433,6 +439,7 @@ class DisplayUtils:
 
         # Create and display the panel
         title = "◆ API Key Missing"
+        self.console.print()  # Add blank line before panel
         self.console.print(
             Panel(
                 text,

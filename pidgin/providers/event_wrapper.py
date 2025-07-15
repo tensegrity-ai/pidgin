@@ -144,9 +144,14 @@ class EventAwareProvider:
                     if not isinstance(model_name, str):
                         model_name = str(model_name)
                     
-                    # Get token tracker for rate limits
+                    # Get token tracker and record usage FIRST
                     from ..providers.token_tracker import get_token_tracker
                     tracker = get_token_tracker()
+                    
+                    # Record the usage before getting stats so current_rate includes this request
+                    tracker.record_usage(provider_name.lower(), usage_data['total_tokens'], model_name)
+                    
+                    # Now get the updated usage stats
                     usage_stats = tracker.get_usage_stats(provider_name.lower())
                     
                     # Create enhanced token usage event

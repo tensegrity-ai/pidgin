@@ -1,0 +1,178 @@
+.TH PIDGIN-INFO 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin-info \- Display information about models, experiments, and conversations
+.SH SYNOPSIS
+.B pidgin info
+\fISUBCOMMAND\fR [\fIARGS\fR]...
+.SH DESCRIPTION
+The \fBinfo\fR command provides detailed information about various aspects of
+the Pidgin system, including available models, experiments, and specific
+conversations.
+.SH SUBCOMMANDS
+.TP
+.B models
+List all available AI models with their capabilities and characteristics.
+.TP
+.B experiments
+Show all experiments (running, completed, and failed) with summary statistics.
+.TP
+.B conversation \fIID\fR
+Display detailed information about a specific conversation including metrics,
+messages, and convergence data.
+.TP
+.B commands
+List all available Pidgin commands with brief descriptions.
+.SH MODELS SUBCOMMAND
+.B pidgin info models
+[\fIOPTIONS\fR]
+.PP
+Shows available models organized by provider.
+.TP
+.BR \-\-provider " " \fIPROVIDER\fR
+Filter by provider (openai, anthropic, google, xai, local).
+.TP
+.BR \-\-format " " \fIFORMAT\fR
+Output format: table (default), list, or json.
+.PP
+Example output:
+.RS
+.nf
+OpenAI Models:
+  gpt-4         Premium reasoning model      (128k context)
+  gpt-4o        Multimodal model            (128k context)
+  gpt-4o-mini   Fast multimodal model       (128k context)
+
+Anthropic Models:
+  claude        Claude 3.5 Sonnet           (200k context)
+  opus          Claude 3 Opus               (200k context)
+  haiku         Claude 3.5 Haiku            (200k context)
+.fi
+.RE
+.SH EXPERIMENTS SUBCOMMAND
+.B pidgin info experiments
+[\fIOPTIONS\fR]
+.PP
+Lists all experiments with summary information.
+.TP
+.BR \-\-status " " \fISTATUS\fR
+Filter by status: running, completed, failed, stopped.
+.TP
+.BR \-\-recent " " \fIN\fR
+Show only the N most recent experiments.
+.TP
+.BR \-\-detailed
+Include detailed metrics for each experiment.
+.PP
+Example output:
+.RS
+.nf
+Active Experiments:
+  bright-horizon (experiment_abc123)
+    Status: running (45% complete)
+    Started: 2 hours ago
+    Conversations: 23/50
+
+Completed Experiments:
+  neural-bridge (experiment_def456)
+    Status: completed
+    Duration: 3h 24m
+    Conversations: 100
+    Avg convergence: 0.87
+.fi
+.RE
+.SH CONVERSATION SUBCOMMAND
+.B pidgin info conversation
+\fICONVERSATION_ID\fR [\fIOPTIONS\fR]
+.PP
+Shows detailed information about a specific conversation.
+.TP
+.BR \-\-metrics
+Include all calculated metrics.
+.TP
+.BR \-\-messages " " \fIN\fR
+Show last N messages (default: 5).
+.TP
+.BR \-\-export " " \fIFORMAT\fR
+Export conversation data (json, markdown, csv).
+.PP
+Information displayed:
+.IP \(bu 3
+Conversation metadata (ID, experiment, models, duration)
+.IP \(bu 3
+Turn-by-turn convergence scores
+.IP \(bu 3
+Final metrics summary
+.IP \(bu 3
+Recent messages
+.IP \(bu 3
+Token usage statistics
+.SH COMMANDS SUBCOMMAND
+.B pidgin info commands
+.PP
+Lists all available Pidgin commands with brief descriptions.
+Useful for quick reference without viewing full help.
+.SH EXAMPLES
+.PP
+List all available models:
+.RS
+.nf
+pidgin info models
+.fi
+.RE
+.PP
+Show only Anthropic models:
+.RS
+.nf
+pidgin info models --provider anthropic
+.fi
+.RE
+.PP
+List recent experiments:
+.RS
+.nf
+pidgin info experiments --recent 10
+.fi
+.RE
+.PP
+Show running experiments only:
+.RS
+.nf
+pidgin info experiments --status running
+.fi
+.RE
+.PP
+View conversation details:
+.RS
+.nf
+pidgin info conversation conv_abc123
+.fi
+.RE
+.PP
+Export conversation to markdown:
+.RS
+.nf
+pidgin info conversation conv_abc123 --export markdown > conv.md
+.fi
+.RE
+.SH OUTPUT FORMATS
+.TP
+.B table
+Human-readable table format (default)
+.TP
+.B list
+Simple list format
+.TP
+.B json
+Machine-readable JSON format
+.TP
+.B csv
+Comma-separated values (conversations only)
+.TP
+.B markdown
+Markdown format (conversations only)
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR pidgin-monitor (1)
+.SH AUTHOR
+Nicholas Lange and contributors

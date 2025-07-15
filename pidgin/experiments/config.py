@@ -47,6 +47,14 @@ class ExperimentConfig:
     # Display settings
     display_mode: str = 'none'  # Display mode for conversations: none, quiet, tail, verbose
     
+    # Prompt settings
+    prompt_tag: Optional[str] = None  # Tag to prefix initial prompt (None = use config default)
+    
+    # Branch metadata
+    branch_from_conversation: Optional[str] = None  # Source conversation ID
+    branch_from_turn: Optional[int] = None  # Turn number to branch from
+    branch_messages: Optional[List[Any]] = None  # Pre-populated messages
+    
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     
@@ -90,14 +98,21 @@ class ExperimentConfig:
         # Validate awareness levels (matching CLI choices)
         valid_awareness = ('none', 'basic', 'firm', 'research')
         
-        if self.awareness not in valid_awareness:
-            errors.append(f"awareness must be one of: {', '.join(valid_awareness)}")
+        # Check if awareness is a valid level or a YAML file path
+        if self.awareness and not (self.awareness in valid_awareness or 
+                                   self.awareness.endswith('.yaml') or 
+                                   self.awareness.endswith('.yml')):
+            errors.append(f"awareness must be one of: {', '.join(valid_awareness)} or a YAML file")
         
-        if self.awareness_a and self.awareness_a not in valid_awareness:
-            errors.append(f"awareness_a must be one of: {', '.join(valid_awareness)}")
+        if self.awareness_a and not (self.awareness_a in valid_awareness or 
+                                      self.awareness_a.endswith('.yaml') or 
+                                      self.awareness_a.endswith('.yml')):
+            errors.append(f"awareness_a must be one of: {', '.join(valid_awareness)} or a YAML file")
         
-        if self.awareness_b and self.awareness_b not in valid_awareness:
-            errors.append(f"awareness_b must be one of: {', '.join(valid_awareness)}")
+        if self.awareness_b and not (self.awareness_b in valid_awareness or 
+                                      self.awareness_b.endswith('.yaml') or 
+                                      self.awareness_b.endswith('.yml')):
+            errors.append(f"awareness_b must be one of: {', '.join(valid_awareness)} or a YAML file")
         
         if self.convergence_action not in ('stop', 'warn', 'continue'):
             errors.append("convergence_action must be 'stop', 'warn', or 'continue'")

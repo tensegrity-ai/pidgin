@@ -1,0 +1,212 @@
+.TH PIDGIN-YAML 5 "July 2025" "pidgin 0.1.0" "File Formats"
+.SH NAME
+pidgin-yaml \- YAML specification format for Pidgin experiments
+.SH SYNOPSIS
+.B experiment.yaml
+.SH DESCRIPTION
+Pidgin experiments can be configured using YAML files that specify all
+parameters for running conversations. This allows for reproducible experiments
+and complex configurations that would be unwieldy on the command line.
+.SH FORMAT
+The YAML file uses the following structure:
+.SH BASIC STRUCTURE
+.RS
+.nf
+# Experiment metadata
+name: my-experiment          # Optional: auto-generated if not provided
+description: |               # Optional: experiment description
+  Multi-line description
+  of the experiment
+
+# Agent configuration
+agents:
+  agent_a: claude           # Model for agent A
+  agent_b: gpt-4           # Model for agent B
+
+# Core parameters
+initial_prompt: "Let's discuss philosophy"
+max_turns: 50
+num_conversations: 10       # Number of repetitions
+
+# Optional parameters
+temperature: 0.7            # Temperature for both agents
+temperatures:               # Or set per-agent
+  agent_a: 0.3
+  agent_b: 0.9
+
+# System prompt awareness
+awareness: enhanced         # For both agents
+awareness_levels:           # Or set per-agent
+  agent_a: full
+  agent_b: basic
+
+# Convergence settings
+convergence:
+  threshold: 0.85
+  action: stop              # stop, continue, or notify
+  
+# Execution settings  
+max_parallel: 10            # Parallel conversation limit
+output_mode: default        # Display mode
+.fi
+.RE
+.SH FIELDS
+.SS Required Fields
+.TP
+.B agents
+Object containing agent_a and agent_b model specifications.
+.TP
+.B max_turns
+Maximum number of turns (exchanges) per conversation.
+.TP
+.B num_conversations
+Number of conversations to run in the experiment.
+.SS Optional Fields
+.TP
+.B name
+Experiment name. Auto-generated if not provided.
+.TP
+.B description
+Free-form description of the experiment's purpose.
+.TP
+.B initial_prompt
+Starting prompt for conversations. Can use multi-line YAML syntax.
+Default: "I'm excited to have this conversation with you."
+.TP
+.B temperature / temperatures
+Model temperature settings (0.0-2.0). Can be set globally or per-agent.
+.TP
+.B awareness / awareness_levels
+System prompt awareness (none, basic, enhanced, full).
+.TP
+.B convergence
+Object with threshold (0.0-1.0) and action settings.
+.TP
+.B dimensional_prompt
+Dimensional prompt specification (perspective:topic:style).
+.TP
+.B custom_instructions
+Per-agent custom system prompt additions.
+.TP
+.B first_speaker
+Which agent speaks first (agent_a or agent_b).
+.TP
+.B max_parallel
+Maximum concurrent conversations (default: 20).
+.TP
+.B output_mode
+Display mode: default, minimal, none, markdown, json.
+.TP
+.B meditation_mode
+Enable longer pauses between messages.
+.TP
+.B tags
+List of tags for experiment categorization.
+.SH EXAMPLES
+.SS Minimal Configuration
+.RS
+.nf
+agents:
+  agent_a: haiku
+  agent_b: gpt-4o-mini
+max_turns: 20
+num_conversations: 5
+.fi
+.RE
+.SS Research Configuration
+.RS
+.nf
+name: compression-dynamics
+description: |
+  Studying how language models compress communication
+  over extended interactions
+  
+agents:
+  agent_a: claude
+  agent_b: gpt-4
+
+initial_prompt: |
+  You're about to engage in a freeform conversation.
+  Be yourself and explore ideas naturally.
+
+max_turns: 100
+num_conversations: 50
+
+temperatures:
+  agent_a: 0.3
+  agent_b: 0.3
+
+convergence:
+  threshold: 0.95
+  action: stop
+
+awareness_levels:
+  agent_a: full
+  agent_b: full
+
+max_parallel: 10
+output_mode: minimal
+
+tags:
+  - compression
+  - long-form
+  - matched-temperature
+.fi
+.RE
+.SS Dimensional Prompt Example
+.RS
+.nf
+agents:
+  agent_a: opus
+  agent_b: gemini
+
+dimensional_prompt:
+  perspective: teachers
+  topic: quantum_physics
+  style: socratic
+
+max_turns: 30
+num_conversations: 10
+.fi
+.RE
+.SS Custom Instructions
+.RS
+.nf
+agents:
+  agent_a: gpt-4
+  agent_b: claude
+
+custom_instructions:
+  agent_a: |
+    You have a background in poetry and tend to use
+    metaphorical language in your responses.
+  agent_b: |
+    You are highly analytical and prefer precise,
+    technical language.
+
+max_turns: 40
+num_conversations: 20
+.fi
+.RE
+.SH VALIDATION
+YAML files are validated before execution. Common errors include:
+.IP \(bu 3
+Missing required fields (agents, max_turns, num_conversations)
+.IP \(bu 3
+Invalid model names
+.IP \(bu 3
+Out-of-range values (e.g., temperature > 2.0)
+.IP \(bu 3
+Conflicting settings (e.g., both temperature and temperatures)
+.SH NOTES
+YAML files support comments (lines starting with #) for documentation.
+Use meaningful experiment names and descriptions for better organization.
+.PP
+File paths in YAML are relative to the YAML file's location, not the
+current working directory.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR yaml (1)
+.SH AUTHOR
+Nicholas Lange and contributors

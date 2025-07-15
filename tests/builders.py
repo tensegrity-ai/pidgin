@@ -20,7 +20,6 @@ from pidgin.core.events import (
     ConversationResumedEvent,
     RateLimitPaceEvent,
     TokenUsageEvent,
-    MetricsCalculatedEvent
 )
 
 
@@ -287,27 +286,6 @@ def make_token_usage_event(
     )
 
 
-def make_metrics_event(
-    conversation_id: str = "test_conv",
-    turn_number: int = 1,
-    metrics: Optional[Dict[str, Any]] = None,
-    **kwargs
-) -> MetricsCalculatedEvent:
-    """Create a test metrics calculated event."""
-    if metrics is None:
-        metrics = {
-            "vocabulary_overlap": 0.75,
-            "message_length_variance": 0.2,
-            "turn_taking_balance": 0.9,
-            "engagement_score": 0.8
-        }
-    
-    return MetricsCalculatedEvent(
-        conversation_id=conversation_id,
-        turn_number=turn_number,
-        metrics=metrics,
-        **kwargs
-    )
 
 
 def make_api_error_event(

@@ -13,7 +13,6 @@ from tests.builders import (
     make_error_event,
     make_api_error_event,
     make_token_usage_event,
-    make_metrics_event
 )
 from pidgin.core.events import *
 
@@ -249,36 +248,6 @@ class TestTokenUsageEvent:
     
 
 
-class TestMetricsEvent:
-    """Test metrics event."""
-    
-    def test_metrics_event_creation(self):
-        """Test MetricsCalculatedEvent creation."""
-        event = make_metrics_event(
-            conversation_id="test_123",
-            turn_number=3,
-            metrics={
-                "vocabulary_overlap": 0.65,
-                "message_length_variance": 0.15
-            }
-        )
-        
-        assert event.conversation_id == "test_123"
-        assert event.turn_number == 3
-        assert event.metrics["vocabulary_overlap"] == 0.65
-        assert event.metrics["message_length_variance"] == 0.15
-    
-    def test_metrics_event_with_empty_metrics(self):
-        """Test MetricsCalculatedEvent with empty metrics."""
-        event = MetricsCalculatedEvent(
-            conversation_id="test_123",
-            turn_number=1,
-            metrics={}
-        )
-        
-        assert event.metrics == {}
-
-
 class TestRateLimitEvent:
     """Test rate limit event."""
     
@@ -312,8 +281,7 @@ class TestEventInheritance:
             make_message_complete_event(),
             make_error_event(),
             make_api_error_event(),
-            make_token_usage_event(),
-            make_metrics_event()
+            make_token_usage_event()
         ]
         
         for event in events:

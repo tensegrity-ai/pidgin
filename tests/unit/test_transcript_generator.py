@@ -27,10 +27,11 @@ class TestTranscriptGenerator:
         """Create a TranscriptGenerator instance with mocked connection."""
         db_path = tmp_path / "test.db"
         
-        with patch('duckdb.connect', return_value=mock_db_connection):
-            gen = TranscriptGenerator(db_path)
-            gen.conn = mock_db_connection
-            return gen
+        # Don't patch duckdb globally, just override the connection
+        gen = TranscriptGenerator.__new__(TranscriptGenerator)
+        gen.db_path = db_path
+        gen.conn = mock_db_connection
+        return gen
     
     def test_format_summary_metrics_with_none_values(self, generator):
         """Test that format_summary_metrics handles None values properly."""

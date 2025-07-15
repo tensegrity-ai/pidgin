@@ -33,8 +33,8 @@ def monitor():
     """
     from ..monitor import Monitor
     
-    display.info("◆ Starting system monitor...", use_panel=False)
-    display.dim("Press Ctrl+C to exit\n")
+    display.info("Starting system monitor...", use_panel=False)
+    display.dim("Press Ctrl+C to exit")
     
     monitor = Monitor()
     try:

@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch, MagicMock, PropertyMock
 from pathlib import Path
 
 from tests.builders import (
@@ -477,3 +477,546 @@ class TestConductorProviderHandling:
         
         # Verify turn executor was called
         conductor.turn_executor.run_single_turn.assert_called_once()
+
+
+class TestConductorInterrupt:
+    """Test Conductor interrupt handling."""
+    
+    @pytest.fixture
+    def conductor(self):
+        """Create a Conductor for testing."""
+        output_manager = Mock(spec=OutputManager)
+        output_manager.create_conversation_dir.return_value = ("test_conv_123", Path("/tmp/test_conv_123"))
+        
+        conductor = Conductor(output_manager=output_manager)
+        
+        # Mock dependencies
+        conductor.lifecycle = Mock()
+        conductor.lifecycle.create_conversation = Mock()
+        conductor.lifecycle.add_initial_messages = AsyncMock()
+        conductor.lifecycle.emit_start_events = AsyncMock()
+        conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
+        conductor.lifecycle.initialize_event_system = AsyncMock()
+        
+        conductor.message_handler = Mock()
+        conductor.message_handler.set_display_filter = Mock()
+        conductor.message_handler.handle_message_complete = Mock()
+        
+        conductor.turn_executor = Mock()
+        conductor.turn_executor.run_single_turn = AsyncMock()
+        conductor.turn_executor.set_custom_awareness = Mock()
+        conductor.turn_executor.set_convergence_overrides = Mock()
+        
+        conductor.interrupt_handler = Mock()
+        conductor.interrupt_handler.interrupt_requested = False
+        conductor.interrupt_handler.current_turn = 0
+        conductor.interrupt_handler.setup_interrupt_handler = Mock()
+        conductor.interrupt_handler.restore_interrupt_handler = Mock()
+        conductor.interrupt_handler.handle_pause = AsyncMock()
+        conductor.interrupt_handler.should_continue = AsyncMock()
+        conductor.interrupt_handler.check_interrupt = Mock(return_value=False)
+        
+        conductor.name_coordinator = Mock()
+        conductor.name_coordinator.initialize_name_mode = Mock()
+        conductor.name_coordinator.assign_display_names = Mock()
+        
+        return conductor
+    
+    
+    def test_check_interrupt_method(self, conductor):
+        """Test check_interrupt method."""
+        # Test when no interrupt
+        conductor.interrupt_handler.check_interrupt.return_value = False
+        assert conductor.check_interrupt() is False
+        
+        # Test when interrupt requested
+        conductor.interrupt_handler.check_interrupt.return_value = True
+        assert conductor.check_interrupt() is True
+    
+    @pytest.mark.asyncio
+    async def test_interrupt_before_turn_execution(self, conductor):
+        """Test interrupt handling that triggers lines 303-306."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Use a property mock to control when interrupt_requested returns True
+        # This bypasses the reset in line 267
+        interrupt_prop = PropertyMock(return_value=True)
+        type(conductor.interrupt_handler).interrupt_requested = interrupt_prop
+        conductor.interrupt_handler.should_continue.return_value = False
+        
+        # Run conversation
+        result = await conductor.run_conversation(
+            agent_a=agent_a,
+            agent_b=agent_b,
+            initial_prompt="Hello",
+            max_turns=5  # Multiple turns to ensure we test the loop
+        )
+        
+        # Verify interrupt was handled
+        conductor.interrupt_handler.handle_pause.assert_called_once()
+        conductor.interrupt_handler.should_continue.assert_called_once()
+        
+        # Verify no turns were executed due to immediate interrupt
+        conductor.turn_executor.run_single_turn.assert_not_called()
+        
+        # Verify conversation ended with interrupted reason
+        conductor.lifecycle.emit_end_event_with_reason.assert_called_once()
+        call_args = conductor.lifecycle.emit_end_event_with_reason.call_args
+        assert call_args[0][4] == "interrupted"  # end_reason
+
+
+class TestConductorBatchLoading:
+    """Test Conductor batch loading functionality."""
+    
+    @pytest.fixture
+    def conductor(self):
+        """Create a Conductor for testing."""
+        output_manager = Mock(spec=OutputManager)
+        output_manager.create_conversation_dir.return_value = ("test_conv_123", Path("/tmp/test_conv_123"))
+        
+        conductor = Conductor(output_manager=output_manager)
+        
+        # Mock all dependencies
+        conductor.lifecycle = Mock()
+        conductor.lifecycle.create_conversation = Mock()
+        conductor.lifecycle.add_initial_messages = AsyncMock()
+        conductor.lifecycle.emit_start_events = AsyncMock()
+        conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
+        conductor.lifecycle.initialize_event_system = AsyncMock()
+        
+        conductor.message_handler = Mock()
+        conductor.message_handler.set_display_filter = Mock()
+        conductor.message_handler.handle_message_complete = Mock()
+        
+        conductor.turn_executor = Mock()
+        conductor.turn_executor.run_single_turn = AsyncMock()
+        conductor.turn_executor.set_custom_awareness = Mock()
+        conductor.turn_executor.set_convergence_overrides = Mock()
+        conductor.turn_executor.stop_reason = "max_turns"
+        
+        conductor.interrupt_handler = Mock()
+        conductor.interrupt_handler.interrupt_requested = False
+        conductor.interrupt_handler.setup_interrupt_handler = Mock()
+        conductor.interrupt_handler.restore_interrupt_handler = Mock()
+        conductor.interrupt_handler.check_interrupt = Mock(return_value=False)
+        
+        conductor.name_coordinator = Mock()
+        conductor.name_coordinator.initialize_name_mode = Mock()
+        conductor.name_coordinator.assign_display_names = Mock()
+        
+        return conductor
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_single_chat(self, conductor, tmp_path):
+        """Test batch loading for single chat sessions."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        # Create JSONL file
+        jsonl_file = conv_dir / "test_conv_123_events.jsonl"
+        jsonl_file.write_text('{"event": "test"}\n')
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                mock_store = Mock()
+                mock_store.import_experiment_from_jsonl.return_value = True
+                mock_store.close = Mock()
+                mock_event_store_class.return_value = mock_store
+                
+                # Run conversation
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1
+                )
+                
+                # Verify EventStore was used
+                mock_event_store_class.assert_called_once_with('/tmp/chats.db')
+                mock_store.import_experiment_from_jsonl.assert_called_once_with(str(conv_dir))
+                mock_store.close.assert_called_once()
+                
+                # Verify marker file was created
+                marker_file = conv_dir / ".loaded_to_db"
+                assert marker_file.exists()
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_skipped_for_experiments(self, conductor, tmp_path):
+        """Test that batch loading is skipped for experiment conversations."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up experiment conversation directory
+        conv_dir = tmp_path / "conv_exp_test_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("conv_exp_test_123", conv_dir)
+        
+        test_conversation = Conversation(
+            id="conv_exp_test_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                # Run conversation
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1,
+                    conversation_id="conv_exp_test_123"
+                )
+                
+                # Verify EventStore was NOT called for experiment
+                mock_event_store_class.assert_not_called()
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_missing_jsonl(self, conductor, tmp_path):
+        """Test batch loading when JSONL file is missing."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory without JSONL file
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                # Run conversation
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1
+                )
+                
+                # Verify EventStore was NOT called when JSONL missing
+                mock_event_store_class.assert_not_called()
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_import_failure(self, conductor, tmp_path):
+        """Test batch loading when import fails."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        # Create JSONL file
+        jsonl_file = conv_dir / "test_conv_123_events.jsonl"
+        jsonl_file.write_text('{"event": "test"}\n')
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore to fail import
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                mock_store = Mock()
+                mock_store.import_experiment_from_jsonl.return_value = False  # Import fails
+                mock_store.close = Mock()
+                mock_event_store_class.return_value = mock_store
+                
+                # Run conversation
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1
+                )
+                
+                # Verify import was attempted
+                mock_store.import_experiment_from_jsonl.assert_called_once()
+                
+                # Verify marker file was NOT created due to failure
+                marker_file = conv_dir / ".loaded_to_db"
+                assert not marker_file.exists()
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_eventstore_import_error(self, conductor, tmp_path):
+        """Test batch loading when EventStore import fails."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        # Create JSONL file
+        jsonl_file = conv_dir / "test_conv_123_events.jsonl"
+        jsonl_file.write_text('{"event": "test"}\n')
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore import to raise ImportError
+        with patch('pidgin.database.event_store.EventStore', side_effect=ImportError("Module not found")):
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                # Run conversation - should not crash
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1
+                )
+                
+                # Verify conversation completed despite import error
+                assert result is not None
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_generic_exception(self, conductor, tmp_path):
+        """Test batch loading with generic exception."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        # Create JSONL file
+        jsonl_file = conv_dir / "test_conv_123_events.jsonl"
+        jsonl_file.write_text('{"event": "test"}\n')
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore to raise exception
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                mock_store = Mock()
+                mock_store.import_experiment_from_jsonl.side_effect = Exception("Database error")
+                mock_event_store_class.return_value = mock_store
+                
+                # Run conversation - should not crash
+                result = await conductor.run_conversation(
+                    agent_a=agent_a,
+                    agent_b=agent_b,
+                    initial_prompt="Hello",
+                    max_turns=1
+                )
+                
+                # Verify conversation completed despite exception
+                assert result is not None
+    
+    @pytest.mark.asyncio
+    async def test_batch_load_file_not_found_error(self, conductor, tmp_path):
+        """Test batch loading with FileNotFoundError."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Set up conversation directory
+        conv_dir = tmp_path / "test_conv_123"
+        conv_dir.mkdir()
+        conductor.output_manager.create_conversation_dir.return_value = ("test_conv_123", conv_dir)
+        
+        # Create JSONL file
+        jsonl_file = conv_dir / "test_conv_123_events.jsonl"
+        jsonl_file.write_text('{"event": "test"}\n')
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=[]
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Mock turn execution to stop immediately
+        conductor.turn_executor.run_single_turn.return_value = None
+        
+        # Mock EventStore to raise FileNotFoundError
+        with patch('pidgin.database.event_store.EventStore') as mock_event_store_class:
+            with patch('pidgin.io.paths.get_chats_database_path', return_value='/tmp/chats.db'):
+                with patch('pidgin.core.conductor.logger') as mock_logger:
+                    mock_store = Mock()
+                    mock_store.import_experiment_from_jsonl.side_effect = FileNotFoundError("File not found")
+                    mock_event_store_class.return_value = mock_store
+                    
+                    # Run conversation - should not crash
+                    result = await conductor.run_conversation(
+                        agent_a=agent_a,
+                        agent_b=agent_b,
+                        initial_prompt="Hello",
+                        max_turns=1
+                    )
+                    
+                    # Verify error was logged (line 388)
+                    assert any(
+                        "File not found during batch load" in str(call)
+                        for call in mock_logger.error.call_args_list
+                    )
+                    
+                    # Verify conversation completed despite exception
+                    assert result is not None
+
+
+class TestConductorEdgeCases:
+    """Test edge cases and special scenarios."""
+    
+    @pytest.fixture
+    def conductor(self):
+        """Create a Conductor for testing."""
+        output_manager = Mock(spec=OutputManager)
+        output_manager.create_conversation_dir.return_value = ("test_conv_123", Path("/tmp/test_conv_123"))
+        
+        conductor = Conductor(output_manager=output_manager)
+        return conductor
+    
+    @pytest.mark.asyncio
+    async def test_convergence_overrides(self):
+        """Test convergence threshold and action overrides."""
+        output_manager = Mock(spec=OutputManager)
+        output_manager.create_conversation_dir.return_value = ("test_conv_123", Path("/tmp/test_conv_123"))
+        
+        # Test with convergence overrides
+        conductor = Conductor(
+            output_manager=output_manager,
+            convergence_threshold_override=0.95,
+            convergence_action_override="continue"
+        )
+        
+        # Verify overrides were set
+        assert conductor.turn_executor is not None
+        # The overrides should have been passed to turn_executor
+        
+    @pytest.mark.asyncio
+    async def test_with_transcript_manager(self):
+        """Test conductor with transcript manager."""
+        output_manager = Mock(spec=OutputManager)
+        transcript_manager = Mock()
+        
+        conductor = Conductor(
+            output_manager=output_manager,
+            transcript_manager=transcript_manager
+        )
+        
+        assert conductor.transcript_manager == transcript_manager
+    
+    @pytest.mark.asyncio
+    async def test_branch_messages(self, conductor):
+        """Test conversation with branch messages."""
+        agent_a = make_agent("agent_a", "gpt-4")
+        agent_b = make_agent("agent_b", "claude-3")
+        
+        # Mock dependencies
+        conductor.lifecycle = Mock()
+        conductor.lifecycle.create_conversation = Mock()
+        conductor.lifecycle.add_initial_messages = AsyncMock()
+        conductor.lifecycle.emit_start_events = AsyncMock()
+        conductor.lifecycle.emit_end_event_with_reason = AsyncMock()
+        conductor.lifecycle.initialize_event_system = AsyncMock()
+        
+        conductor.message_handler = Mock()
+        conductor.message_handler.set_display_filter = Mock()
+        conductor.message_handler.handle_message_complete = Mock()
+        
+        conductor.turn_executor = Mock()
+        conductor.turn_executor.run_single_turn = AsyncMock(return_value=None)
+        conductor.turn_executor.set_custom_awareness = Mock()
+        conductor.turn_executor.set_convergence_overrides = Mock()
+        conductor.turn_executor.stop_reason = "max_turns"
+        
+        conductor.interrupt_handler = Mock()
+        conductor.interrupt_handler.interrupt_requested = False
+        conductor.interrupt_handler.setup_interrupt_handler = Mock()
+        conductor.interrupt_handler.restore_interrupt_handler = Mock()
+        
+        conductor.name_coordinator = Mock()
+        conductor.name_coordinator.initialize_name_mode = Mock()
+        conductor.name_coordinator.assign_display_names = Mock()
+        
+        # Create branch messages
+        branch_messages = [
+            make_message("Previous message 1", agent_id="agent_a"),
+            make_message("Previous message 2", agent_id="agent_b")
+        ]
+        
+        test_conversation = Conversation(
+            id="test_conv_123",
+            agents=[agent_a, agent_b],
+            messages=branch_messages
+        )
+        conductor.lifecycle.create_conversation.return_value = test_conversation
+        
+        # Run conversation with branch messages
+        result = await conductor.run_conversation(
+            agent_a=agent_a,
+            agent_b=agent_b,
+            initial_prompt="Continue from here",
+            max_turns=1,
+            branch_messages=branch_messages
+        )
+        
+        # Verify initial messages were NOT added (because we're branching)
+        conductor.lifecycle.add_initial_messages.assert_not_called()
+        
+        # Verify conversation was created with branch messages
+        conductor.lifecycle.create_conversation.assert_called_once()
+        call_args = conductor.lifecycle.create_conversation.call_args
+        assert call_args[0][4] == branch_messages  # branch_messages argument

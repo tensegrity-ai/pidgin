@@ -16,6 +16,7 @@ from .events import (
 from ..ui.tail_display import TailDisplay
 from ..ui.display_filter import DisplayFilter
 from ..providers.event_wrapper import EventAwareProvider
+from ..config import Config
 
 
 class ConversationLifecycle:
@@ -56,6 +57,7 @@ class ConversationLifecycle:
         agents: Dict[str, Agent],
         existing_bus=None,
         db_store=None,
+        prompt_tag: Optional[str] = None,
     ):
         """Initialize EventBus and display components.
         
@@ -94,7 +96,7 @@ class ConversationLifecycle:
             # Use display filter for normal/quiet modes
             if self.console is not None and display_mode != 'none':
                 self.display_filter = DisplayFilter(
-                    self.console, display_mode, show_timing, agents
+                    self.console, display_mode, show_timing, agents, prompt_tag
                 )
                 self.bus.subscribe(Event, self.display_filter.handle_event)
             else:
@@ -117,7 +119,8 @@ class ConversationLifecycle:
             )
     
     def create_conversation(
-        self, conv_id: str, agent_a: Agent, agent_b: Agent, initial_prompt: str
+        self, conv_id: str, agent_a: Agent, agent_b: Agent, initial_prompt: str,
+        pre_populated_messages: Optional[list] = None
     ) -> Conversation:
         """Create and initialize conversation object.
         
@@ -126,6 +129,7 @@ class ConversationLifecycle:
             agent_a: First agent
             agent_b: Second agent
             initial_prompt: Initial prompt
+            pre_populated_messages: Optional list of messages for branching
             
         Returns:
             New conversation object
@@ -135,6 +139,11 @@ class ConversationLifecycle:
             initial_prompt=initial_prompt,
         )
         conversation.id = conv_id  # Use our generated ID
+        
+        # Add pre-populated messages if provided (for branching)
+        if pre_populated_messages:
+            conversation.messages.extend(pre_populated_messages)
+        
         return conversation
     
     async def add_initial_messages(
@@ -142,6 +151,7 @@ class ConversationLifecycle:
         conversation: Conversation,
         system_prompts: Dict[str, str],
         initial_prompt: str,
+        prompt_tag: Optional[str] = None,
     ):
         """Add system prompts and initial message to conversation.
         
@@ -153,15 +163,29 @@ class ConversationLifecycle:
         system_prompt_a = system_prompts["agent_a"]
         system_prompt_b = system_prompts["agent_b"]
         
+        # Get human tag - use provided value or fall back to config
+        if prompt_tag is None:
+            config = Config()
+            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+        else:
+            human_tag = prompt_tag
+        
         # Add system prompt and initial message
         messages_to_add = []
         if system_prompt_a:  # Only add if non-empty (chaos mode has empty prompts)
             messages_to_add.append(
                 Message(role="system", content=system_prompt_a, agent_id="system")
             )
+        
+        # Format initial prompt with configurable tag
+        if human_tag:
+            initial_content = f"{human_tag}: {initial_prompt}"
+        else:
+            initial_content = initial_prompt
+            
         messages_to_add.append(
             Message(
-                role="user", content=f"[HUMAN]: {initial_prompt}", agent_id="researcher"
+                role="user", content=initial_content, agent_id="researcher"
             )
         )
         
@@ -177,6 +201,7 @@ class ConversationLifecycle:
         system_prompts: Dict[str, str],
         temperature_a: Optional[float],
         temperature_b: Optional[float],
+        prompt_tag: Optional[str] = None,
     ):
         """Emit all start-of-conversation events.
         

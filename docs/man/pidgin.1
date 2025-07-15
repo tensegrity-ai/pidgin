@@ -1,0 +1,165 @@
+.TH PIDGIN 1 "July 2025" "pidgin 0.1.0" "User Commands"
+.SH NAME
+pidgin \- AI conversation research tool for studying emergent communication patterns
+.SH SYNOPSIS
+.B pidgin
+[\fIOPTIONS\fR] \fICOMMAND\fR [\fIARGS\fR]...
+.SH DESCRIPTION
+\fBPidgin\fR enables controlled experiments between AI agents to discover how they
+develop communication patterns, convergence behaviors, and linguistic adaptations.
+It serves as an AI linguistic observatory, recording and analyzing the evolution
+of machine-to-machine communication.
+.PP
+Pidgin focuses on being a lightweight conversation orchestrator that records
+interactions into structured data formats (JSONL and DuckDB) for later analysis.
+It intentionally avoids heavy ML dependencies to remain fast and portable.
+.SH COMMANDS
+.TP
+.B run
+Run conversations between AI agents. This is the primary command for conducting
+experiments. Supports single conversations or multi-conversation experiments.
+.TP
+.B stop
+Stop running experiments gracefully. Can stop a specific experiment by ID/name
+or all running experiments with --all.
+.TP
+.B monitor
+System-wide health monitor showing all active experiments, progress, convergence
+warnings, and completion estimates. Updates live every 2 seconds.
+.TP
+.B branch
+Branch from an existing conversation at a specific turn to explore alternate
+conversation paths.
+.TP
+.B info
+Display information about available models, experiments, or specific conversations.
+Includes subcommands: models, experiments, conversation.
+.SH OPTIONS
+.TP
+.BR \-\-version
+Show the version and exit.
+.TP
+.BR \-\-help ", " \-h
+Show help message and exit.
+.SH EXAMPLES
+.PP
+Start a simple conversation between Claude and GPT-4:
+.RS
+.nf
+pidgin run -a claude -b gpt-4 -t 20
+.fi
+.RE
+.PP
+Run an experiment with multiple conversations:
+.RS
+.nf
+pidgin run -a haiku -b gpt-4o-mini -r 10 -t 50 --name "compression-study"
+.fi
+.RE
+.PP
+Use a YAML specification file:
+.RS
+.nf
+pidgin run experiment.yaml
+.fi
+.RE
+.PP
+Monitor all running experiments:
+.RS
+.nf
+pidgin monitor
+.fi
+.RE
+.PP
+Stop a specific experiment:
+.RS
+.nf
+pidgin stop experiment_abc123de
+.fi
+.RE
+.PP
+Stop all running experiments:
+.RS
+.nf
+pidgin stop --all
+.fi
+.RE
+.PP
+View available models:
+.RS
+.nf
+pidgin info models
+.fi
+.RE
+.PP
+Branch from an existing conversation:
+.RS
+.nf
+pidgin branch conv_12345678 --turn 15
+.fi
+.RE
+.SH FILES
+.TP
+.I ~/.pidgin/
+User configuration directory containing API keys and settings.
+.TP
+.I ./.pidgin/
+Project-specific configuration directory (takes precedence over user config).
+.TP
+.I ./pidgin_output/
+Default output directory for experiments, conversations, and analysis results.
+Contains subdirectories for experiments, each with JSONL event logs and DuckDB
+databases.
+.SH ENVIRONMENT
+.TP
+.B ANTHROPIC_API_KEY
+API key for Claude models (required for Claude conversations).
+.TP
+.B OPENAI_API_KEY
+API key for OpenAI models including GPT-4 (required for OpenAI conversations).
+.TP
+.B GOOGLE_API_KEY
+API key for Google models like Gemini (required for Google conversations).
+.TP
+.B XAI_API_KEY
+API key for xAI models like Grok (required for xAI conversations).
+.TP
+.B PIDGIN_OUTPUT_DIR
+Override the default output directory (default: ./pidgin_output).
+.TP
+.B PIDGIN_LOG_LEVEL
+Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO).
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error
+.TP
+.B 2
+Command line usage error
+.TP
+.B 130
+Interrupted by user (Ctrl+C)
+.SH NOTES
+Pidgin stores all conversation data in JSONL format for maximum portability
+and transparency. Each event is recorded with full context, allowing complete
+reconstruction of conversations. Data is automatically imported into DuckDB
+for efficient analysis after experiments complete.
+.PP
+The tool is designed to be stateless - all experiment state is derived from
+the JSONL event logs, making it robust against interruptions and allowing
+experiments to be resumed or analyzed later.
+.SH SEE ALSO
+.BR pidgin-run (1),
+.BR pidgin-stop (1),
+.BR pidgin-monitor (1),
+.BR pidgin-branch (1),
+.BR pidgin-info (1),
+.BR pidgin-yaml (5),
+.BR pidgin-metrics (7)
+.SH BUGS
+Report bugs at: https://github.com/nicholas-lange/pidgin/issues
+.SH AUTHOR
+Nicholas Lange and contributors

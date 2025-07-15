@@ -1,0 +1,235 @@
+.TH PIDGIN-METRICS 7 "July 2025" "pidgin 0.1.0" "Miscellaneous"
+.SH NAME
+pidgin-metrics \- Metrics calculated by Pidgin for conversation analysis
+.SH DESCRIPTION
+Pidgin calculates a comprehensive set of metrics for each conversation turn,
+stored in the database for analysis. Metrics are calculated in real-time for
+operational needs (convergence monitoring) and comprehensively during import
+for research analysis.
+.SH METRIC CATEGORIES
+.SS Message-Level Metrics (Per Agent)
+Each metric is prefixed with \fBa_\fR for agent A or \fBb_\fR for agent B.
+.TP
+.B message_length
+Number of characters in the message.
+.TP
+.B word_count
+Number of space-separated words.
+.TP
+.B vocabulary_size
+Number of unique words used.
+.TP
+.B sentence_count
+Number of sentences detected.
+.TP
+.B avg_word_length
+Average length of words in characters.
+.TP
+.B avg_sentence_length
+Average number of words per sentence.
+.TP
+.B unique_word_ratio
+Ratio of unique words to total words (vocabulary diversity).
+.TP
+.B hapax_legomena_ratio
+Ratio of words used only once (lexical richness indicator).
+.TP
+.B question_count
+Number of questions in the message.
+.TP
+.B exclamation_count
+Number of exclamatory sentences.
+.TP
+.B emoji_count
+Number of emoji characters.
+.TP
+.B punctuation_diversity
+Number of distinct punctuation marks used.
+.TP
+.B formality_score
+Estimated formality level (0=informal, 1=formal).
+.SS Information Theory Metrics
+.TP
+.B word_entropy
+Shannon entropy of word distribution (bits).
+.TP
+.B character_entropy
+Shannon entropy of character distribution.
+.TP
+.B compression_ratio
+Ratio indicating information density.
+.SS Linguistic Complexity
+.TP
+.B lexical_diversity
+Type-token ratio adjusted for text length.
+.TP
+.B self_repetition
+Measure of phrase repetition within the message.
+.TP
+.B repeated_ngrams
+Count of repeated n-gram patterns.
+.SS Convergence Metrics (Paired)
+.TP
+.B vocabulary_overlap
+Jaccard similarity of vocabulary between agents.
+.RS
+.nf
+overlap = |V_a ∩ V_b| / |V_a ∪ V_b|
+.fi
+.RE
+.TP
+.B length_convergence
+Similarity in message lengths.
+.RS
+.nf
+convergence = 1 - |len_a - len_b| / max(len_a, len_b)
+.fi
+.RE
+.TP
+.B structural_similarity
+Similarity in linguistic structure (punctuation, capitalization patterns).
+.TP
+.B style_similarity
+Composite measure of stylistic alignment.
+.TP
+.B mutual_mimicry
+Average of directional mimicry scores.
+.TP
+.B mimicry_score_a_to_b
+How much agent A mimics agent B's vocabulary.
+.TP
+.B mimicry_score_b_to_a
+How much agent B mimics agent A's vocabulary.
+.TP
+.B overall_convergence
+Weighted average of convergence metrics used for stopping criteria.
+.RS
+.nf
+convergence = 0.4 * vocabulary_overlap +
+              0.3 * structural_similarity +
+              0.2 * length_convergence +
+              0.1 * mimicry_score
+.fi
+.RE
+.SS Cumulative Metrics
+.TP
+.B cumulative_vocabulary_a/b
+Total unique words used by each agent so far.
+.TP
+.B cumulative_convergence
+Vocabulary overlap considering all previous turns.
+.TP
+.B repetition_ratio
+Ratio of repeated content across the conversation.
+.SS Placeholder Metrics
+The following metrics are stored as placeholders (0.0) to maintain schema
+compatibility. They require heavy ML libraries and can be calculated post-hoc:
+.TP
+.B semantic_similarity
+Requires sentence transformers for embedding-based similarity.
+.TP
+.B sentiment_convergence
+Requires sentiment analysis libraries (TextBlob, VADER).
+.TP
+.B emotional_intensity
+Requires emotion lexicons and analysis tools.
+.TP
+.B topic_consistency
+Requires topic modeling (LDA, BERT-based models).
+.TP
+.B formality_convergence
+Requires detailed linguistic analysis.
+.SH CALCULATION DETAILS
+.SS Vocabulary Overlap
+Uses Jaccard similarity coefficient:
+.RS
+.nf
+def calculate_vocabulary_overlap(words_a, words_b):
+    vocab_a = set(words_a)
+    vocab_b = set(words_b)
+    intersection = vocab_a & vocab_b
+    union = vocab_a | vocab_b
+    return len(intersection) / len(union) if union else 0
+.fi
+.RE
+.SS Mimicry Score
+Measures adoption of partner's vocabulary:
+.RS
+.nf
+def calculate_mimicry(current_words, partner_history):
+    partner_vocab = set(word for turn in partner_history 
+                       for word in turn)
+    current_vocab = set(current_words)
+    shared = current_vocab & partner_vocab
+    return len(shared) / len(current_vocab) if current_vocab else 0
+.fi
+.RE
+.SS Word Entropy
+Shannon entropy of word frequency distribution:
+.RS
+.nf
+H(X) = -Σ p(x) * log2(p(x))
+.fi
+.RE
+Where p(x) is the probability of word x in the message.
+.SH DATABASE SCHEMA
+Metrics are stored in the \fBconversation_turns\fR table with appropriate
+data types:
+.IP \(bu 3
+Counts: TINYINT or SMALLINT
+.IP \(bu 3
+Ratios/scores: DOUBLE (0.0-1.0)
+.IP \(bu 3
+Text metrics: INTEGER
+.IP \(bu 3
+Identifiers: VARCHAR
+.SH ANALYSIS QUERIES
+.SS Average convergence by turn
+.RS
+.nf
+SELECT turn_number, AVG(overall_convergence) as avg_conv
+FROM conversation_turns
+WHERE experiment_id = ?
+GROUP BY turn_number
+ORDER BY turn_number;
+.fi
+.RE
+.SS High convergence conversations
+.RS
+.nf
+SELECT conversation_id, MAX(overall_convergence) as peak
+FROM conversation_turns
+GROUP BY conversation_id
+HAVING peak > 0.9
+ORDER BY peak DESC;
+.fi
+.RE
+.SS Vocabulary growth
+.RS
+.nf
+SELECT turn_number, 
+       AVG(cumulative_vocabulary_a) as avg_vocab_a,
+       AVG(cumulative_vocabulary_b) as avg_vocab_b
+FROM conversation_turns
+WHERE experiment_id = ?
+GROUP BY turn_number;
+.fi
+.RE
+.SH NOTES
+All metrics are calculated deterministically from message text, ensuring
+reproducibility. The computational cost is O(n) for most metrics where n
+is message length.
+.PP
+Metrics are designed to capture both individual message characteristics
+and paired conversation dynamics, enabling analysis of how communication
+patterns evolve over time.
+.SH SEE ALSO
+.BR pidgin (1),
+.BR pidgin-run (1),
+.BR pidgin-info (1)
+.SH REFERENCES
+Shannon, C. E. (1948). "A Mathematical Theory of Communication"
+.PP
+Pickering, M. J., & Garrod, S. (2004). "Toward a mechanistic psychology of dialogue"
+.SH AUTHOR
+Nicholas Lange and contributors

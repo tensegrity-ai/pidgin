@@ -278,21 +278,34 @@ Each turn in a conversation generates one row with ~150 columns capturing lingui
 - 100 conversations × 50 turns = ~6MB per experiment
 - Negligible storage cost enables comprehensive analysis
 
-## Implementation Priority
+## Placeholder Metrics
 
-### Phase 1: Core Metrics
-1. Basic counts (words, sentences, length)
-2. TTR and vocabulary overlap
-3. Overall convergence score
+The following metrics are included in the schema but stored as placeholder values (0.0) to maintain compatibility. They require additional libraries and can be calculated post-hoc:
 
-### Phase 2: Linguistic Metrics
-4. Entropy measures
-5. Hedge words and questions
-6. Symbol tracking
+### Semantic & NLP Metrics
+- **semantic_similarity**: Requires sentence-transformers (~500MB)
+- **sentiment_convergence**: Requires TextBlob or VADER
+- **emotional_intensity**: Requires NRCLex or emotion lexicons
+- **formality_convergence**: Requires linguistic formality analysis
 
-### Phase 3: Advanced Metrics
-7. Repetition patterns
-8. Compression ratios
-9. Syntactic complexity
+### Advanced Convergence Metrics  
+- **topic_consistency**: Requires LDA or BERT topic modeling
+- **rhythm_convergence**: Requires prosodic analysis
+- **convergence_velocity**: Rate of change calculation
 
-This comprehensive metric set enables rigorous analysis of AI communication patterns while maintaining skepticism about their meaning.
+These metrics are intentionally not calculated by Pidgin to keep it lightweight. Researchers can calculate them using the stored message text and the auto-generated Jupyter notebooks include example code.
+
+## Implementation Status
+
+### ✓ Implemented (Phase 1-3)
+- All basic text metrics (word count, vocabulary, etc.)
+- All convergence metrics (vocabulary overlap, structural similarity)
+- All linguistic metrics (entropy, diversity, complexity)
+- All compression and repetition metrics
+
+### ⧖ Placeholders (Calculate Post-Hoc)
+- Semantic similarity metrics
+- Sentiment and emotion metrics
+- Topic modeling metrics
+
+This comprehensive metric set enables rigorous analysis of AI communication patterns while keeping Pidgin fast and dependency-free.
