@@ -1,11 +1,7 @@
 """Tail display for showing formatted event stream in console."""
 
-from datetime import datetime
-from typing import Any, Dict
 
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 
 from ..core.event_bus import EventBus

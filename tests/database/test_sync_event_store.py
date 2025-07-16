@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pidgin.database.event_store import EventStore, ImportResult
+from pidgin.database.event_store import EventStore
 
 
 class TestEventStore:
@@ -16,7 +16,6 @@ class TestEventStore:
     @pytest.fixture
     def temp_db_path(self):
         """Create a temporary database path."""
-        import os
 
         # Use a temporary directory and create a unique filename
         temp_dir = tempfile.mkdtemp()

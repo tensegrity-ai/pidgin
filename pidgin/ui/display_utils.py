@@ -378,7 +378,7 @@ class DisplayUtils:
 
         # Build content lines
         lines = []
-        lines.append(f"[bold]◇ Experiment Complete[/bold]")
+        lines.append("[bold]◇ Experiment Complete[/bold]")
         lines.append("")
         lines.append(f"Name: {name}")
         lines.append(f"ID: {experiment_id}")

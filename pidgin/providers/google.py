@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager

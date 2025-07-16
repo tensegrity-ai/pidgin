@@ -41,7 +41,6 @@ class MockProvider(Provider):
 
     async def cleanup(self) -> None:
         """Clean up resources."""
-        pass
 
 
 class ErrorProvider(Provider):

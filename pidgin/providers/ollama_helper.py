@@ -1,11 +1,9 @@
 """Ollama installation and management helper."""
 
 import asyncio
-import os
 import platform
 import socket
 import subprocess
-from pathlib import Path
 
 import click
 
@@ -76,7 +74,7 @@ async def start_ollama_server(console) -> bool:
 
         return False
 
-    except Exception as e:
+    except Exception:
         return False
 
 

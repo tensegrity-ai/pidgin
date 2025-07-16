@@ -1,10 +1,8 @@
 """Tests for OutputManager."""
 
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from pidgin.io.output_manager import OutputManager
 

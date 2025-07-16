@@ -2,11 +2,10 @@
 """Ollama setup and model management for CLI."""
 
 import subprocess
-from typing import Optional, Set, Tuple
+from typing import Tuple
 
 import click
 from rich.console import Console
-from rich.panel import Panel
 
 from ..config.models import get_model_config
 from ..providers.ollama_helper import (
@@ -48,11 +47,11 @@ async def normalize_local_model_names(
 
         if model_a == "local":
             choice = click.prompt("First agent", type=int, default=1)
-            model_a = f"local:{models[choice-1] if 1 <= choice <= 4 else models[0]}"
+            model_a = f"local:{models[choice - 1] if 1 <= choice <= 4 else models[0]}"
 
         if model_b == "local":
             choice = click.prompt("Second agent", type=int, default=1)
-            model_b = f"local:{models[choice-1] if 1 <= choice <= 4 else models[0]}"
+            model_b = f"local:{models[choice - 1] if 1 <= choice <= 4 else models[0]}"
 
     return model_a, model_b
 

@@ -1,9 +1,5 @@
 """Test provider error handling utilities."""
 
-from unittest.mock import Mock
-
-import pytest
-
 from pidgin.providers.error_utils import (
     ProviderErrorHandler,
     create_anthropic_error_handler,

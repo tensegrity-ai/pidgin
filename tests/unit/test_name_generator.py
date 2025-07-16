@@ -1,7 +1,6 @@
 # tests/unit/test_name_generator.py
 """Test experiment name generator."""
 
-import pytest
 
 from pidgin.cli.name_generator import ADJECTIVES, NOUNS, generate_experiment_name
 

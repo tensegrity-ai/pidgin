@@ -1,7 +1,7 @@
 """Base provider interface for AI model integrations."""
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 
 from ..core.types import Message
 
@@ -49,7 +49,6 @@ class Provider(ABC):
             internally when appropriate.
         """
         yield  # type: ignore[misc]
-        pass
 
     async def cleanup(self) -> None:
         """Clean up provider resources.
@@ -62,7 +61,6 @@ class Provider(ABC):
         This method is called when the provider is no longer needed.
         The default implementation does nothing.
         """
-        pass
 
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call.

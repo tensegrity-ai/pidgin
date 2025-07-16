@@ -16,7 +16,6 @@ from ..config.system_prompts import get_system_prompts
 from ..io.logger import get_logger
 from ..io.output_manager import OutputManager
 from ..ui.display_utils import DisplayUtils, dim
-from .constants import Colors, EndReason
 from .conversation_lifecycle import ConversationLifecycle
 from .event_bus import EventBus
 from .events import MessageCompleteEvent

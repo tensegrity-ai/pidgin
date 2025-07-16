@@ -1,6 +1,6 @@
 """Token usage event handler for DuckDB storage."""
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from ..core.events import MessageCompleteEvent, TokenUsageEvent
 from ..core.rate_limiter import StreamingRateLimiter

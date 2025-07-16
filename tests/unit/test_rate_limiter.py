@@ -1,9 +1,8 @@
 # tests/unit/test_rate_limiter.py
 """Test rate limiting functionality."""
 
-import asyncio
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -274,7 +273,7 @@ class TestStreamingRateLimiter:
             with patch("pidgin.core.rate_limiter.logger"):
                 start_time = time.time()
                 limiter.record_error("openai", "rate_limit")
-                end_time = time.time()
+                # end_time = time.time()  # Not used
 
             # Should set backoff
             assert "openai" in limiter.backoff_until
@@ -291,7 +290,7 @@ class TestStreamingRateLimiter:
             with patch("pidgin.core.rate_limiter.logger"):
                 start_time = time.time()
                 limiter.record_error("anthropic", "429")
-                end_time = time.time()
+                # end_time = time.time()  # Not used
 
             # Should set backoff
             assert "anthropic" in limiter.backoff_until
@@ -308,7 +307,7 @@ class TestStreamingRateLimiter:
             with patch("pidgin.core.rate_limiter.logger"):
                 start_time = time.time()
                 limiter.record_error("google", "overloaded")
-                end_time = time.time()
+                # end_time = time.time()  # Not used
 
             # Should set backoff
             assert "google" in limiter.backoff_until

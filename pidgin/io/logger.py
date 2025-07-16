@@ -1,7 +1,6 @@
 """Logging configuration for Pidgin."""
 
 import logging
-import sys
 
 from rich.logging import RichHandler
 

@@ -2,7 +2,6 @@
 """Test retry utilities."""
 
 import asyncio
-from unittest.mock import AsyncMock, Mock
 
 import pytest
 

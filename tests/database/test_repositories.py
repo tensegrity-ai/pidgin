@@ -1,9 +1,8 @@
 """Comprehensive tests for repository classes."""
 
-import json
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import duckdb
@@ -13,10 +12,9 @@ from pidgin.core.events import (
     ConversationEndEvent,
     ConversationStartEvent,
     MessageCompleteEvent,
-    TokenUsageEvent,
     TurnCompleteEvent,
 )
-from pidgin.core.types import Agent, Message
+from pidgin.core.types import Message
 from pidgin.database.base_repository import BaseRepository
 from pidgin.database.conversation_repository import ConversationRepository
 from pidgin.database.event_repository import EventRepository
@@ -538,7 +536,7 @@ class TestMetricsRepository:
         """Test logging turn metrics."""
         # For tests, we just need to verify basic functionality
         # The real metrics calculation happens during import
-        metrics = {"convergence_score": 0.8, "vocabulary_overlap": 0.75}
+        # metrics = {"convergence_score": 0.8, "vocabulary_overlap": 0.75}  # For reference
 
         # During live conversations, only convergence_score is logged
         metrics_repo.log_turn_metrics("conversation_123", 1, {"convergence_score": 0.8})
@@ -621,7 +619,7 @@ class TestMetricsRepository:
                     )
                     assert result[0] == 150
                     assert result[1] == 0.015
-        except (Exception,) as e:
+        except (Exception,):
             # Table doesn't exist or method doesn't exist, skip test
             # This is expected if the metrics table hasn't been created yet
             pass

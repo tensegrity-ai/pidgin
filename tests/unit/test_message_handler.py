@@ -1,12 +1,11 @@
 """Test message handling functionality."""
 
 import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from pidgin.core.constants import RateLimits, SystemDefaults
+from pidgin.core.constants import RateLimits
 from pidgin.core.events import (
     ConversationPausedEvent,
     MessageCompleteEvent,
@@ -15,7 +14,6 @@ from pidgin.core.events import (
     RateLimitPaceEvent,
 )
 from pidgin.core.message_handler import MessageHandler
-from pidgin.core.types import Agent, Message
 from tests.builders import make_agent, make_message
 
 

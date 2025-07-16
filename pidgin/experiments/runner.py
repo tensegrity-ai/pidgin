@@ -2,30 +2,19 @@
 """Experiment runner supporting both sequential and parallel execution."""
 
 import asyncio
-import json
 import logging
-import os
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from rich.console import Console
-from rich.panel import Panel
 
 from ..config.models import get_model_config
 from ..config.prompts import build_initial_prompt
-from ..config.resolution import resolve_awareness_levels, resolve_temperatures
 from ..constants import ExperimentStatus
-from ..core import EventBus
 from ..core.conductor import Conductor
 from ..core.events import (
     ConversationBranchedEvent,
-    ConversationEndEvent,
-    ConversationStartEvent,
-    MessageCompleteEvent,
-    SystemPromptEvent,
-    TurnCompleteEvent,
 )
 from ..core.types import Agent
 from ..database.event_store import EventStore
@@ -339,7 +328,7 @@ class ExperimentRunner:
         model_b_config = get_model_config(config.agent_b_model)
 
         if not model_a_config or not model_b_config:
-            raise ValueError(f"Invalid model configuration")
+            raise ValueError("Invalid model configuration")
 
         # Create providers
         provider_a = await get_provider_for_model(
@@ -499,7 +488,7 @@ class ExperimentRunner:
                     self.display.info(summary, use_panel=False)
             else:
                 # Display error in a nice panel
-                error_message = f"Database Import Failed\n\n"
+                error_message = "Database Import Failed\n\n"
                 error_message += f"Experiment: {experiment_id}\n\n"
                 error_message += f"Error: {result.error}"
 
@@ -515,7 +504,7 @@ class ExperimentRunner:
 
         except Exception as e:
             # Display error in a nice panel
-            error_message = f"Import/Transcript Generation Failed\n\n"
+            error_message = "Import/Transcript Generation Failed\n\n"
             error_message += f"Experiment: {experiment_id}\n\n"
             error_message += f"Error: {str(e)}"
 

@@ -1,8 +1,6 @@
 """Base repository with common database operations."""
 
 import json
-from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb

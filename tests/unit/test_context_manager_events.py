@@ -1,6 +1,5 @@
 """Unit tests for context truncation event emission."""
 
-import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

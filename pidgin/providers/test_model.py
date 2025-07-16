@@ -1,7 +1,6 @@
 """Test model for offline development and testing."""
 
 import hashlib
-import json
 from typing import AsyncGenerator, List, Optional
 
 from ..core.types import Message

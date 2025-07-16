@@ -1,9 +1,8 @@
 """Tests for the Conductor class - conversation orchestrator."""
 
 import asyncio
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
+from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
 
@@ -12,20 +11,12 @@ from pidgin.core.event_bus import EventBus
 from pidgin.core.events import (
     ConversationEndEvent,
     ConversationStartEvent,
-    MessageCompleteEvent,
-    TurnCompleteEvent,
-    TurnStartEvent,
 )
-from pidgin.core.types import Agent, Conversation, Message
+from pidgin.core.types import Conversation
 from pidgin.io.output_manager import OutputManager
 from tests.builders import (
     make_agent,
-    make_conversation_end_event,
-    make_conversation_start_event,
     make_message,
-    make_message_complete_event,
-    make_turn_complete_event,
-    make_turn_start_event,
 )
 
 
@@ -98,7 +89,7 @@ class TestConductorConversation:
         conductor.lifecycle.initialize_event_system = AsyncMock()
 
         conductor.message_handler = Mock()  # Has both sync and async methods
-        conductor.message_handler.set_display_filter = Mock()  # Sync method
+        # conductor.message_handler.set_display_filter = Mock()  # Not used  # Sync method
         conductor.message_handler.handle_message_complete = Mock()  # Sync method
 
         conductor.turn_executor = Mock()
@@ -161,7 +152,7 @@ class TestConductorConversation:
         conductor.lifecycle.save_transcripts = AsyncMock()
 
         # Mock message handler methods
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         # Mock turn execution - stop after 1 turn
@@ -326,7 +317,7 @@ class TestConductorEventEmission:
 
         # Mock dependencies but keep real lifecycle and bus
         conductor.message_handler = AsyncMock()
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         conductor.turn_executor = AsyncMock()
@@ -423,7 +414,7 @@ class TestConductorProviderHandling:
         conductor.turn_executor.run_single_turn = AsyncMock(return_value=None)
         conductor.turn_executor.stop_reason = "max_turns"
 
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         conductor.interrupt_handler = Mock()
@@ -469,7 +460,7 @@ class TestConductorInterrupt:
         conductor.lifecycle.initialize_event_system = AsyncMock()
 
         conductor.message_handler = Mock()
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         conductor.turn_executor = Mock()
@@ -515,8 +506,8 @@ class TestConductorInterrupt:
 
         # Use a property mock to control when interrupt_requested returns True
         # This bypasses the reset in line 267
-        interrupt_prop = PropertyMock(return_value=True)
-        type(conductor.interrupt_handler).interrupt_requested = interrupt_prop
+        _interrupt_prop = PropertyMock(return_value=True)
+        type(conductor.interrupt_handler).interrupt_requested = _interrupt_prop
         conductor.interrupt_handler.should_continue.return_value = False
 
         # Run conversation
@@ -563,7 +554,7 @@ class TestConductorBatchLoading:
         conductor.lifecycle.initialize_event_system = AsyncMock()
 
         conductor.message_handler = Mock()
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         conductor.turn_executor = Mock()
@@ -980,7 +971,7 @@ class TestConductorEdgeCases:
         conductor.lifecycle.initialize_event_system = AsyncMock()
 
         conductor.message_handler = Mock()
-        conductor.message_handler.set_display_filter = Mock()
+        # conductor.message_handler.set_display_filter = Mock()  # Not used
         conductor.message_handler.handle_message_complete = Mock()
 
         conductor.turn_executor = Mock()

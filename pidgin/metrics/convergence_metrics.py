@@ -3,7 +3,7 @@
 import math
 import zlib
 from collections import Counter
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set
 
 from .text_analysis import TextAnalyzer
 

@@ -14,6 +14,10 @@ ORIGINAL_CWD = os.environ.get("PWD", os.getcwd())
 os.environ["PIDGIN_ORIGINAL_CWD"] = ORIGINAL_CWD
 
 # Configure rich-click BEFORE importing
+# NOTE: The following imports violate E402 (module level import not at top)
+# This is intentional - we MUST configure rich-click settings before importing
+# it as click, otherwise the configuration won't take effect.
+
 import rich_click.rich_click as rc
 
 # Force terminal and color detection
@@ -47,15 +51,15 @@ rc.STYLE_HELPTEXT = "#d8dee9"  # Nord4 light gray
 rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 
 # Now import as click
-import rich_click as click
+import rich_click as click  # noqa: E402
 
-from ..ui.display_utils import DisplayUtils
-from .branch import branch
-from .constants import BANNER
-from .info import info
-from .monitor import monitor
-from .run import run
-from .stop import stop
+from ..ui.display_utils import DisplayUtils  # noqa: E402
+from .branch import branch  # noqa: E402
+from .constants import BANNER  # noqa: E402
+from .info import info  # noqa: E402
+from .monitor import monitor  # noqa: E402
+from .run import run  # noqa: E402
+from .stop import stop  # noqa: E402
 
 console = Console()
 display = DisplayUtils(console)
@@ -94,7 +98,6 @@ def cli():
 
     • Configuration files: ~/.pidgin/ or ./.pidgin/
     """
-    pass
 
 
 # Register commands

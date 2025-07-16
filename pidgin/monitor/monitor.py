@@ -2,11 +2,10 @@
 
 import asyncio
 import json
-import time
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rich import box
 from rich.console import Console, Group
@@ -24,7 +23,7 @@ from ..cli.constants import (
     NORD_RED,
     NORD_YELLOW,
 )
-from ..constants import ConversationStatus, ExperimentStatus
+from ..constants import ConversationStatus
 from ..experiments.state_builder import get_state_builder
 from ..io.logger import get_logger
 from ..io.paths import get_experiments_dir
@@ -139,7 +138,7 @@ class Monitor:
             if timestamp.tzinfo is None:
                 timestamp = timestamp.replace(tzinfo=timezone.utc)
             return (now - timestamp).total_seconds() < (minutes * 60)
-        except:
+        except (AttributeError, TypeError):
             return False
 
     def get_experiment_states(self) -> List[Any]:
@@ -278,7 +277,7 @@ class Monitor:
                                 completed = completed.replace(tzinfo=timezone.utc)
                             if (now - completed).total_seconds() < 300:
                                 all_convs.append((exp, conv))
-                        except:
+                        except (AttributeError, TypeError):
                             pass
 
         if not all_convs:
@@ -576,7 +575,7 @@ class Monitor:
             else:
                 color = NORD_YELLOW
                 glyph = "!"
-                status = "Error"
+                # status = "Error"  # Not used currently
 
             # Format the most common error type
             common_error = error_counter.most_common(1)[0]

@@ -3,7 +3,6 @@
 
 from datetime import datetime
 
-import pytest
 
 from pidgin.core.types import Message
 from pidgin.providers.token_utils import (

@@ -2,9 +2,6 @@
 
 import asyncio
 import json
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -43,10 +40,10 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
             "agent_a": Agent(id="agent_a", model="unknown", display_name="Agent A"),
             "agent_b": Agent(id="agent_b", model="unknown", display_name="Agent B"),
         }
-        display = VerboseDisplay(bus, console, agents)
+        _display = VerboseDisplay(bus, console, agents)
     else:
         # Default to tail display
-        display = TailDisplay(bus, console)
+        _display = TailDisplay(bus, console)
 
     # Track file positions
     file_positions = {}
@@ -155,13 +152,13 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                                         if f.read(1):  # Check if there's more data
                                             continue_reading = True
                                             f.seek(file_positions[jsonl_file])
-                                except:
+                                except (OSError, IOError):
                                     pass
 
                             if not continue_reading:
                                 # No more data to read, exit
                                 break
-                except:
+                except Exception:
                     pass
 
             # Sleep briefly before next check

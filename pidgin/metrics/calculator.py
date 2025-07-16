@@ -1,8 +1,7 @@
 """Comprehensive metrics calculator for conversation analysis."""
 
-import functools
-from collections import Counter, defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple
+from collections import Counter
+from typing import Any, Dict, List, Set
 
 from .convergence_metrics import ConvergenceCalculator
 from .linguistic_metrics import LinguisticAnalyzer

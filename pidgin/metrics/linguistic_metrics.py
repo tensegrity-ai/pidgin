@@ -2,7 +2,7 @@
 
 import math
 from collections import Counter
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List
 
 from .constants import (
     AGREEMENT_MARKERS,
@@ -13,7 +13,6 @@ from .constants import (
     POLITENESS_MARKERS,
     SECOND_PERSON,
 )
-from .text_analysis import TextAnalyzer
 
 
 class LinguisticAnalyzer:

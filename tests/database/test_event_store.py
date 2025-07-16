@@ -7,13 +7,9 @@ from pathlib import Path
 import pytest
 
 from pidgin.core.events import (
-    ConversationEndEvent,
     ConversationStartEvent,
-    MessageCompleteEvent,
-    TurnCompleteEvent,
 )
-from pidgin.core.types import Agent, Message
-from pidgin.database.event_store import EventStore, ImportResult
+from pidgin.database.event_store import EventStore
 
 
 class TestEventStoreFull:
@@ -22,7 +18,6 @@ class TestEventStoreFull:
     @pytest.fixture
     def temp_db_path(self):
         """Create a temporary database path."""
-        import os
 
         temp_dir = tempfile.mkdtemp()
         db_path = Path(temp_dir) / "test.duckdb"

@@ -1,7 +1,7 @@
 """Simple API key management for all providers."""
 
 import os
-from typing import List, Optional
+from typing import List
 
 from ..constants import EnvVars, ProviderNames
 
@@ -9,7 +9,6 @@ from ..constants import EnvVars, ProviderNames
 class APIKeyError(Exception):
     """Raised when API key is missing or invalid."""
 
-    pass
 
 
 class APIKeyManager:
@@ -69,7 +68,7 @@ class APIKeyManager:
                 f"Please set the {env_var} environment variable:\n"
                 f"  export {env_var}=your-api-key\n\n"
                 f"For keychain integration:\n"
-                f"  https://github.com/anthropics/pidgin#api-keys"
+                "  https://github.com/anthropics/pidgin#api-keys"
             )
 
         return key
@@ -118,7 +117,7 @@ class APIKeyManager:
                     ]
                 )
                 + "\n\n"
-                f"Export the required environment variables:\n"
+                "Export the required environment variables:\n"
                 + "\n".join(
                     f"  export {env_var}=your-{provider}-api-key"
                     for provider, env_var in [
@@ -132,6 +131,6 @@ class APIKeyManager:
                     ]
                 )
                 + "\n\n"
-                f"For keychain integration:\n"
-                f"  https://github.com/anthropics/pidgin#api-keys"
+                "For keychain integration:\n"
+                "  https://github.com/anthropics/pidgin#api-keys"
             )

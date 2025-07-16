@@ -4,8 +4,6 @@ import json
 
 # Avoid importing pidgin modules to prevent circular imports
 import logging
-from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 

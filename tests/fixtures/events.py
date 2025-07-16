@@ -1,7 +1,6 @@
 # tests/fixtures/events.py
 """Common event fixtures for testing."""
 
-from datetime import datetime
 
 import pytest
 

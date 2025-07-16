@@ -1,6 +1,6 @@
 """Pydantic schema for configuration validation."""
 
-from typing import Any, Dict, Literal, Optional
+from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -8,9 +8,6 @@ from ..constants import (
     DEFAULT_CONVERGENCE_ACTION,
     DEFAULT_CONVERGENCE_PROFILE,
     DEFAULT_CONVERGENCE_THRESHOLD,
-    DEFAULT_CONVERGENCE_WEIGHTS,
-    ConvergenceActions,
-    ConvergenceComponents,
     ConvergenceProfiles,
 )
 

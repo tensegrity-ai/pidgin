@@ -4,12 +4,9 @@ This module implements a simplified dimensional approach focusing on three core 
 CONTEXT (how they relate), TOPIC (what they discuss), and MODE (how they think).
 """
 
-import random
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-import yaml
 
 from ..io.logger import get_logger
 

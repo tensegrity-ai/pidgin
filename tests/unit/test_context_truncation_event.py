@@ -3,7 +3,6 @@
 import json
 from datetime import datetime
 
-import pytest
 
 from pidgin.core.events import ContextTruncationEvent
 

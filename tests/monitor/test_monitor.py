@@ -4,12 +4,12 @@ import json
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from rich.console import Console
 
-from pidgin.constants import ConversationStatus, ExperimentStatus
+from pidgin.constants import ConversationStatus
 from pidgin.monitor.monitor import Monitor
 
 

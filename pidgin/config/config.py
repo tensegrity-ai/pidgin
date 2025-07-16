@@ -12,7 +12,6 @@ from ..constants import (
     DEFAULT_CONVERGENCE_PROFILE,
     DEFAULT_CONVERGENCE_THRESHOLD,
     DEFAULT_CONVERGENCE_WEIGHTS,
-    ConvergenceActions,
     ConvergenceComponents,
     ConvergenceProfiles,
 )
@@ -139,7 +138,7 @@ class Config:
 
         # No config found - ask if user wants to create one
         logger.warning("No configuration file found.")
-        print(f"\nNo configuration file found.")
+        print("\nNo configuration file found.")
         print(f"Would you like to create one at: {config_path}?")
         print("This will let you customize convergence profiles and other settings.")
 

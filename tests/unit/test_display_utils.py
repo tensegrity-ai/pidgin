@@ -1,8 +1,7 @@
 """Tests for DisplayUtils."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 from rich.console import Console
 from rich.text import Text
 

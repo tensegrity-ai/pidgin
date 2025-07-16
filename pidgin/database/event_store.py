@@ -12,9 +12,7 @@ from typing import Any, Dict, List, Optional
 import duckdb
 
 from ..core.events import Event
-from ..core.types import Agent, Conversation, ConversationTurn
 from ..io.logger import get_logger
-from .base_repository import BaseRepository
 from .conversation_repository import ConversationRepository
 from .event_repository import EventRepository
 from .experiment_repository import ExperimentRepository
@@ -73,12 +71,6 @@ class EventStore:
             self.db.close()
         if hasattr(self, "importer") and hasattr(self.importer, "db"):
             self.importer.db.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
 
     # Event Operations (delegate to EventRepository)
     def save_event(self, event: Event, experiment_id: str, conversation_id: str):

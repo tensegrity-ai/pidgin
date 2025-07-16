@@ -2,7 +2,7 @@
 
 import re
 from collections import Counter
-from typing import Dict, List, Set, Tuple
+from typing import List, Set, Tuple
 
 from .constants import (
     ACKNOWLEDGMENT_REGEX,
@@ -88,10 +88,7 @@ class TextAnalyzer:
         # Count other special symbols not covered above
         other_count = 0
         for char in message:
-            if (
-                char in ALL_SPECIAL_SYMBOLS
-                and char not in "→←↑↓⟶⟵+-*/=≈≠≤≥<>"
-            ):
+            if char in ALL_SPECIAL_SYMBOLS and char not in "→←↑↓⟶⟵+-*/=≈≠≤≥<>":
                 other_count += 1
 
         return emoji_count + arrow_count + math_count + other_count

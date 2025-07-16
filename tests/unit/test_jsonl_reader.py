@@ -1,11 +1,9 @@
 """Tests for JSONLExperimentReader."""
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from pidgin.constants import ConversationStatus, ExperimentStatus
 from pidgin.io.jsonl_reader import JSONLExperimentReader

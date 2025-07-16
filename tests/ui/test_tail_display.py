@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from rich.console import Console
-from rich.text import Text
 
 from pidgin.core.event_bus import EventBus
 from pidgin.core.events import (

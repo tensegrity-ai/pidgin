@@ -1,21 +1,17 @@
 """Tests for TurnExecutor."""
 
 import time
-from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from pidgin.core.constants import EndReason
 from pidgin.core.events import (
-    ConversationEndEvent,
     SystemPromptEvent,
-    Turn,
     TurnCompleteEvent,
     TurnStartEvent,
 )
 from pidgin.core.turn_executor import TurnExecutor
-from pidgin.core.types import Agent, Conversation, Message
 from tests.builders import make_agent, make_conversation, make_message
 
 

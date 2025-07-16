@@ -1,9 +1,7 @@
 """Tests for context_utils module."""
 
-import logging
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
 
 from pidgin.core.types import Message
 from pidgin.providers.context_utils import (
@@ -90,7 +88,7 @@ class TestContextUtils:
                 mock_custom_logger = Mock()
                 mock_get_logger.return_value = mock_custom_logger
 
-                result = apply_context_truncation(
+                _result = apply_context_truncation(
                     messages, "google", logger_name="custom.logger"
                 )
 

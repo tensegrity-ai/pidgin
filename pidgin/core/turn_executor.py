@@ -1,11 +1,9 @@
 """Turn execution logic for conversations."""
 
-import time
 from typing import Optional
 
 from .constants import EndReason
 from .events import (
-    ConversationEndEvent,
     SystemPromptEvent,
     Turn,
     TurnCompleteEvent,

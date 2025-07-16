@@ -1,7 +1,5 @@
 """Tests for Router and DirectRouter."""
 
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -206,7 +204,7 @@ class TestDirectRouter:
         mock_providers["agent_a"].stream_response = tracking_stream_response
 
         # Get response from agent_a
-        response = await router.get_next_response(history, "agent_a")
+        _response = await router.get_next_response(history, "agent_a")
 
         # Verify correct history was passed
         assert len(called_messages) == 4  # system + human + own + other agent

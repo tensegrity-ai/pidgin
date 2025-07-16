@@ -4,13 +4,12 @@ import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from pidgin.constants import ConversationStatus, ExperimentStatus
 from pidgin.experiments.state_builder import StateBuilder, get_state_builder
-from pidgin.experiments.state_types import ConversationState, ExperimentState
+from pidgin.experiments.state_types import ExperimentState
 
 
 @pytest.fixture

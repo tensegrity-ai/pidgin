@@ -3,8 +3,6 @@
 
 import asyncio
 import json
-import os
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -12,11 +10,11 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
 from ..config.dimensional_prompts import DimensionalPromptGenerator
-from ..config.models import MODELS, get_model_config
-from ..config.prompts import build_initial_prompt
+from ..config.models import get_model_config
+# Removed import - build_initial_prompt is defined locally
 from ..providers.builder import build_provider
 from ..ui.display_utils import DisplayUtils
-from .constants import MODEL_GLYPHS, NORD_GREEN, NORD_RED, NORD_YELLOW, PROVIDER_COLORS
+from .constants import MODEL_GLYPHS, PROVIDER_COLORS
 
 console = Console()
 display = DisplayUtils(console)
@@ -223,7 +221,7 @@ def parse_temperature(value: str) -> float:
             raise ValueError("Temperature must be between 0.0 and 2.0")
         return temp
     except ValueError as e:
-        raise click.BadParameter(str(e))
+        raise ValueError(str(e))
 
 
 def parse_dimensions(dimensions: List[str]) -> List[str]:

@@ -3,26 +3,18 @@
 
 import asyncio
 import json
-import os
-import sys
-import uuid
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import rich_click as click
 import yaml
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
 from ..experiments import ExperimentConfig, ExperimentManager
 from ..experiments.state_builder import get_state_builder
 from ..io.paths import get_experiments_dir
 from ..ui.display_utils import DisplayUtils
 from . import ORIGINAL_CWD
-from .constants import DEFAULT_TEMPERATURE, DEFAULT_TURNS
-from .helpers import parse_temperature, validate_model_id
+from .helpers import validate_model_id
 from .name_generator import generate_experiment_name
 
 console = Console()
@@ -281,10 +273,10 @@ def branch(
         if quiet:
             # Quiet mode: show commands and exit
             console.print(
-                f"\n[#4c566a]Running in background. Check progress:[/#4c566a]"
+                "\n[#4c566a]Running in background. Check progress:[/#4c566a]"
             )
             cmd_lines = [
-                f"pidgin monitor              # Monitor all experiments",
+                "pidgin monitor              # Monitor all experiments",
                 f"pidgin stop {name}    # Stop by name",
                 f"pidgin stop {exp_id[:8]}  # Stop by ID",
             ]
@@ -292,7 +284,7 @@ def branch(
         else:
             # Show live display
             console.print(
-                f"[#4c566a]Ctrl+C to exit display • experiment continues[/#4c566a]"
+                "[#4c566a]Ctrl+C to exit display • experiment continues[/#4c566a]"
             )
             console.print()
 
@@ -310,7 +302,7 @@ def branch(
                         manifest = json.load(f)
 
                     completed = manifest.get("completed_conversations", 0)
-                    _failed = manifest.get("failed_conversations", 0)
+                    # _failed = manifest.get("failed_conversations", 0)  # For future use
                     total = manifest.get("total_conversations", repetitions)
 
                     display.info(

@@ -1,17 +1,9 @@
 """Tests for MetricsCalculator."""
 
-from unittest.mock import Mock, patch
 
 import pytest
 
 from pidgin.metrics.calculator import MetricsCalculator
-from pidgin.metrics.constants import (
-    AGREEMENT_MARKERS,
-    DISAGREEMENT_MARKERS,
-    FIRST_PERSON_SINGULAR,
-    HEDGE_WORDS,
-    POLITENESS_MARKERS,
-)
 
 
 class TestMetricsCalculator:
@@ -55,7 +47,7 @@ class TestMetricsCalculator:
     def test_vocabulary_tracking(self, calculator):
         """Test vocabulary tracking across turns."""
         # Turn 1
-        metrics1 = calculator.calculate_turn_metrics(0, "Hello world", "Hello there")
+        _metrics1 = calculator.calculate_turn_metrics(0, "Hello world", "Hello there")
 
         # Turn 2 - should show vocabulary overlap
         metrics2 = calculator.calculate_turn_metrics(
@@ -191,8 +183,8 @@ class TestMetricsCalculator:
 
         metrics = calculator.calculate_turn_metrics(0, ack_msg, no_ack_msg)
 
-        assert metrics["agent_a"]["starts_with_acknowledgment"] == True
-        assert metrics["agent_b"]["starts_with_acknowledgment"] == False
+        assert metrics["agent_a"]["starts_with_acknowledgment"] is True
+        assert metrics["agent_b"]["starts_with_acknowledgment"] is False
 
     def test_politeness_markers(self, calculator):
         """Test politeness marker detection."""

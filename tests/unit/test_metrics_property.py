@@ -3,7 +3,6 @@
 import math
 import string
 from collections import Counter
-from typing import List, Set
 
 import pytest
 from hypothesis import assume, given, settings
@@ -13,14 +12,7 @@ from hypothesis.strategies import composite
 from pidgin.metrics.calculator import MetricsCalculator
 from pidgin.metrics.constants import (
     AGREEMENT_MARKERS,
-    ARROW_PATTERN,
-    ARROWS,
-    DISAGREEMENT_MARKERS,
-    EMOJI_PATTERN,
-    FIRST_PERSON_SINGULAR,
     HEDGE_WORDS,
-    MATH_SYMBOLS,
-    POLITENESS_MARKERS,
 )
 from pidgin.metrics.convergence_metrics import ConvergenceCalculator
 from pidgin.metrics.linguistic_metrics import LinguisticAnalyzer

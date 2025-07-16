@@ -5,7 +5,7 @@ import json
 import threading
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
+from typing import Any, Callable, Dict, List, Type, TypeVar
 
 from ..io.logger import get_logger
 from .constants import SystemDefaults

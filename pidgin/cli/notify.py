@@ -4,7 +4,6 @@
 import shlex
 import subprocess
 import sys
-from pathlib import Path
 
 from ..constants import ExperimentStatus
 

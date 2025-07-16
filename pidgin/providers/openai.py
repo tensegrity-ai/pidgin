@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 
 from openai import AsyncOpenAI
 
@@ -9,7 +9,6 @@ from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
 from .error_utils import create_openai_error_handler
-from .retry_utils import is_retryable_error, retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 

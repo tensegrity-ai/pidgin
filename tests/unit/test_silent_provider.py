@@ -1,6 +1,5 @@
 """Tests for SilentProvider."""
 
-from unittest.mock import Mock
 
 import pytest
 

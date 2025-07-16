@@ -1,9 +1,7 @@
 """Comprehensive tests for ConversationLifecycle."""
 
 import time
-from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -13,7 +11,6 @@ from pidgin.core.events import (
     ConversationEndEvent,
     ConversationStartEvent,
     Event,
-    MessageCompleteEvent,
     SystemPromptEvent,
 )
 from pidgin.core.types import Agent, Conversation, Message

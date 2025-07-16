@@ -1,6 +1,5 @@
 """Tests for configuration schema validation."""
 
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError

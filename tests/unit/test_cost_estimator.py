@@ -1,6 +1,5 @@
 """Tests for CostEstimator."""
 
-from typing import List
 from unittest.mock import Mock
 
 import pytest

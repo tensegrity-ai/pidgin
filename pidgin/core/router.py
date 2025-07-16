@@ -1,6 +1,6 @@
 from typing import Any, AsyncIterator, Dict, List, Optional, Protocol, Tuple
 
-from .types import Conversation, Message
+from .types import Message
 
 
 class Router(Protocol):

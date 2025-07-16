@@ -120,7 +120,7 @@ class ProviderContextManager:
                     # Since we're already in an async context (providers are async),
                     # we can create a task to emit without blocking
                     try:
-                        loop = asyncio.get_running_loop()
+                        _loop = asyncio.get_running_loop()
                         asyncio.create_task(event_bus.emit(event))
                     except RuntimeError:
                         # No running loop, skip emission

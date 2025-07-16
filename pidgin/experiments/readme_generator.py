@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from ..io.logger import get_logger
 
@@ -189,7 +189,7 @@ class ExperimentReadmeGenerator:
                 "cat manifest.json | jq .",
                 "",
                 "# Search for specific events",
-                f'grep "MessageCompleteEvent" conv_*.jsonl | jq .content',
+                'grep "MessageCompleteEvent" conv_*.jsonl | jq .content',
                 "",
                 "# Import to database (if not already done)",
                 f"pidgin import {exp_id}",

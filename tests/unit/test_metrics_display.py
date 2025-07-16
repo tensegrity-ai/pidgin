@@ -1,6 +1,5 @@
 """Tests for metrics display module."""
 
-import pytest
 
 from pidgin.metrics.display import (
     calculate_structural_similarity,

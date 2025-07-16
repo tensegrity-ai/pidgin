@@ -1,7 +1,7 @@
 """Tests for the base Provider class."""
 
-from typing import Any, AsyncGenerator, Dict, List, Optional
-from unittest.mock import AsyncMock, Mock
+from typing import AsyncGenerator, Dict, List, Optional
+from unittest.mock import Mock
 
 import pytest
 

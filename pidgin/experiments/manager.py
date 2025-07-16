@@ -1,6 +1,5 @@
 """Manage experiment daemons and provide status."""
 
-import asyncio
 import json
 import logging
 import os
@@ -198,7 +197,7 @@ class ExperimentManager:
         # Launch daemon process
         # Try to use setproctitle if available to make the process identifiable
         try:
-            import setproctitle
+            pass
 
             # Create a wrapper script that sets process title before running
             wrapper_cmd = [

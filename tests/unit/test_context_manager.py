@@ -1,11 +1,8 @@
 """Test provider context window management."""
 
-import logging
-from unittest.mock import patch
 
 import pytest
 
-from pidgin.core.types import Message
 from pidgin.providers.context_manager import ProviderContextManager
 from tests.builders import make_message
 

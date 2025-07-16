@@ -1,9 +1,8 @@
 """Generate markdown transcripts from database data."""
 
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import duckdb
 

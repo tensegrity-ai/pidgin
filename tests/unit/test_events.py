@@ -2,9 +2,11 @@
 
 from datetime import datetime
 
-import pytest
 
-from pidgin.core.events import *
+from pidgin.core.events import (
+    ErrorEvent,
+    RateLimitPaceEvent,
+)
 from tests.builders import (
     make_api_error_event,
     make_conversation_end_event,

@@ -1,7 +1,7 @@
 """Unit tests for truncation event display in verbose mode."""
 
 from io import StringIO
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from rich.console import Console

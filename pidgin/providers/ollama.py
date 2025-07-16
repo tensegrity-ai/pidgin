@@ -165,7 +165,7 @@ class OllamaProvider(Provider):
                             except (json.JSONDecodeError, ValueError, TypeError):
                                 # Skip malformed JSON lines
                                 pass
-        except aiohttp.ClientConnectorError as e:
+        except aiohttp.ClientConnectorError:
             # Connection error
             error = Exception("connection_error")
             friendly_msg = self.error_handler.get_friendly_error(error)

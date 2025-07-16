@@ -2,8 +2,6 @@
 """Test manifest management functionality."""
 
 import json
-from datetime import datetime
-from pathlib import Path
 
 import pytest
 

@@ -1,8 +1,7 @@
 """Test event-aware provider wrapper."""
 
-import time
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

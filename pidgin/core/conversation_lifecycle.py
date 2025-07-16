@@ -13,7 +13,6 @@ from .events import (
     ConversationEndEvent,
     ConversationStartEvent,
     Event,
-    MessageCompleteEvent,
     SystemPromptEvent,
 )
 from .types import Agent, Conversation, Message

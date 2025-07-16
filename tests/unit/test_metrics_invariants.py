@@ -1,15 +1,11 @@
 """Property-based tests focusing on metric invariants and relationships."""
 
-import re
-from typing import Any, Dict, List, Set
 
-import pytest
-from hypothesis import assume, given, note, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.strategies import composite
 
 from pidgin.metrics.calculator import MetricsCalculator
-from pidgin.metrics.convergence_metrics import ConvergenceCalculator
 from pidgin.metrics.linguistic_metrics import LinguisticAnalyzer
 from pidgin.metrics.text_analysis import TextAnalyzer
 
@@ -189,7 +185,7 @@ class TestMetricInvariants:
 
         cumulative_sizes = []
         for i, (msg_a, msg_b) in enumerate(zip(messages[::2], messages[1::2])):
-            metrics = calculator.calculate_turn_metrics(i, msg_a, msg_b)
+            _metrics = calculator.calculate_turn_metrics(i, msg_a, msg_b)
 
             total_vocab_size = len(
                 calculator.cumulative_vocab["agent_a"]
@@ -287,7 +283,7 @@ class TestMetricRelationships:
 
         agent_metrics = metrics["agent_a"]
         compression_ratio = agent_metrics.get("compression_ratio", 0)
-        char_entropy = agent_metrics.get("char_entropy", 0)
+        # char_entropy = agent_metrics.get("char_entropy", 0)  # Not used currently
 
         # Higher entropy generally means better compression
         # This is a weak invariant but should generally hold

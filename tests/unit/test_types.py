@@ -3,7 +3,6 @@
 
 from datetime import datetime
 
-import pytest
 
 from pidgin.core.types import (
     Agent,

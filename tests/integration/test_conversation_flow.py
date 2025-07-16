@@ -1,8 +1,6 @@
 # tests/integration/test_conversation_flow.py
 """Integration tests for conversation flow."""
 
-import asyncio
-from pathlib import Path
 
 import pytest
 
@@ -10,7 +8,6 @@ from pidgin.core.conductor import Conductor
 from pidgin.core.event_bus import EventBus
 from pidgin.core.types import Agent, Conversation
 from pidgin.providers.local import LocalProvider
-from pidgin.providers.test_model import LocalTestModel
 
 
 class TestConversationFlow:
@@ -36,7 +33,7 @@ class TestConversationFlow:
         )
 
         # Create conductor
-        conductor = Conductor(bus)
+        _conductor = Conductor(bus)
 
         # Track events
         events_received = []
@@ -50,7 +47,7 @@ class TestConversationFlow:
 
         # Run conversation (just a few turns)
         max_turns = 3
-        turn_count = 0
+        # turn_count = 0  # Not used
 
         # Start bus
         await bus.start()
@@ -61,8 +58,8 @@ class TestConversationFlow:
             # use the actual conductor.run_conversation method
 
             # Verify we can create providers
-            provider_a = LocalProvider()
-            provider_b = LocalProvider()
+            _provider_a = LocalProvider()
+            _provider_b = LocalProvider()
 
             # Verify event logging
             from pidgin.core.events import ConversationStartEvent

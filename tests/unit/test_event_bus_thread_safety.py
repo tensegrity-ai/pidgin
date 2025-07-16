@@ -2,8 +2,6 @@
 
 import asyncio
 import threading
-import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -12,9 +10,7 @@ import pytest
 from pidgin.core.event_bus import EventBus
 from pidgin.core.events import ConversationStartEvent, Event, MessageCompleteEvent
 from tests.builders import (
-    make_conversation_start_event,
     make_message,
-    make_message_complete_event,
 )
 
 

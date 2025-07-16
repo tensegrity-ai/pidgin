@@ -2,7 +2,6 @@
 
 import logging
 import time
-from typing import List
 
 from ..core.event_bus import EventBus
 from ..core.events import (
@@ -14,7 +13,7 @@ from ..core.events import (
 from ..core.router import DirectRouter  # For message transformation
 from ..core.types import Message
 from .base import Provider
-from .token_utils import estimate_messages_tokens, estimate_tokens
+from .token_utils import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ class EventAwareProvider:
             model_name = getattr(self.provider, "model_name", None) or getattr(
                 self.provider, "model", None
             )
-            input_tokens = estimate_messages_tokens(agent_messages, model_name)
+            # input_tokens = estimate_messages_tokens(agent_messages, model_name)  # Not used currently
 
             # Stream response and buffer chunks (no longer emitting chunk events)
             chunks = []

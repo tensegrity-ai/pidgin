@@ -4,24 +4,19 @@ from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.rule import Rule
 from rich.text import Text
 
 from ..core.events import (
     APIErrorEvent,
     ConversationEndEvent,
-    ConversationPausedEvent,
     ConversationResumedEvent,
     ConversationStartEvent,
     ErrorEvent,
     Event,
-    InterruptRequestEvent,
     MessageCompleteEvent,
-    MessageRequestEvent,
     ProviderTimeoutEvent,
     SystemPromptEvent,
     TurnCompleteEvent,
-    TurnStartEvent,
 )
 
 
@@ -148,7 +143,7 @@ class DisplayFilter:
         agent_a_display = event.agent_a_display_name or "Agent A"
         agent_b_display = event.agent_b_display_name or "Agent B"
 
-        content = f"[bold]Starting Conversation[/bold]\n\n"
+        content = "[bold]Starting Conversation[/bold]\n\n"
         content += f"◈ {agent_a_display}: {event.agent_a_model}"
         if event.temperature_a is not None:
             content += f" (temp: {event.temperature_a})"
@@ -167,7 +162,7 @@ class DisplayFilter:
         human_tag = self.prompt_tag if self.prompt_tag is not None else "[HUMAN]"
 
         # Show initial prompt as agents will see it
-        content += f"[bold]Initial Prompt (as agents see it):[/bold]\n"
+        content += "[bold]Initial Prompt (as agents see it):[/bold]\n"
         if human_tag:
             content += f"{human_tag}: {event.initial_prompt}"
         else:
@@ -357,14 +352,14 @@ class DisplayFilter:
         """Show conversation end panel."""
         duration = event.duration_ms / 1000  # Convert to seconds
 
-        content = f"[bold]Conversation Complete[/bold]\n\n"
+        content = "[bold]Conversation Complete[/bold]\n\n"
         content += f"◇ Total turns: {event.total_turns}\n"
         content += f"◇ Duration: {duration:.1f}s\n"
 
         # Enhanced reason display for convergence
         if event.reason == "high_convergence":
-            content += f"◇ Reason: Convergence threshold reached\n"
-            content += f"[dim]  (Stopped to prevent token waste)[/dim]"
+            content += "◇ Reason: Convergence threshold reached\n"
+            content += "[dim]  (Stopped to prevent token waste)[/dim]"
         else:
             content += f"◇ Reason: {event.reason}"
 

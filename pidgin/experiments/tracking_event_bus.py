@@ -2,7 +2,6 @@
 """Event bus wrapper that tracks progress in manifest."""
 
 from pathlib import Path
-from typing import Optional
 
 from ..constants import ConversationStatus
 from ..core.event_bus import EventBus

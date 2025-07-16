@@ -1,7 +1,7 @@
 # pidgin/metrics/cost_estimator.py
 """Simple cost estimation for AI conversations."""
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from ..core.types import Message
 

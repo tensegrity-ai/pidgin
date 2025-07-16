@@ -1,8 +1,7 @@
 """Flat metrics calculator for DuckDB wide-table optimization."""
 
-import functools
-from collections import Counter, defaultdict
-from typing import Any, Dict, List, Optional
+from collections import Counter
+from typing import Any, Dict, List
 
 from .convergence_metrics import ConvergenceCalculator
 from .linguistic_metrics import LinguisticAnalyzer
@@ -121,7 +120,7 @@ class FlatMetricsCalculator:
         vocab_size = len(unique_words)
 
         # Safe division with guards
-        avg_word_length = sum(len(w) for w in words) / max(word_count, 1)
+        # avg_word_length = sum(len(w) for w in words) / max(word_count, 1)  # Not used currently
         avg_sentence_length = word_count / max(sentence_count, 1)
 
         # Linguistic analysis
@@ -129,9 +128,9 @@ class FlatMetricsCalculator:
         linguistic_markers = self.linguistic_analyzer.count_linguistic_markers(words)
         entropy = self.linguistic_analyzer.calculate_entropy(word_counter)
         char_entropy = self.linguistic_analyzer.calculate_character_entropy(message)
-        lexical_diversity = self.linguistic_analyzer.calculate_lexical_diversity_index(
-            word_count, vocab_size
-        )
+        # lexical_diversity = self.linguistic_analyzer.calculate_lexical_diversity_index(
+        #     word_count, vocab_size
+        # )  # Not used currently
         self_repetition = self.linguistic_analyzer.calculate_self_repetition(words)
         formality_score = self.linguistic_analyzer.calculate_formality_score(
             message, words
@@ -154,7 +153,7 @@ class FlatMetricsCalculator:
         punctuation_diversity = self.text_analyzer.calculate_punctuation_diversity(
             message
         )
-        starts_with_ack = self.text_analyzer.starts_with_acknowledgment(message)
+        # starts_with_ack = self.text_analyzer.starts_with_acknowledgment(message)  # Not used currently
         compression_ratio = self.convergence_calc.calculate_compression_ratio(message)
 
         # Special elements
@@ -298,11 +297,11 @@ class FlatMetricsCalculator:
         # Sentence pattern similarity
         sentences_a = self.text_analyzer.split_sentences(message_a)
         sentences_b = self.text_analyzer.split_sentences(message_b)
-        sentence_pattern_similarity = (
-            self.convergence_calc.calculate_sentence_pattern_similarity(
-                sentences_a, sentences_b
-            )
-        )
+        # sentence_pattern_similarity = (
+        #     self.convergence_calc.calculate_sentence_pattern_similarity(
+        #         sentences_a, sentences_b
+        #     )
+        # )  # Not used currently
 
         # Calculate overall convergence score
         convergence_metrics = {
@@ -318,9 +317,10 @@ class FlatMetricsCalculator:
         # Calculate repetition ratio if we have enough messages
         repetition_ratio = 0.0
         if len(self.all_messages) >= 4:  # At least 2 turns
-            repetition_ratio = self.convergence_calc.calculate_repetition_ratio(
-                self.all_messages[-10:]  # Use last 5 turns (10 messages)
-            )
+            # repetition_ratio = self.convergence_calc.calculate_repetition_ratio(
+            #     self.all_messages[-10:]  # Use last 5 turns (10 messages)
+            # )  # Not used currently
+            pass
 
         return {
             "vocabulary_overlap": current_overlap,

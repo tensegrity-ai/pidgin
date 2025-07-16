@@ -3,55 +3,35 @@
 
 import asyncio
 import json
-import os
-import signal
-import sys
-import time
-import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import rich_click as click
 import yaml
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
 from ..config.defaults import get_smart_convergence_defaults
 from ..config.models import MODELS, get_model_config
 from ..config.resolution import resolve_temperatures
-from ..core import Agent, Conversation
-from ..core.conductor import Conductor
-from ..experiments import ExperimentConfig, ExperimentManager, ExperimentRunner
-from ..io import OutputManager
+from ..experiments import ExperimentConfig, ExperimentManager
 from ..io.paths import get_experiments_dir
-from ..providers import APIKeyError
 from ..ui.display_utils import DisplayUtils
 from .constants import (
-    DEFAULT_TEMPERATURE,
     DEFAULT_TURNS,
     MODEL_GLYPHS,
     NORD_BLUE,
-    NORD_CYAN,
     NORD_DARK,
-    NORD_GREEN,
     NORD_RED,
-    NORD_YELLOW,
-    PROVIDER_COLORS,
 )
 from .helpers import (
     build_initial_prompt,
     check_ollama_available,
     format_model_display,
-    get_provider_for_model,
     parse_dimensions,
-    parse_temperature,
     validate_model_id,
 )
 from .name_generator import generate_experiment_name
 from .notify import send_notification
-from .ollama_setup import ensure_ollama_models_ready, normalize_local_model_names
 
 console = Console()
 display = DisplayUtils(console)
@@ -670,10 +650,10 @@ def _run_conversations(
         if quiet:
             # Quiet mode: just show commands and exit
             console.print(
-                f"\n[#4c566a]Running in background. Check progress:[/#4c566a]"
+                "\n[#4c566a]Running in background. Check progress:[/#4c566a]"
             )
             cmd_lines = []
-            cmd_lines.append(f"pidgin monitor              # Monitor all experiments")
+            cmd_lines.append("pidgin monitor              # Monitor all experiments")
             cmd_lines.append(f"pidgin stop {name}    # Stop by name")
             cmd_lines.append(f"pidgin stop {exp_id[:8]}  # Stop by ID")
             cmd_lines.append(f"tail -f {get_experiments_dir()}/{exp_id}/*.jsonl")
@@ -767,8 +747,8 @@ def _run_conversations(
                     "Display exited. Experiment continues running in background.",
                     use_panel=False,
                 )
-                console.print(f"\n[#4c566a]Check progress with:[/#4c566a]")
-                console.print(f"  pidgin monitor")
+                console.print("\n[#4c566a]Check progress with:[/#4c566a]")
+                console.print("  pidgin monitor")
                 console.print(f"  pidgin stop {name}")
 
     except Exception as e:

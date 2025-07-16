@@ -10,7 +10,6 @@ from rich.console import Console
 
 from ..experiments import ExperimentManager
 from ..ui.display_utils import DisplayUtils
-from .constants import NORD_CYAN, NORD_GREEN, NORD_RED, NORD_YELLOW
 
 console = Console()
 display = DisplayUtils(console)

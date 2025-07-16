@@ -1,7 +1,6 @@
 """Tests for LocalProvider class."""
 
 import asyncio
-from typing import List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

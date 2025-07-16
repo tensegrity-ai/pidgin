@@ -1,11 +1,10 @@
 """Tests for Config class functionality."""
 
 from pathlib import Path
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 import yaml
-from pydantic import ValidationError
 
 from pidgin.config.config import Config, get_config, load_config
 from pidgin.constants import (

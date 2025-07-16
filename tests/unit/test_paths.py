@@ -1,10 +1,8 @@
 """Tests for path utilities."""
 
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from pidgin.io.paths import (
     get_chats_database_path,

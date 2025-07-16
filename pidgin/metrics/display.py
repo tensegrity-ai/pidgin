@@ -3,7 +3,7 @@
 import re
 import unicodedata
 from collections import Counter
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .constants import EMOJI_PATTERN, SENTENCE_ENDINGS
 

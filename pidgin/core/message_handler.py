@@ -4,7 +4,7 @@ import asyncio
 import time
 from typing import Dict, List, Optional
 
-from .constants import Colors, RateLimits, SystemDefaults
+from .constants import RateLimits, SystemDefaults
 from .events import (
     ConversationPausedEvent,
     MessageRequestEvent,

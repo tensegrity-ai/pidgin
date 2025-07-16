@@ -4,10 +4,8 @@
 import asyncio
 import json
 import threading
-import time
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -17,8 +15,6 @@ from pidgin.core.events import (
     ConversationStartEvent,
     Event,
     MessageCompleteEvent,
-    Turn,
-    TurnCompleteEvent,
 )
 from pidgin.core.types import Message
 
@@ -182,7 +178,7 @@ class TestEventBus:
         msg_a = Message(
             role="user", content="Hello", agent_id="agent_a", timestamp=datetime.now()
         )
-        msg_b = Message(
+        _msg_b = Message(
             role="assistant",
             content="Hi there",
             agent_id="agent_b",
@@ -226,7 +222,7 @@ class TestEventBus:
         assert len(lines) == 3
         for i, line in enumerate(lines):
             data = json.loads(line)
-            assert data["event_type"] == type(events[i]).__name__
+            assert data["event_type"] == events[i].__class__.__name__
 
     @pytest.mark.asyncio
     async def test_error_handling_in_subscriber(self, event_bus):
@@ -380,7 +376,8 @@ class TestEventBusThreadSafety:
         def subscribe_task():
             try:
                 for i in range(100):
-                    handler = lambda e: None
+                    def handler(e):
+                        pass
                     event_bus.subscribe(MessageCompleteEvent, handler)
                     event_bus.unsubscribe(MessageCompleteEvent, handler)
             except Exception as e:
@@ -589,7 +586,7 @@ class TestEventBusSerializationEdgeCases:
         # Create an event with datetime
         from datetime import datetime
 
-        event = ConversationStartEvent(
+        _event = ConversationStartEvent(
             conversation_id="test_conv",
             agent_a_model="model_a",
             agent_b_model="model_b",
