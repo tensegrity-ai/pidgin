@@ -2,29 +2,29 @@
 
 import json
 from datetime import datetime
-from typing import Dict, Any, Optional, Type
 from pathlib import Path
+from typing import Any, Dict, Optional, Type
 
 from ..core.events import (
-    Event,
-    ConversationStartEvent,
-    ConversationEndEvent,
-    TurnStartEvent,
-    TurnCompleteEvent,
-    MessageRequestEvent,
-    MessageChunkEvent,
-    MessageCompleteEvent,
-    Turn,
-    SystemPromptEvent,
-    ErrorEvent,
     APIErrorEvent,
-    ProviderTimeoutEvent,
-    InterruptRequestEvent,
+    ContextTruncationEvent,
+    ConversationEndEvent,
     ConversationPausedEvent,
     ConversationResumedEvent,
+    ConversationStartEvent,
+    ErrorEvent,
+    Event,
+    InterruptRequestEvent,
+    MessageChunkEvent,
+    MessageCompleteEvent,
+    MessageRequestEvent,
+    ProviderTimeoutEvent,
     RateLimitPaceEvent,
+    SystemPromptEvent,
     TokenUsageEvent,
-    ContextTruncationEvent,
+    Turn,
+    TurnCompleteEvent,
+    TurnStartEvent,
 )
 from ..core.types import Message
 from ..io.logger import get_logger
@@ -34,7 +34,7 @@ logger = get_logger("event_deserializer")
 
 class EventDeserializer:
     """Deserialize JSON events back to Event dataclasses."""
-    
+
     # Map event type strings to event classes
     EVENT_TYPES: Dict[str, Type[Event]] = {
         "ConversationStartEvent": ConversationStartEvent,
@@ -57,14 +57,14 @@ class EventDeserializer:
         # Handle legacy names
         "ConversationCreated": ConversationStartEvent,
     }
-    
+
     @classmethod
     def deserialize_event(cls, event_data: Dict[str, Any]) -> Optional[Event]:
         """Deserialize a JSON event to its corresponding Event dataclass.
-        
+
         Args:
             event_data: JSON event data
-            
+
         Returns:
             Event instance or None if unknown event type
         """
@@ -77,23 +77,25 @@ class EventDeserializer:
             if "timestamp" in event_data:
                 data_payload["timestamp"] = event_data["timestamp"]
             event_data = data_payload
-        
+
         event_type = event_data.get("event_type")
         if not event_type:
             logger.warning("Event missing event_type field")
             return None
-            
+
         event_class = cls.EVENT_TYPES.get(event_type)
         if not event_class:
             # Unknown event type - log but don't fail
             logger.debug(f"Unknown event type: {event_type}")
             return None
-            
+
         try:
             # Parse timestamp if present
             timestamp_str = event_data.get("timestamp")
-            timestamp = cls._parse_timestamp(timestamp_str) if timestamp_str else datetime.now()
-            
+            timestamp = (
+                cls._parse_timestamp(timestamp_str) if timestamp_str else datetime.now()
+            )
+
             # Build event based on type
             if event_type == "ConversationStartEvent":
                 return cls._build_conversation_start(event_data, timestamp)
@@ -132,11 +134,11 @@ class EventDeserializer:
             else:
                 logger.warning(f"No builder for event type: {event_type}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Failed to deserialize {event_type}: {e}")
             return None
-    
+
     @staticmethod
     def _parse_timestamp(timestamp_str: str) -> datetime:
         """Parse ISO timestamp string to datetime."""
@@ -148,9 +150,11 @@ class EventDeserializer:
         except (ValueError, TypeError, AttributeError):
             # Fallback to now if parsing fails (invalid format, None, or not a string)
             return datetime.now()
-    
+
     @classmethod
-    def _build_conversation_start(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationStartEvent:
+    def _build_conversation_start(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ConversationStartEvent:
         """Build ConversationStartEvent from JSON data."""
         event = ConversationStartEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -166,9 +170,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_conversation_end(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationEndEvent:
+    def _build_conversation_end(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ConversationEndEvent:
         """Build ConversationEndEvent from JSON data."""
         event = ConversationEndEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -179,9 +185,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_turn_start(cls, data: Dict[str, Any], timestamp: datetime) -> TurnStartEvent:
+    def _build_turn_start(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> TurnStartEvent:
         """Build TurnStartEvent from JSON data."""
         event = TurnStartEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -190,32 +198,42 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_turn_complete(cls, data: Dict[str, Any], timestamp: datetime) -> TurnCompleteEvent:
+    def _build_turn_complete(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> TurnCompleteEvent:
         """Build TurnCompleteEvent from JSON data."""
         turn_data = data.get("turn", {})
-        
+
         # Extract messages from turn data
         msg_a_data = turn_data.get("agent_a_message", {})
         msg_b_data = turn_data.get("agent_b_message", {})
-        
+
         msg_a = Message(
             role="assistant",
             content=msg_a_data.get("content", ""),
             agent_id="agent_a",
-            timestamp=cls._parse_timestamp(msg_a_data.get("timestamp", "")) if msg_a_data.get("timestamp") else timestamp
+            timestamp=(
+                cls._parse_timestamp(msg_a_data.get("timestamp", ""))
+                if msg_a_data.get("timestamp")
+                else timestamp
+            ),
         )
-        
+
         msg_b = Message(
             role="assistant",
             content=msg_b_data.get("content", ""),
             agent_id="agent_b",
-            timestamp=cls._parse_timestamp(msg_b_data.get("timestamp", "")) if msg_b_data.get("timestamp") else timestamp
+            timestamp=(
+                cls._parse_timestamp(msg_b_data.get("timestamp", ""))
+                if msg_b_data.get("timestamp")
+                else timestamp
+            ),
         )
-        
+
         turn = Turn(agent_a_message=msg_a, agent_b_message=msg_b)
-        
+
         event = TurnCompleteEvent(
             conversation_id=data.get("conversation_id", ""),
             turn_number=data.get("turn_number", 0),
@@ -225,9 +243,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_message_request(cls, data: Dict[str, Any], timestamp: datetime) -> MessageRequestEvent:
+    def _build_message_request(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> MessageRequestEvent:
         """Build MessageRequestEvent from JSON data."""
         # Parse conversation history
         conversation_history = []
@@ -236,10 +256,14 @@ class EventDeserializer:
                 role=msg_data.get("role", "user"),
                 content=msg_data.get("content", ""),
                 agent_id=msg_data.get("agent_id", ""),
-                timestamp=cls._parse_timestamp(msg_data.get("timestamp", "")) if msg_data.get("timestamp") else timestamp
+                timestamp=(
+                    cls._parse_timestamp(msg_data.get("timestamp", ""))
+                    if msg_data.get("timestamp")
+                    else timestamp
+                ),
             )
             conversation_history.append(message)
-        
+
         event = MessageRequestEvent(
             conversation_id=data.get("conversation_id", ""),
             agent_id=data.get("agent_id", ""),
@@ -250,9 +274,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_message_chunk(cls, data: Dict[str, Any], timestamp: datetime) -> MessageChunkEvent:
+    def _build_message_chunk(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> MessageChunkEvent:
         """Build MessageChunkEvent from JSON data."""
         event = MessageChunkEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -264,19 +290,25 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_message_complete(cls, data: Dict[str, Any], timestamp: datetime) -> MessageCompleteEvent:
+    def _build_message_complete(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> MessageCompleteEvent:
         """Build MessageCompleteEvent from JSON data."""
         msg_data = data.get("message", {})
-        
+
         message = Message(
             role=msg_data.get("role", "assistant"),
             content=msg_data.get("content", ""),
             agent_id=data.get("agent_id", ""),
-            timestamp=cls._parse_timestamp(msg_data.get("timestamp", "")) if msg_data.get("timestamp") else timestamp
+            timestamp=(
+                cls._parse_timestamp(msg_data.get("timestamp", ""))
+                if msg_data.get("timestamp")
+                else timestamp
+            ),
         )
-        
+
         event = MessageCompleteEvent(
             conversation_id=data.get("conversation_id", ""),
             agent_id=data.get("agent_id", ""),
@@ -287,9 +319,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_system_prompt(cls, data: Dict[str, Any], timestamp: datetime) -> SystemPromptEvent:
+    def _build_system_prompt(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> SystemPromptEvent:
         """Build SystemPromptEvent from JSON data."""
         event = SystemPromptEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -300,7 +334,7 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
     def _build_error(cls, data: Dict[str, Any], timestamp: datetime) -> ErrorEvent:
         """Build ErrorEvent from JSON data."""
@@ -313,9 +347,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_api_error(cls, data: Dict[str, Any], timestamp: datetime) -> APIErrorEvent:
+    def _build_api_error(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> APIErrorEvent:
         """Build APIErrorEvent from JSON data."""
         event = APIErrorEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -330,9 +366,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_provider_timeout(cls, data: Dict[str, Any], timestamp: datetime) -> ProviderTimeoutEvent:
+    def _build_provider_timeout(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ProviderTimeoutEvent:
         """Build ProviderTimeoutEvent from JSON data."""
         event = ProviderTimeoutEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -345,9 +383,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_interrupt_request(cls, data: Dict[str, Any], timestamp: datetime) -> InterruptRequestEvent:
+    def _build_interrupt_request(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> InterruptRequestEvent:
         """Build InterruptRequestEvent from JSON data."""
         event = InterruptRequestEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -357,9 +397,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_conversation_paused(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationPausedEvent:
+    def _build_conversation_paused(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ConversationPausedEvent:
         """Build ConversationPausedEvent from JSON data."""
         event = ConversationPausedEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -369,9 +411,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_conversation_resumed(cls, data: Dict[str, Any], timestamp: datetime) -> ConversationResumedEvent:
+    def _build_conversation_resumed(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ConversationResumedEvent:
         """Build ConversationResumedEvent from JSON data."""
         event = ConversationResumedEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -380,9 +424,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_rate_limit_pace(cls, data: Dict[str, Any], timestamp: datetime) -> RateLimitPaceEvent:
+    def _build_rate_limit_pace(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> RateLimitPaceEvent:
         """Build RateLimitPaceEvent from JSON data."""
         event = RateLimitPaceEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -393,9 +439,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
-    def _build_token_usage(cls, data: Dict[str, Any], timestamp: datetime) -> TokenUsageEvent:
+    def _build_token_usage(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> TokenUsageEvent:
         """Build TokenUsageEvent from JSON data."""
         event = TokenUsageEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -407,10 +455,11 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
-    
+
     @classmethod
-    def _build_context_truncation(cls, data: Dict[str, Any], timestamp: datetime) -> ContextTruncationEvent:
+    def _build_context_truncation(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ContextTruncationEvent:
         """Build ContextTruncationEvent from JSON data."""
         event = ContextTruncationEvent(
             conversation_id=data.get("conversation_id", ""),
@@ -425,29 +474,31 @@ class EventDeserializer:
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)
         return event
-    
+
     @classmethod
     def read_jsonl_events(cls, jsonl_path: Path):
         """Generator that reads and deserializes events from a JSONL file.
-        
+
         Args:
             jsonl_path: Path to JSONL file
-            
+
         Yields:
             (line_number, event) tuples
         """
-        with open(jsonl_path, 'r') as f:
+        with open(jsonl_path, "r") as f:
             for line_num, line in enumerate(f, 1):
                 try:
                     if not line.strip():
                         continue
-                        
+
                     event_data = json.loads(line)
                     event = cls.deserialize_event(event_data)
-                    
+
                     if event:
                         yield line_num, event
-                        
+
                 except json.JSONDecodeError as e:
-                    logger.warning(f"Invalid JSON at line {line_num} in {jsonl_path}: {e}")
+                    logger.warning(
+                        f"Invalid JSON at line {line_num} in {jsonl_path}: {e}"
+                    )
                     continue

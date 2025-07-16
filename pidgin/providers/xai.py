@@ -1,14 +1,15 @@
 import logging
-from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
+from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional
+
 from ..core.types import Message
+from .api_key_manager import APIKeyManager
 from .base import Provider
 from .error_utils import ProviderErrorHandler
-from .api_key_manager import APIKeyManager
 
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelConfig, ModelCharacteristics
+from ..config.models import ModelCharacteristics, ModelConfig
 
 # xAI model definitions
 XAI_MODELS = {
@@ -81,10 +82,12 @@ class xAIProvider(Provider):
         self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
         self.model = model
         self._last_usage = None
-        # xAI uses similar errors to OpenAI  
+        # xAI uses similar errors to OpenAI
         self.error_handler = ProviderErrorHandler(
             provider_name="xAI",
-            custom_errors={"model_not_found": "Model not found. Please check the xAI model name is correct"}
+            custom_errors={
+                "model_not_found": "Model not found. Please check the xAI model name is correct"
+            },
         )
 
     async def stream_response(
@@ -92,16 +95,15 @@ class xAIProvider(Provider):
     ) -> AsyncGenerator[str, None]:
         # Apply context truncation
         from .context_utils import apply_context_truncation
-        
+
         truncated_messages = apply_context_truncation(
-            messages,
-            provider="xai",
-            model=self.model,
-            logger_name=__name__
+            messages, provider="xai", model=self.model, logger_name=__name__
         )
-        
+
         # Convert to OpenAI format (xAI is OpenAI-compatible)
-        openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
+        openai_messages = [
+            {"role": m.role, "content": m.content} for m in truncated_messages
+        ]
 
         try:
             # Build parameters
@@ -110,41 +112,49 @@ class xAIProvider(Provider):
                 "messages": openai_messages,
                 "max_tokens": 1000,
                 "stream": True,
-                "stream_options": {"include_usage": True}  # Request usage data like OpenAI
+                "stream_options": {
+                    "include_usage": True
+                },  # Request usage data like OpenAI
             }
-            
+
             # Add temperature if specified (xAI/OpenAI allows 0-2)
             if temperature is not None:
                 params["temperature"] = temperature
-                
+
             stream = await self.client.chat.completions.create(**params)
 
             async for chunk in stream:
                 # Handle content chunks
-                if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
+                if (
+                    chunk.choices
+                    and len(chunk.choices) > 0
+                    and chunk.choices[0].delta.content
+                ):
                     yield chunk.choices[0].delta.content
-                
+
                 # Check for usage data in the final chunk
-                if hasattr(chunk, 'usage') and chunk.usage:
+                if hasattr(chunk, "usage") and chunk.usage:
                     self._last_usage = {
-                        'prompt_tokens': getattr(chunk.usage, 'prompt_tokens', 0),
-                        'completion_tokens': getattr(chunk.usage, 'completion_tokens', 0),
-                        'total_tokens': getattr(chunk.usage, 'total_tokens', 0)
+                        "prompt_tokens": getattr(chunk.usage, "prompt_tokens", 0),
+                        "completion_tokens": getattr(
+                            chunk.usage, "completion_tokens", 0
+                        ),
+                        "total_tokens": getattr(chunk.usage, "total_tokens", 0),
                     }
                     logger.debug(f"xAI usage data captured: {self._last_usage}")
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)
-            
+
             # Log appropriately based on error type
             if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected API error: {friendly_error}")
             else:
                 logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
-            
+
             # Create a clean exception with friendly message
             raise Exception(friendly_error) from None
-    
+
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""
         return self._last_usage

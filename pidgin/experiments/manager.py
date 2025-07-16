@@ -1,21 +1,21 @@
 """Manage experiment daemons and provide status."""
 
-import os
-import sys
+import asyncio
 import json
+import logging
+import os
 import signal
 import subprocess
+import sys
 import time
-import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-
-import asyncio
 import uuid
-from .config import ExperimentConfig
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from ..core.constants import SystemDefaults
 from ..core.exceptions import ExperimentAlreadyExistsError
+from .config import ExperimentConfig
 
 
 class ExperimentManager:
@@ -460,13 +460,13 @@ class ExperimentManager:
         # Resolve the identifier to a full experiment ID
         resolved_id = self.resolve_experiment_id(experiment_id)
         if not resolved_id:
-            print(f"Could not resolve experiment identifier: {experiment_id}")
+            logging.error(f"Could not resolve experiment identifier: {experiment_id}")
             return
 
         log_file = self.logs_dir / f"{resolved_id}.log"
 
         if not log_file.exists():
-            print(f"No log file found at: {log_file}")
+            logging.warning(f"No log file found at: {log_file}")
             return
 
         # Use subprocess to tail

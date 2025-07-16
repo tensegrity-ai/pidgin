@@ -1,26 +1,30 @@
 """Configuration management for Pidgin."""
 
-import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
-from pydantic import ValidationError
+from typing import Any, Dict, Optional
 
-from ..io.logger import get_logger
+import yaml
+from pydantic import ValidationError
 from rich.console import Console
-from ..ui.display_utils import warning, success, info, DisplayUtils, error
+
 from ..constants import (
-    ConvergenceProfiles, ConvergenceComponents, DEFAULT_CONVERGENCE_WEIGHTS,
-    ConvergenceActions, DEFAULT_CONVERGENCE_THRESHOLD, DEFAULT_CONVERGENCE_PROFILE,
-    DEFAULT_CONVERGENCE_ACTION
+    DEFAULT_CONVERGENCE_ACTION,
+    DEFAULT_CONVERGENCE_PROFILE,
+    DEFAULT_CONVERGENCE_THRESHOLD,
+    DEFAULT_CONVERGENCE_WEIGHTS,
+    ConvergenceActions,
+    ConvergenceComponents,
+    ConvergenceProfiles,
 )
-from .schema import PidginConfig, ConvergenceWeights
+from ..io.logger import get_logger
+from .schema import PidginConfig
 
 logger = get_logger("config")
 
 
 class Config:
     """Configuration manager for Pidgin."""
-    
+
     # Use convergence profiles from constants
     CONVERGENCE_PROFILES = DEFAULT_CONVERGENCE_WEIGHTS
 
@@ -28,12 +32,12 @@ class Config:
         "conversation": {
             "convergence_threshold": DEFAULT_CONVERGENCE_THRESHOLD,
             "convergence_action": DEFAULT_CONVERGENCE_ACTION,
-            "convergence_profile": DEFAULT_CONVERGENCE_PROFILE,  # Now defaults to "structural"
+            "convergence_profile": DEFAULT_CONVERGENCE_PROFILE,  # Now defaults
         },
         "convergence": {
             "profile": DEFAULT_CONVERGENCE_PROFILE,
             # Custom weights (used when profile is "custom")
-            "custom_weights": DEFAULT_CONVERGENCE_WEIGHTS[ConvergenceProfiles.BALANCED]
+            "custom_weights": DEFAULT_CONVERGENCE_WEIGHTS[ConvergenceProfiles.BALANCED],
         },
         "context_management": {
             "enabled": True,
@@ -111,7 +115,7 @@ class Config:
             # This should never happen with our defaults
             logger.error("Default configuration is invalid!")
             raise RuntimeError("Invalid default configuration") from e
-            
+
         self.config_path = config_path
 
         # Only load from explicit path if provided
@@ -127,48 +131,50 @@ class Config:
     def _check_and_create_config(self):
         """Check for config file and offer to create one if missing."""
         config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
-        
+
         if config_path.exists():
             logger.info(f"Loading config from: {config_path}")
             self.load_from_file(config_path)
             return
-            
+
         # No config found - ask if user wants to create one
-        warning("No configuration file found.", use_panel=False)
-        info(f"Would you like to create one at: {config_path}?", use_panel=False)
-        info("This will let you customize convergence profiles and other settings.", use_panel=False)
-        
+        logger.warning("No configuration file found.")
+        print(f"\nNo configuration file found.")
+        print(f"Would you like to create one at: {config_path}?")
+        print("This will let you customize convergence profiles and other settings.")
+
         console = Console()
         response = console.input("\nCreate config file? [y/N]: ")
-        
-        if response.lower() == 'y':
+
+        if response.lower() == "y":
             # Create directory if needed
             config_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Write example config
             self._write_example_config(config_path)
-            success(f"Created config at: {config_path}")
-            info("You can edit this file to customize Pidgin's behavior.", use_panel=False)
-            
+            logger.info(f"Created config at: {config_path}")
+            print(f"\n✓ Created config at: {config_path}")
+            print("You can edit this file to customize Pidgin's behavior.")
+
             # Load the newly created config
             self.load_from_file(config_path)
         else:
             logger.info("Using default configuration")
-    
+
     def _write_example_config(self, path: Path):
         """Write example configuration file."""
-        example_config = '''# Pidgin configuration file
+        example_config = """# Pidgin configuration file
 # Edit this file to customize behavior
 
 conversation:
   convergence_threshold: 0.85    # Stop when convergence exceeds this (0.0-1.0)
   convergence_action: stop       # What to do: stop, warn, or continue
-  convergence_profile: balanced  # Profile: balanced, structural, semantic, strict, custom
+  convergence_profile: balanced  # Profile: balanced, structural, semantic, etc.
 
 convergence:
   # Choose a built-in profile or use custom weights
   profile: structural  # Emphasizes structural similarity
-  
+
   # Custom weights (used when profile is "custom", must sum to 1.0)
   custom_weights:
     content: 0.25      # Word/phrase similarity
@@ -193,8 +199,8 @@ experiments:
     convergence_action: stop
   baseline:
     convergence_threshold: 1.0  # Never stop on convergence
-'''
-        with open(path, 'w') as f:
+"""
+        with open(path, "w") as f:
             f.write(example_config)
 
     def load_from_file(self, path: Path):
@@ -208,7 +214,7 @@ experiments:
         if user_config:
             # Merge with defaults first
             merged_config = self._deep_merge(self.config, user_config)
-            
+
             # Validate the merged configuration
             try:
                 validated_config = PidginConfig(**merged_config)
@@ -216,10 +222,11 @@ experiments:
                 self.config = validated_config.model_dump()
                 self.config_path = path
             except ValidationError as e:
-                error(f"Configuration validation failed: {path}")
+                logger.error(f"Configuration validation failed: {path}")
+                print(f"\nError: Configuration validation failed: {path}")
                 for err in e.errors():
-                    field_path = " → ".join(str(loc) for loc in err['loc'])
-                    error(f"  {field_path}: {err['msg']}", use_panel=False)
+                    field_path = " → ".join(str(loc) for loc in err["loc"])
+                    print(f"  {field_path}: {err['msg']}")
                 raise ValueError(f"Invalid configuration in {path}") from e
 
     def _deep_merge(self, base: Dict, update: Dict) -> Dict:
@@ -239,7 +246,7 @@ experiments:
         return result
 
     def get(self, key_path: str, default: Any = None) -> Any:
-        """Get config value using dot notation (e.g., 'conversation.checkpoint.enabled')."""
+        """Get config value using dot notation (e.g., 'conversation.enabled')."""
         keys = key_path.split(".")
         value = self.config
 
@@ -255,7 +262,7 @@ experiments:
         """Set config value using dot notation."""
         # Create a copy to validate
         test_config = self.config.copy()
-        
+
         keys = key_path.split(".")
         config = test_config
 
@@ -267,7 +274,7 @@ experiments:
 
         # Set the value in test config
         config[keys[-1]] = value
-        
+
         # Validate the entire config
         try:
             validated_config = PidginConfig(**test_config)
@@ -276,11 +283,15 @@ experiments:
         except ValidationError as e:
             # Find the relevant error for this field
             for err in e.errors():
-                err_path = ".".join(str(loc) for loc in err['loc'])
+                err_path = ".".join(str(loc) for loc in err["loc"])
                 if err_path == key_path or err_path.startswith(key_path):
-                    raise ValueError(f"Invalid value for {key_path}: {err['msg']}") from e
+                    raise ValueError(
+                        f"Invalid value for {key_path}: {err['msg']}"
+                    ) from e
             # If no specific error found, raise general validation error
-            raise ValueError(f"Configuration validation failed after setting {key_path}") from e
+            raise ValueError(
+                f"Configuration validation failed after setting {key_path}"
+            ) from e
 
     def save(self, path: Optional[Path] = None):
         """Save configuration to file."""
@@ -297,30 +308,31 @@ experiments:
     def get_convergence_config(self) -> Dict[str, Any]:
         """Get convergence configuration including weights."""
         conv_config = self.get("conversation", {}).copy()
-        
+
         # Add convergence weights based on profile
         profile = self.get("convergence.profile", DEFAULT_CONVERGENCE_PROFILE)
         if profile == ConvergenceProfiles.CUSTOM:
-            weights = self.get("convergence.custom_weights", 
-                             self.CONVERGENCE_PROFILES[ConvergenceProfiles.BALANCED])
+            weights = self.get(
+                "convergence.custom_weights",
+                self.CONVERGENCE_PROFILES[ConvergenceProfiles.BALANCED],
+            )
             # Validate custom weights
             self._validate_convergence_weights(weights)
             conv_config["weights"] = weights
         else:
             conv_config["weights"] = self.CONVERGENCE_PROFILES.get(
-                profile, 
-                self.CONVERGENCE_PROFILES[DEFAULT_CONVERGENCE_PROFILE]
+                profile, self.CONVERGENCE_PROFILES[DEFAULT_CONVERGENCE_PROFILE]
             )
         conv_config["profile"] = profile
-        
+
         return conv_config
-    
+
     def _validate_convergence_weights(self, weights: Dict[str, float]) -> None:
         """Validate that convergence weights sum to 1.0.
-        
+
         Args:
             weights: Dictionary of convergence component weights
-            
+
         Raises:
             ValueError: If weights don't sum to 1.0 or are missing components
         """
@@ -330,9 +342,9 @@ experiments:
             ConvergenceComponents.STRUCTURE,
             ConvergenceComponents.SENTENCES,
             ConvergenceComponents.LENGTH,
-            ConvergenceComponents.PUNCTUATION
+            ConvergenceComponents.PUNCTUATION,
         }
-        
+
         weight_keys = set(weights.keys())
         if weight_keys != required_components:
             missing = required_components - weight_keys
@@ -343,7 +355,7 @@ experiments:
             if extra:
                 msg.append(f"Unknown components: {', '.join(extra)}")
             raise ValueError(f"Invalid convergence weights. {' '.join(msg)}")
-        
+
         # Check weights sum to 1.0
         total = sum(weights.values())
         if not (0.99 <= total <= 1.01):  # Allow small floating point errors

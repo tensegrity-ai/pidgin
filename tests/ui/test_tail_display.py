@@ -1,33 +1,34 @@
 """Tests for TailDisplay class."""
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from rich.console import Console
 from rich.text import Text
 
-from pidgin.ui.tail_display import TailDisplay
 from pidgin.core.event_bus import EventBus
 from pidgin.core.events import (
-    ConversationStartEvent,
-    ConversationEndEvent,
-    TurnStartEvent,
-    TurnCompleteEvent,
-    MessageRequestEvent,
-    MessageCompleteEvent,
-    MessageChunkEvent,
-    SystemPromptEvent,
     APIErrorEvent,
     ContextTruncationEvent,
-    RateLimitPaceEvent,
-    TokenUsageEvent,
-    ProviderTimeoutEvent,
-    InterruptRequestEvent,
+    ConversationEndEvent,
     ConversationPausedEvent,
     ConversationResumedEvent,
+    ConversationStartEvent,
     Event,
+    InterruptRequestEvent,
+    MessageChunkEvent,
+    MessageCompleteEvent,
+    MessageRequestEvent,
+    ProviderTimeoutEvent,
+    RateLimitPaceEvent,
+    SystemPromptEvent,
+    TokenUsageEvent,
+    TurnCompleteEvent,
+    TurnStartEvent,
 )
 from pidgin.core.types import Message
+from pidgin.ui.tail_display import TailDisplay
 
 
 @pytest.fixture
@@ -63,10 +64,10 @@ class TestTailDisplay:
     def test_init_subscribes_to_events(self, event_bus, console):
         """Test that TailDisplay subscribes to all events."""
         display = TailDisplay(event_bus, console)
-        
+
         # Should subscribe to all events
         event_bus.subscribe.assert_called_once_with(Event, display.log_event)
-        
+
         # Should initialize instance variables
         assert display.bus == event_bus
         assert display.console == console
@@ -75,11 +76,11 @@ class TestTailDisplay:
     def test_log_event_with_none_console(self, event_bus):
         """Test that log_event returns early if console is None."""
         display = TailDisplay(event_bus, None)
-        
+
         # Create a mock event
         event = Mock(spec=Event)
         event.timestamp = datetime.now(timezone.utc)
-        
+
         # Should return early and not crash
         display.log_event(event)
 
@@ -89,8 +90,8 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.chunk = "chunk content"
         event.agent_id = "agent_a"
-        
-        with patch.object(tail_display, '_handle_message_chunk') as mock_handler:
+
+        with patch.object(tail_display, "_handle_message_chunk") as mock_handler:
             tail_display.log_event(event)
             mock_handler.assert_called_once_with(event)
 
@@ -103,9 +104,9 @@ class TestTailDisplay:
         event.agent_b_model = "claude-3"
         event.max_turns = 10
         event.initial_prompt = None
-        
+
         tail_display.log_event(event)
-        
+
         # Should print header and content
         assert console.print.call_count == 1
         args = console.print.call_args[0]
@@ -123,21 +124,21 @@ class TestTailDisplay:
         event.agent_b_model = "claude-3"
         event.max_turns = 10
         event.initial_prompt = "What is the meaning of life?"
-        
-        with patch('pidgin.config.Config') as mock_config:
+
+        with patch("pidgin.config.Config") as mock_config:
             config_instance = Mock()
             config_instance.get.return_value = "[HUMAN]"
             mock_config.return_value = config_instance
-            
+
             tail_display.log_event(event)
-            
+
             # Should print both conversation start and initial prompt
             assert console.print.call_count == 2
-            
+
             # Check the first call (conversation start)
             first_call = console.print.call_args_list[0]
             assert "conv12345678..." in first_call[0][1]
-            
+
             # Check the second call (initial prompt)
             second_call = console.print.call_args_list[1]
             assert "[HUMAN]: What is the meaning of life?" in second_call[0][1]
@@ -151,21 +152,21 @@ class TestTailDisplay:
         event.agent_b_model = "claude-3"
         event.max_turns = 10
         event.initial_prompt = "This is a very long prompt that should be truncated because it exceeds the maximum length limit set in the display"
-        
-        with patch('pidgin.config.Config') as mock_config:
+
+        with patch("pidgin.config.Config") as mock_config:
             config_instance = Mock()
             config_instance.get.return_value = "[HUMAN]"
             mock_config.return_value = config_instance
-            
+
             tail_display.log_event(event)
-            
+
             # Should print both conversation start and initial prompt
             assert console.print.call_count == 2
-            
+
             # Check the first call (conversation start)
             first_call = console.print.call_args_list[0]
             assert "conv12345678..." in first_call[0][1]
-            
+
             # Check the second call (initial prompt) - should be truncated
             second_call = console.print.call_args_list[1]
             assert "..." in second_call[0][1]
@@ -178,9 +179,9 @@ class TestTailDisplay:
         event.reason = "max_turns_reached"
         event.total_turns = 10
         event.duration_ms = 120000
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "reason: max_turns" in args[1]
@@ -192,9 +193,9 @@ class TestTailDisplay:
         event = Mock(spec=TurnStartEvent)
         event.timestamp = datetime.now(timezone.utc)
         event.turn_number = 5
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "Turn 5" in args[1]
@@ -205,9 +206,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.turn_number = 5
         event.convergence_score = 0.75
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "turn: 5" in args[1]
@@ -218,9 +219,9 @@ class TestTailDisplay:
         event = Mock(spec=MessageRequestEvent)
         event.timestamp = datetime.now(timezone.utc)
         event.agent_id = "agent_a"
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "[#a3be8c]agent_a[/#a3be8c] thinking..." in args[1]
@@ -233,9 +234,9 @@ class TestTailDisplay:
         event.message = mock_message
         event.duration_ms = 2500
         event.tokens_used = 150
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "agent_a" in args[1]
@@ -247,16 +248,16 @@ class TestTailDisplay:
         """Test message complete with long message gets truncated."""
         mock_message = Mock(spec=Message)
         mock_message.content = "This is a very long message that should be truncated"
-        
+
         event = Mock(spec=MessageCompleteEvent)
         event.timestamp = datetime.now(timezone.utc)
         event.agent_id = "agent_b"
         event.message = mock_message
         event.duration_ms = None
         event.tokens_used = None
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "This is a very lo..." in args[1]  # Truncated to 17 chars + ...
@@ -268,9 +269,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.chunk = "chunk content here"
         event.agent_id = "agent_a"
-        
+
         tail_display._handle_message_chunk(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "[#a3be8c]agent_a[/#a3be8c]: chunk content here" in args[1]
@@ -282,9 +283,9 @@ class TestTailDisplay:
         event.content = "chunk content here"
         event.agent_id = "agent_a"
         # No chunk attribute
-        
+
         tail_display._handle_message_chunk(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "[#a3be8c]agent_a[/#a3be8c]: chunk content here" in args[1]
@@ -296,9 +297,9 @@ class TestTailDisplay:
         event.provider = "openai"
         event.error_type = "rate_limit"
         event.error_message = "Rate limit exceeded. Please try again later."
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "openai" in args[1]
@@ -312,9 +313,9 @@ class TestTailDisplay:
         event.messages_dropped = 5
         event.original_message_count = 20
         event.truncated_message_count = 15
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "agent_a" in args[1]
@@ -327,9 +328,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.agent_id = "agent_a"
         event.prompt = "You are a helpful assistant."
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "[#a3be8c]agent_a[/#a3be8c]: You are a helpful assistant." in args[1]
@@ -340,9 +341,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.agent_id = "agent_a"
         event.prompt = None
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "[#a3be8c]agent_a[/#a3be8c] system prompt configured" in args[1]
@@ -354,9 +355,9 @@ class TestTailDisplay:
         event.reason = "mixed"
         event.wait_time = 30.5
         event.provider = "openai"
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "Waiting 30.5s for openai (request + token limits)" in args[1]
@@ -369,9 +370,9 @@ class TestTailDisplay:
         event.tokens_used = 150
         event.current_usage_rate = 8000
         event.tokens_per_minute_limit = 10000
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "openai: 150 tokens" in args[1]
@@ -385,12 +386,15 @@ class TestTailDisplay:
         event.error_type = "timeout"
         event.error_message = "Request timed out"
         event.timeout_seconds = 30
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
-        assert "[#a3be8c]agent_a[/#a3be8c] | timeout: Request timed out (timeout: 30s)" in args[1]
+        assert (
+            "[#a3be8c]agent_a[/#a3be8c] | timeout: Request timed out (timeout: 30s)"
+            in args[1]
+        )
 
     def test_display_interrupt_request(self, tail_display, console):
         """Test interrupt request event display."""
@@ -398,9 +402,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.interrupt_source = "user"
         event.turn_number = 5
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "Interrupt from user at turn 5" in args[1]
@@ -411,9 +415,9 @@ class TestTailDisplay:
         event.timestamp = datetime.now(timezone.utc)
         event.turn_number = 5
         event.paused_during = "message_generation"
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "Paused at turn 5 (message_generation)" in args[1]
@@ -423,9 +427,9 @@ class TestTailDisplay:
         event = Mock(spec=ConversationResumedEvent)
         event.timestamp = datetime.now(timezone.utc)
         event.turn_number = 5
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "Resumed at turn 5" in args[1]
@@ -436,14 +440,14 @@ class TestTailDisplay:
         event = Mock()
         event.timestamp = datetime.now(timezone.utc)
         event.dict.return_value = {
-            'custom_field': 'custom_value',
-            'another_field': 'another_value',
-            'timestamp': event.timestamp,
-            'event_id': 'test123'
+            "custom_field": "custom_value",
+            "another_field": "another_value",
+            "timestamp": event.timestamp,
+            "event_id": "test123",
         }
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "custom_field: custom_value" in args[1]
@@ -455,14 +459,14 @@ class TestTailDisplay:
         event = Mock()
         event.timestamp = datetime.now(timezone.utc)
         event.dict.return_value = {
-            'empty_field': None,
-            'blank_field': "",
-            'timestamp': event.timestamp,
-            'event_id': 'test123'
+            "empty_field": None,
+            "blank_field": "",
+            "timestamp": event.timestamp,
+            "event_id": "test123",
         }
-        
+
         tail_display.log_event(event)
-        
+
         console.print.assert_called_once()
         args = console.print.call_args[0]
         assert "(no data)" in args[1]
@@ -477,9 +481,9 @@ class TestTailDisplay:
         event.temperature_b = 0.8
         event.initial_prompt = "What is the meaning of life?" * 10  # Long prompt
         event.max_turns = 10
-        
+
         result = tail_display._format_event_content(event)
-        
+
         assert "conversation_id: conv123" in result
         assert "agent_a: gpt-4 (temp: 0.7)" in result
         assert "agent_b: claude-3 (temp: 0.8)" in result
@@ -494,9 +498,9 @@ class TestTailDisplay:
         event.final_convergence = 0.85
         event.total_turns = 10
         event.duration_ms = 120000
-        
+
         result = tail_display._format_event_content(event)
-        
+
         assert "conversation_id: conv123" in result
         assert "reason: max_turns_reached" in result
         assert "final_convergence: 0.85" in result
@@ -507,9 +511,9 @@ class TestTailDisplay:
         """Test legacy format method for message chunk."""
         event = Mock(spec=MessageChunkEvent)
         event.content = "chunk content"
-        
+
         result = tail_display._format_event_content(event)
-        
+
         assert result == "chunk content"
 
     def test_format_event_content_generic(self, tail_display):
@@ -518,15 +522,15 @@ class TestTailDisplay:
         event = Mock()
         event.timestamp = datetime.now(timezone.utc)
         event.dict.return_value = {
-            'field1': 'value1',
-            'field2': None,
-            'field3': 'value3',
-            'timestamp': event.timestamp,
-            'event_id': 'test123'
+            "field1": "value1",
+            "field2": None,
+            "field3": "value3",
+            "timestamp": event.timestamp,
+            "event_id": "test123",
         }
-        
+
         result = tail_display._format_event_content(event)
-        
+
         assert "field1: value1" in result
         assert "field2" not in result  # None values should be skipped
         assert "field3: value3" in result

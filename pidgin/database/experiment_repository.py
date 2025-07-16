@@ -3,11 +3,11 @@
 import json
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from .base_repository import BaseRepository
-from ..io.logger import get_logger
 from ..constants import ExperimentStatus
+from ..io.logger import get_logger
+from .base_repository import BaseRepository
 
 logger = get_logger("experiment_repository")
 
@@ -30,7 +30,7 @@ class ExperimentRepository(BaseRepository):
 
         query = """
             INSERT INTO experiments (
-                experiment_id, name, config, status, 
+                experiment_id, name, config, status,
                 created_at, total_conversations, completed_conversations,
                 failed_conversations
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -93,8 +93,8 @@ class ExperimentRepository(BaseRepository):
         """
         if ended_at:
             query = """
-                UPDATE experiments 
-                SET status = ?, completed_at = ? 
+                UPDATE experiments
+                SET status = ?, completed_at = ?
                 WHERE experiment_id = ?
             """
             params = [status, ended_at, experiment_id]
@@ -119,16 +119,16 @@ class ExperimentRepository(BaseRepository):
         """
         if status_filter:
             query = """
-                SELECT * FROM experiments 
-                WHERE status = ? 
-                ORDER BY created_at DESC 
+                SELECT * FROM experiments
+                WHERE status = ?
+                ORDER BY created_at DESC
                 LIMIT ?
             """
             params = [status_filter, limit]
         else:
             query = """
-                SELECT * FROM experiments 
-                ORDER BY created_at DESC 
+                SELECT * FROM experiments
+                ORDER BY created_at DESC
                 LIMIT ?
             """
             params = [limit]
@@ -166,7 +166,7 @@ class ExperimentRepository(BaseRepository):
         # Get conversation stats
         conv_stats = self.fetchone(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total_conversations,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
@@ -191,7 +191,7 @@ class ExperimentRepository(BaseRepository):
         # Get turn stats
         turn_stats = self.fetchone(
             """
-            SELECT 
+            SELECT
                 AVG(tm.convergence_score) as avg_turn_convergence,
                 COUNT(DISTINCT tm.conversation_id) as conversations_with_metrics
             FROM turn_metrics tm
@@ -232,8 +232,8 @@ class ExperimentRepository(BaseRepository):
         # Get conversation stats
         conversations = self.fetchall(
             """
-            SELECT conversation_id, status 
-            FROM conversations 
+            SELECT conversation_id, status
+            FROM conversations
             WHERE experiment_id = ?
         """,
             [experiment_id],

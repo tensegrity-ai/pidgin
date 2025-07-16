@@ -6,18 +6,15 @@ from .types import Conversation, Message
 class Router(Protocol):
     """Router interface for future extensibility"""
 
-    async def stream_response(self, messages: List[Message]) -> AsyncIterator[str]:
-        ...
+    async def stream_response(self, messages: List[Message]) -> AsyncIterator[str]: ...
 
     async def get_next_response(
         self, conversation_history: List[Message], target_agent: str
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     async def get_next_response_stream(
         self, conversation_history: List[Message], target_agent: str
-    ) -> AsyncIterator[Tuple[str, str]]:
-        ...
+    ) -> AsyncIterator[Tuple[str, str]]: ...
 
 
 class DirectRouter:

@@ -1,28 +1,28 @@
 """Display filter for human-readable conversation output."""
 
 from typing import Optional
-from rich.panel import Panel
+
 from rich.console import Console
-from rich.text import Text
+from rich.panel import Panel
 from rich.rule import Rule
+from rich.text import Text
 
 from ..core.events import (
-    Event,
-    ConversationStartEvent,
-    ConversationEndEvent,
-    TurnStartEvent,
-    TurnCompleteEvent,
-    MessageRequestEvent,
-    MessageCompleteEvent,
-    SystemPromptEvent,
     APIErrorEvent,
-    ErrorEvent,
-    ProviderTimeoutEvent,
-    InterruptRequestEvent,
+    ConversationEndEvent,
     ConversationPausedEvent,
     ConversationResumedEvent,
+    ConversationStartEvent,
+    ErrorEvent,
+    Event,
+    InterruptRequestEvent,
+    MessageCompleteEvent,
+    MessageRequestEvent,
+    ProviderTimeoutEvent,
+    SystemPromptEvent,
+    TurnCompleteEvent,
+    TurnStartEvent,
 )
-from ..config import Config
 
 
 class DisplayFilter:
@@ -66,40 +66,41 @@ class DisplayFilter:
         self.max_turns = 0
         self.agents = agents or {}
         self.prompt_tag = prompt_tag
-    
-    def _calculate_panel_width(self, content: str, title: str = "", min_width: int = 40, max_width: int = 80) -> int:
+
+    def _calculate_panel_width(
+        self, content: str, title: str = "", min_width: int = 40, max_width: int = 80
+    ) -> int:
         """Calculate appropriate panel width based on content.
-        
+
         Args:
             content: The panel content
             title: The panel title
             min_width: Minimum panel width
             max_width: Maximum panel width
-            
+
         Returns:
             Calculated panel width
         """
         # Split content into lines and strip ANSI codes for accurate length
-        from rich.text import Text
-        lines = content.split('\n')
-        
+        lines = content.split("\n")
+
         # Find longest line (stripping any rich markup)
         max_line_length = 0
         for line in lines:
             # Use Rich's Text to get actual display length
             text = Text.from_markup(line)
             max_line_length = max(max_line_length, len(text.plain))
-        
+
         # Consider title length
         title_text = Text.from_markup(title)
         title_length = len(title_text.plain) + 4  # Add padding for title formatting
-        
+
         # Determine width based on content
         content_width = max(max_line_length, title_length)
-        
+
         # Apply constraints (+6 for panel borders and padding)
         panel_width = max(min_width, min(content_width + 6, max_width))
-        
+
         return panel_width
 
     def handle_event(self, event: Event) -> None:
@@ -157,15 +158,14 @@ class DisplayFilter:
             content += f" (temp: {event.temperature_b})"
         content += "\n"
         content += f"◈ Max turns: {event.max_turns}\n"
-        content += f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause[/{self.COLORS['nord3']}]\n\n"
+        content += (
+            f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause"
+            f"[/{self.COLORS['nord3']}]\n\n"
+        )
 
-        # Get human tag - use instance value or fall back to config
-        if self.prompt_tag is None:
-            config = Config()
-            human_tag = config.get("defaults.human_tag", "[HUMAN]")
-        else:
-            human_tag = self.prompt_tag
-        
+        # Get human tag - use instance value or default
+        human_tag = self.prompt_tag if self.prompt_tag is not None else "[HUMAN]"
+
         # Show initial prompt as agents will see it
         content += f"[bold]Initial Prompt (as agents see it):[/bold]\n"
         if human_tag:
@@ -174,7 +174,9 @@ class DisplayFilter:
             content += f"{event.initial_prompt}"
 
         # Calculate appropriate width - allow wider panels for initial prompt display
-        width = self._calculate_panel_width(content, "⬡ Conversation Setup", max_width=120)
+        width = self._calculate_panel_width(
+            content, "⬡ Conversation Setup", max_width=120
+        )
 
         self.console.print(
             Panel(
@@ -184,7 +186,7 @@ class DisplayFilter:
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
         self.console.print()
@@ -199,7 +201,10 @@ class DisplayFilter:
             else:
                 display_name = event.agent_id.replace("_", " ").title()
 
-        content = f"[{self.COLORS['nord3']}]System instructions:[/{self.COLORS['nord3']}]\n\n{event.prompt}"
+        content = (
+            f"[{self.COLORS['nord3']}]System instructions:"
+            f"[/{self.COLORS['nord3']}]\n\n{event.prompt}"
+        )
 
         # Customize the display based on which agent
         if event.agent_id == "agent_a":
@@ -223,7 +228,7 @@ class DisplayFilter:
                 border_style=style,
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
         self.console.print()
@@ -254,7 +259,7 @@ class DisplayFilter:
                 display_name = f"{agent_name} ({model_shortname})"
             else:
                 # Just show the name (e.g., "Haiku-1" or "Agent A")
-                display_name = agent_name or 'Agent A'
+                display_name = agent_name or "Agent A"
             glyph = "◆"
             color = self.COLORS["nord14"]  # Green
         elif event.agent_id == "agent_b":
@@ -268,7 +273,7 @@ class DisplayFilter:
                 display_name = f"{agent_name} ({model_shortname})"
             else:
                 # Just show the name (e.g., "Sonnet-2" or "Agent B")
-                display_name = agent_name or 'Agent B'
+                display_name = agent_name or "Agent B"
             glyph = "●"
             color = self.COLORS["nord15"]  # Blue
         elif "human" in event.agent_id.lower():
@@ -288,16 +293,18 @@ class DisplayFilter:
 
         # Show the message without a panel
         self.console.print(f"\n[{color}]{glyph} {display_name}:[/{color}]")
-        
+
         # Wrap the message content at consistent width
-        from rich.text import Text
         text_width = min(self.console.width - 4, 80)
         wrapped_text = Text(content)
         self.console.print(wrapped_text, width=text_width, style="default")
-        
+
         if self.show_timing:
-            self.console.print(f"[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]")
-        
+            self.console.print(
+                f"[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | "
+                f"Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]"
+            )
+
         self.console.print()  # Add spacing after message
 
     def _show_turn_complete(self, event: TurnCompleteEvent):
@@ -306,10 +313,10 @@ class DisplayFilter:
 
         # Use consistent width similar to panels
         separator_width = min(self.console.width - 4, 60)
-        
+
         # Build turn info
         turn_info = f"Turn {self.current_turn}/{self.max_turns}"
-        
+
         # Add convergence if available
         if event.convergence_score is not None:
             conv_text = f"Convergence: {event.convergence_score:.2f}"
@@ -317,22 +324,34 @@ class DisplayFilter:
             if event.convergence_score > 0.75:
                 conv_text += " [HIGH]"
                 # Use plain text for centering calculation
-                plain_turn_info = f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
-                turn_info += f" | [{self.COLORS['nord13']}]{conv_text}[/{self.COLORS['nord13']}]"
+                plain_turn_info = (
+                    f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
+                )
+                turn_info += (
+                    f" | [{self.COLORS['nord13']}]{conv_text}[/{self.COLORS['nord13']}]"
+                )
             else:
-                plain_turn_info = f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
+                plain_turn_info = (
+                    f"Turn {self.current_turn}/{self.max_turns} | {conv_text}"
+                )
                 turn_info += f" | {conv_text}"
         else:
             plain_turn_info = f"Turn {self.current_turn}/{self.max_turns}"
-        
+
         # Calculate padding for centering
         padding = max(0, (separator_width - len(plain_turn_info)) // 2)
         centered_info = " " * padding + turn_info
-        
+
         # Print centered separators and info
-        self.console.print(f"\n[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]")
-        self.console.print(f"[{self.COLORS['nord3']}]{centered_info}[/{self.COLORS['nord3']}]")
-        self.console.print(f"[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]\n")
+        self.console.print(
+            f"\n[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]"
+        )
+        self.console.print(
+            f"[{self.COLORS['nord3']}]{centered_info}[/{self.COLORS['nord3']}]"
+        )
+        self.console.print(
+            f"[{self.COLORS['nord3']}]{'─' * separator_width}[/{self.COLORS['nord3']}]\n"
+        )
 
     def _show_conversation_end(self, event: ConversationEndEvent):
         """Show conversation end panel."""
@@ -341,7 +360,7 @@ class DisplayFilter:
         content = f"[bold]Conversation Complete[/bold]\n\n"
         content += f"◇ Total turns: {event.total_turns}\n"
         content += f"◇ Duration: {duration:.1f}s\n"
-        
+
         # Enhanced reason display for convergence
         if event.reason == "high_convergence":
             content += f"◇ Reason: Convergence threshold reached\n"
@@ -350,7 +369,9 @@ class DisplayFilter:
             content += f"◇ Reason: {event.reason}"
 
         # Summary panels should be compact
-        width = self._calculate_panel_width(content, "⬟ Summary", min_width=40, max_width=60)
+        width = self._calculate_panel_width(
+            content, "⬟ Summary", min_width=40, max_width=60
+        )
 
         self.console.print(
             Panel(
@@ -360,7 +381,7 @@ class DisplayFilter:
                 border_style=self.COLORS["nord7"],
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
 
@@ -411,7 +432,10 @@ class DisplayFilter:
             elif "openai" in event.provider.lower():
                 service_url = "platform.openai.com → Billing"
 
-            content = f"[bold {self.COLORS['nord13']}]{agent_name or event.agent_id} cannot respond[/bold {self.COLORS['nord13']}]\n\n"
+            content = (
+                f"[bold {self.COLORS['nord13']}]{agent_name or event.agent_id} "
+                f"cannot respond[/bold {self.COLORS['nord13']}]\n\n"
+            )
             content += f"◇ {event.error_message}\n"
             if service_url:
                 content += f"\n[{self.COLORS['nord4']}]To fix: Visit {service_url}[/{self.COLORS['nord4']}]"
@@ -438,7 +462,7 @@ class DisplayFilter:
 
         # Calculate appropriate width for error panels
         width = self._calculate_panel_width(content, title, min_width=40, max_width=80)
-        
+
         self.console.print(
             Panel(
                 content,
@@ -447,21 +471,27 @@ class DisplayFilter:
                 border_style=border_style,
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
         self.console.print()
 
     def _show_error(self, event: ErrorEvent):
         """Show generic error."""
-        content = f"[bold {self.COLORS['nord11']}]{event.error_type.replace('_', ' ').title()}[/bold {self.COLORS['nord11']}]\n\n"
+        content = (
+            f"[bold {self.COLORS['nord11']}]"
+            f"{event.error_type.replace('_', ' ').title()}"
+            f"[/bold {self.COLORS['nord11']}]\n\n"
+        )
         content += f"{event.error_message}"
 
         if event.context:
             content += f"\n\n[{self.COLORS['nord3']}]Context: {event.context}[/{self.COLORS['nord3']}]"
 
         # Calculate appropriate width
-        width = self._calculate_panel_width(content, "! Error", min_width=40, max_width=80)
+        width = self._calculate_panel_width(
+            content, "! Error", min_width=40, max_width=80
+        )
 
         self.console.print(
             Panel(
@@ -471,7 +501,7 @@ class DisplayFilter:
                 border_style=self.COLORS["nord11"],
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
         self.console.print()
@@ -494,7 +524,9 @@ class DisplayFilter:
             content += f"\n[dim]Context: {event.context}[/dim]"
 
         # Calculate appropriate width
-        width = self._calculate_panel_width(content, "⏱ Timeout", min_width=40, max_width=70)
+        width = self._calculate_panel_width(
+            content, "⏱ Timeout", min_width=40, max_width=70
+        )
 
         self.console.print(
             Panel(
@@ -504,7 +536,7 @@ class DisplayFilter:
                 border_style=self.COLORS["nord13"],
                 padding=(1, 2),
                 width=width,
-                expand=False
+                expand=False,
             )
         )
         self.console.print()
@@ -525,25 +557,25 @@ class DisplayFilter:
         if wait_time < 0.5:
             # Very brief pause - don't show anything
             return
-            
+
         # Format the wait time nicely
         if wait_time < 1.0:
             time_str = f"{wait_time:.1f}s"
         else:
             time_str = f"{wait_time:.1f}s"
-        
+
         # Create a subtle panel
         content = f"⏸ Waiting {time_str} for {provider} rate limits"
-        
+
         # Calculate width for pacing panel - should be compact
         width = self._calculate_panel_width(content, "", min_width=35, max_width=50)
-        
+
         self.console.print()  # Leading newline
         self.console.print(
             Panel(
                 content,
-                style=self.COLORS['nord13'],  # Yellow
-                border_style=self.COLORS['nord3'],  # Dim border
+                style=self.COLORS["nord13"],  # Yellow
+                border_style=self.COLORS["nord3"],  # Dim border
                 padding=(0, 1),
                 width=width,
                 expand=False,

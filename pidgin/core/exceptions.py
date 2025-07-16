@@ -3,12 +3,13 @@
 
 class PidginError(Exception):
     """Base exception for all Pidgin errors."""
-    pass
 
+    pass
 
 
 class RateLimitError(PidginError):
     """Raised when rate limits are exceeded."""
+
     def __init__(self, provider: str, wait_time: float, message: str = None):
         self.provider = provider
         self.wait_time = wait_time
@@ -19,11 +20,13 @@ class RateLimitError(PidginError):
 
 class ProviderError(PidginError):
     """Base exception for provider-related errors."""
+
     pass
 
 
 class ProviderTimeoutError(ProviderError):
     """Raised when a provider times out."""
+
     def __init__(self, provider: str, timeout: float, agent_id: str = None):
         self.provider = provider
         self.timeout = timeout
@@ -36,26 +39,31 @@ class ProviderTimeoutError(ProviderError):
 
 class DatabaseError(PidginError):
     """Base exception for database-related errors."""
+
     pass
 
 
 class DatabaseConnectionError(DatabaseError):
     """Raised when database connection fails."""
+
     pass
 
 
 class DatabaseLockError(DatabaseError):
     """Raised when database is locked by another process."""
+
     pass
 
 
 class ExperimentError(PidginError):
     """Base exception for experiment-related errors."""
+
     pass
 
 
 class ExperimentAlreadyExistsError(ExperimentError):
     """Raised when trying to create an experiment with a duplicate name."""
+
     def __init__(self, name: str, existing_id: str):
         self.name = name
         self.existing_id = existing_id
@@ -64,6 +72,7 @@ class ExperimentAlreadyExistsError(ExperimentError):
 
 class ExperimentNotFoundError(ExperimentError):
     """Raised when an experiment cannot be found."""
+
     def __init__(self, identifier: str):
         self.identifier = identifier
         super().__init__(f"Experiment not found: {identifier}")

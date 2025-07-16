@@ -1,5 +1,6 @@
 """Provider names and configuration constants."""
 
+
 # Provider names
 class ProviderNames:
     ANTHROPIC = "anthropic"
@@ -10,6 +11,7 @@ class ProviderNames:
     LOCAL = "local"
     SILENT = "silent"
 
+
 # Provider model prefixes
 class ModelPrefixes:
     ANTHROPIC = "claude"
@@ -19,11 +21,13 @@ class ModelPrefixes:
     OLLAMA = "ollama"
     LOCAL = "local"
 
+
 # Special models
 class SpecialModels:
     LOCAL_TEST = "local:test"
     OLLAMA_DEFAULT = "ollama:qwen2.5:0.5b"
     SILENT = "silent"
+
 
 # Environment variable names
 class EnvVars:
@@ -33,6 +37,7 @@ class EnvVars:
     GEMINI_API_KEY = "GEMINI_API_KEY"
     XAI_API_KEY = "XAI_API_KEY"
     GROK_API_KEY = "GROK_API_KEY"
+
 
 # Collections
 ALL_PROVIDERS = [

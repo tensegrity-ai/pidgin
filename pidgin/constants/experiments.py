@@ -1,5 +1,6 @@
 """Experiment status and metadata constants."""
 
+
 # Experiment statuses
 class ExperimentStatus:
     CREATED = "created"
@@ -11,11 +12,13 @@ class ExperimentStatus:
     CANCELLED = "cancelled"
     INTERRUPTED = "interrupted"
 
+
 # Experiment types
 class ExperimentType:
     SINGLE_CONVERSATION = "single_conversation"
     BATCH_CONVERSATIONS = "batch_conversations"
     PARAMETER_SWEEP = "parameter_sweep"
+
 
 # Default values
 DEFAULT_MAX_TURNS = 50

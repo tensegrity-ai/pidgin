@@ -1,18 +1,19 @@
 """Test convergence weight validation."""
 
 import pytest
+
 from pidgin.analysis.convergence import ConvergenceCalculator
 
 
 class TestConvergenceValidation:
     """Test weight validation in ConvergenceCalculator."""
-    
+
     def test_default_weights_valid(self):
         """Test that default weights are valid."""
         # Should not raise
         calc = ConvergenceCalculator()
         assert sum(calc.weights.values()) == 1.0
-    
+
     def test_custom_valid_weights(self):
         """Test with valid custom weights."""
         weights = {
@@ -24,7 +25,7 @@ class TestConvergenceValidation:
         }
         calc = ConvergenceCalculator(weights=weights)
         assert calc.weights == weights
-    
+
     def test_weights_not_sum_to_one(self):
         """Test that weights must sum to 1.0."""
         weights = {
@@ -36,7 +37,7 @@ class TestConvergenceValidation:
         }
         with pytest.raises(ValueError, match="Weights must sum to 1.0, got 1.300"):
             ConvergenceCalculator(weights=weights)
-    
+
     def test_missing_weight_key(self):
         """Test that all required keys must be present."""
         weights = {
@@ -46,7 +47,7 @@ class TestConvergenceValidation:
         }
         with pytest.raises(ValueError, match="missing keys"):
             ConvergenceCalculator(weights=weights)
-    
+
     def test_extra_weight_key(self):
         """Test that no extra keys are allowed."""
         weights = {
@@ -59,7 +60,7 @@ class TestConvergenceValidation:
         }
         with pytest.raises(ValueError, match="extra keys"):
             ConvergenceCalculator(weights=weights)
-    
+
     def test_negative_weight(self):
         """Test that weights must be non-negative."""
         weights = {
@@ -71,7 +72,7 @@ class TestConvergenceValidation:
         }
         with pytest.raises(ValueError, match="must be a non-negative number"):
             ConvergenceCalculator(weights=weights)
-    
+
     def test_non_numeric_weight(self):
         """Test that weights must be numeric."""
         weights = {
@@ -83,7 +84,7 @@ class TestConvergenceValidation:
         }
         with pytest.raises(ValueError, match="must be a non-negative number"):
             ConvergenceCalculator(weights=weights)
-    
+
     def test_weights_sum_within_tolerance(self):
         """Test that small floating point errors are acceptable."""
         # This should work due to tolerance

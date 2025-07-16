@@ -4,17 +4,15 @@ from typing import Optional, Tuple
 
 
 def resolve_temperatures(
-    temperature: Optional[float],
-    temp_a: Optional[float],
-    temp_b: Optional[float]
+    temperature: Optional[float], temp_a: Optional[float], temp_b: Optional[float]
 ) -> Tuple[Optional[float], Optional[float]]:
     """Resolve temperature settings for both agents.
-    
+
     Args:
         temperature: General temperature for both agents
         temp_a: Specific temperature for agent A
         temp_b: Specific temperature for agent B
-        
+
     Returns:
         Tuple of (temp_a, temp_b) with fallbacks applied
     """
@@ -24,17 +22,15 @@ def resolve_temperatures(
 
 
 def resolve_awareness_levels(
-    awareness: str,
-    awareness_a: Optional[str],
-    awareness_b: Optional[str]
+    awareness: str, awareness_a: Optional[str], awareness_b: Optional[str]
 ) -> Tuple[str, str]:
     """Resolve awareness levels for both agents.
-    
+
     Args:
         awareness: General awareness level for both agents
         awareness_a: Specific awareness for agent A
         awareness_b: Specific awareness for agent B
-        
+
     Returns:
         Tuple of (awareness_a, awareness_b) with fallbacks applied
     """

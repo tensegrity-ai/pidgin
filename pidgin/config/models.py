@@ -1,7 +1,7 @@
 """Model configuration and metadata for Pidgin."""
 
-from typing import Dict, List, Optional, Literal
 from dataclasses import dataclass
+from typing import Dict, List, Literal, Optional
 
 
 @dataclass
@@ -34,51 +34,59 @@ class ModelConfig:
 def _load_models() -> Dict[str, ModelConfig]:
     """Load model configurations from all providers."""
     models = {}
-    
+
     # Import provider models - use lazy imports to avoid circular dependencies
     try:
         from ..providers.anthropic import ANTHROPIC_MODELS
+
         models.update(ANTHROPIC_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.openai import OPENAI_MODELS
+
         models.update(OPENAI_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.google import GOOGLE_MODELS
+
         models.update(GOOGLE_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.xai import XAI_MODELS
+
         models.update(XAI_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.local import LOCAL_MODELS
+
         models.update(LOCAL_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.ollama import OLLAMA_MODELS
+
         models.update(OLLAMA_MODELS)
     except ImportError:
         pass
-    
+
     try:
         from ..providers.silent import SILENT_MODELS
+
         models.update(SILENT_MODELS)
     except ImportError:
         pass
-    
+
     return models
+
 
 # Model configurations aggregated from all providers
 MODELS: Dict[str, ModelConfig] = _load_models()
@@ -124,10 +132,10 @@ def get_model_shortcuts() -> Dict[str, str]:
 
 def resolve_model_id(model_or_alias: str) -> tuple[str, Optional[ModelConfig]]:
     """Resolve a model name or alias to its full model ID.
-    
+
     Args:
         model_or_alias: Model ID or alias
-        
+
     Returns:
         Tuple of (resolved_model_id, model_config)
         If model not found, returns (original_input, None)

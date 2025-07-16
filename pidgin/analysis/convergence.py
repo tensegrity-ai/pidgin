@@ -1,7 +1,7 @@
 """Convergence metrics for tracking when AI agents start sounding alike."""
 
 import re
-from typing import List, Tuple, Any
+from typing import Any, List, Tuple
 
 
 class ConvergenceCalculator:
@@ -16,7 +16,7 @@ class ConvergenceCalculator:
         """
         self.window_size = window_size
         self.history: List[float] = []
-        
+
         # Default weights if none provided
         self.weights = weights or {
             "content": 0.4,
@@ -25,7 +25,7 @@ class ConvergenceCalculator:
             "structure": 0.15,
             "punctuation": 0.1,
         }
-        
+
         # Validate weights
         self._validate_weights()
 
@@ -95,8 +95,6 @@ class ConvergenceCalculator:
 
     def _clean_message_content(self, message: Any) -> Any:
         """Clean message content by removing embedded agent labels and formatting."""
-        import re
-
         content = message.content
 
         # Remove embedded agent labels like "**Agent A**:" and "**Agent B**:"
@@ -196,7 +194,10 @@ class ConvergenceCalculator:
         return ratio
 
     def _structure_similarity(self, messages_a: List, messages_b: List) -> float:
-        """Calculate similarity based on structural patterns (paragraphs, lists, questions)."""
+        """Calculate similarity based on structural patterns.
+        
+        Includes paragraphs, lists, questions.
+        """
 
         def extract_features(messages):
             features = {"paragraphs": 0, "lists": 0, "questions": 0, "code_blocks": 0}
@@ -302,17 +303,17 @@ class ConvergenceCalculator:
             return "stable"
         else:
             return "fluctuating"
-    
+
     def _validate_weights(self):
         """Validate that weights are properly configured.
-        
+
         Raises:
             ValueError: If weights don't sum to 1.0 or have invalid values
         """
         # Check all required keys are present
         required_keys = {"content", "length", "sentences", "structure", "punctuation"}
         provided_keys = set(self.weights.keys())
-        
+
         if provided_keys != required_keys:
             missing = required_keys - provided_keys
             extra = provided_keys - required_keys
@@ -322,12 +323,14 @@ class ConvergenceCalculator:
             if extra:
                 msg_parts.append(f"extra keys: {extra}")
             raise ValueError(f"Invalid weight keys - {', '.join(msg_parts)}")
-        
+
         # Check all weights are non-negative
         for key, value in self.weights.items():
             if not isinstance(value, (int, float)) or value < 0:
-                raise ValueError(f"Weight '{key}' must be a non-negative number, got {value}")
-        
+                raise ValueError(
+                    f"Weight '{key}' must be a non-negative number, got {value}"
+                )
+
         # Check weights sum to 1.0 (with small tolerance for floating point)
         total = sum(self.weights.values())
         if abs(total - 1.0) > 0.001:

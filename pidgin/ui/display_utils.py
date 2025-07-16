@@ -5,6 +5,7 @@ Pidgin, ensuring consistent styling and user experience.
 """
 
 from typing import Optional, Union
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -209,7 +210,10 @@ class DisplayUtils:
             use_panel: Whether to use a panel (rare for success)
         """
         if use_panel:
-            content = f"[bold {NORD_COLORS['nord14']}]{message}[/bold {NORD_COLORS['nord14']}]"
+            content = (
+                f"[bold {NORD_COLORS['nord14']}]{message}"
+                f"[/bold {NORD_COLORS['nord14']}]"
+            )
             width = self._calculate_panel_width(content, "✓ Success", max_width=60)
 
             self.console.print()  # Add blank line before panel
@@ -257,23 +261,38 @@ class DisplayUtils:
 
         if is_billing and billing_url:
             # Special billing error display
-            content = f"[bold {NORD_COLORS['nord13']}]{agent_name} cannot respond[/bold {NORD_COLORS['nord13']}]\n\n"
+            content = (
+                f"[bold {NORD_COLORS['nord13']}]{agent_name} cannot respond"
+                f"[/bold {NORD_COLORS['nord13']}]\n\n"
+            )
             content += f"◇ {error_message}\n"
-            content += f"\n[{NORD_COLORS['nord4']}]To fix: Visit {billing_url}[/{NORD_COLORS['nord4']}]"
+            content += (
+                f"\n[{NORD_COLORS['nord4']}]To fix: Visit {billing_url}"
+                f"[/{NORD_COLORS['nord4']}]"
+            )
 
             title = "Billing Issue"
             border_style = NORD_COLORS["nord13"]  # Yellow for billing
         else:
             # Regular API error
-            content = f"[bold {NORD_COLORS['nord11']}]Connection Issue[/bold {NORD_COLORS['nord11']}]\n\n"
+            content = (
+                f"[bold {NORD_COLORS['nord11']}]Connection Issue"
+                f"[/bold {NORD_COLORS['nord11']}]\n\n"
+            )
             content += f"◈ Agent: {agent_name}\n"
             content += f"◈ Provider: {provider}\n"
             content += f"◈ Error: {error_message}\n"
 
             if retryable:
-                content += f"\n[{NORD_COLORS['nord8']}]◇ Retrying automatically...[/{NORD_COLORS['nord8']}]"
+                content += (
+                    f"\n[{NORD_COLORS['nord8']}]◇ Retrying automatically..."
+                    f"[/{NORD_COLORS['nord8']}]"
+                )
             else:
-                content += f"\n[{NORD_COLORS['nord3']}]◇ Cannot retry automatically[/{NORD_COLORS['nord3']}]"
+                content += (
+                    f"\n[{NORD_COLORS['nord3']}]◇ Cannot retry automatically"
+                    f"[/{NORD_COLORS['nord3']}]"
+                )
 
             title = "◆ API Error"
             border_style = NORD_COLORS["nord11"]
@@ -413,9 +432,6 @@ class DisplayUtils:
             provider: Optional provider name for context
         """
         # Format the message with styling
-        from rich.text import Text
-        from rich.panel import Panel
-
         # Create styled text for the content
         text = Text()
         text.append("Configuration Required\n\n", style=f"bold {NORD_COLORS['nord11']}")

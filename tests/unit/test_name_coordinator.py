@@ -1,11 +1,12 @@
 """Test agent naming and name coordination logic."""
 
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
+from pidgin.config.models import ModelConfig
 from pidgin.core.name_coordinator import NameCoordinator
 from pidgin.core.types import Agent
-from pidgin.config.models import ModelConfig
 
 
 class TestNameCoordinator:

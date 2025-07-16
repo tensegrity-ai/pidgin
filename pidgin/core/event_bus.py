@@ -5,11 +5,11 @@ import json
 import threading
 from collections import defaultdict
 from pathlib import Path
-from typing import Callable, Dict, List, Type, TypeVar, Optional, Any
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
 
-from .events import Event
 from ..io.logger import get_logger
 from .constants import SystemDefaults
+from .events import Event
 
 logger = get_logger("event_bus")
 
@@ -20,9 +20,14 @@ T = TypeVar("T", bound=Event)
 class EventBus:
     """Central event distribution with radical transparency."""
 
-    def __init__(self, db_store=None, event_log_dir=None, max_history_size: int = SystemDefaults.MAX_EVENT_HISTORY):
+    def __init__(
+        self,
+        db_store=None,
+        event_log_dir=None,
+        max_history_size: int = SystemDefaults.MAX_EVENT_HISTORY,
+    ):
         """Initialize EventBus.
-        
+
         Args:
             db_store: Optional EventStore for persisting events
             event_log_dir: Optional directory for JSONL event logs
@@ -66,7 +71,7 @@ class EventBus:
 
         # Fallback to string representation
         return str(value)
-    
+
     def _serialize_object(self, obj: Any) -> Any:
         """Serialize an object to a dictionary."""
         # Special handling for Message objects
@@ -75,73 +80,82 @@ class EventBus:
                 "role": obj.role,
                 "content": obj.content,
                 "agent_id": getattr(obj, "agent_id", None),
-                "timestamp": obj.timestamp.isoformat()
-                if hasattr(obj, "timestamp")
-                else None,
+                "timestamp": (
+                    obj.timestamp.isoformat() if hasattr(obj, "timestamp") else None
+                ),
             }
-        
+
         # Special handling for Google's GenerativeModel
         if hasattr(obj, "_model_name") and hasattr(obj, "_client"):
             # This is a Google GenerativeModel object, just return the model name
             return getattr(obj, "_model_name", str(obj))
-        
+
         # Prevent serializing complex objects with sensitive data
         class_name = obj.__class__.__name__
-        if any(sensitive in class_name.lower() for sensitive in ["client", "credential", "key", "token"]):
+        if any(
+            sensitive in class_name.lower()
+            for sensitive in ["client", "credential", "key", "token"]
+        ):
             # Don't serialize objects that might contain credentials
             return f"<{class_name} object>"
-        
+
         # Generic object serialization
         try:
             return {k: self._serialize_value(v) for k, v in obj.__dict__.items()}
         except Exception:
             # If we can't serialize it, just return string representation
             return str(obj)
-    
+
     def _get_jsonl_file(self, conversation_id: str):
         """Get or create JSONL file handle for a conversation."""
         if not self.event_log_dir:
             return None
-            
+
         with self._jsonl_lock:
             if conversation_id not in self._jsonl_files:
                 # Create directory if needed
                 log_dir = Path(self.event_log_dir)
                 log_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 # Open file in append mode
                 log_path = log_dir / f"{conversation_id}_events.jsonl"
-                self._jsonl_files[conversation_id] = open(log_path, 'a', buffering=1)  # Line buffered
-                
+                self._jsonl_files[conversation_id] = open(
+                    log_path, "a", buffering=1
+                )  # Line buffered
+
             return self._jsonl_files[conversation_id]
-    
+
     def _write_to_jsonl(self, event: Event, event_data: dict):
         """Write event to JSONL file."""
         # Get conversation ID from event
-        conversation_id = getattr(event, 'conversation_id', None)
+        conversation_id = getattr(event, "conversation_id", None)
         if not conversation_id:
             return
-            
+
         with self._jsonl_lock:
             try:
                 jsonl_file = self._get_jsonl_file(conversation_id)
                 if jsonl_file:
                     # First try to serialize to string to catch any issues
                     try:
-                        json_str = json.dumps(event_data, separators=(',', ':'))
+                        json_str = json.dumps(event_data, separators=(",", ":"))
                     except Exception as e:
-                        logger.error(f"Failed to serialize event {type(event).__name__}: {e}")
+                        logger.error(
+                            f"Failed to serialize event {type(event).__name__}: {e}"
+                        )
                         # Try to identify the problematic field
                         for key, value in event_data.items():
                             try:
                                 json.dumps({key: value})
                             except (TypeError, ValueError) as e:
-                                logger.error(f"  Field '{key}' with type {type(value)} cannot be serialized: {e}")
+                                logger.error(
+                                    f"  Field '{key}' with type {type(value)} cannot be serialized: {e}"
+                                )
                         return
-                    
+
                     # Write the pre-serialized string
                     jsonl_file.write(json_str)
-                    jsonl_file.write('\n')
+                    jsonl_file.write("\n")
                     jsonl_file.flush()
             except Exception as e:
                 logger.error(f"Error writing to JSONL: {e}")
@@ -157,8 +171,7 @@ class EventBus:
             self.event_history.append(event)
             if len(self.event_history) > self.max_history_size:
                 # Remove oldest events to maintain size limit
-                self.event_history = self.event_history[-self.max_history_size:]
-
+                self.event_history = self.event_history[-self.max_history_size :]
 
         # Prepare event data for serialization
         event_data = {}
@@ -178,7 +191,9 @@ class EventBus:
                         event_data[k] = v
                     else:
                         # Log warning and convert to string
-                        logger.warning(f"Unexpected type for model field in {type(event).__name__}: {type(v)}")
+                        logger.warning(
+                            f"Unexpected type for model field in {type(event).__name__}: {type(v)}"
+                        )
                         event_data[k] = str(v)
                 else:
                     event_data[k] = self._serialize_value(v)
@@ -186,10 +201,10 @@ class EventBus:
         # Add timestamp and event_type to the data
         event_data["timestamp"] = event.timestamp.isoformat()
         event_data["event_type"] = type(event).__name__
-        
+
         # Add experiment_id if not present but conversation_id is
-        if "experiment_id" not in event_data and hasattr(event, 'conversation_id'):
-            event_data["experiment_id"] = getattr(event, 'experiment_id', None)
+        if "experiment_id" not in event_data and hasattr(event, "conversation_id"):
+            event_data["experiment_id"] = getattr(event, "experiment_id", None)
 
         # Write to JSONL if configured
         if self.event_log_dir:
@@ -217,9 +232,10 @@ class EventBus:
             except Exception as e:
                 # Log but don't crash on handler errors
                 error_msg = f"Error in event handler {handler.__name__}: {e}"
-                
+
                 # Only show traceback in DEBUG mode
                 import os
+
                 if os.getenv("PIDGIN_DEBUG"):
                     logger.error(error_msg, exc_info=True)
                 else:
@@ -274,7 +290,7 @@ class EventBus:
     async def stop(self):
         """Stop event bus and close resources."""
         self._running = False
-        
+
         # Close all JSONL files
         with self._jsonl_lock:
             for file_handle in self._jsonl_files.values():
@@ -283,10 +299,10 @@ class EventBus:
                 except Exception as e:
                     logger.error(f"Error closing JSONL file: {e}")
             self._jsonl_files.clear()
-    
+
     def close_conversation_log(self, conversation_id: str) -> None:
         """Close JSONL file for a specific conversation.
-        
+
         Args:
             conversation_id: The conversation ID whose log to close
         """
@@ -295,7 +311,8 @@ class EventBus:
                 try:
                     self._jsonl_files[conversation_id].close()
                     del self._jsonl_files[conversation_id]
-                    logger.debug(f"Closed JSONL file for conversation {conversation_id}")
+                    logger.debug(
+                        f"Closed JSONL file for conversation {conversation_id}"
+                    )
                 except Exception as e:
                     logger.error(f"Error closing JSONL file for {conversation_id}: {e}")
-

@@ -1,36 +1,37 @@
 """Comprehensive tests for repository classes."""
 
-import pytest
+import json
+import sys
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-import json
-import duckdb
-import sys
 
+import duckdb
+import pytest
+
+from pidgin.core.events import (
+    ConversationEndEvent,
+    ConversationStartEvent,
+    MessageCompleteEvent,
+    TokenUsageEvent,
+    TurnCompleteEvent,
+)
+from pidgin.core.types import Agent, Message
 from pidgin.database.base_repository import BaseRepository
+from pidgin.database.conversation_repository import ConversationRepository
 from pidgin.database.event_repository import EventRepository
 from pidgin.database.experiment_repository import ExperimentRepository
-from pidgin.database.conversation_repository import ConversationRepository
 from pidgin.database.message_repository import MessageRepository
 from pidgin.database.metrics_repository import MetricsRepository
 from pidgin.database.schema_manager import SchemaManager
-from pidgin.core.events import (
-    ConversationStartEvent,
-    TurnCompleteEvent,
-    MessageCompleteEvent,
-    ConversationEndEvent,
-    TokenUsageEvent,
-)
-from pidgin.core.types import Message, Agent
 
 # Import builders if they exist, otherwise define simple test events
 try:
     from tests.builders import (
-        make_conversation_start_event,
-        make_turn_complete_event,
-        make_message_complete_event,
         make_conversation_end_event,
+        make_conversation_start_event,
+        make_message_complete_event,
+        make_turn_complete_event,
     )
 except ImportError:
     # Define simple test event makers
@@ -93,26 +94,30 @@ class TestBaseRepository:
     def db_conn(self, monkeypatch):
         """Create a temporary database connection."""
         # Clear any mocked modules before importing
-        mocked_modules = [mod for mod in sys.modules.keys() if 'mock' in str(type(sys.modules[mod]))]
+        mocked_modules = [
+            mod for mod in sys.modules.keys() if "mock" in str(type(sys.modules[mod]))
+        ]
         for mod in mocked_modules:
-            if mod.startswith('duckdb'):
+            if mod.startswith("duckdb"):
                 del sys.modules[mod]
-        
+
         # Import a fresh duckdb to avoid any mocking issues
         import duckdb as real_duckdb
-        
+
         # Ensure we're not getting a mock
-        if hasattr(real_duckdb.connect, '_mock_name'):
+        if hasattr(real_duckdb.connect, "_mock_name"):
             pytest.skip("duckdb is mocked in this test run")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
             conn = real_duckdb.connect(str(db_path))
-            
+
             # Verify it's a real connection
-            assert hasattr(conn, 'execute'), "Connection should have execute method"
-            assert not hasattr(conn.execute, '_mock_name'), "Execute method should not be mocked"
-            
+            assert hasattr(conn, "execute"), "Connection should have execute method"
+            assert not hasattr(
+                conn.execute, "_mock_name"
+            ), "Execute method should not be mocked"
+
             yield conn
             conn.close()
 
@@ -571,7 +576,9 @@ class TestMetricsRepository:
         # Check if method exists
         if hasattr(metrics_repo, "calculate_convergence_metrics"):
             # Calculate convergence
-            conv_metrics = metrics_repo.calculate_convergence_metrics("conversation_123")
+            conv_metrics = metrics_repo.calculate_convergence_metrics(
+                "conversation_123"
+            )
 
             assert "avg_convergence" in conv_metrics
             assert "max_convergence" in conv_metrics

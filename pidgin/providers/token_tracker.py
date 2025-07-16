@@ -2,9 +2,9 @@
 
 import time
 from collections import defaultdict, deque
-from typing import Dict, Optional, Tuple, Any
 from dataclasses import dataclass
 from threading import Lock
+from typing import Any, Dict, Optional, Tuple
 
 from ..config import get_config
 from ..io.logger import get_logger

@@ -2,11 +2,11 @@
 
 import json
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from .base_repository import BaseRepository
-from ..io.logger import get_logger
 from ..constants import ConversationStatus
+from ..io.logger import get_logger
+from .base_repository import BaseRepository
 
 logger = get_logger("conversation_repository")
 
@@ -117,8 +117,8 @@ class ConversationRepository(BaseRepository):
                     final_score = result[1]
 
             query = """
-                UPDATE conversations 
-                SET status = ?, completed_at = ?, convergence_reason = ?, 
+                UPDATE conversations
+                SET status = ?, completed_at = ?, convergence_reason = ?,
                     error_message = ?, final_convergence_score = ?, total_turns = ?
                 WHERE conversation_id = ?
             """
@@ -148,8 +148,8 @@ class ConversationRepository(BaseRepository):
             List of message dicts ordered by turn and agent
         """
         query = """
-            SELECT * FROM messages 
-            WHERE conversation_id = ? 
+            SELECT * FROM messages
+            WHERE conversation_id = ?
             ORDER BY turn_number, agent_id
         """
 
@@ -262,9 +262,9 @@ class ConversationRepository(BaseRepository):
         # Get all turn metrics
         results = self.fetchall(
             """
-            SELECT turn_number, convergence_score 
-            FROM turn_metrics 
-            WHERE conversation_id = ? 
+            SELECT turn_number, convergence_score
+            FROM turn_metrics
+            WHERE conversation_id = ?
             ORDER BY turn_number
         """,
             [conversation_id],

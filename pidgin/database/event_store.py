@@ -5,22 +5,22 @@ access to all experiment, conversation, and metrics data through a clean
 repository-based architecture.
 """
 
-import duckdb
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .base_repository import BaseRepository
-from .event_repository import EventRepository
-from .experiment_repository import ExperimentRepository
-from .conversation_repository import ConversationRepository
-from .message_repository import MessageRepository
-from .metrics_repository import MetricsRepository
-from .import_service import ImportService, ImportResult
+import duckdb
 
 from ..core.events import Event
 from ..core.types import Agent, Conversation, ConversationTurn
 from ..io.logger import get_logger
+from .base_repository import BaseRepository
+from .conversation_repository import ConversationRepository
+from .event_repository import EventRepository
+from .experiment_repository import ExperimentRepository
+from .import_service import ImportResult, ImportService
+from .message_repository import MessageRepository
+from .metrics_repository import MetricsRepository
 
 logger = get_logger("event_store")
 
@@ -73,10 +73,10 @@ class EventStore:
             self.db.close()
         if hasattr(self, "importer") and hasattr(self.importer, "db"):
             self.importer.db.close()
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
@@ -268,11 +268,11 @@ class EventStore:
 
             # Delete experiment-level events
             self.events.delete_events_for_experiment(experiment_id)
-            
+
             # Delete from conversation_turns table (for imported data)
             self.db.execute(
                 "DELETE FROM conversation_turns WHERE experiment_id = ?",
-                [experiment_id]
+                [experiment_id],
             )
 
             # Finally delete experiment

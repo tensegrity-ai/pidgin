@@ -1,18 +1,20 @@
+import asyncio
 import logging
 import time
-import asyncio
+from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional
+
 from openai import AsyncOpenAI
-from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
+
 from ..core.types import Message
-from .base import Provider
-from .retry_utils import retry_with_exponential_backoff, is_retryable_error
-from .error_utils import create_openai_error_handler
 from .api_key_manager import APIKeyManager
+from .base import Provider
+from .error_utils import create_openai_error_handler
+from .retry_utils import is_retryable_error, retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelConfig, ModelCharacteristics
+from ..config.models import ModelCharacteristics, ModelConfig
 
 # OpenAI model definitions
 OPENAI_MODELS = {
@@ -171,32 +173,31 @@ OPENAI_MODELS = {
 
 class OpenAIProvider(Provider):
     """OpenAI API provider with friendly error handling."""
+
     def __init__(self, model: str):
         api_key = APIKeyManager.get_api_key("openai")
         self.client = AsyncOpenAI(api_key=api_key)
         self.model = model
         self.error_handler = create_openai_error_handler()
-    
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Apply context truncation
         from .context_utils import apply_context_truncation
-        
+
         truncated_messages = apply_context_truncation(
-            messages,
-            provider="openai",
-            model=self.model,
-            logger_name=__name__
+            messages, provider="openai", model=self.model, logger_name=__name__
         )
-        
+
         # Convert to OpenAI format
-        openai_messages = [{"role": m.role, "content": m.content} for m in truncated_messages]
+        openai_messages = [
+            {"role": m.role, "content": m.content} for m in truncated_messages
+        ]
 
         # Initialize usage tracking
         self._last_usage = None
-        
+
         # Retry logic for overloaded/rate limit errors
         max_retries = 3
         base_delay = 1.0
@@ -209,26 +210,32 @@ class OpenAIProvider(Provider):
                     "messages": openai_messages,
                     "max_tokens": 1000,
                     "stream": True,
-                    "stream_options": {"include_usage": True}  # Request usage data
+                    "stream_options": {"include_usage": True},  # Request usage data
                 }
-                
+
                 # Add temperature if specified (OpenAI allows 0-2)
                 if temperature is not None:
                     params["temperature"] = temperature
-                
+
                 stream = await self.client.chat.completions.create(**params)
 
                 async for chunk in stream:
                     # Handle content chunks
-                    if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
+                    if (
+                        chunk.choices
+                        and len(chunk.choices) > 0
+                        and chunk.choices[0].delta.content
+                    ):
                         yield chunk.choices[0].delta.content
-                    
+
                     # Check for usage data in the final chunk
-                    if hasattr(chunk, 'usage') and chunk.usage:
+                    if hasattr(chunk, "usage") and chunk.usage:
                         self._last_usage = {
-                            'prompt_tokens': getattr(chunk.usage, 'prompt_tokens', 0),
-                            'completion_tokens': getattr(chunk.usage, 'completion_tokens', 0),
-                            'total_tokens': getattr(chunk.usage, 'total_tokens', 0)
+                            "prompt_tokens": getattr(chunk.usage, "prompt_tokens", 0),
+                            "completion_tokens": getattr(
+                                chunk.usage, "completion_tokens", 0
+                            ),
+                            "total_tokens": getattr(chunk.usage, "total_tokens", 0),
                         }
                         logger.debug(f"OpenAI usage data captured: {self._last_usage}")
                 return  # Success!
@@ -239,14 +246,15 @@ class OpenAIProvider(Provider):
 
                 # Check if it's a timeout error (by type name or content)
                 if "timeout" in error_type or any(
-                    err in error_str.lower()
-                    for err in ["timeout", "timed out"]
+                    err in error_str.lower() for err in ["timeout", "timed out"]
                 ):
                     if attempt < max_retries - 1:
                         # Calculate exponential backoff with jitter
                         delay = base_delay * (2**attempt) + (0.1 * time.time() % 1)
                         # Log timeout without traceback
-                        logger.info(f"OpenAI request timed out, retrying in {delay:.1f}s")
+                        logger.info(
+                            f"OpenAI request timed out, retrying in {delay:.1f}s"
+                        )
                         await asyncio.sleep(delay)
                         continue
                     else:
@@ -254,7 +262,7 @@ class OpenAIProvider(Provider):
                         friendly_error = self.error_handler.get_friendly_error(e)
                         logger.info(f"Timeout after retries: {friendly_error}")
                         raise Exception(friendly_error) from None
-                
+
                 # Check if it's a rate limit or overloaded error
                 elif any(
                     err in error_str.lower()
@@ -273,7 +281,9 @@ class OpenAIProvider(Provider):
                         if self.error_handler.should_suppress_traceback(e):
                             logger.info(f"Expected API error: {friendly_error}")
                         else:
-                            logger.error(f"API error after retries: {str(e)}", exc_info=True)
+                            logger.error(
+                                f"API error after retries: {str(e)}", exc_info=True
+                            )
                         raise Exception(friendly_error) from None
                 else:
                     # Non-retryable error
@@ -283,7 +293,7 @@ class OpenAIProvider(Provider):
                     else:
                         logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
                     raise Exception(friendly_error) from None
-    
+
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""
         return self._last_usage

@@ -5,7 +5,7 @@ from .tail_display import TailDisplay
 from .verbose_display import VerboseDisplay
 
 __all__ = [
-    'DisplayFilter',
-    'TailDisplay',
-    'VerboseDisplay',
+    "DisplayFilter",
+    "TailDisplay",
+    "VerboseDisplay",
 ]

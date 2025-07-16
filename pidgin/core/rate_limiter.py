@@ -4,8 +4,8 @@ import asyncio
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Any
 from threading import Lock
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import get_config
 from ..io.logger import get_logger
@@ -51,8 +51,8 @@ class StreamingRateLimiter:
             "tokens_per_minute": 60000,
         },
         "local": {
-            "requests_per_minute": float('inf'),  # No limits for local models
-            "tokens_per_minute": float('inf'),
+            "requests_per_minute": float("inf"),  # No limits for local models
+            "tokens_per_minute": float("inf"),
         },
     }
 
@@ -61,7 +61,9 @@ class StreamingRateLimiter:
         self.rate_limits = self._load_limits()
 
         # Track request history per provider
-        self.request_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=SystemDefaults.MAX_EVENT_HISTORY))
+        self.request_history: Dict[str, deque] = defaultdict(
+            lambda: deque(maxlen=SystemDefaults.MAX_EVENT_HISTORY)
+        )
 
         # Track last request time per provider for pacing
         self.last_request_time: Dict[str, float] = {}
@@ -107,7 +109,7 @@ class StreamingRateLimiter:
         config = get_config()
         if not config.get("rate_limiting.enabled", True):
             return 0.0
-        
+
         # Skip rate limiting for local models
         if provider == "local" or provider.startswith("local"):
             return 0.0
@@ -148,7 +150,8 @@ class StreamingRateLimiter:
             # Check token rate using sliding window
             current_tokens = self._get_current_token_rate(provider)
             if (
-                current_tokens + estimated_tokens > token_limit * RateLimits.SAFETY_MARGIN
+                current_tokens + estimated_tokens
+                > token_limit * RateLimits.SAFETY_MARGIN
             ):
                 # Calculate how long to wait for tokens to "expire"
                 token_wait = self._calculate_token_wait(
@@ -161,31 +164,34 @@ class StreamingRateLimiter:
             # Use display utilities if available (for CLI), otherwise fall back to logger
             try:
                 from rich.console import Console
+
                 console = Console()
-                
+
                 # Create compact rate limit display similar to turn counter
                 nord3 = "#4c566a"  # Muted gray color
                 separator_width = min(console.width - 4, 60)
-                
+
                 # Build the rate limit info
                 rate_info = f"⏱ Rate limit pacing for {provider}: {wait_time:.1f}s"
                 timing_info = f"[{nord3}][dim]Request interval: {request_interval:.1f}s | Token cost: {token_interval:.1f}s[/dim][/{nord3}]"
-                
+
                 # Calculate padding for centering
-                plain_rate_info = f"⏱ Rate limit pacing for {provider}: {wait_time:.1f}s"
+                plain_rate_info = (
+                    f"⏱ Rate limit pacing for {provider}: {wait_time:.1f}s"
+                )
                 padding = max(0, (separator_width - len(plain_rate_info)) // 2)
                 centered_rate_info = " " * padding + rate_info
-                
+
                 plain_timing_info = f"Request interval: {request_interval:.1f}s | Token cost: {token_interval:.1f}s"
                 timing_padding = max(0, (separator_width - len(plain_timing_info)) // 2)
                 centered_timing_info = " " * timing_padding + timing_info
-                
+
                 # Print compact display
                 console.print(f"\n[{nord3}]{'─' * separator_width}[/{nord3}]")
                 console.print(f"[{nord3}]{centered_rate_info}[/{nord3}]")
                 console.print(centered_timing_info)
                 console.print(f"[{nord3}]{'─' * separator_width}[/{nord3}]\n")
-                
+
             except ImportError:
                 # Fallback for non-CLI contexts
                 logger.info(
@@ -307,7 +313,9 @@ class StreamingRateLimiter:
             return 0.0
 
         # Find how long until oldest requests expire
-        tokens_to_free = (current_tokens + new_tokens) - (limit * RateLimits.SAFETY_MARGIN)
+        tokens_to_free = (current_tokens + new_tokens) - (
+            limit * RateLimits.SAFETY_MARGIN
+        )
         freed_tokens = 0
 
         for req in recent:

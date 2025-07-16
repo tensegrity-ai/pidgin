@@ -4,27 +4,27 @@ import time
 from pathlib import Path
 from typing import Dict, Optional
 
-from .event_bus import EventBus
-from .types import Agent, Conversation, Message
-from .events import (
-    Event,
-    ConversationStartEvent,
-    ConversationEndEvent,
-    SystemPromptEvent,
-    MessageCompleteEvent,
-)
-from ..ui.tail_display import TailDisplay
-from ..ui.display_filter import DisplayFilter
-from ..providers.event_wrapper import EventAwareProvider
 from ..config import Config
+from ..providers.event_wrapper import EventAwareProvider
+from ..ui.display_filter import DisplayFilter
+from ..ui.tail_display import TailDisplay
+from .event_bus import EventBus
+from .events import (
+    ConversationEndEvent,
+    ConversationStartEvent,
+    Event,
+    MessageCompleteEvent,
+    SystemPromptEvent,
+)
+from .types import Agent, Conversation, Message
 
 
 class ConversationLifecycle:
     """Manages conversation initialization, start/end events, and cleanup."""
-    
+
     def __init__(self, console=None):
         """Initialize lifecycle manager.
-        
+
         Args:
             console: Optional console for output
         """
@@ -40,15 +40,15 @@ class ConversationLifecycle:
         self._end_event_emitted = False
         self.verbose_display = None
         self.tail_display = None
-    
+
     def set_providers(self, base_providers):
         """Set base providers for wrapping.
-        
+
         Args:
             base_providers: Dict of agent_id -> provider
         """
         self.base_providers = base_providers
-    
+
     async def initialize_event_system(
         self,
         conv_dir: Path,
@@ -60,7 +60,7 @@ class ConversationLifecycle:
         prompt_tag: Optional[str] = None,
     ):
         """Initialize EventBus and display components.
-        
+
         Args:
             conv_dir: Conversation directory
             display_mode: Display mode (normal, quiet, verbose)
@@ -73,7 +73,7 @@ class ConversationLifecycle:
         # Database operations happen post-experiment via batch import
         self.db_store = db_store
         self._owns_db_store = False
-        
+
         if existing_bus is None:
             # We don't have a bus yet, create one with event logging only (no db_store)
             # JSONL files are written to the conversation directory
@@ -83,7 +83,7 @@ class ConversationLifecycle:
         else:
             # Using shared bus
             self.bus = existing_bus
-        
+
         # Create event logger and display filter based on mode
         if display_mode == "tail":
             # Use tail display for showing raw events
@@ -91,10 +91,11 @@ class ConversationLifecycle:
         elif display_mode == "verbose":
             # Use verbose display for minimal message viewing
             from ..ui.verbose_display import VerboseDisplay
+
             self.verbose_display = VerboseDisplay(self.bus, self.console, agents)
         else:
             # Use display filter for normal/quiet modes
-            if self.console is not None and display_mode != 'none':
+            if self.console is not None and display_mode != "none":
                 self.display_filter = DisplayFilter(
                     self.console, display_mode, show_timing, agents, prompt_tag
                 )
@@ -103,34 +104,38 @@ class ConversationLifecycle:
                 self.display_filter = None
             # Still create event logger but without console output (for file logging)
             self.tail_display = TailDisplay(self.bus, None)
-        
+
         # Wrap providers with event awareness now that bus exists
         # Create wrapped providers for agent_a and agent_b
         self.wrapped_providers = {}
-        
+
         if "agent_a" in self.base_providers:
             self.wrapped_providers["agent_a"] = EventAwareProvider(
                 self.base_providers["agent_a"], self.bus, "agent_a"
             )
-        
+
         if "agent_b" in self.base_providers:
             self.wrapped_providers["agent_b"] = EventAwareProvider(
                 self.base_providers["agent_b"], self.bus, "agent_b"
             )
-    
+
     def create_conversation(
-        self, conv_id: str, agent_a: Agent, agent_b: Agent, initial_prompt: str,
-        pre_populated_messages: Optional[list] = None
+        self,
+        conv_id: str,
+        agent_a: Agent,
+        agent_b: Agent,
+        initial_prompt: str,
+        pre_populated_messages: Optional[list] = None,
     ) -> Conversation:
         """Create and initialize conversation object.
-        
+
         Args:
             conv_id: Conversation ID
             agent_a: First agent
             agent_b: Second agent
             initial_prompt: Initial prompt
             pre_populated_messages: Optional list of messages for branching
-            
+
         Returns:
             New conversation object
         """
@@ -139,13 +144,13 @@ class ConversationLifecycle:
             initial_prompt=initial_prompt,
         )
         conversation.id = conv_id  # Use our generated ID
-        
+
         # Add pre-populated messages if provided (for branching)
         if pre_populated_messages:
             conversation.messages.extend(pre_populated_messages)
-        
+
         return conversation
-    
+
     async def add_initial_messages(
         self,
         conversation: Conversation,
@@ -154,43 +159,40 @@ class ConversationLifecycle:
         prompt_tag: Optional[str] = None,
     ):
         """Add system prompts and initial message to conversation.
-        
+
         Args:
             conversation: Conversation to add messages to
             system_prompts: Dict of agent_id -> system prompt
             initial_prompt: Initial user prompt
         """
         system_prompt_a = system_prompts["agent_a"]
-        system_prompt_b = system_prompts["agent_b"]
-        
+
         # Get human tag - use provided value or fall back to config
         if prompt_tag is None:
             config = Config()
             human_tag = config.get("defaults.human_tag", "[HUMAN]")
         else:
             human_tag = prompt_tag
-        
+
         # Add system prompt and initial message
         messages_to_add = []
         if system_prompt_a:  # Only add if non-empty (chaos mode has empty prompts)
             messages_to_add.append(
                 Message(role="system", content=system_prompt_a, agent_id="system")
             )
-        
+
         # Format initial prompt with configurable tag
         if human_tag:
             initial_content = f"{human_tag}: {initial_prompt}"
         else:
             initial_content = initial_prompt
-            
+
         messages_to_add.append(
-            Message(
-                role="user", content=initial_content, agent_id="researcher"
-            )
+            Message(role="user", content=initial_content, agent_id="researcher")
         )
-        
+
         conversation.messages.extend(messages_to_add)
-    
+
     async def emit_start_events(
         self,
         conversation: Conversation,
@@ -204,7 +206,7 @@ class ConversationLifecycle:
         prompt_tag: Optional[str] = None,
     ):
         """Emit all start-of-conversation events.
-        
+
         Args:
             conversation: Conversation object
             agent_a: First agent
@@ -229,11 +231,11 @@ class ConversationLifecycle:
                 temperature_b=temperature_b,
             )
         )
-        
+
         # Emit system prompt events for both agents
         system_prompt_a = system_prompts["agent_a"]
         system_prompt_b = system_prompts["agent_b"]
-        
+
         if system_prompt_a:  # Only emit if non-empty
             await self.bus.emit(
                 SystemPromptEvent(
@@ -243,7 +245,7 @@ class ConversationLifecycle:
                     agent_display_name=agent_a.display_name,
                 )
             )
-        
+
         if system_prompt_b:  # Only emit if non-empty
             await self.bus.emit(
                 SystemPromptEvent(
@@ -253,7 +255,7 @@ class ConversationLifecycle:
                     agent_display_name=agent_b.display_name,
                 )
             )
-    
+
     async def emit_end_event_with_reason(
         self,
         conversation: Conversation,
@@ -263,7 +265,7 @@ class ConversationLifecycle:
         reason: Optional[str] = None,
     ):
         """Emit conversation end event with specific reason and cleanup.
-        
+
         Args:
             conversation: Conversation object
             final_turn: Last turn number completed
@@ -275,25 +277,28 @@ class ConversationLifecycle:
         if self._end_event_emitted:
             if self.console:
                 from ..ui.display_utils import DisplayUtils
+
                 display = DisplayUtils(self.console)
-                display.warning("Attempted to emit ConversationEndEvent twice", use_panel=False)
+                display.warning(
+                    "Attempted to emit ConversationEndEvent twice", use_panel=False
+                )
             # Still run cleanup
             await self.cleanup()
             return
-        
+
         # Mark that we've emitted the end event
         self._end_event_emitted = True
-        
+
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Determine end reason if not provided
         if not reason:
             if final_turn + 1 >= max_turns:
                 reason = "max_turns_reached"
             else:
                 reason = "interrupted"
-        
+
         # Emit end event
         await self.bus.emit(
             ConversationEndEvent(
@@ -303,13 +308,13 @@ class ConversationLifecycle:
                 duration_ms=duration_ms,
             )
         )
-        
+
         # Close JSONL log for this conversation
-        if self.bus and hasattr(self.bus, 'close_conversation_log'):
+        if self.bus and hasattr(self.bus, "close_conversation_log"):
             self.bus.close_conversation_log(conversation.id)
-        
+
         await self.cleanup()
-    
+
     async def emit_end_event(
         self,
         conversation: Conversation,
@@ -318,7 +323,7 @@ class ConversationLifecycle:
         start_time: float,
     ):
         """Emit conversation end event and cleanup.
-        
+
         Args:
             conversation: Conversation object
             final_turn: Last turn number completed
@@ -328,11 +333,11 @@ class ConversationLifecycle:
         await self.emit_end_event_with_reason(
             conversation, final_turn, max_turns, start_time, None
         )
-    
+
     async def cleanup(self):
         """Clean up resources without emitting end event."""
         # Stop progress display if active
-        
+
         # Stop event bus if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()

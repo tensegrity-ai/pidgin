@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from .types import Message
@@ -12,7 +12,9 @@ from .types import Message
 class Event:
     """Base event with timestamp and ID."""
 
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc), init=False)
+    timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc), init=False
+    )
     event_id: str = field(default_factory=lambda: uuid4().hex[:8], init=False)
 
 
@@ -193,12 +195,10 @@ class TokenUsageEvent(Event):
     current_usage_rate: float
 
 
-
-
 @dataclass
 class ContextTruncationEvent(Event):
     """Emitted when messages are truncated to fit context window."""
-    
+
     conversation_id: str
     agent_id: str
     provider: str
@@ -212,7 +212,7 @@ class ContextTruncationEvent(Event):
 @dataclass
 class ConversationBranchedEvent(Event):
     """Emitted when a conversation is branched from another."""
-    
+
     conversation_id: str  # New conversation ID
     source_conversation_id: str  # Original conversation ID
     branch_point: int  # Turn number where branch occurred

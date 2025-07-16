@@ -2,86 +2,60 @@
 
 __version__ = "0.1.0"
 
-# Core exports
-from .core import (
-    Conductor,
-    EventBus,
-    Router,
-    Agent,
-    Message,
-    Conversation,
-)
-
 # Analysis exports
-from .analysis import (
-    ConvergenceCalculator,
-)
-
-# Metrics exports
-from .metrics import (
-    calculate_turn_metrics,
-    calculate_structural_similarity,
-    MetricsCalculator,
-)
-
-# UI exports
-from .ui import (
-    DisplayFilter,
-    TailDisplay,
-    VerboseDisplay,
-)
+from .analysis import ConvergenceCalculator
 
 # Config exports
 from .config import (
     Config,
+    DimensionalPromptGenerator,
     get_config,
-    load_config,
     get_model_config,
     get_system_prompts,
-    DimensionalPromptGenerator,
+    load_config,
 )
 
+# Core exports
+from .core import EventBus
+from .core.conductor import Conductor
+
 # IO exports
-from .io import (
-    OutputManager,
-    get_logger,
+from .io import OutputManager, get_logger
+
+# Metrics exports
+from .metrics import (
+    MetricsCalculator,
+    calculate_structural_similarity,
+    calculate_turn_metrics,
 )
+
+# UI exports
+from .ui import DisplayFilter, TailDisplay, VerboseDisplay
 
 __all__ = [
     # Version
-    '__version__',
-    
+    "__version__",
     # Core
-    'Conductor',
-    'EventBus',
-    'Router',
-    'Agent',
-    'Message',
-    'Conversation',
-    
+    "Conductor",
+    "EventBus",
     # Analysis
-    'ConvergenceCalculator',
-    
+    "ConvergenceCalculator",
     # Metrics
-    'calculate_turn_metrics',
-    'calculate_structural_similarity',
-    'MetricsCalculator',
-    
+    "calculate_turn_metrics",
+    "calculate_structural_similarity",
+    "MetricsCalculator",
     # UI
-    'DisplayFilter',
-    'TailDisplay',
-    'VerboseDisplay',
-    
+    "DisplayFilter",
+    "TailDisplay",
+    "VerboseDisplay",
     # Config
-    'Config',
-    'get_config',
-    'load_config',
-    'get_model_config',
-    'get_system_prompts',
-    'DimensionalPromptGenerator',
-    
+    "Config",
+    "get_config",
+    "load_config",
+    "get_model_config",
+    "get_system_prompts",
+    "DimensionalPromptGenerator",
     # IO
-    'OutputManager',
-    'TranscriptManager',
-    'get_logger',
+    "OutputManager",
+    "get_logger",
 ]

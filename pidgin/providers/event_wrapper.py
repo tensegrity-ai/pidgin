@@ -6,15 +6,15 @@ from typing import List
 
 from ..core.event_bus import EventBus
 from ..core.events import (
-    MessageRequestEvent,
-    MessageCompleteEvent,
     APIErrorEvent,
+    MessageCompleteEvent,
+    MessageRequestEvent,
     TokenUsageEvent,
 )
+from ..core.router import DirectRouter  # For message transformation
 from ..core.types import Message
 from .base import Provider
-from ..core.router import DirectRouter  # For message transformation
-from .token_utils import estimate_tokens, estimate_messages_tokens
+from .token_utils import estimate_messages_tokens, estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -61,27 +61,36 @@ class EventAwareProvider:
             agent_messages = self.router._build_agent_history(
                 event.conversation_history, self.agent_id
             )
-            
+
             # Estimate input tokens
             # Try model_name first (for providers that store model name separately)
             # Fall back to model if model_name doesn't exist
-            model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', None)
+            model_name = getattr(self.provider, "model_name", None) or getattr(
+                self.provider, "model", None
+            )
             input_tokens = estimate_messages_tokens(agent_messages, model_name)
 
             # Stream response and buffer chunks (no longer emitting chunk events)
             chunks = []
             # Add timeout to prevent hanging
             import asyncio
+
             timeout_seconds = 300  # 5 minute timeout
-            
+
             try:
                 async with asyncio.timeout(timeout_seconds):
-                    async for chunk in self.provider.stream_response(agent_messages, temperature=event.temperature):
+                    async for chunk in self.provider.stream_response(
+                        agent_messages, temperature=event.temperature
+                    ):
                         chunks.append(chunk)
                         chunk_index += 1
             except asyncio.TimeoutError:
-                logger.error(f"Provider {self.provider.__class__.__name__} timed out after {timeout_seconds}s")
-                raise Exception(f"Provider response timed out after {timeout_seconds} seconds")
+                logger.error(
+                    f"Provider {self.provider.__class__.__name__} timed out after {timeout_seconds}s"
+                )
+                raise Exception(
+                    f"Provider response timed out after {timeout_seconds} seconds"
+                )
 
             # Build complete message
             content = "".join(chunks)
@@ -93,17 +102,21 @@ class EventAwareProvider:
 
             # Calculate metrics
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Get provider name for model-specific token counting
-            provider_name = self.provider.__class__.__name__.replace("Provider", "").lower()
-            model_name = getattr(self.provider, 'model_name', None) or getattr(self.provider, 'model', None)
-            
+            provider_name = self.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower()
+            model_name = getattr(self.provider, "model_name", None) or getattr(
+                self.provider, "model", None
+            )
+
             # Try to get actual token usage from provider
             tokens_used = 0
-            if hasattr(self.provider, 'get_last_usage'):
+            if hasattr(self.provider, "get_last_usage"):
                 usage_data = self.provider.get_last_usage()
-                if usage_data and 'completion_tokens' in usage_data:
-                    tokens_used = usage_data['completion_tokens']
+                if usage_data and "completion_tokens" in usage_data:
+                    tokens_used = usage_data["completion_tokens"]
                 else:
                     # Fall back to estimation
                     tokens_used = estimate_tokens(content, model_name)
@@ -121,72 +134,87 @@ class EventAwareProvider:
                     duration_ms=duration_ms,
                 )
             )
-            
+
             # Emit token usage event if we have actual usage data
-            if hasattr(self.provider, 'get_last_usage'):
+            if hasattr(self.provider, "get_last_usage"):
                 usage_data = self.provider.get_last_usage()
-                if usage_data and 'total_tokens' in usage_data:
+                if usage_data and "total_tokens" in usage_data:
                     # Extract provider name and model
-                    provider_name = self.provider.__class__.__name__.replace("Provider", "")
+                    provider_name = self.provider.__class__.__name__.replace(
+                        "Provider", ""
+                    )
                     # Get model name, ensuring we get a string not an object
-                    model_name = getattr(self.provider, 'model_name', None)
+                    model_name = getattr(self.provider, "model_name", None)
                     if not model_name:
-                        model_obj = getattr(self.provider, 'model', None)
-                        if model_obj and hasattr(model_obj, 'model_name'):
+                        model_obj = getattr(self.provider, "model", None)
+                        if model_obj and hasattr(model_obj, "model_name"):
                             # Google's GenerativeModel has model_name attribute
                             model_name = model_obj.model_name
                         elif isinstance(model_obj, str):
                             model_name = model_obj
                         else:
-                            model_name = 'unknown'
-                    
+                            model_name = "unknown"
+
                     # Ensure model_name is a string
                     if not isinstance(model_name, str):
                         model_name = str(model_name)
-                    
+
                     # Get token tracker and record usage FIRST
                     from ..providers.token_tracker import get_token_tracker
+
                     tracker = get_token_tracker()
-                    
+
                     # Record the usage before getting stats so current_rate includes this request
-                    tracker.record_usage(provider_name.lower(), usage_data['total_tokens'], model_name)
-                    
+                    tracker.record_usage(
+                        provider_name.lower(), usage_data["total_tokens"], model_name
+                    )
+
                     # Now get the updated usage stats
                     usage_stats = tracker.get_usage_stats(provider_name.lower())
-                    
+
                     # Create enhanced token usage event
                     token_event = TokenUsageEvent(
                         conversation_id=event.conversation_id,
                         provider=provider_name,
-                        tokens_used=usage_data['total_tokens'],
-                        tokens_per_minute_limit=usage_stats['rate_limit'],
-                        current_usage_rate=usage_stats['current_rate'],
+                        tokens_used=usage_data["total_tokens"],
+                        tokens_per_minute_limit=usage_stats["rate_limit"],
+                        current_usage_rate=usage_stats["current_rate"],
                     )
                     # Add model as custom attribute (ensure it's a string)
                     # CRITICAL: Only set model if it's actually a string to prevent serialization issues
-                    if isinstance(model_name, str) and model_name != 'unknown':
+                    if isinstance(model_name, str) and model_name != "unknown":
                         # Double-check it's really a string and not an object
                         if type(model_name) is str:
                             token_event.model = model_name
                             # Debug log to track what we're setting
-                            logger.debug(f"Set token_event.model to: {model_name} (type: {type(model_name)})")
+                            logger.debug(
+                                f"Set token_event.model to: {model_name} (type: {type(model_name)})"
+                            )
                         else:
-                            logger.warning(f"Model name is not a pure string: {type(model_name)}")
-                    
+                            logger.warning(
+                                f"Model name is not a pure string: {type(model_name)}"
+                            )
+
                     # Handle different naming conventions (Anthropic vs OpenAI)
-                    token_event.prompt_tokens = usage_data.get('prompt_tokens', 0) or usage_data.get('input_tokens', 0)
-                    token_event.completion_tokens = usage_data.get('completion_tokens', 0) or usage_data.get('output_tokens', 0)
-                    
+                    token_event.prompt_tokens = usage_data.get(
+                        "prompt_tokens", 0
+                    ) or usage_data.get("input_tokens", 0)
+                    token_event.completion_tokens = usage_data.get(
+                        "completion_tokens", 0
+                    ) or usage_data.get("output_tokens", 0)
+
                     # Final safety check before emitting
-                    if hasattr(token_event, 'model'):
-                        model_val = getattr(token_event, 'model')
+                    if hasattr(token_event, "model"):
+                        model_val = getattr(token_event, "model")
                         if not isinstance(model_val, str):
-                            logger.error(f"CRITICAL: token_event.model is not a string! Type: {type(model_val)}")
+                            logger.error(
+                                f"CRITICAL: token_event.model is not a string! Type: {type(model_val)}"
+                            )
                             # Remove the problematic attribute
-                            delattr(token_event, 'model')
-                    
+                            delattr(token_event, "model")
+
                     await self.bus.emit(token_event)
-                    
+
         except Exception as e:
             # Emit error event
             error_str = str(e)
@@ -215,6 +243,6 @@ class EventAwareProvider:
 
             # Log the error
             logger.error(f"Error in handle_message_request: {e}", exc_info=True)
-            
+
             # Still raise to let conductor handle it
             raise

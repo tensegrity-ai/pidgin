@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 class ProviderErrorHandler:
     """Base error handler with common error mapping functionality."""
-    
+
     # Base friendly errors common to most providers
     BASE_FRIENDLY_ERRORS: Dict[str, str] = {
         "rate_limit": "Rate limit reached. The system will automatically retry...",
@@ -19,7 +19,7 @@ class ProviderErrorHandler:
         "readtimeout": "Request timed out. The system will automatically retry...",
         "read timeout": "Request timed out. The system will automatically retry...",
     }
-    
+
     # Base errors that should suppress traceback
     BASE_SUPPRESS_TRACEBACK: List[str] = [
         "invalid_api_key",
@@ -34,50 +34,53 @@ class ProviderErrorHandler:
         "readtimeout",
         "read timeout",
     ]
-    
-    def __init__(self, provider_name: str, 
-                 custom_errors: Optional[Dict[str, str]] = None,
-                 custom_suppress: Optional[List[str]] = None):
+
+    def __init__(
+        self,
+        provider_name: str,
+        custom_errors: Optional[Dict[str, str]] = None,
+        custom_suppress: Optional[List[str]] = None,
+    ):
         """Initialize error handler with provider-specific customizations.
-        
+
         Args:
             provider_name: Name of the provider (for error messages)
             custom_errors: Provider-specific error mappings to add/override
             custom_suppress: Provider-specific traceback suppression patterns
         """
         self.provider_name = provider_name
-        
+
         # Merge base and custom error mappings
         self.friendly_errors = self.BASE_FRIENDLY_ERRORS.copy()
         if custom_errors:
             self.friendly_errors.update(custom_errors)
-            
+
         # Merge base and custom suppression patterns
         self.suppress_traceback_errors = self.BASE_SUPPRESS_TRACEBACK.copy()
         if custom_suppress:
             self.suppress_traceback_errors.extend(custom_suppress)
-    
+
     def get_friendly_error(self, error: Exception) -> str:
         """Convert technical API errors to user-friendly messages.
-        
+
         Args:
             error: The exception to convert
-            
+
         Returns:
             User-friendly error message
         """
         error_str = str(error).lower()
-        error_type = getattr(error, '__class__.__name__', '').lower()
-        
+        error_type = getattr(error, "__class__.__name__", "").lower()
+
         # Check error message content and type
         # First check for exact matches in error type
         if error_type in self.friendly_errors:
             return self.friendly_errors[error_type]
-            
+
         # Then check for patterns in error string
         for key, friendly_msg in self.friendly_errors.items():
             # Check if key (with underscores replaced) is in error string
-            if key.replace('_', ' ') in error_str:
+            if key.replace("_", " ") in error_str:
                 return friendly_msg
             # Check if key is in error type name
             if key in error_type:
@@ -91,24 +94,24 @@ class ProviderErrorHandler:
             # Special handling for resource exhausted - it's a rate limit
             if key == "resource_exhausted" and "resource exhausted" in error_str:
                 return friendly_msg
-                
+
         # Fallback to original error
         return str(error)
-    
+
     def should_suppress_traceback(self, error: Exception) -> bool:
         """Check if we should suppress the full traceback for this error.
-        
+
         Args:
             error: The exception to check
-            
+
         Returns:
             True if traceback should be suppressed
         """
         error_str = str(error).lower()
-        error_type = getattr(error, '__class__.__name__', '').lower()
-        
+        error_type = getattr(error, "__class__.__name__", "").lower()
+
         return any(
-            phrase in error_str or phrase in error_type 
+            phrase in error_str or phrase in error_type
             for phrase in self.suppress_traceback_errors
         )
 
@@ -141,7 +144,7 @@ def create_anthropic_error_handler() -> ProviderErrorHandler:
     return ProviderErrorHandler(
         provider_name="Anthropic",
         custom_errors=ANTHROPIC_ERRORS,
-        custom_suppress=["overloaded_error", "permission_error"]
+        custom_suppress=["overloaded_error", "permission_error"],
     )
 
 
@@ -150,7 +153,7 @@ def create_openai_error_handler() -> ProviderErrorHandler:
     return ProviderErrorHandler(
         provider_name="OpenAI",
         custom_errors=OPENAI_ERRORS,
-        custom_suppress=["insufficient_quota", "readtimeout"]
+        custom_suppress=["insufficient_quota", "readtimeout"],
     )
 
 
@@ -159,6 +162,12 @@ def create_google_error_handler() -> ProviderErrorHandler:
     return ProviderErrorHandler(
         provider_name="Google",
         custom_errors=GOOGLE_ERRORS,
-        custom_suppress=["quota_exceeded", "invalid_argument", "resource_exhausted", 
-                         "deadline_exceeded", "permission_denied", "unavailable"]
+        custom_suppress=[
+            "quota_exceeded",
+            "invalid_argument",
+            "resource_exhausted",
+            "deadline_exceeded",
+            "permission_denied",
+            "unavailable",
+        ],
     )

@@ -4,14 +4,14 @@
 import os
 
 # Force color output for rich-click
-os.environ['FORCE_COLOR'] = '1'
-os.environ['CLICOLOR_FORCE'] = '1'
+os.environ["FORCE_COLOR"] = "1"
+os.environ["CLICOLOR_FORCE"] = "1"
 
 # Store the original working directory before any imports that might change it
 # When running with python -m, the working directory may be changed
-ORIGINAL_CWD = os.environ.get('PWD', os.getcwd())
+ORIGINAL_CWD = os.environ.get("PWD", os.getcwd())
 # Set it in environment for other modules to use
-os.environ['PIDGIN_ORIGINAL_CWD'] = ORIGINAL_CWD
+os.environ["PIDGIN_ORIGINAL_CWD"] = ORIGINAL_CWD
 
 # Configure rich-click BEFORE importing
 import rich_click.rich_click as rc
@@ -22,6 +22,7 @@ rc.FORCE_TERMINAL = True
 
 # Configure rich console directly
 from rich.console import Console
+
 rc.CONSOLE = Console(force_terminal=True, color_system="truecolor")
 
 rc.USE_RICH_MARKUP = True
@@ -48,16 +49,17 @@ rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 # Now import as click
 import rich_click as click
 
+from ..ui.display_utils import DisplayUtils
+from .branch import branch
 from .constants import BANNER
+from .info import info
+from .monitor import monitor
 from .run import run
 from .stop import stop
-from .monitor import monitor
-from .info import info
-from .branch import branch
-from ..ui.display_utils import DisplayUtils
 
 console = Console()
 display = DisplayUtils(console)
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
@@ -65,7 +67,8 @@ def cli():
     """AI conversation research tool for studying emergent communication patterns.
 
     Pidgin enables controlled experiments between AI agents to discover how they
-    develop communication patterns, convergence behaviors, and linguistic adaptations.
+    develop communication patterns, convergence behaviors, and linguistic
+    adaptations.
 
     [bold]QUICK START:[/bold]
     pidgin run -a claude -b gpt
@@ -94,8 +97,6 @@ def cli():
     pass
 
 
-
-
 # Register commands
 cli.add_command(run)
 cli.add_command(stop)
@@ -103,15 +104,18 @@ cli.add_command(monitor)
 cli.add_command(info)
 cli.add_command(branch)
 
+
 def main():
     """Main entry point."""
     # Check if help is being requested
     import sys
-    if '--help' in sys.argv or '-h' in sys.argv or len(sys.argv) == 1:
+
+    if "--help" in sys.argv or "-h" in sys.argv or len(sys.argv) == 1:
         console.print(BANNER)
-    
+
     # Run the CLI
     cli()
+
 
 if __name__ == "__main__":
     main()

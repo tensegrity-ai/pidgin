@@ -4,11 +4,12 @@ This module defines the fundamental data structures used throughout Pidgin
 for representing conversations, messages, agents, and turns.
 """
 
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 from uuid import uuid4
-from enum import Enum
-from dataclasses import dataclass, field
+
 from pydantic import BaseModel, Field
 
 
@@ -59,17 +60,17 @@ class ConversationTurn:
 
 class Message(BaseModel):
     """Represents a single message in a conversation.
-    
+
     Messages track both the content and metadata about who sent them
     and when. The role field follows OpenAI conventions ("user"/"assistant")
     while agent_id tracks the specific sender.
-    
+
     Attributes:
         role: Either "user" or "assistant" following API conventions
         content: The actual text content of the message
         agent_id: Identifier of who sent the message (agent_a, agent_b, system, etc.)
         timestamp: When the message was created
-        
+
     Example:
         msg = Message(
             role="assistant",
@@ -77,6 +78,7 @@ class Message(BaseModel):
             agent_id="agent_a"
         )
     """
+
     role: str  # "user" or "assistant"
     content: str
     agent_id: str  # Who sent the message (agent_a, agent_b, system, human, mediator)
@@ -85,17 +87,17 @@ class Message(BaseModel):
 
 class Agent(BaseModel):
     """Represents an AI agent in a conversation.
-    
+
     Agents are the participants in conversations. Each agent has a specific
     model backing it and optional configuration like temperature.
-    
+
     Attributes:
         id: Unique identifier (usually "agent_a" or "agent_b")
         model: Model identifier (e.g., "gpt-4", "claude-3-opus")
         display_name: Optional custom name for display
         model_shortname: Cached shortname from model config
         temperature: Optional temperature override for this agent
-        
+
     Example:
         agent = Agent(
             id="agent_a",
@@ -104,6 +106,7 @@ class Agent(BaseModel):
             temperature=0.7
         )
     """
+
     id: str
     model: str
     display_name: Optional[str] = None
@@ -113,23 +116,24 @@ class Agent(BaseModel):
 
 class Conversation(BaseModel):
     """Represents a complete conversation between agents.
-    
+
     Conversations track all messages exchanged between agents along with
     metadata about when they occurred and what prompt initiated them.
-    
+
     Attributes:
         id: Unique conversation identifier (auto-generated)
         agents: List of participating agents
         messages: All messages in chronological order
         started_at: When the conversation began
         initial_prompt: The prompt that started the conversation
-        
+
     Example:
         conv = Conversation(
             agents=[agent_a, agent_b],
             initial_prompt="Let's discuss philosophy"
         )
     """
+
     id: str = Field(default_factory=lambda: uuid4().hex[:8])
     agents: List[Agent]
     messages: List[Message] = []

@@ -1,18 +1,17 @@
 import logging
-from anthropic import AsyncAnthropic
-from typing import List, AsyncIterator, AsyncGenerator, Optional, Dict
-from ..core.types import Message
-from .base import Provider
-from .retry_utils import retry_with_exponential_backoff, is_overloaded_error
-from .error_utils import create_anthropic_error_handler
-from .api_key_manager import APIKeyManager
 from dataclasses import dataclass
-from typing import Literal
+from typing import AsyncGenerator, AsyncIterator, Dict, List, Literal, Optional
+
+from anthropic import AsyncAnthropic
+
+from ..config.models import ModelCharacteristics, ModelConfig
+from ..core.types import Message
+from .api_key_manager import APIKeyManager
+from .base import Provider
+from .error_utils import create_anthropic_error_handler
+from .retry_utils import is_overloaded_error, retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
-
-# Import model config classes from central location
-from ..config.models import ModelConfig, ModelCharacteristics
 
 # Anthropic model definitions
 ANTHROPIC_MODELS = {
@@ -93,26 +92,26 @@ ANTHROPIC_MODELS = {
 
 class AnthropicProvider(Provider):
     """Anthropic API provider with friendly error handling."""
+
     def __init__(self, model: str):
         api_key = APIKeyManager.get_api_key("anthropic")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
         self.error_handler = create_anthropic_error_handler()
-    
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Apply context truncation
-        from .context_utils import apply_context_truncation, split_system_and_conversation_messages
-        
-        truncated_messages = apply_context_truncation(
-            messages,
-            provider="anthropic",
-            model=self.model,
-            logger_name=__name__
+        from .context_utils import (
+            apply_context_truncation,
+            split_system_and_conversation_messages,
         )
-        
+
+        truncated_messages = apply_context_truncation(
+            messages, provider="anthropic", model=self.model, logger_name=__name__
+        )
+
         # Extract system messages and conversation messages
         system_messages, conversation_messages = split_system_and_conversation_messages(
             truncated_messages
@@ -124,7 +123,7 @@ class AnthropicProvider(Provider):
             "messages": conversation_messages,
             "max_tokens": 1000,
         }
-        
+
         # Add temperature if specified (Anthropic caps at 1.0)
         if temperature is not None:
             api_params["temperature"] = min(temperature, 1.0)
@@ -148,42 +147,44 @@ class AnthropicProvider(Provider):
                     yield text
                 # Capture usage data after stream completes
                 final_message = await stream.get_final_message()
-                if hasattr(final_message, 'usage'):
+                if hasattr(final_message, "usage"):
                     self._last_usage = {
-                        'input_tokens': getattr(final_message.usage, 'input_tokens', 0),
-                        'output_tokens': getattr(final_message.usage, 'output_tokens', 0),
-                        'total_tokens': 0  # Will be calculated
+                        "input_tokens": getattr(final_message.usage, "input_tokens", 0),
+                        "output_tokens": getattr(
+                            final_message.usage, "output_tokens", 0
+                        ),
+                        "total_tokens": 0,  # Will be calculated
                     }
-                    self._last_usage['total_tokens'] = (
-                        self._last_usage['input_tokens'] + 
-                        self._last_usage['output_tokens']
+                    self._last_usage["total_tokens"] = (
+                        self._last_usage["input_tokens"]
+                        + self._last_usage["output_tokens"]
                     )
-        
+
         # Initialize usage tracking
         self._last_usage = None
-        
+
         # Use retry wrapper with exponential backoff
         try:
             async for chunk in retry_with_exponential_backoff(
                 _make_api_call,
                 max_retries=3,
                 base_delay=1.0,
-                retry_on=(Exception,)  # Retry on all exceptions for now
+                retry_on=(Exception,),  # Retry on all exceptions for now
             ):
                 yield chunk
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)
-            
+
             # Log appropriately based on error type
             if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected API error: {friendly_error}")
             else:
                 logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
-            
+
             # Create a clean exception with friendly message
             raise Exception(friendly_error) from None
-    
+
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""
         return self._last_usage

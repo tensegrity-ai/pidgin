@@ -1,15 +1,17 @@
 # tests/unit/test_types.py
 """Test core type definitions."""
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from pidgin.core.types import (
-    ConversationRole,
-    InterventionSource,
-    ConversationTurn,
-    Message,
     Agent,
     Conversation,
+    ConversationRole,
+    ConversationTurn,
+    InterventionSource,
+    Message,
 )
 
 

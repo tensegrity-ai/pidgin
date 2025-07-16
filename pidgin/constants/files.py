@@ -1,5 +1,6 @@
 """File extension and path pattern constants."""
 
+
 # File extensions
 class FileExtensions:
     JSONL = ".jsonl"
@@ -14,6 +15,7 @@ class FileExtensions:
     DUCKDB = ".duckdb"
     IPYNB = ".ipynb"
 
+
 # Directory names
 class DirectoryNames:
     EXPERIMENTS = "experiments"
@@ -22,6 +24,7 @@ class DirectoryNames:
     LOGS = "logs"
     CONFIG = ".config"
     PIDGIN = "pidgin"
+
 
 # File patterns
 class FilePatterns:
@@ -32,12 +35,14 @@ class FilePatterns:
     IMPORTED_MARKER = ".imported"
     IMPORTING_MARKER = ".importing"
 
+
 # Special files
 class SpecialFiles:
     MANIFEST = "manifest.json"
     CLAUDE_MD = "CLAUDE.md"
     TODO_MD = "TODO.md"
     README_MD = "README.md"
+
 
 # Default paths
 DEFAULT_OUTPUT_DIR = "pidgin_output"

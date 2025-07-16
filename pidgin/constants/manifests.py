@@ -1,5 +1,6 @@
 """Manifest file field names and structure constants."""
 
+
 # Manifest field names
 class ManifestFields:
     EXPERIMENT_ID = "experiment_id"
@@ -15,7 +16,7 @@ class ManifestFields:
     RUNNING_CONVERSATIONS = "running_conversations"
     CONVERSATIONS = "conversations"
     ERROR = "error"
-    
+
     # Conversation entry fields
     class Conversation:
         CONVERSATION_ID = "conversation_id"
@@ -26,6 +27,7 @@ class ManifestFields:
         ERROR = "error"
         TOTAL_TURNS = "total_turns"
         FINAL_CONVERGENCE = "final_convergence"
+
 
 # Manifest version
 MANIFEST_VERSION = "2.0"

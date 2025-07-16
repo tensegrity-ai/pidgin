@@ -8,9 +8,9 @@ from pathlib import Path
 import rich_click as click
 from rich.console import Console
 
-from .constants import NORD_GREEN, NORD_RED, NORD_YELLOW, NORD_CYAN
 from ..experiments import ExperimentManager
 from ..ui.display_utils import DisplayUtils
+from .constants import NORD_CYAN, NORD_GREEN, NORD_RED, NORD_YELLOW
 
 console = Console()
 display = DisplayUtils(console)
@@ -20,11 +20,11 @@ from . import ORIGINAL_CWD
 
 
 @click.command()
-@click.argument('experiment_id', required=False)
-@click.option('--all', is_flag=True, help='Stop all running experiments')
+@click.argument("experiment_id", required=False)
+@click.option("--all", is_flag=True, help="Stop all running experiments")
 def stop(experiment_id, all):
     """Stop a running experiment gracefully.
-    
+
     You can use the experiment ID, shortened ID, or name.
     Use --all to stop all running experiments at once.
     """
@@ -33,13 +33,13 @@ def stop(experiment_id, all):
         display.warning(
             "Stopping ALL experiments",
             context="This will stop ALL running experiments!",
-            use_panel=False
+            use_panel=False,
         )
-        
+
         # Find all daemon PIDs
         active_dir = Path(ORIGINAL_CWD) / "pidgin_output" / "experiments" / "active"
         daemon_pids = []
-        
+
         if active_dir.exists():
             for pid_file in active_dir.glob("*.pid"):
                 try:
@@ -49,9 +49,9 @@ def stop(experiment_id, all):
                 except (OSError, ValueError):
                     # PID file is inaccessible or contains invalid data
                     pass
-        
+
         display.status(f"Found {len(daemon_pids)} running daemons", style="nord8")
-        
+
         # Kill each daemon
         for pid, exp_id in daemon_pids:
             try:
@@ -61,25 +61,27 @@ def stop(experiment_id, all):
                 display.dim(f"  ! {exp_id} already dead (PID: {pid})")
             except Exception as e:
                 display.error(f"Failed to stop {exp_id}: {e}", use_panel=False)
-        
+
         console.print()  # Add spacing
         display.success("All experiments stopped")
     else:
         if not experiment_id:
-            display.error("Either provide an experiment ID or use --all", use_panel=False)
+            display.error(
+                "Either provide an experiment ID or use --all", use_panel=False
+            )
             return
-            
+
         manager = ExperimentManager(
             base_dir=Path(ORIGINAL_CWD) / "pidgin_output" / "experiments"
         )
-        
+
         display.status(f"Stopping experiment {experiment_id}...", style="nord13")
-        
+
         if manager.stop_experiment(experiment_id):
             display.success(f"Stopped experiment {experiment_id}")
         else:
             display.error(
                 f"Failed to stop experiment {experiment_id}",
                 context="It may not be running",
-                use_panel=False
+                use_panel=False,
             )

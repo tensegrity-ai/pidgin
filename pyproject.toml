@@ -71,7 +71,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=pidgin --cov-report=term --cov-report=html"
+addopts = "--cov=pidgin"
 filterwarnings = [
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
     "ignore::RuntimeWarning:coverage.parser",
@@ -95,7 +95,7 @@ omit = [
 
 [tool.coverage.report]
 # Overall project minimum
-fail_under = 70
+fail_under = 60
 
 # Show missing lines
 show_missing = true

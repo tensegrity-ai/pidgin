@@ -5,9 +5,10 @@ CONTEXT (how they relate), TOPIC (what they discuss), and MODE (how they think).
 """
 
 import random
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
-from dataclasses import dataclass
+
 import yaml
 
 from ..io.logger import get_logger
@@ -58,7 +59,7 @@ class DimensionalPromptGenerator:
             "science": "how the universe works",
             "creativity": "the creative process and imagination",
             "ethics": "moral reasoning and ethical questions",
-            "meta": "our own conversation and thinking"
+            "meta": "our own conversation and thinking",
         },
     )
 
@@ -75,7 +76,6 @@ class DimensionalPromptGenerator:
             "supportive": "I encourage you to build on each other's ideas constructively.",
         },
     )
-
 
     def __init__(self):
         """Initialize the generator with the three core dimensions."""
@@ -147,7 +147,7 @@ class DimensionalPromptGenerator:
                 f"Missing required dimension 'relationship'. "
                 f"Available values: {', '.join(self.RELATIONSHIP_DIMENSION.values.keys())}"
             )
-        
+
         if "topic" not in parsed:
             raise ValueError(
                 f"Missing required dimension 'topic'. "
@@ -163,25 +163,24 @@ class DimensionalPromptGenerator:
                         f"Available: {', '.join(self.dimensions[dim_name].values.keys())}"
                     )
 
-
     def _build_prompt(self, parsed: Dict[str, str], topic_value: str) -> str:
         """Build the prompt from dimensions using simplified composition logic."""
         # 1. Get relationship template (required)
         relationship = parsed.get("relationship", "peers")
-        prompt = self.RELATIONSHIP_DIMENSION.values[relationship].format(topic=topic_value)
-        
+        prompt = self.RELATIONSHIP_DIMENSION.values[relationship].format(
+            topic=topic_value
+        )
+
         # 2. Add modifier if specified (optional)
         if "modifier" in parsed:
             modifier_sentence = self.MODIFIER_DIMENSION.values[parsed["modifier"]]
             prompt = f"{prompt} {modifier_sentence}"
-        
+
         # 3. Ensure proper ending
         if not prompt.rstrip().endswith((".", "!", "?", ":")):
             prompt = prompt.rstrip() + "."
-        
+
         return prompt
-
-
 
     def get_all_dimensions(self) -> Dict[str, Dimension]:
         """Get all available dimensions."""
