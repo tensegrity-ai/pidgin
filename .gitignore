@@ -1,129 +1,42 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
+*.pyc
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# Virtual environments
-venv/
-ENV/
-env/
-.venv
-
-# IDEs
-.vscode/
-.idea/
-.claude/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Testing
+# Testing & Coverage
 .coverage
 .pytest_cache/
-htmlcov/
-.tox/
-.nox/
 .hypothesis/
-
-# Type checking
 .mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
 
-# Pidgin specific
+# Build & Distribution
+dist/
+*.egg-info/
+
+# Project Output
+pidgin_output/
 .pidgin_data/
-pidgin_data/
-~/.pidgin_data/
-
-# Conversation outputs (if running in project dir)
-transcripts/
-checkpoints/
-*.checkpoint
-*.transcript
-
-# Config files with potential secrets
-pidgin.yaml
-.pidgin.yaml
-config.yaml
-.env
-.env.local
-*.env
-.envrc
-
-# But allow example/default configs
-!pidgin.yaml.example
-!pidgin.yaml.default
-!.env.example
-
-# Logs
 *.log
 logs/
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-.cache/
-
-# macOS
+# IDE & OS
 .DS_Store
-.AppleDouble
-.LSOverride
+.claude/
 
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+# Environment
+.env
+.env.*
+*.env
 
-# Linux
-.directory
+# Backup files
+*~
+*.bak
+*.py-e
 
-# Jupyter Notebooks (if used for analysis)
-.ipynb_checkpoints
-*.ipynb
-notebooks/
-
-# Documentation builds
-docs/_build/
-docs/.doctrees/
-
-# Example scripts (generated during testing)
+# Examples (if generated during testing)
 examples/
-
-# Event data (future)
-events/
-event_logs/
-*.events
-
-# Experimental data
-/experiments/
-experiment_results/
-batch_runs/
 
 # API keys - NEVER commit these
 *_api_key*
 *_API_KEY*
-api_keys/
-secrets/pidgin_output/
-pidgin_output/
