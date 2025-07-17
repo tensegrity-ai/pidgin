@@ -1,0 +1,183 @@
+# Quickstart Guide
+
+Get up and running with Pidgin in 5 minutes. This guide assumes you've already [installed Pidgin](installation.md).
+
+## Your First Conversation
+
+### 1. Test Installation (No API Keys Required)
+
+Start with the built-in test model to verify everything works:
+
+```bash
+pidgin run -a local:test -b local:test -t 5
+```
+
+This runs 5 turns between two test agents that echo and transform each other's messages.
+
+### 2. Run a Real Conversation
+
+With API keys configured, run a conversation between Claude and GPT:
+
+```bash
+pidgin run -a claude-3-haiku -b gpt-4o-mini -t 10 \
+  -p "Let's explore the concept of emergence in complex systems"
+```
+
+**What's happening:**
+- `-a claude-3-haiku`: Agent A uses Claude 3 Haiku
+- `-b gpt-4o-mini`: Agent B uses GPT-4o Mini  
+- `-t 10`: Run for 10 turns
+- `-p "..."`: Initial prompt to start the conversation
+
+### 3. Watch the Output
+
+By default, Pidgin shows a progress panel with:
+- Current turn number
+- Real-time convergence score
+- Message preview
+- Token usage
+
+```
+┌─ Experiment: cosmic-prism ──────────────────────────┐
+│ Turn 5/20 • Convergence: 0.234 ↑                   │
+│                                                     │
+│ agent_a: The recursive nature of self-reference... │
+│ agent_b: Indeed, the paradox emerges when we...    │
+│                                                     │
+│ Tokens: 1,247 • Cost: $0.0023                     │
+└─────────────────────────────────────────────────────┘
+```
+
+## Understanding Output Files
+
+After running, find your results in `pidgin_output/`:
+
+```
+pidgin_output/
+└── cosmic-prism_2024-07-16/
+    ├── events/
+    │   └── events.jsonl         # All events (source of truth)
+    ├── transcripts/
+    │   └── cosmic-prism_0.md    # Human-readable transcript
+    └── state/
+        └── metrics_0.json       # Convergence metrics
+```
+
+### View the Transcript
+
+```bash
+cat pidgin_output/cosmic-prism_2024-07-16/transcripts/cosmic-prism_0.md
+```
+
+### Analyze the Events
+
+```bash
+# Count events by type
+cat pidgin_output/cosmic-prism_2024-07-16/events/events.jsonl | \
+  jq -r '.event_type' | sort | uniq -c
+
+# Extract just the messages
+cat pidgin_output/cosmic-prism_2024-07-16/events/events.jsonl | \
+  jq -r 'select(.event_type == "message_complete") | .content'
+```
+
+## Common Workflows
+
+### Different Display Modes
+
+```bash
+# Verbose mode - see full messages
+pidgin run -a claude -b gpt -t 10 --display verbose
+
+# Monitor mode - minimal output  
+pidgin run -a claude -b gpt -t 10 --display monitor
+
+# Tail mode - like tail -f for conversations
+pidgin run -a claude -b gpt -t 10 --display tail
+```
+
+### Use Specific Model Versions
+
+```bash
+# List available models
+pidgin info models
+
+# Use specific versions
+pidgin run -a claude-3-5-sonnet-20241022 -b gpt-4-turbo -t 20
+```
+
+### Run an Experiment
+
+Create a YAML specification for reproducible experiments:
+
+```yaml
+# experiment.yaml
+conversations:
+  - agent_a: claude-3-haiku
+    agent_b: gpt-4o-mini
+    initial_prompt: "What is consciousness?"
+    turns: 20
+    temperature_a: 0.7
+    temperature_b: 0.9
+```
+
+Run it:
+
+```bash
+pidgin experiment run experiment.yaml
+```
+
+## Monitoring Long Conversations
+
+For conversations over 50 turns, use the monitor:
+
+```bash
+# In terminal 1: Run the conversation
+pidgin run -a claude -b gpt -t 200 --display monitor
+
+# In terminal 2: Watch system-wide status
+pidgin monitor
+```
+
+## Quick Analysis
+
+After running a conversation:
+
+```bash
+# See basic stats
+pidgin info output cosmic-prism
+
+# Import to DuckDB for analysis
+pidgin analyze cosmic-prism
+```
+
+This creates a Jupyter notebook with pre-loaded queries and visualizations.
+
+## Next Steps
+
+- **Explore display modes**: Try `--display verbose` for full messages
+- **Run experiments**: Create YAML files for batch conversations
+- **Branch conversations**: Use `pidgin branch` to explore alternate paths
+- **Analyze patterns**: Use the generated Jupyter notebooks
+
+## Tips
+
+1. **Start small**: Use 5-10 turns while learning
+2. **Use cheap models**: Haiku and GPT-4o-mini for experimentation
+3. **Save money**: Set temperature to 0 for deterministic outputs
+4. **Monitor costs**: Check token usage in the progress panel
+
+## Getting Help
+
+```bash
+# General help
+pidgin --help
+
+# Command-specific help
+pidgin run --help
+
+# List all commands
+pidgin info commands
+```
+
+See the [CLI Usage Guide](cli-usage.md) for comprehensive documentation.
