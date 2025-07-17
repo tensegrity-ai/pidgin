@@ -286,6 +286,30 @@ Pidgin is a comprehensive research tool with:
 - `pidgin/experiments/` - Batch experiment runner with daemon support
 - `pidgin/ui/` - Display components and filters
 
+## Development
+
+```bash
+# Install development dependencies
+poetry install
+
+# Run tests
+poetry run pidgin-test
+
+# Format code
+poetry run pidgin-format
+
+# Run all checks (format, lint, typecheck)
+poetry run pidgin-check
+
+# Run development version without installing
+poetry run pidgin-dev run -a local:test -b local:test -t 5
+
+# See all development commands
+poetry run pidgin-status
+```
+
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
+
 ## Contributing
 
 This is early-stage research. We need:

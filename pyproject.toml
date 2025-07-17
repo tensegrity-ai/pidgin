@@ -48,6 +48,19 @@ autoflake = "^2.3.1"
 
 [tool.poetry.scripts]
 pidgin = "pidgin.cli:main"
+pidgin-format = "pidgin.scripts:format"
+pidgin-lint = "pidgin.scripts:lint"
+pidgin-typecheck = "pidgin.scripts:typecheck"
+pidgin-check = "pidgin.scripts:check"
+pidgin-test = "pidgin.scripts:test"
+pidgin-build = "pidgin.scripts:build"
+pidgin-install-pipx = "pidgin.scripts:install_pipx"
+pidgin-clean = "pidgin.scripts:clean"
+pidgin-reset = "pidgin.scripts:reset"
+pidgin-dev = "pidgin.scripts:dev"
+pidgin-status = "pidgin.scripts:status"
+pidgin-quick-test = "pidgin.scripts:quick_test"
+pidgin-ci = "pidgin.scripts:ci"
 
 [build-system]
 requires = ["poetry-core"]
