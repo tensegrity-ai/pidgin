@@ -204,7 +204,7 @@ class ExperimentManager:
                 sys.executable,
                 "-c",
                 f"import setproctitle; setproctitle.setproctitle('pidgin-experiment-{experiment_id[:8]}'); "
-                f"import sys; sys.argv = {[sys.executable, '-m', 'pidgin.experiments.daemon_launcher', '--experiment-id', experiment_id, '--config', json.dumps(config.dict()), '--working-dir', working_dir]!r}; "
+                f"import sys; sys.argv = {[sys.executable, '-m', 'pidgin.experiments.daemon_launcher', '--experiment-id', experiment_id, '--experiment-dir', dir_name, '--config', json.dumps(config.dict()), '--working-dir', working_dir]!r}; "
                 f"from pidgin.experiments.daemon_launcher import main; main()",
             ]
             cmd = wrapper_cmd
@@ -216,17 +216,19 @@ class ExperimentManager:
                 "pidgin.experiments.daemon_launcher",
                 "--experiment-id",
                 experiment_id,
+                "--experiment-dir",
+                dir_name,
                 "--config",
                 json.dumps(config.dict()),
                 "--working-dir",
                 working_dir,
             ]
 
-        # Create a temporary error file to capture startup errors
-        error_file = self.logs_dir / f"{experiment_id}_startup_error.log"
+        # Create a file to capture startup output
+        startup_log = self.logs_dir / f"{experiment_id}_startup.log"
 
-        # Start the daemon with error capture
-        with open(error_file, "w") as stderr_file:
+        # Start the daemon with output capture
+        with open(startup_log, "w") as stderr_file:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
@@ -245,9 +247,9 @@ class ExperimentManager:
         # If we get here, daemon failed to start
         # Read any startup errors
         error_msg = "Failed to start experiment daemon"
-        if error_file.exists():
+        if startup_log.exists():
             try:
-                with open(error_file, "r") as f:
+                with open(startup_log, "r") as f:
                     error_content = f.read().strip()
                     if error_content:
                         error_msg += f"\nStartup error: {error_content}"
@@ -258,7 +260,7 @@ class ExperimentManager:
         if process.poll() is not None:
             error_msg += f"\nExit code: {process.returncode}"
             error_msg += f"\nCheck logs at: {self.logs_dir / f'{experiment_id}.log'}"
-            error_msg += f"\nStartup errors at: {error_file}"
+            error_msg += f"\nStartup log at: {startup_log}"
             raise RuntimeError(error_msg)
 
         error_msg += (
