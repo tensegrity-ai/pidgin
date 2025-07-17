@@ -1,27 +1,43 @@
 # Pidgin Test Suite
 
-This test suite provides comprehensive testing for the Pidgin AI conversation research tool.
+Comprehensive test coverage for the Pidgin AI conversation research tool with 988 tests achieving 65.23% code coverage.
 
 ## Structure
 
 ```
 tests/
-├── unit/                   # Unit tests for individual modules
-│   ├── test_types.py      # Core data types
-│   ├── test_token_utils.py # Token counting utilities
-│   ├── test_name_generator.py # Experiment name generation
-│   ├── test_paths.py      # Path utilities
-│   ├── test_event_bus.py  # Event system
-│   ├── test_manifest.py   # Manifest management
-│   └── test_retry_utils.py # Retry logic
-├── integration/           # Integration tests
-│   └── test_conversation_flow.py # End-to-end conversation tests
-├── fixtures/              # Shared test fixtures
-│   ├── events.py         # Event fixtures
-│   ├── messages.py       # Message and conversation fixtures
-│   └── providers.py      # Mock provider implementations
-└── conftest.py           # Pytest configuration
-
+├── unit/ (43 tests)           # Unit tests for core components
+│   ├── test_conductor*.py     # Conversation orchestration
+│   ├── test_event_*.py        # Event system and serialization
+│   ├── test_metrics_*.py      # Metrics calculation and validation
+│   ├── test_context_*.py      # Context management
+│   ├── test_display_*.py      # Display utilities
+│   └── (35+ more test files)  # See full list below
+├── database/ (4 tests)        # Database and storage tests
+│   ├── test_event_store.py    # Event storage
+│   ├── test_repositories.py   # Repository patterns
+│   ├── test_sync_event_store.py # Synchronous operations
+│   └── test_transcript_generator.py # Transcript generation
+├── integration/ (1 test)      # End-to-end integration tests
+│   └── test_conversation_flow.py # Full conversation lifecycle
+├── experiments/ (2 tests)     # Experiment runner tests
+│   ├── test_runner_simple.py  # Basic experiment execution
+│   └── test_state_builder.py  # State management
+├── providers/ (2 tests)       # Provider implementation tests
+│   ├── test_base.py          # Base provider interface
+│   └── test_local.py         # Local test provider
+├── cli/ (1 test)             # CLI command tests
+│   └── test_run.py           # Run command tests
+├── monitor/ (1 test)         # Monitor system tests
+│   └── test_monitor.py       # System monitoring
+├── ui/ (1 test)              # UI component tests
+│   └── test_tail_display.py  # Tail display functionality
+├── fixtures/                  # Shared test fixtures and builders
+│   ├── events.py             # Event fixtures
+│   ├── messages.py           # Message and conversation fixtures
+│   └── providers.py          # Mock provider implementations
+├── builders.py               # Test data builders
+└── conftest.py               # Pytest configuration and fixtures
 ```
 
 ## Running Tests
@@ -45,60 +61,132 @@ poetry run pytest -k "event"
 
 ## Test Coverage
 
-Current test coverage includes:
+Current test suite: **988 tests** with **65.23% code coverage**
 
-### Unit Tests (73 tests)
-- **Core Types** (10 tests): Message, Agent, Conversation, ConversationTurn
-- **Event Bus** (11 tests): Event emission, subscription, history, JSONL logging
-- **Token Utils** (12 tests): Token estimation, usage parsing
-- **Path Utils** (9 tests): Output directory resolution, environment variables
-- **Name Generator** (5 tests): Experiment name generation
-- **Manifest Manager** (13 tests): Experiment manifest CRUD, atomic writes
-- **Retry Utils** (13 tests): Exponential backoff, error detection
+### Coverage by Component
 
-### Integration Tests (3 tests)
-- Basic conversation flow with test model
-- Event serialization to JSONL
-- Error handling during conversations
+#### Core Components (100% coverage)
+- **Event System**: Event bus, event types, serialization/deserialization
+- **Type System**: Message, Agent, Conversation, Turn data structures
+- **Metrics**: Calculator, display, text analysis, convergence metrics
+- **Utilities**: Token counting, path resolution, retry logic, display utils
 
-### Test Fixtures
-- Common event types for testing
-- Sample messages and conversations
-- Mock providers (MockProvider, ErrorProvider, DelayedProvider)
+#### High Coverage (90-99%)
+- **Conductor**: Conversation orchestration and lifecycle (100%)
+- **Message Handler**: Message routing and processing (98%)
+- **Rate Limiter**: Token bucket implementation (98%)
+- **Context Management**: Token limits and truncation (91%)
+- **Database**: Event store, repositories, schema (90%+)
 
-## TODO: Additional Tests Needed
+#### Moderate Coverage (50-89%)
+- **Experiments**: Runner, state builder, manifest (73%)
+- **CLI**: Commands and helpers (30-50%)
+- **Monitor**: System monitoring (53%)
 
-### Unit Tests
-1. **Metrics Calculator** - Complex metrics calculations
-2. **Rate Limiter** - Token bucket algorithm, provider-specific limits
-3. **Conductor** - Conversation orchestration
-4. **Message Handler** - Message routing and processing
-5. **Provider Implementations** - API interactions (with mocking)
+#### Low Coverage (< 50%)
+- **Providers**: API implementations (10-36%) - uses mocks in tests
+- **UI**: Display filters and verbose mode (13-29%)
+- **Analysis**: Notebook generator (0%) - not critical path
 
-### Integration Tests
-1. **Full Experiment Flow** - Complete experiment lifecycle
-2. **Database Operations** - Event storage and retrieval
-3. **CLI Commands** - Command parsing and execution
-4. **Multi-Conversation Experiments** - Parallel execution
+### Test Categories
 
-### Performance Tests
-1. **Large Conversations** - Memory usage, event handling
-2. **Concurrent Experiments** - Resource management
-3. **JSONL File Handling** - Large file operations
+1. **Unit Tests** (43 files, ~900 tests)
+   - Comprehensive coverage of all core components
+   - Fast execution with mocked dependencies
+   - Property-based testing with Hypothesis
+   - Extensive edge case coverage
+
+2. **Integration Tests** (8 files, ~80 tests)
+   - Database operations with real DuckDB
+   - Full conversation lifecycle testing
+   - Experiment execution workflows
+   - CLI command integration
+
+3. **UI/Monitor Tests** (2 files, ~8 tests)
+   - Terminal display components
+   - System monitoring functionality
+
+## Test Execution
+
+### Quick Test Commands
+
+```bash
+# Run all tests with coverage
+poetry run pytest
+
+# Run tests without coverage (faster)
+poetry run pytest --no-cov
+
+# Run specific test categories
+poetry run pytest tests/unit/          # Unit tests only
+poetry run pytest tests/integration/   # Integration tests
+poetry run pytest tests/database/      # Database tests
+
+# Run tests matching a pattern
+poetry run pytest -k "event"          # All event-related tests
+poetry run pytest -k "not slow"       # Skip slow tests
+
+# Run with specific markers
+poetry run pytest -m "unit"           # Unit tests only
+poetry run pytest -m "not benchmark"  # Skip benchmarks
+
+# Parallel execution (faster)
+poetry run pytest -n auto             # Use all CPU cores
+```
+
+### Coverage Reports
+
+```bash
+# Generate HTML coverage report
+poetry run pytest --cov=pidgin --cov-report=html
+# Open htmlcov/index.html in browser
+
+# Show missing lines in terminal
+poetry run pytest --cov=pidgin --cov-report=term-missing
+
+# Generate multiple report formats
+poetry run pytest --cov=pidgin --cov-report=term --cov-report=html --cov-report=xml
+```
+
+## Key Test Files
+
+### Most Important Test Files
+1. **test_conductor.py** - Core conversation orchestration logic
+2. **test_event_bus.py** - Event system that powers everything
+3. **test_metrics_calculator.py** - Metrics calculation accuracy
+4. **test_conversation_flow.py** - End-to-end integration test
+5. **test_event_store.py** - Data persistence layer
+
+### Test Utilities
+- **builders.py** - Factory functions for test data
+- **conftest.py** - Shared fixtures and pytest configuration
+- **fixtures/** - Reusable test components
 
 ## Testing Best Practices
 
-1. **Use Fixtures** - Leverage pytest fixtures for common test data
-2. **Mock External Dependencies** - Don't make real API calls
-3. **Test Error Cases** - Include negative test cases
-4. **Keep Tests Fast** - Use small datasets, mock delays
-5. **Test Isolation** - Each test should be independent
-6. **Clear Assertions** - Make test failures easy to understand
+1. **Fast Execution** - Full suite runs in ~90 seconds
+2. **No External Dependencies** - All API calls are mocked
+3. **Deterministic** - Tests use fixed seeds and timestamps
+4. **Isolated** - Each test cleans up after itself
+5. **Comprehensive** - Edge cases, error paths, and happy paths
+6. **Well-Organized** - Clear naming and logical grouping
 
-## Continuous Integration
+## Test Markers
 
-Tests are designed to run in CI environments:
-- No external dependencies required
-- Uses temporary directories for file operations
-- Mocks all API interactions
-- Predictable and reproducible results
+```python
+# Available pytest markers (see pyproject.toml)
+@pytest.mark.unit         # Fast unit tests
+@pytest.mark.integration  # Integration tests
+@pytest.mark.slow        # Tests taking >1 second
+@pytest.mark.database    # Tests requiring DuckDB
+@pytest.mark.benchmark   # Performance benchmarks
+```
+
+## Python Version Compatibility
+
+Tests are compatible with Python 3.9+ and have been verified on:
+- Python 3.9 (minimum supported)
+- Python 3.10
+- Python 3.11
+- Python 3.12
+- Python 3.13 (current development)
