@@ -280,7 +280,7 @@ class ImportService:
             "a_message_hash": a_hash,
             "b_message_hash": b_hash,
             # Token usage
-            "a_prompt_tokens": None,
+            "a_prompt_tokens": None,  # TODO: extract from events if available
             "a_completion_tokens": messages.get("agent_a", {}).get("tokens_used"),
             "b_prompt_tokens": None,
             "b_completion_tokens": messages.get("agent_b", {}).get("tokens_used"),

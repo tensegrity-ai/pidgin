@@ -58,7 +58,7 @@ Everything emits events. No hidden state. Complete audit trail.
 ### Provider Abstraction for Model Flexibility
 ```python
 class Provider(ABC):
-    async def stream_response(self, messages, temperature=None):
+    async def stream_response(messages, temperature=None):
         yield chunk
 ```
 
@@ -214,47 +214,14 @@ With JSONL-first architecture, database concurrency is no longer an issue:
 - DuckDB is only used for post-experiment analysis (auto-imported when experiments complete)
 - Batch import happens after experiments complete
 
-## Development Workflow
+## Current State
 
-### Using Poetry Scripts
+The core architecture is complete with JSONL-first data flow. We're now focused on:
 
-All development commands are available through Poetry:
+1. **Analysis infrastructure** - Auto-generated Jupyter notebooks
+2. **Performance optimization** - Token caching, metric calculation
+3. **Statistical validation** - Proper significance testing for observations
 
-```bash
-# Code quality
-poetry run pidgin-format      # Format with black & isort
-poetry run pidgin-lint        # Run linting checks
-poetry run pidgin-typecheck   # Run mypy type checking
-poetry run pidgin-check       # Run all checks
+## Note on TODOs
 
-# Testing
-poetry run pidgin-test        # Run all tests
-poetry run pidgin-test --unit # Unit tests only
-poetry run pidgin-test --cov  # Tests with coverage
-
-# Development
-poetry run pidgin-dev <args>  # Run dev version without installing
-poetry run pidgin-build       # Build the package
-poetry run pidgin-install-pipx # Install with pipx
-poetry run pidgin-clean       # Clean build artifacts
-poetry run pidgin-reset       # Kill experiments and clean data
-poetry run pidgin-status      # Check installation status
-
-# Quick commands
-poetry run pidgin-quick-test  # Quick test with local models
-poetry run pidgin-ci          # Run full CI pipeline locally
-```
-
-### Before Committing
-
-1. **Run tests**: `poetry run pidgin-test`
-2. **Format code**: `poetry run pidgin-format`
-3. **Check code**: `poetry run pidgin-check`
-4. **Verify functionality**: Test your changes with local models
-
-### Environment Setup
-
-- Use Poetry for dependency management
-- Create `.env` file for API keys (never commit this)
-- Use `local:test` provider for development to avoid API costs
-- Run `poetry install` to set up the development environment
+All project TODOs are tracked in TODO.md. This file focuses on development guidelines and philosophy.

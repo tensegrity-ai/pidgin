@@ -2,8 +2,6 @@
 
 This directory contains manual pages for the Pidgin AI conversation research tool.
 
-**Note**: The Makefile in this directory is specifically for installing man pages only, not for general development tasks.
-
 ## Contents
 
 ### Section 1 - User Commands
