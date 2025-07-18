@@ -38,6 +38,10 @@ These guidelines ensure consistent, grounded development of the Pidgin research 
 - "might indicate" not "proves"
 - "in our tests" not "universally"
 
+### 4. Design Considerations
+- Everything uses the Nord color scheme, defined in contants
+- No emoji ever, but unicode glyphs are encouraged
+
 ## Architecture Principles
 
 ### Event-Driven for Complete Observability
