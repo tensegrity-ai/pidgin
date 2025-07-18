@@ -13,11 +13,12 @@ from .daemon import ExperimentDaemon
 from .runner import ExperimentRunner
 
 
-async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: ExperimentDaemon):
+async def run_experiment(experiment_id: str, experiment_dir: str, config: ExperimentConfig, daemon: ExperimentDaemon):
     """Run the experiment with the experiment runner.
     
     Args:
         experiment_id: Existing experiment ID to use
+        experiment_dir: Directory name to use for the experiment
         config: Experiment configuration
         daemon: Daemon instance
     """
@@ -32,7 +33,7 @@ async def run_experiment(experiment_id: str, config: ExperimentConfig, daemon: E
     runner = ExperimentRunner(output_dir, daemon)
     
     try:
-        await runner.run_experiment_with_id(experiment_id, config)
+        await runner.run_experiment_with_id(experiment_id, experiment_dir, config)
     except asyncio.CancelledError:
         logging.info("Experiment cancelled")
         raise
@@ -47,6 +48,7 @@ def main():
     """Main entry point for daemon launcher."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment-id', required=True, help='Experiment ID')
+    parser.add_argument('--experiment-dir', required=True, help='Experiment directory name')
     parser.add_argument('--config', required=True, help='JSON config')
     parser.add_argument('--working-dir', required=True, help='Working directory for output')
     args = parser.parse_args()
@@ -109,7 +111,7 @@ def main():
         
         # Run experiment
         try:
-            asyncio.run(run_experiment(args.experiment_id, config, daemon))
+            asyncio.run(run_experiment(args.experiment_id, args.experiment_dir, config, daemon))
             logging.info("Experiment completed successfully")
         except KeyboardInterrupt:
             logging.info("Experiment interrupted by user")

@@ -63,16 +63,17 @@ class ExperimentRunner:
         self.completed_count = 0
         self.failed_count = 0
     
-    async def run_experiment_with_id(self, experiment_id: str, config: ExperimentConfig):
+    async def run_experiment_with_id(self, experiment_id: str, experiment_dir: str, config: ExperimentConfig):
         """Run experiment with existing ID.
         
         This is called by the daemon after it has already created the experiment record.
         
         Args:
             experiment_id: Existing experiment ID
+            experiment_dir: Directory name to use for the experiment
             config: Experiment configuration
         """
-        exp_dir = self.output_dir / experiment_id
+        exp_dir = self.output_dir / experiment_dir
         exp_dir.mkdir(parents=True, exist_ok=True)
         
         # Create manifest
