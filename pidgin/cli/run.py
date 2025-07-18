@@ -670,11 +670,17 @@ def _run_conversations(
             from ..experiments.display_runner import run_display
 
             try:
+                # Get the actual directory name
+                exp_dir_name = manager.get_experiment_directory(exp_id)
+                if not exp_dir_name:
+                    display.error(f"Could not find directory for experiment {exp_id}")
+                    return
+                
                 # Run the display (this will tail JSONL files and show live updates)
-                asyncio.run(run_display(exp_id, display_mode))
+                asyncio.run(run_display(exp_dir_name, display_mode))
 
                 # After display exits, show completion info
-                exp_dir = get_experiments_dir() / exp_id
+                exp_dir = get_experiments_dir() / exp_dir_name
                 manifest_path = exp_dir / "manifest.json"
 
                 if manifest_path.exists():

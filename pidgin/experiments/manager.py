@@ -145,6 +145,26 @@ class ExperimentManager:
             logging.warning(f"Multiple experiments match '{identifier}': {matches}")
 
         return None
+    
+    def get_experiment_directory(self, experiment_id: str) -> Optional[str]:
+        """Get the full directory name for an experiment ID.
+        
+        Args:
+            experiment_id: The experiment ID (e.g., experiment_a1b2c3d4)
+            
+        Returns:
+            Full directory name if found, None otherwise
+        """
+        # Look for directories that start with this experiment ID
+        for experiment_dir in self.base_dir.glob(f"{experiment_id}_*"):
+            if experiment_dir.is_dir():
+                return experiment_dir.name
+        
+        # If not found with underscore, try exact match
+        if (self.base_dir / experiment_id).exists():
+            return experiment_id
+            
+        return None
 
     def start_experiment(
         self, config: ExperimentConfig, working_dir: Optional[str] = None

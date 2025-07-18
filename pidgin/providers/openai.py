@@ -207,7 +207,7 @@ class OpenAIProvider(Provider):
                 params = {
                     "model": self.model,
                     "messages": openai_messages,
-                    "max_tokens": 1000,
+                    "max_completion_tokens": 1000,
                     "stream": True,
                     "stream_options": {"include_usage": True},  # Request usage data
                 }
