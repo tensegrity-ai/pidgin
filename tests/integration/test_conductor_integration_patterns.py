@@ -1,7 +1,8 @@
-"""Example of refactoring Conductor tests from heavy mocking to integration-style testing.
+"""Integration test patterns for the Conductor using real components.
 
-This file demonstrates how to refactor the heavily mocked tests in test_conductor.py
-to use more real components and reduce brittleness while maintaining test isolation.
+This file demonstrates best practices for integration testing with real components
+instead of heavy mocking. These tests use actual EventBus, OutputManager, and 
+test providers to validate component integration while maintaining test isolation.
 """
 
 import asyncio
@@ -103,6 +104,7 @@ class TestConductorIntegrationStyle:
         # Cleanup
         await real_event_bus.stop()
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_run_conversation_integration(self, conductor_with_real_components):
         """Test full conversation flow with real components.
@@ -195,6 +197,7 @@ class TestConductorIntegrationStyle:
         )
         assert end_event.reason in ["max_turns_reached", "high_convergence"]
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_conversation_with_interrupt_integration(
         self, conductor_with_real_components
@@ -249,6 +252,7 @@ class TestConductorIntegrationStyle:
         # Should have initial + some messages, but not all 20 (10 turns * 2 agents)
         assert len(conversation.messages) < 21
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_conversation_with_name_choosing_integration(
         self, conductor_with_real_components
@@ -293,6 +297,7 @@ class TestConductorIntegrationStyle:
         # Verify the display names are used in the system
         # (In a real system, this would affect message display)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_error_recovery_integration(
         self, conductor_with_real_components, monkeypatch
@@ -348,6 +353,7 @@ class TestConductorIntegrationStyle:
 class TestConductorMockComparison:
     """Side-by-side comparison of mocked vs integration approaches."""
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_heavily_mocked_approach(self):
         """ORIGINAL APPROACH: Heavy mocking makes tests brittle and less valuable.
@@ -388,6 +394,7 @@ class TestConductorMockComparison:
         # This test only verifies we called mocked methods!
         # It doesn't test if the system actually works.
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_integration_approach(self, tmp_path):
         """IMPROVED APPROACH: Use real components for better testing.
@@ -492,6 +499,7 @@ class ConversationTestHarness:
 class TestWithHarness:
     """Example tests using the reusable test harness."""
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_simple_conversation_with_harness(self, tmp_path):
         """Demonstrates how the harness simplifies integration tests."""
