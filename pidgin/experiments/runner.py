@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import os
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -367,6 +368,11 @@ class ExperimentRunner:
 
         # Create providers
         logging.info(f"Creating provider for agent_a: {config.agent_a_model}")
+        # Log environment info for debugging
+        logging.debug(f"Environment has {len(os.environ)} variables")
+        logging.debug(f"ANTHROPIC_API_KEY present: {'ANTHROPIC_API_KEY' in os.environ}")
+        logging.debug(f"OPENAI_API_KEY present: {'OPENAI_API_KEY' in os.environ}")
+        
         try:
             provider_a = await get_provider_for_model(
                 config.agent_a_model, temperature=config.temperature_a
