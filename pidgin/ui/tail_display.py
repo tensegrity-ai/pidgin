@@ -1,5 +1,6 @@
 """Tail display for showing formatted event stream in console."""
 
+from typing import Dict, Optional
 
 from rich.console import Console
 from rich.text import Text
@@ -87,6 +88,9 @@ class TailDisplay:
         self.bus = bus
         self.console = console
         self.chunk_buffer = {}  # Buffer for message chunks
+        
+        # Store agent display names from ConversationStartEvent
+        self.agent_display_names: Dict[str, str] = {}
 
         # Subscribe to ALL events
         bus.subscribe(Event, self.log_event)
@@ -101,7 +105,9 @@ class TailDisplay:
             Formatted agent ID with color markup
         """
         agent_color = self.NORD_GREEN if agent_id == "agent_a" else self.NORD_BLUE
-        return f"[{agent_color}]{agent_id}[/{agent_color}]"
+        # Use display name if available, otherwise fall back to agent_id
+        display_text = self.agent_display_names.get(agent_id, agent_id)
+        return f"[{agent_color}]{display_text}[/{agent_color}]"
 
     def log_event(self, event: Event) -> None:
         """Display an event with beautiful Rich formatting.
@@ -173,6 +179,12 @@ class TailDisplay:
         self, event: ConversationStartEvent, header: Text, color: str
     ) -> None:
         """Display conversation start event."""
+        # Store agent display names for later use
+        if event.agent_a_display_name:
+            self.agent_display_names["agent_a"] = event.agent_a_display_name
+        if event.agent_b_display_name:
+            self.agent_display_names["agent_b"] = event.agent_b_display_name
+            
         # Format as single line with key info
         content = f"id: {event.conversation_id[:12]}... | "
         content += f"{event.agent_a_model} ↔ {event.agent_b_model} | "

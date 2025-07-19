@@ -153,10 +153,7 @@ class ExperimentRunner:
 
             # Automatically import to database and generate transcripts
             if final_status == ExperimentStatus.COMPLETED:
-                await self._import_and_generate_transcripts(experiment_id, exp_dir)
-                
-                # Update manifest to completed after post-processing
-                manifest.update_experiment_status(ExperimentStatus.COMPLETED)
+                await self._import_and_generate_transcripts(experiment_id, exp_dir, manifest)
 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
@@ -369,22 +366,36 @@ class ExperimentRunner:
             raise ValueError("Invalid model configuration")
 
         # Create providers
-        provider_a = await get_provider_for_model(
-            config.agent_a_model, temperature=config.temperature_a
-        )
-        provider_b = await get_provider_for_model(
-            config.agent_b_model, temperature=config.temperature_b
-        )
+        logging.info(f"Creating provider for agent_a: {config.agent_a_model}")
+        try:
+            provider_a = await get_provider_for_model(
+                config.agent_a_model, temperature=config.temperature_a
+            )
+        except Exception as e:
+            logging.error(f"Failed to create provider_a: {e}", exc_info=True)
+            raise
+            
+        logging.info(f"Creating provider for agent_b: {config.agent_b_model}")
+        try:
+            provider_b = await get_provider_for_model(
+                config.agent_b_model, temperature=config.temperature_b
+            )
+        except Exception as e:
+            logging.error(f"Failed to create provider_b: {e}", exc_info=True)
+            raise
 
         if not provider_a or not provider_b:
             raise ValueError("Failed to create providers")
+            
+        logging.info(f"Providers created successfully")
 
-        # Create agents
+        # Create agents with display names from model config
         agent_a = Agent(
             id="agent_a",
             model=model_a_config.model_id,
             model_shortname=config.agent_a_model,
             temperature=config.temperature_a,
+            display_name=model_a_config.shortname,  # Use the model's display name
         )
 
         agent_b = Agent(
@@ -392,10 +403,13 @@ class ExperimentRunner:
             model=model_b_config.model_id,
             model_shortname=config.agent_b_model,
             temperature=config.temperature_b,
+            display_name=model_b_config.shortname,  # Use the model's display name
         )
 
         agents = {"agent_a": agent_a, "agent_b": agent_b}
         providers = {"agent_a": provider_a, "agent_b": provider_b}
+        
+        logging.info(f"Agents created successfully")
 
         return agents, providers
 
@@ -465,12 +479,13 @@ class ExperimentRunner:
             branch_messages=config.branch_messages,
         )
 
-    async def _import_and_generate_transcripts(self, experiment_id: str, exp_dir: Path):
+    async def _import_and_generate_transcripts(self, experiment_id: str, exp_dir: Path, manifest: ManifestManager):
         """Automatically import experiment to database and generate transcripts.
 
         Args:
             experiment_id: Experiment ID
             exp_dir: Experiment directory
+            manifest: Manifest manager to update status
         """
         import time
         start_time = time.time()
@@ -582,6 +597,9 @@ class ExperimentRunner:
             )
             await self.experiment_event_bus.emit(complete_event)
             
+            # Update manifest back to completed status
+            manifest.update_experiment_status(ExperimentStatus.COMPLETED)
+            
         except Exception as e:
             # Display error in a nice panel
             error_message = "Import/Transcript Generation Failed\n\n"
@@ -618,3 +636,6 @@ class ExperimentRunner:
                 duration_ms=duration_ms,
             )
             await self.experiment_event_bus.emit(complete_event)
+            
+            # Update manifest back to completed status even if some tasks failed
+            manifest.update_experiment_status(ExperimentStatus.COMPLETED)

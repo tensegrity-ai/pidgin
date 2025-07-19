@@ -284,6 +284,7 @@ class ExperimentManager:
             # Check if subprocess exited early
             poll_result = process.poll()
             if poll_result is not None and poll_result != 0:
+                # Process exited with error
                 break
 
             # Check if PID file exists first
