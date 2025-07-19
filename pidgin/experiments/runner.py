@@ -258,6 +258,14 @@ class ExperimentRunner:
             config: Experiment configuration
             conv_config: Conversation-specific configuration
         """
+        # Set process title for this conversation
+        try:
+            import setproctitle
+
+            setproctitle.setproctitle(f"pidgin-conv-{conversation_id[:8]}")
+        except ImportError:
+            pass  # Optional dependency
+
         # Register conversation in manifest
         self._register_conversation(exp_dir, conversation_id)
 
@@ -472,7 +480,7 @@ class ExperimentRunner:
                 result = event_store.import_experiment_from_jsonl(exp_dir)
 
             if result.success:
-                steps_completed.append(f"Database ({result.events_imported} events)")
+                steps_completed.append(f"Database ({result.turns_imported} turns)")
 
                 # Generate transcripts
                 logging.debug(f"Generating transcripts for {experiment_id}")

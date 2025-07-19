@@ -40,3 +40,4 @@ examples/
 # API keys - NEVER commit these
 *_api_key*
 *_API_KEY*
+temp/

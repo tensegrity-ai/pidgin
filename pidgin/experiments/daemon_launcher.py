@@ -14,7 +14,10 @@ from .runner import ExperimentRunner
 
 
 async def run_experiment(
-    experiment_id: str, experiment_dir: str, config: ExperimentConfig, daemon: ExperimentDaemon
+    experiment_id: str,
+    experiment_dir: str,
+    config: ExperimentConfig,
+    daemon: ExperimentDaemon,
 ):
     """Run the experiment with the experiment runner.
 
@@ -51,7 +54,9 @@ def main():
     """Main entry point for daemon launcher."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment-id", required=True, help="Experiment ID")
-    parser.add_argument("--experiment-dir", required=True, help="Experiment directory name")
+    parser.add_argument(
+        "--experiment-dir", required=True, help="Experiment directory name"
+    )
     parser.add_argument("--config", required=True, help="JSON config")
     parser.add_argument(
         "--working-dir", required=True, help="Working directory for output"
@@ -74,23 +79,11 @@ def main():
     # Create daemon with absolute path based on working directory
     active_dir = working_dir / "pidgin_output" / "experiments" / "active"
 
-    # Pre-startup logging (before logging is configured)
-    print(f"[pidgin-daemon] Starting experiment {args.experiment_id}", file=sys.stderr)
-    print(f"[pidgin-daemon] Working directory: {working_dir}", file=sys.stderr)
-    print(f"[pidgin-daemon] Active directory: {active_dir}", file=sys.stderr)
-    print(
-        f"[pidgin-daemon] PID file: {active_dir / f'{args.experiment_id}.pid'}",
-        file=sys.stderr,
-    )
-
     # Ensure directories exist before daemonizing
     try:
         active_dir.mkdir(parents=True, exist_ok=True)
-        print(
-            f"[pidgin-daemon] Created active directory: {active_dir}", file=sys.stderr
-        )
     except Exception as e:
-        print(f"[pidgin-daemon] Error creating active directory: {e}", file=sys.stderr)
+        sys.stderr.write(f"Error creating active directory: {e}\n")
         sys.exit(1)
 
     daemon = ExperimentDaemon(args.experiment_id, active_dir)
@@ -113,14 +106,12 @@ def main():
 
         logging.info(f"Starting experiment {args.experiment_id}")
         logging.info(f"Config: {config.name} - {config.repetitions} repetitions")
-        logging.info(
-            f"PIDGIN_PROJECT_BASE after daemon: {os.environ.get('PIDGIN_PROJECT_BASE', 'NOT SET')}"
-        )
-        logging.info(f"Current working directory: {os.getcwd()}")
 
         # Run experiment
         try:
-            asyncio.run(run_experiment(args.experiment_id, args.experiment_dir, config, daemon))
+            asyncio.run(
+                run_experiment(args.experiment_id, args.experiment_dir, config, daemon)
+            )
             logging.info("Experiment completed successfully")
         except KeyboardInterrupt:
             logging.info("Experiment interrupted by user")

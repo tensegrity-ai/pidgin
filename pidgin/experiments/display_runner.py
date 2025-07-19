@@ -24,6 +24,13 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     """
     if display_mode == "none":
         return
+    
+    # Set process title for display runner
+    try:
+        import setproctitle
+        setproctitle.setproctitle(f"pidgin-display-{display_mode}")
+    except ImportError:
+        pass  # Optional dependency
 
     exp_dir = get_experiments_dir() / experiment_id
     if not exp_dir.exists():

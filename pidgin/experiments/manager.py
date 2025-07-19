@@ -145,13 +145,13 @@ class ExperimentManager:
             logging.warning(f"Multiple experiments match '{identifier}': {matches}")
 
         return None
-    
+
     def get_experiment_directory(self, experiment_id: str) -> Optional[str]:
         """Get the full directory name for an experiment ID.
-        
+
         Args:
             experiment_id: The experiment ID (e.g., experiment_a1b2c3d4)
-            
+
         Returns:
             Full directory name if found, None otherwise
         """
@@ -159,11 +159,11 @@ class ExperimentManager:
         for experiment_dir in self.base_dir.glob(f"{experiment_id}_*"):
             if experiment_dir.is_dir():
                 return experiment_dir.name
-        
+
         # If not found with underscore, try exact match
         if (self.base_dir / experiment_id).exists():
             return experiment_id
-            
+
         return None
 
     def start_experiment(
@@ -209,27 +209,37 @@ class ExperimentManager:
         if working_dir is None:
             working_dir = os.getcwd()
 
-        # Debug log
-        logging.info(
-            f"Starting experiment {experiment_id} with working_dir: {working_dir}"
-        )
-
         # Launch daemon process
-        # Try to use setproctitle if available to make the process identifiable
+        # Check if setproctitle is available to make processes identifiable
         try:
-            pass
+            import setproctitle  # noqa: F401
+            has_setproctitle = True
+        except ImportError:
+            has_setproctitle = False
 
+        if has_setproctitle:
             # Create a wrapper script that sets process title before running
+            # Use meaningful name: pidgin-exp-{name}-{id}
+            proc_name = f"pidgin-exp-{safe_name}-{experiment_id[:8]}"
+            
+            # Build the wrapper command with proper module execution
             wrapper_cmd = [
                 sys.executable,
                 "-c",
-                f"import setproctitle; setproctitle.setproctitle('pidgin-experiment-{experiment_id[:8]}'); "
-                f"import sys; sys.argv = {[sys.executable, '-m', 'pidgin.experiments.daemon_launcher', '--experiment-id', experiment_id, '--experiment-dir', dir_name, '--config', json.dumps(config.dict()), '--working-dir', working_dir]!r}; "
-                f"from pidgin.experiments.daemon_launcher import main; main()",
+                f"import sys; import setproctitle; "
+                f"setproctitle.setproctitle('{proc_name}'); "
+                f"sys.argv = ['pidgin.experiments.daemon_launcher', "
+                f"'--experiment-id', '{experiment_id}', "
+                f"'--experiment-dir', '{dir_name}', "
+                f"'--config', {json.dumps(config.dict())!r}, "
+                f"'--working-dir', '{working_dir}']; "
+                f"import runpy; "
+                f"runpy.run_module('pidgin.experiments.daemon_launcher', "
+                f"run_name='__main__')",
             ]
             cmd = wrapper_cmd
-        except ImportError:
-            # Fall back to regular command
+        else:
+            # Fall back to regular command without process title
             cmd = [
                 sys.executable,
                 "-m",
@@ -248,21 +258,43 @@ class ExperimentManager:
         startup_log = self.logs_dir / f"{experiment_id}_startup.log"
 
         # Start the daemon with output capture
+        # Pass environment to subprocess so PIDGIN_ORIGINAL_CWD is available
+        env = os.environ.copy()
+        # Ensure PIDGIN_ORIGINAL_CWD is set for the subprocess
+        if "PIDGIN_ORIGINAL_CWD" not in env:
+            env["PIDGIN_ORIGINAL_CWD"] = working_dir
+
         with open(startup_log, "w") as stderr_file:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=stderr_file,
                 stdin=subprocess.DEVNULL,
+                env=env,
             )
 
         # Wait for daemon to start with retries
         max_retries = SystemDefaults.MAX_RETRIES
-        for i in range(max_retries):
+        pid_file = self.active_dir / f"{experiment_id}.pid"
+
+        # Wait for PID file to be created
+        for i in range(max_retries * 2):  # Double retries for PID file creation
             time.sleep(0.5)
-            if self.is_running(experiment_id):
-                # Success!
-                return experiment_id
+
+            # Check if subprocess exited early
+            poll_result = process.poll()
+            if poll_result is not None and poll_result != 0:
+                break
+
+            # Check if PID file exists first
+            if pid_file.exists():
+                # Now check if process is actually running
+                if self.is_running(experiment_id):
+                    # Success!
+                    return experiment_id
+                else:
+                    # PID file exists but process isn't running
+                    break
 
         # If we get here, daemon failed to start
         # Read any startup errors

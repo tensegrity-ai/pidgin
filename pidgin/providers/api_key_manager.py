@@ -10,7 +10,6 @@ class APIKeyError(Exception):
     """Raised when API key is missing or invalid."""
 
 
-
 class APIKeyManager:
     """Simple manager for provider API keys."""
 

@@ -80,8 +80,8 @@ class ExperimentDaemon:
         try:
             import setproctitle
 
-            # Use short ID to avoid truncation
-            setproctitle.setproctitle(f"pidgin-{self.experiment_id[:8]}")
+            # Use descriptive name for daemon process
+            setproctitle.setproctitle(f"pidgin-daemon-{self.experiment_id[:8]}")
         except ImportError:
             pass  # Optional dependency, graceful degradation
 
