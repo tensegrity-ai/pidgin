@@ -8,6 +8,7 @@ class ExperimentStatus:
     PAUSED = "paused"
     COMPLETED = "completed"
     COMPLETED_WITH_FAILURES = "completed_with_failures"
+    POST_PROCESSING = "post_processing"
     FAILED = "failed"
     CANCELLED = "cancelled"
     INTERRUPTED = "interrupted"
@@ -32,6 +33,7 @@ ALL_EXPERIMENT_STATUSES = [
     ExperimentStatus.PAUSED,
     ExperimentStatus.COMPLETED,
     ExperimentStatus.COMPLETED_WITH_FAILURES,
+    ExperimentStatus.POST_PROCESSING,
     ExperimentStatus.FAILED,
     ExperimentStatus.CANCELLED,
     ExperimentStatus.INTERRUPTED,

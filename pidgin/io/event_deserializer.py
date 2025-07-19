@@ -8,16 +8,20 @@ from typing import Any, Dict, Optional, Type
 from ..core.events import (
     APIErrorEvent,
     ContextTruncationEvent,
+    ConversationBranchedEvent,
     ConversationEndEvent,
     ConversationPausedEvent,
     ConversationResumedEvent,
     ConversationStartEvent,
     ErrorEvent,
     Event,
+    ExperimentCompleteEvent,
     InterruptRequestEvent,
     MessageChunkEvent,
     MessageCompleteEvent,
     MessageRequestEvent,
+    PostProcessingCompleteEvent,
+    PostProcessingStartEvent,
     ProviderTimeoutEvent,
     RateLimitPaceEvent,
     SystemPromptEvent,
@@ -54,6 +58,10 @@ class EventDeserializer:
         "RateLimitPaceEvent": RateLimitPaceEvent,
         "TokenUsageEvent": TokenUsageEvent,
         "ContextTruncationEvent": ContextTruncationEvent,
+        "ConversationBranchedEvent": ConversationBranchedEvent,
+        "ExperimentCompleteEvent": ExperimentCompleteEvent,
+        "PostProcessingStartEvent": PostProcessingStartEvent,
+        "PostProcessingCompleteEvent": PostProcessingCompleteEvent,
         # Handle legacy names
         "ConversationCreated": ConversationStartEvent,
     }
@@ -131,6 +139,14 @@ class EventDeserializer:
                 return cls._build_token_usage(event_data, timestamp)
             elif event_type == "ContextTruncationEvent":
                 return cls._build_context_truncation(event_data, timestamp)
+            elif event_type == "ConversationBranchedEvent":
+                return cls._build_conversation_branched(event_data, timestamp)
+            elif event_type == "ExperimentCompleteEvent":
+                return cls._build_experiment_complete(event_data, timestamp)
+            elif event_type == "PostProcessingStartEvent":
+                return cls._build_post_processing_start(event_data, timestamp)
+            elif event_type == "PostProcessingCompleteEvent":
+                return cls._build_post_processing_complete(event_data, timestamp)
             else:
                 logger.warning(f"No builder for event type: {event_type}")
                 return None
@@ -470,6 +486,66 @@ class EventDeserializer:
             original_message_count=data.get("original_message_count", 0),
             truncated_message_count=data.get("truncated_message_count", 0),
             messages_dropped=data.get("messages_dropped", 0),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+
+    @classmethod
+    def _build_conversation_branched(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ConversationBranchedEvent:
+        """Build ConversationBranchedEvent from JSON data."""
+        event = ConversationBranchedEvent(
+            conversation_id=data.get("conversation_id", ""),
+            source_conversation_id=data.get("source_conversation_id", ""),
+            branch_point=data.get("branch_point", 0),
+            parameter_changes=data.get("parameter_changes", {}),
+            experiment_id=data.get("experiment_id"),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+
+    @classmethod
+    def _build_experiment_complete(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ExperimentCompleteEvent:
+        """Build ExperimentCompleteEvent from JSON data."""
+        event = ExperimentCompleteEvent(
+            experiment_id=data.get("experiment_id", ""),
+            total_conversations=data.get("total_conversations", 0),
+            completed_conversations=data.get("completed_conversations", 0),
+            failed_conversations=data.get("failed_conversations", 0),
+            status=data.get("status", ""),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+
+    @classmethod
+    def _build_post_processing_start(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> PostProcessingStartEvent:
+        """Build PostProcessingStartEvent from JSON data."""
+        event = PostProcessingStartEvent(
+            experiment_id=data.get("experiment_id", ""),
+            tasks=data.get("tasks", []),
+        )
+        event.timestamp = timestamp
+        event.event_id = data.get("event_id", event.event_id)
+        return event
+
+    @classmethod
+    def _build_post_processing_complete(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> PostProcessingCompleteEvent:
+        """Build PostProcessingCompleteEvent from JSON data."""
+        event = PostProcessingCompleteEvent(
+            experiment_id=data.get("experiment_id", ""),
+            tasks_completed=data.get("tasks_completed", []),
+            tasks_failed=data.get("tasks_failed", []),
+            duration_ms=data.get("duration_ms", 0),
         )
         event.timestamp = timestamp
         event.event_id = data.get("event_id", event.event_id)

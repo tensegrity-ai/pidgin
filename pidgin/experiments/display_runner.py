@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 
 from rich.console import Console
 
@@ -57,6 +58,11 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
 
     # Get initial JSONL files
     jsonl_files = list(exp_dir.glob("*.jsonl"))
+    
+    # Also check for experiment-level events file
+    experiment_events_file = exp_dir / f"{experiment_id}_events.jsonl"
+    if experiment_events_file.exists() and experiment_events_file not in jsonl_files:
+        jsonl_files.append(experiment_events_file)
 
     # Track if we need to check for new files
     check_for_new_files = False
@@ -147,8 +153,16 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                             >= total_conversations
                         )
 
-                        # Only exit if experiment is complete AND all conversations are done
-                        if status in ["completed", "failed"] and all_conversations_done:
+                        # Check if experiment is in a terminal state
+                        # We now wait for COMPLETED status (not POST_PROCESSING)
+                        # because runner.py sets status back to COMPLETED after post-processing
+                        terminal_statuses = ["completed", "failed", "interrupted", "cancelled"]
+                        
+                        # Only exit if:
+                        # 1. Status is terminal (not post_processing)
+                        # 2. All conversations are done
+                        # 3. We're not in post_processing state
+                        if status in terminal_statuses and all_conversations_done and status != "post_processing":
                             # One more pass to catch final events
                             await asyncio.sleep(0.5)
                             continue_reading = False
@@ -165,6 +179,10 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                             if not continue_reading:
                                 # No more data to read, exit
                                 break
+                        elif status == "post_processing":
+                            # If we're in post_processing, keep waiting
+                            logging.debug("Experiment is in post-processing, continuing to monitor...")
+                            pass
                 except Exception:
                     pass
 

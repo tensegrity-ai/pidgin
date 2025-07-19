@@ -15,6 +15,9 @@ from ..constants import ExperimentStatus
 from ..core.conductor import Conductor
 from ..core.events import (
     ConversationBranchedEvent,
+    ExperimentCompleteEvent,
+    PostProcessingStartEvent,
+    PostProcessingCompleteEvent,
 )
 from ..core.types import Agent
 from ..database.event_store import EventStore
@@ -50,6 +53,7 @@ class ExperimentRunner:
         self.active_tasks = {}
         self.completed_count = 0
         self.failed_count = 0
+        self.experiment_event_bus = None  # Will be created per experiment
 
     async def run_experiment_with_id(
         self, experiment_id: str, experiment_dir: str, config: ExperimentConfig
@@ -76,6 +80,11 @@ class ExperimentRunner:
         )
 
         # Removed legacy metadata.json - using only manifest.json
+
+        # Create experiment-level event bus for tracking experiment-wide events
+        from ..core.event_bus import EventBus
+        self.experiment_event_bus = EventBus(event_log_dir=exp_dir)
+        await self.experiment_event_bus.start()
 
         try:
             # Validate API keys for all required providers
@@ -120,8 +129,21 @@ class ExperimentRunner:
             else:
                 final_status = ExperimentStatus.COMPLETED
 
-            # Update manifest with final status
-            manifest.update_experiment_status(final_status)
+            # Emit experiment complete event
+            complete_event = ExperimentCompleteEvent(
+                experiment_id=experiment_id,
+                total_conversations=config.repetitions,
+                completed_conversations=self.completed_count,
+                failed_conversations=self.failed_count,
+                status=final_status,
+            )
+            await self.experiment_event_bus.emit(complete_event)
+
+            # Update manifest to post-processing status if completed
+            if final_status == ExperimentStatus.COMPLETED:
+                manifest.update_experiment_status(ExperimentStatus.POST_PROCESSING)
+            else:
+                manifest.update_experiment_status(final_status)
 
             # Metadata tracking removed - using only manifest.json
 
@@ -132,6 +154,9 @@ class ExperimentRunner:
             # Automatically import to database and generate transcripts
             if final_status == ExperimentStatus.COMPLETED:
                 await self._import_and_generate_transcripts(experiment_id, exp_dir)
+                
+                # Update manifest to completed after post-processing
+                manifest.update_experiment_status(ExperimentStatus.COMPLETED)
 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
@@ -142,6 +167,10 @@ class ExperimentRunner:
             # Metadata tracking removed - using only manifest.json
 
             raise
+        finally:
+            # Clean up experiment event bus
+            if self.experiment_event_bus:
+                await self.experiment_event_bus.stop()
 
     async def _run_parallel_conversations(
         self,
@@ -443,32 +472,51 @@ class ExperimentRunner:
             experiment_id: Experiment ID
             exp_dir: Experiment directory
         """
+        import time
+        start_time = time.time()
+        
+        # Emit post-processing start event
+        tasks = ["README", "Jupyter notebook", "Database import", "Transcripts"]
+        start_event = PostProcessingStartEvent(
+            experiment_id=experiment_id,
+            tasks=tasks,
+        )
+        await self.experiment_event_bus.emit(start_event)
+        
         try:
             # Track what we're doing for a clean summary at the end
             steps_completed = []
+            steps_failed = []
 
             # Generate README first
             logging.debug(f"Generating README for experiment {experiment_id}")
-            from .readme_generator import ExperimentReadmeGenerator
+            try:
+                from .readme_generator import ExperimentReadmeGenerator
 
-            readme_gen = ExperimentReadmeGenerator(exp_dir)
-            readme_gen.generate()
-            steps_completed.append("README")
+                readme_gen = ExperimentReadmeGenerator(exp_dir)
+                readme_gen.generate()
+                steps_completed.append("README")
+            except Exception as e:
+                logging.error(f"Failed to generate README: {e}")
+                steps_failed.append("README")
 
             # Generate Jupyter notebook
             logging.debug(
                 f"Generating analysis notebook for experiment {experiment_id}"
             )
-            from ..analysis.notebook_generator import NotebookGenerator
-
-            notebook_gen = NotebookGenerator(exp_dir)
             try:
+                from ..analysis.notebook_generator import NotebookGenerator
+
+                notebook_gen = NotebookGenerator(exp_dir)
                 notebook_gen.generate()
                 steps_completed.append("Jupyter notebook")
             except ImportError:
                 logging.debug(
                     "Jupyter notebook generation skipped (nbformat not installed)"
                 )
+            except Exception as e:
+                logging.error(f"Failed to generate notebook: {e}")
+                steps_failed.append("Jupyter notebook")
 
             logging.debug(f"Auto-importing experiment {experiment_id} to database")
 
@@ -476,26 +524,39 @@ class ExperimentRunner:
             db_path = get_database_path()
 
             # Import to database using EventStore
-            with EventStore(db_path) as event_store:
-                result = event_store.import_experiment_from_jsonl(exp_dir)
+            try:
+                with EventStore(db_path) as event_store:
+                    result = event_store.import_experiment_from_jsonl(exp_dir)
 
-            if result.success:
-                steps_completed.append(f"Database ({result.turns_imported} turns)")
+                if result.success:
+                    steps_completed.append("Database import")
 
-                # Generate transcripts
-                logging.debug(f"Generating transcripts for {experiment_id}")
-                with TranscriptGenerator(db_path) as generator:
-                    generator.generate_experiment_transcripts(experiment_id, exp_dir)
+                    # Generate transcripts
+                    logging.debug(f"Generating transcripts for {experiment_id}")
+                    try:
+                        with TranscriptGenerator(db_path) as generator:
+                            generator.generate_experiment_transcripts(experiment_id, exp_dir)
+                        steps_completed.append("Transcripts")
+                    except Exception as e:
+                        logging.error(f"Failed to generate transcripts: {e}")
+                        steps_failed.append("Transcripts")
 
-                steps_completed.append("Transcripts")
+                    # Show clean summary instead of multiple log lines
+                    summary = f"✓ Post-processing complete: {', '.join(steps_completed)}"
+                    if steps_failed:
+                        summary += f"\n✗ Failed: {', '.join(steps_failed)}"
 
-                # Show clean summary instead of multiple log lines
-                summary = f"✓ Post-processing complete: {', '.join(steps_completed)}"
-
-                # Show summary in display mode appropriate way
-                if self.console:
-                    self.display.info(summary, use_panel=False)
-            else:
+                    # Show summary in display mode appropriate way
+                    if self.console:
+                        self.display.info(summary, use_panel=False)
+                else:
+                    steps_failed.append("Database import")
+            except Exception as e:
+                logging.error(f"Failed to import to database: {e}")
+                steps_failed.append("Database import")
+                result = None
+                
+            if result and not result.success:
                 # Display error in a nice panel
                 error_message = "Database Import Failed\n\n"
                 error_message += f"Experiment: {experiment_id}\n\n"
@@ -511,6 +572,16 @@ class ExperimentRunner:
                 # Don't double-log the error since we're showing it in a panel
                 logging.debug(f"Import failed for {experiment_id}: {result.error}")
 
+            # Emit post-processing complete event
+            duration_ms = int((time.time() - start_time) * 1000)
+            complete_event = PostProcessingCompleteEvent(
+                experiment_id=experiment_id,
+                tasks_completed=steps_completed,
+                tasks_failed=steps_failed,
+                duration_ms=duration_ms,
+            )
+            await self.experiment_event_bus.emit(complete_event)
+            
         except Exception as e:
             # Display error in a nice panel
             error_message = "Import/Transcript Generation Failed\n\n"
@@ -537,3 +608,13 @@ class ExperimentRunner:
             logging.error(
                 f"Error during auto-import/transcript generation: {e}", exc_info=True
             )
+            
+            # Still emit complete event even if some tasks failed
+            duration_ms = int((time.time() - start_time) * 1000)
+            complete_event = PostProcessingCompleteEvent(
+                experiment_id=experiment_id,
+                tasks_completed=steps_completed,
+                tasks_failed=steps_failed + ["Unknown"],  # Add unknown for the exception
+                duration_ms=duration_ms,
+            )
+            await self.experiment_event_bus.emit(complete_event)

@@ -218,3 +218,32 @@ class ConversationBranchedEvent(Event):
     branch_point: int  # Turn number where branch occurred
     parameter_changes: Dict[str, Any]  # What parameters were changed
     experiment_id: Optional[str] = None  # New experiment ID
+
+
+@dataclass
+class ExperimentCompleteEvent(Event):
+    """Emitted when all conversations in an experiment are complete."""
+
+    experiment_id: str
+    total_conversations: int
+    completed_conversations: int
+    failed_conversations: int
+    status: str  # completed, failed, interrupted
+
+
+@dataclass
+class PostProcessingStartEvent(Event):
+    """Emitted when post-experiment processing begins."""
+
+    experiment_id: str
+    tasks: List[str]  # List of tasks to perform (e.g., ["readme", "notebook", "database", "transcripts"])
+
+
+@dataclass
+class PostProcessingCompleteEvent(Event):
+    """Emitted when all post-experiment processing is complete."""
+
+    experiment_id: str
+    tasks_completed: List[str]  # Tasks that were successfully completed
+    tasks_failed: List[str]  # Tasks that failed
+    duration_ms: int
