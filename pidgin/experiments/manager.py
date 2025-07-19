@@ -221,13 +221,17 @@ class ExperimentManager:
             # Create a wrapper script that sets process title before running
             # Use meaningful name: pidgin-exp-{name}-{id}
             proc_name = f"pidgin-exp-{safe_name}-{experiment_id[:8]}"
-            
             # Build the wrapper command with proper module execution
+            # Handle potential ImportError gracefully in the subprocess
             wrapper_cmd = [
                 sys.executable,
                 "-c",
-                f"import sys; import setproctitle; "
-                f"setproctitle.setproctitle('{proc_name}'); "
+                f"import sys; "
+                f"try: "
+                f"    import setproctitle; "
+                f"    setproctitle.setproctitle('{proc_name}'); "
+                f"except ImportError: "
+                f"    pass; "  # Gracefully continue without setproctitle
                 f"sys.argv = ['pidgin.experiments.daemon_launcher', "
                 f"'--experiment-id', '{experiment_id}', "
                 f"'--experiment-dir', '{dir_name}', "
