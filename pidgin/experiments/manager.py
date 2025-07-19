@@ -310,7 +310,9 @@ class ExperimentManager:
                 pass
 
         # Check if process failed immediately
-        if process.poll() is not None:
+        poll_result = process.poll()
+        if poll_result is not None and poll_result != 0:
+            # Process exited with error
             error_msg += f"\nExit code: {process.returncode}"
             error_msg += f"\nCheck logs at: {self.logs_dir / f'{experiment_id}.log'}"
             error_msg += f"\nStartup log at: {startup_log}"
