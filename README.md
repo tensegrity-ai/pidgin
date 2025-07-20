@@ -16,7 +16,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 ### ◆ What Works
 - **Recording**: JSONL-based event capture for every interaction
 - **Models**: 20+ models across Anthropic, OpenAI, Google, xAI, and local (Ollama)
-- **Display**: Real-time observability with convergence tracking, verbose mode, or raw event stream
+- **Display**: Real-time observability with convergence tracking, chat mode, or raw event stream
 - **Output**: JSONL events, markdown transcripts, manifest tracking
 - **Experiments**: Run hundreds of conversations with smart parallelism
 - **Background**: Background processes with meaningful names and system-wide monitoring
@@ -48,7 +48,7 @@ export OPENAI_API_KEY="..."
 pidgin run -a claude -b gpt -t 20
 
 # Watch the conversation messages
-pidgin run -a claude -b gpt -t 20 --verbose
+pidgin run -a claude -b gpt -t 20 --display chat
 
 # See raw event stream (like tail -f)
 pidgin run -a claude -b gpt -t 20 --tail

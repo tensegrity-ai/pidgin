@@ -33,7 +33,7 @@ pidgin run [OPTIONS]
 - `--awareness-b TEXT` - Agent B's awareness level
 - `--temperature-a FLOAT` - Override agent A temperature
 - `--temperature-b FLOAT` - Override agent B temperature
-- `--display MODE` - Display mode: `progress`, `verbose`, `tail`, `monitor`
+- `--display MODE` - Display mode: `progress`, `chat`, `tail`, `monitor`
 - `--name TEXT` - Custom experiment name
 - `--output PATH` - Output directory
 - `--no-conversation` - Skip initial "Hello" exchange
@@ -50,9 +50,9 @@ pidgin run -a claude-3-haiku -b gpt-4o-mini -t 10
 pidgin run -a claude -b gpt -t 20 \
   -p "What patterns emerge in nature?"
 
-# Verbose output with custom temperatures
+# Chat output with custom temperatures
 pidgin run -a claude -b gpt -t 30 \
-  --display verbose \
+  --display chat \
   --temperature-a 0.9 \
   --temperature-b 0.5
 
@@ -270,7 +270,7 @@ XAI_API_KEY=...
 PIDGIN_OUTPUT_DIR=/path/to/output
 
 # Default display mode
-PIDGIN_DISPLAY_MODE=verbose
+PIDGIN_DISPLAY_MODE=chat
 
 # Parallel conversation limit
 PIDGIN_MAX_PARALLEL=4

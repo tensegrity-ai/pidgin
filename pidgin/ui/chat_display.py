@@ -1,4 +1,4 @@
-"""Verbose display for watching conversations with minimal metadata."""
+"""Chat display for watching conversations with minimal metadata."""
 
 from typing import Dict
 
@@ -19,8 +19,8 @@ from ..core.events import (
 from ..core.types import Agent
 
 
-class VerboseDisplay:
-    """Verbose display showing messages and turn markers."""
+class ChatDisplay:
+    """Chat display showing messages and turn markers."""
 
     # Nord color palette
     COLORS = {
@@ -35,7 +35,7 @@ class VerboseDisplay:
     }
 
     def __init__(self, bus: EventBus, console: Console, agents: Dict[str, Agent]):
-        """Initialize verbose display.
+        """Initialize chat display.
 
         Args:
             bus: Event bus to subscribe to

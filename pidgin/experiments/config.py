@@ -48,7 +48,7 @@ class ExperimentConfig:
 
     # Display settings
     display_mode: str = (
-        "none"  # Display mode for conversations: none, quiet, tail, verbose
+        "none"  # Display mode for conversations: none, quiet, tail, chat
     )
 
     # Prompt settings

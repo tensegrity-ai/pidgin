@@ -38,7 +38,7 @@ prompt: "Hello, let's discuss AI safety"
 | `max_parallel` | No | int | 1 | Number of parallel conversations |
 | `first_speaker` | No | string | "agent_a" | Which agent speaks first |
 | `choose_names` | No | bool | false | Let agents choose their own names |
-| `display_mode` | No | string | "verbose" | Display mode: none, quiet, tail, verbose |
+| `display_mode` | No | string | "chat" | Display mode: none, quiet, tail, chat |
 | `prompt_tag` | No | string | "[HUMAN]" | Tag to prefix initial prompt |
 | `notify` | No | bool | false | Send notification when complete |
 | `output` | No | string | - | Custom output directory |
@@ -61,7 +61,7 @@ convergence_action: stop
 awareness: basic
 max_parallel: 5
 prompt_tag: "[RESEARCHER]"
-display_mode: verbose
+display_mode: chat
 ```
 
 ## Tips

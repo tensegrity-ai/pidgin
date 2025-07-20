@@ -11,7 +11,7 @@ from ..core.types import Agent
 from ..io.event_deserializer import EventDeserializer
 from ..io.paths import get_experiments_dir
 from ..ui.tail_display import TailDisplay
-from ..ui.verbose_display import VerboseDisplay
+from ..ui.chat_display import ChatDisplay
 
 console = Console()
 
@@ -21,7 +21,7 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
 
     Args:
         experiment_id: The experiment ID to display
-        display_mode: Display mode ('tail', 'verbose', or 'none')
+        display_mode: Display mode ('tail', 'chat', or 'none')
     """
     if display_mode == "none":
         return
@@ -29,7 +29,7 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     # Set process title for display runner
     try:
         import setproctitle
-        if display_mode == "verbose":
+        if display_mode == "chat":
             setproctitle.setproctitle("pidgin-chat")
         else:
             setproctitle.setproctitle("pidgin-tail")
@@ -44,14 +44,14 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     # Create event bus and display
     bus = EventBus()
 
-    if display_mode == "verbose":
-        # For verbose display, we need to create dummy agents
+    if display_mode == "chat":
+        # For chat display, we need to create dummy agents
         # In the future, we could read this from manifest
         agents = {
             "agent_a": Agent(id="agent_a", model="unknown", display_name="Agent A"),
             "agent_b": Agent(id="agent_b", model="unknown", display_name="Agent B"),
         }
-        _display = VerboseDisplay(bus, console, agents)
+        _display = ChatDisplay(bus, console, agents)
     else:
         # Default to tail display
         _display = TailDisplay(bus, console)

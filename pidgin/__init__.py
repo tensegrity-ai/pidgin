@@ -30,7 +30,7 @@ from .metrics import (
 )
 
 # UI exports
-from .ui import DisplayFilter, TailDisplay, VerboseDisplay
+from .ui import DisplayFilter, TailDisplay, ChatDisplay
 
 __all__ = [
     # Version
@@ -47,7 +47,7 @@ __all__ = [
     # UI
     "DisplayFilter",
     "TailDisplay",
-    "VerboseDisplay",
+    "ChatDisplay",
     # Config
     "Config",
     "get_config",

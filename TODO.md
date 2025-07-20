@@ -129,12 +129,12 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 **Fixed**: Implemented proper event-driven post-processing flow with new events and status
 
 ### 6. Error Handling & Logging
-- [ ] Rename misleading log files (startup_error.log → startup.log) (already fixed)
-- [ ] Improve error messages for common issues (API keys, rate limits)
-- [ ] Handle experiment name collisions gracefully:
-  - [ ] When auto-generated names collide, retry with a new random name
-  - [ ] Currently fails with ugly error when name already exists
-  - [ ] Should be simple retry loop in name generation
+- [x] Rename misleading log files (startup_error.log → startup.log) (already fixed)
+- [x] Improve error messages for common issues (API keys, rate limits)
+- [x] Handle experiment name collisions gracefully:
+  - [x] When auto-generated names collide, retry with a new random name
+  - [x] Currently fails with ugly error when name already exists
+  - [x] Should be simple retry loop in name generation
 - [x] Simplify process names:
   - [x] Current implementation is overly complex
   - [x] Just use simple names: `pidgin-exp`, `pidgin-monitor`, `pidgin-tail`, `pidgin-chat`
@@ -143,14 +143,10 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 ## Low Priority - Nice to Have
 
 ### 7. Display Improvements
-- [ ] Rename "verbose" display to "chat" display throughout:
-  - [ ] CLI flag: `--verbose` → `--chat` (keep --verbose as alias)
-  - [ ] Internal naming: VerboseDisplay → ChatDisplay
-  - [ ] Documentation updates
-- [ ] Show model names instead of "Agent A/B":
-  - [ ] Read model info from manifest or events
-  - [ ] Use shortname (e.g., "Claude 3 Opus", "GPT-4")
-  - [ ] Format: "[Model Name] thinks..." instead of "Agent A thinks..."
+- [x] Rename "verbose" display to "chat" display throughout:
+  - [x] No CLI flag - it runs by default and there is no reattach mechanism
+  - [x] Internal naming: VerboseDisplay → ChatDisplay
+  - [x] Documentation updates
 
 ### 8. Documentation Updates
 - [ ] Update examples to reflect best practices
@@ -175,6 +171,7 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 - [x] Remove inline TODO about token extraction
 - [x] Fix daemon startup with setproctitle (made it required dependency)
 - [x] Add meaningful process names for better debugging
+- [x] Improve monitor error display to show useful details
 - [x] Fix pipx installation daemon startup race condition
 - [x] Implement proper event-driven post-processing flow
 - [x] Add model reference documentation

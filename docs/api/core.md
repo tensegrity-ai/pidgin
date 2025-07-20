@@ -46,7 +46,7 @@ async def run_conversation(
 - `agent_a`, `agent_b`: The participating agents
 - `initial_prompt`: Starting prompt for the conversation
 - `max_turns`: Maximum number of message exchanges
-- `display_mode`: Output display ("normal", "quiet", "verbose")
+- `display_mode`: Output display ("normal", "quiet", "chat")
 - `show_timing`: Whether to display timing information
 - `choose_names`: Allow agents to choose their own names
 - `awareness_a`, `awareness_b`: System prompt awareness levels

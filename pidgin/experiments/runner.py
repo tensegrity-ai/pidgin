@@ -429,7 +429,7 @@ class ExperimentRunner:
 
         # Check if we need a console for display modes
         console = None
-        if config.display_mode in ["verbose", "tail"]:
+        if config.display_mode in ["chat", "tail"]:
             console = Console()
 
         return output_manager, console

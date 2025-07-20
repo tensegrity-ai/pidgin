@@ -1,4 +1,4 @@
-"""Unit tests for truncation event display in verbose mode."""
+"""Unit tests for truncation event display in chat mode."""
 
 from io import StringIO
 from unittest.mock import Mock
@@ -8,11 +8,11 @@ from rich.console import Console
 
 from pidgin.core.event_bus import EventBus
 from pidgin.core.events import ContextTruncationEvent
-from pidgin.ui.verbose_display import VerboseDisplay
+from pidgin.ui.chat_display import ChatDisplay
 
 
-class TestVerboseDisplayTruncation:
-    """Test that truncation events are displayed in verbose mode."""
+class TestChatDisplayTruncation:
+    """Test that truncation events are displayed in chat mode."""
 
     @pytest.fixture
     def console_output(self):
@@ -38,26 +38,26 @@ class TestVerboseDisplayTruncation:
         return {"agent_a": agent_a, "agent_b": agent_b}
 
     @pytest.fixture
-    def verbose_display(self, test_console, mock_agents):
-        """Create a VerboseDisplay instance."""
+    def chat_display(self, test_console, mock_agents):
+        """Create a ChatDisplay instance."""
         bus = EventBus()
-        return VerboseDisplay(bus, test_console, mock_agents)
+        return ChatDisplay(bus, test_console, mock_agents)
 
-    def test_truncation_shown_in_verbose_mode(
-        self, verbose_display, console_output, test_console
+    def test_truncation_shown_in_chat_mode(
+        self, chat_display, console_output, test_console
     ):
-        """Test that truncation events are displayed in verbose mode."""
+        """Test that truncation events are displayed in chat mode."""
         # First check if handle_truncation method exists
         # If not, we'll add it to the display
-        if not hasattr(verbose_display, "handle_truncation"):
+        if not hasattr(chat_display, "handle_truncation"):
             # Add a simple handler for testing
             def handle_truncation(event):
                 info = f"⚠ Context Truncated • {event.messages_dropped} messages dropped • {event.truncated_message_count} messages remain"
                 test_console.print(f"[yellow]{info}[/yellow]")
 
-            verbose_display.handle_truncation = handle_truncation
+            chat_display.handle_truncation = handle_truncation
             # Subscribe to the event
-            verbose_display.bus.subscribe(ContextTruncationEvent, handle_truncation)
+            chat_display.bus.subscribe(ContextTruncationEvent, handle_truncation)
 
         # Create a truncation event
         event = ContextTruncationEvent(
@@ -74,7 +74,7 @@ class TestVerboseDisplayTruncation:
         # Emit the event
         import asyncio
 
-        asyncio.run(verbose_display.bus.emit(event))
+        asyncio.run(chat_display.bus.emit(event))
 
         # Check that truncation was displayed
         output = console_output.getvalue()

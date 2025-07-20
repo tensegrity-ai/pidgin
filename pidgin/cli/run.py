@@ -235,7 +235,7 @@ def run(
     elif tail:
         display_mode = "tail"  # Show formatted event stream
     else:
-        display_mode = "verbose"  # Default: show conversation messages
+        display_mode = "chat"  # Default: show conversation messages
 
     # Handle meditation mode
     if meditation:
@@ -464,7 +464,7 @@ def _run_from_spec(spec, spec_file):
     choose_names = spec.get("choose_names", False)
     max_parallel = spec.get("max_parallel", 1)
     first_speaker = spec.get("first_speaker", "agent_a")
-    display_mode = spec.get("display_mode", "verbose")
+    display_mode = spec.get("display_mode", "chat")
     prompt_tag = spec.get("prompt_tag", "[HUMAN]")
 
     # Notification settings
@@ -544,7 +544,7 @@ def _run_conversations(
     # For parallel execution or quiet mode, don't use interactive displays
     if max_parallel > 1 or quiet:
         experiment_display_mode = "none"
-        if display_mode in ["tail", "verbose"] and max_parallel > 1:
+        if display_mode in ["tail", "chat"] and max_parallel > 1:
             display.warning(
                 f"--{display_mode} is not supported with parallel execution",
                 use_panel=False,

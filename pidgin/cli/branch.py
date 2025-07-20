@@ -311,7 +311,7 @@ def branch(
             from ..experiments.display_runner import run_display
 
             try:
-                asyncio.run(run_display(exp_id, "verbose"))
+                asyncio.run(run_display(exp_id, "chat"))
 
                 # Show completion info
                 exp_dir = get_experiments_dir() / exp_id

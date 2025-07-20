@@ -85,7 +85,7 @@ Current test suite: **988 tests** with **65.23% code coverage**
 
 #### Low Coverage (< 50%)
 - **Providers**: API implementations (10-36%) - uses mocks in tests
-- **UI**: Display filters and verbose mode (13-29%)
+- **UI**: Display filters and chat mode (13-29%)
 - **Analysis**: Notebook generator (0%) - not critical path
 
 ### Test Categories

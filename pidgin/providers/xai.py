@@ -82,13 +82,9 @@ class xAIProvider(Provider):
         self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
         self.model = model
         self._last_usage = None
-        # xAI uses similar errors to OpenAI
-        self.error_handler = ProviderErrorHandler(
-            provider_name="xAI",
-            custom_errors={
-                "model_not_found": "Model not found. Please check the xAI model name is correct"
-            },
-        )
+        # Use the xAI-specific error handler
+        from .error_utils import create_xai_error_handler
+        self.error_handler = create_xai_error_handler()
 
     async def stream_response(
         self, messages: List[Message], temperature: Optional[float] = None

@@ -86,8 +86,8 @@ cat pidgin_output/cosmic-prism_2024-07-16/events/events.jsonl | \
 ### Different Display Modes
 
 ```bash
-# Verbose mode - see full messages
-pidgin run -a claude -b gpt -t 10 --display verbose
+# Chat mode - see full messages
+pidgin run -a claude -b gpt -t 10 --display chat
 
 # Monitor mode - minimal output  
 pidgin run -a claude -b gpt -t 10 --display monitor
@@ -155,7 +155,7 @@ This creates a Jupyter notebook with pre-loaded queries and visualizations.
 
 ## Next Steps
 
-- **Explore display modes**: Try `--display verbose` for full messages
+- **Explore display modes**: Try `--display chat` for full messages
 - **Run experiments**: Create YAML files for batch conversations
 - **Branch conversations**: Use `pidgin branch` to explore alternate paths
 - **Analyze patterns**: Use the generated Jupyter notebooks

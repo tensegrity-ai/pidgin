@@ -129,7 +129,7 @@ class Conductor:
             agent_b: Second agent
             initial_prompt: Starting prompt
             max_turns: Maximum number of turns
-            display_mode: Display mode (normal, quiet, verbose)
+            display_mode: Display mode (normal, quiet, chat)
             show_timing: Whether to show timing information
             choose_names: Whether agents should choose their own names
             awareness_a: Awareness level for agent A (none, basic, firm, research)

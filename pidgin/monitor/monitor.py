@@ -538,9 +538,38 @@ class Monitor:
         # Sort by timestamp, most recent first
         errors.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
         return errors
+    
+    def _truncate_text(self, text: str, max_length: int, suffix: str = "...") -> str:
+        """Truncate text to max length with suffix."""
+        if len(text) <= max_length:
+            return text
+        return text[: max_length - len(suffix)] + suffix
+    
+    def _check_error_resolved(self, error: Dict[str, Any], all_errors: List[Dict[str, Any]]) -> bool:
+        """Check if an error was resolved by looking for successful events after it."""
+        # This is a simplified check - in a full implementation we'd look for
+        # MessageCompleteEvent or similar success events after the error
+        error_time = error.get("timestamp", "")
+        error_conv = error.get("conversation_id", "")
+        
+        if not error_time or not error_conv:
+            return False
+        
+        # Check if there are any later errors for the same conversation
+        # If not, it might have been resolved
+        for other_error in all_errors:
+            if (other_error.get("conversation_id") == error_conv and 
+                other_error.get("timestamp", "") > error_time):
+                return False
+        
+        # If retryable and has retries, consider it potentially resolved
+        if error.get("retryable") and error.get("retry_count", 0) > 0:
+            return True
+        
+        return False
 
     def build_errors_panel(self) -> Panel:
-        """Build panel showing recent errors."""
+        """Build panel showing recent errors with detailed information."""
         errors = self.get_recent_errors(minutes=10)
 
         if not errors:
@@ -550,46 +579,188 @@ class Monitor:
                 width=self.get_panel_width(),
             )
 
-        # Group errors by provider and type
-        provider_errors = defaultdict(list)
-        for error in errors:
-            provider = error.get("provider", "unknown")
+        # Create a table for detailed error display
+        table = Table(show_header=True, header_style="bold", box=None, expand=False)
+        table.add_column("Time", style=NORD_DARK, width=8)
+        table.add_column("Provider", width=10)
+        table.add_column("Type", width=14)
+        table.add_column("Context", width=32)
+        table.add_column("Status", width=10)
+
+        # Process errors in reverse chronological order (newest first)
+        errors.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+        
+        # Limit to most recent 10 errors for display
+        display_errors = errors[:10]
+        
+        for error in display_errors:
+            # Extract fields with defaults
+            timestamp_str = error.get("timestamp", "")
+            provider = error.get("provider", "")
             error_type = error.get("error_type", "unknown")
-            provider_errors[provider].append(error_type)
-
-        # Build error summary
-        error_lines = []
-        for provider, error_types in provider_errors.items():
-            error_count = len(error_types)
-            error_counter = Counter(error_types)
-
-            # Determine color and glyph based on error types
-            if "rate_limit" in error_types or "429" in str(error_types):
-                color = NORD_ORANGE
-                glyph = "▲"
-                status = "Rate Limited"
-            elif any("auth" in et.lower() for et in error_types):
-                color = NORD_RED
-                glyph = "✗"
-                status = "Auth Error"
+            error_message = error.get("error_message", "")
+            context = error.get("context", "")
+            agent_id = error.get("agent_id", "")
+            conversation_id = error.get("conversation_id", "")
+            experiment_id = error.get("experiment_id", "")
+            retry_count = error.get("retry_count", 0)
+            retryable = error.get("retryable", False)
+            
+            # For ErrorEvent (not APIErrorEvent), provider might not be set
+            if not provider:
+                # Try to infer from agent_id or error message
+                if agent_id:
+                    if "gpt" in agent_id.lower():
+                        provider = "openai"
+                    elif "claude" in agent_id.lower():
+                        provider = "anthropic"
+                    elif "gemini" in agent_id.lower():
+                        provider = "google"
+                    elif "grok" in agent_id.lower():
+                        provider = "xai"
+                    else:
+                        provider = "unknown"
+                else:
+                    provider = "unknown"
+            
+            # Format timestamp as relative time
+            time_str = "unknown"
+            if timestamp_str:
+                try:
+                    event_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                    if event_time.tzinfo is None:
+                        event_time = event_time.replace(tzinfo=timezone.utc)
+                    now = datetime.now(timezone.utc)
+                    delta = now - event_time
+                    
+                    if delta.total_seconds() < 60:
+                        time_str = f"{int(delta.total_seconds())}s ago"
+                    elif delta.total_seconds() < 3600:
+                        time_str = f"{int(delta.total_seconds() / 60)}m ago"
+                    else:
+                        time_str = f"{int(delta.total_seconds() / 3600)}h ago"
+                except:
+                    pass
+            
+            # Infer error type from message if needed
+            if error_type == "unknown" and error_message:
+                error_msg_lower = error_message.lower()
+                if "rate" in error_msg_lower and "limit" in error_msg_lower:
+                    error_type = "rate_limit"
+                elif "429" in error_message:
+                    error_type = "rate_limit"
+                elif "auth" in error_msg_lower or "unauthorized" in error_msg_lower:
+                    error_type = "auth_error"
+                elif "timeout" in error_msg_lower:
+                    error_type = "timeout"
+                elif "overloaded" in error_msg_lower:
+                    error_type = "overloaded"
+            
+            # Format provider name
+            provider_display = provider.replace("Provider", "").title()
+            if provider_display == "Unknown":
+                provider_display = "?"
+            
+            # Format error type
+            type_display = error_type.replace("_", " ").title()
+            if type_display == "Api Error":
+                type_display = "API Error"
+            
+            # Build context string
+            context_parts = []
+            
+            # Add experiment name if available
+            if experiment_id:
+                # Extract experiment name from ID (format: experiment_id_name_date)
+                exp_parts = experiment_id.split("_")
+                if len(exp_parts) >= 3:
+                    exp_name = exp_parts[2]
+                    context_parts.append(self._truncate_text(exp_name, 20))
+            
+            # Add conversation ID (shortened)
+            if conversation_id:
+                conv_short = conversation_id.split("_")[-1][:8]
+                context_parts.append(f"conv_{conv_short}")
+            
+            # Add agent info if available
+            if agent_id:
+                # Try to extract model name from agent_id if it looks like a model
+                agent_display = agent_id
+                if "gpt" in agent_id or "claude" in agent_id or "gemini" in agent_id:
+                    agent_display = agent_id.split("/")[-1]  # Handle provider/model format
+                context_parts.append(f"Agent: {self._truncate_text(agent_display, 15)}")
+            
+            # Add error message snippet if no other context
+            if len(context_parts) < 2 and error_message:
+                msg_snippet = self._truncate_text(error_message, 30)
+                context_parts.append(f'"{msg_snippet}"')
+            
+            # If we have a context string and room, add it
+            if context and len(context_parts) < 3:
+                context_parts.append(self._truncate_text(context, 35))
+            
+            context_str = "\n".join(context_parts[:3]) if context_parts else "No context"
+            
+            # Format status
+            status_str = ""
+            status_color = NORD_YELLOW
+            
+            # Check if error might be resolved
+            is_resolved = self._check_error_resolved(error, errors)
+            
+            if is_resolved:
+                status_str = "Resolved"
+                status_color = NORD_GREEN
+            elif retry_count > 0:
+                status_str = f"Retried {retry_count}x"
+                status_color = NORD_ORANGE
+            elif retryable:
+                status_str = "Retryable"
+                status_color = NORD_BLUE
             else:
-                color = NORD_YELLOW
+                status_str = "Failed"
+                status_color = NORD_RED
+            
+            # Determine row color based on error type
+            if error_type in ["rate_limit", "overloaded"]:
+                type_color = NORD_ORANGE
+                glyph = "▲"
+            elif error_type in ["auth_error", "unauthorized"]:
+                type_color = NORD_RED
+                glyph = "✗"
+            elif "timeout" in error_type:
+                type_color = NORD_YELLOW
+                glyph = "⏱"
+            else:
+                type_color = NORD_YELLOW
                 glyph = "!"
-                # status = "Error"  # Not used currently
-
-            # Format the most common error type
-            common_error = error_counter.most_common(1)[0]
-            error_lines.append(
-                f"[{color}]{glyph} {provider.title()}: {error_count} errors - {common_error[0]}[/{color}]"
+            
+            # Add row to table
+            table.add_row(
+                time_str,
+                f"[{type_color}]{provider_display}[/{type_color}]",
+                f"[{type_color}]{glyph} {type_display}[/{type_color}]",
+                context_str,
+                f"[{status_color}]{status_str}[/{status_color}]"
             )
-
-        content = (
-            "\n".join(error_lines)
-            if error_lines
-            else f"[{NORD_GREEN}]● No recent errors[/{NORD_GREEN}]"
-        )
-        title = f"Recent Errors ({len(errors)})" if errors else "Recent Errors (10m)"
-        return Panel(content, title=title, width=self.get_panel_width())
+        
+        # Add summary footer if there are more errors
+        if len(errors) > 10:
+            table.add_row("", "", "", f"[dim]... and {len(errors) - 10} more[/dim]", "")
+        
+        # Add helpful footer
+        if errors:
+            table.add_row("", "", "", "", "")
+            table.add_row(
+                "", 
+                "", 
+                "", 
+                "[dim]View logs for full details[/dim]", 
+                ""
+            )
+        
+        title = f"Recent Errors ({len(errors)}) - Last 10m"
+        return Panel(table, title=title, width=self.get_panel_width())
 
     def get_failed_conversations(self) -> List[Dict[str, Any]]:
         """Get failed conversations from manifest files."""

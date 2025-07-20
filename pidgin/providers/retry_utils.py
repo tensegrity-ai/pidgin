@@ -63,8 +63,18 @@ async def retry_with_exponential_backoff(
             if jitter:
                 delay = delay * (0.5 + 0.5 * time.time() % 1)
 
-            # Notify about retry
-            yield f"\n[Retrying in {delay:.1f}s due to error: {str(e)[:50]}...]\n"
+            # Notify about retry with user-friendly message
+            error_msg = str(e)
+            if "rate limit" in error_msg.lower() or "429" in error_msg:
+                friendly_msg = "Rate limit reached - waiting before retry"
+            elif "timeout" in error_msg.lower():
+                friendly_msg = "Request timed out - retrying"
+            elif "overloaded" in error_msg.lower() or "503" in error_msg:
+                friendly_msg = "API temporarily overloaded - waiting"
+            else:
+                friendly_msg = "Temporary error - retrying"
+            
+            yield f"\n[{friendly_msg} ({delay:.1f}s)...]\n"
 
             # Wait before retrying
             await asyncio.sleep(delay)

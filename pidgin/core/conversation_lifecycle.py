@@ -37,7 +37,7 @@ class ConversationLifecycle:
         self.base_providers = {}
         self.wrapped_providers = {}
         self._end_event_emitted = False
-        self.verbose_display = None
+        self.chat_display = None
         self.tail_display = None
 
     def set_providers(self, base_providers):
@@ -62,7 +62,7 @@ class ConversationLifecycle:
 
         Args:
             conv_dir: Conversation directory
-            display_mode: Display mode (normal, quiet, verbose)
+            display_mode: Display mode (normal, quiet, chat)
             show_timing: Whether to show timing
             agents: Dict of agent_id -> Agent
             existing_bus: Optional existing EventBus to use
@@ -87,11 +87,11 @@ class ConversationLifecycle:
         if display_mode == "tail":
             # Use tail display for showing raw events
             self.tail_display = TailDisplay(self.bus, self.console)
-        elif display_mode == "verbose":
-            # Use verbose display for minimal message viewing
-            from ..ui.verbose_display import VerboseDisplay
+        elif display_mode == "chat":
+            # Use chat display for minimal message viewing
+            from ..ui.chat_display import ChatDisplay
 
-            self.verbose_display = VerboseDisplay(self.bus, self.console, agents)
+            self.chat_display = ChatDisplay(self.bus, self.console, agents)
         else:
             # Use display filter for normal/quiet modes
             if self.console is not None and display_mode != "none":

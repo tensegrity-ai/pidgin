@@ -34,7 +34,7 @@ class TestConversationLifecycleBasics:
         assert lifecycle.base_providers == {}
         assert lifecycle.wrapped_providers == {}
         assert lifecycle._end_event_emitted is False
-        assert lifecycle.verbose_display is None
+        assert lifecycle.chat_display is None
         assert lifecycle.tail_display is None
 
     def test_set_providers(self):
@@ -172,13 +172,13 @@ class TestEventSystemInitialization:
         )
 
         assert lifecycle.tail_display is not None
-        assert lifecycle.verbose_display is None
+        assert lifecycle.chat_display is None
         assert lifecycle.display_filter is None
 
         await lifecycle.cleanup()
 
     @pytest.mark.asyncio
-    async def test_initialize_verbose_display(self, tmp_path):
+    async def test_initialize_chat_display(self, tmp_path):
         """Test initializing with verbose display mode."""
         console = Mock()
         lifecycle = ConversationLifecycle(console)
@@ -192,7 +192,7 @@ class TestEventSystemInitialization:
             conv_dir=tmp_path, display_mode="verbose", show_timing=False, agents=agents
         )
 
-        assert lifecycle.verbose_display is not None
+        assert lifecycle.chat_display is not None
         assert lifecycle.tail_display is None
         assert lifecycle.display_filter is None
 
@@ -215,7 +215,7 @@ class TestEventSystemInitialization:
 
         assert lifecycle.display_filter is not None
         assert lifecycle.tail_display is not None  # Still created for logging
-        assert lifecycle.verbose_display is None
+        assert lifecycle.chat_display is None
 
         await lifecycle.cleanup()
 

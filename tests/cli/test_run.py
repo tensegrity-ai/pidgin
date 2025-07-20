@@ -218,8 +218,8 @@ class TestRunCommandModes:
         # Check that quiet mode parameters are passed correctly
         assert "quiet" in str(call_args) or result.exit_code == 0
 
-    def test_verbose_mode(self, cli_runner, mock_dependencies):
-        """Test verbose mode execution (default mode)."""
+    def test_chat_mode(self, cli_runner, mock_dependencies):
+        """Test chat mode execution (default mode)."""
         result = cli_runner.invoke(
             run, ["--agent-a", "claude", "--agent-b", "gpt-4", "--turns", "2"]
         )

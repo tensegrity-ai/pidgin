@@ -120,17 +120,17 @@ class TestExperimentRunnerBasic:
             )
             mock_bus.start.assert_called_once()
 
-    def test_setup_output_and_console_verbose_mode(
+    def test_setup_output_and_console_chat_mode(
         self, temp_output_dir, sample_experiment_config
     ):
-        """Test output and console setup in verbose mode."""
+        """Test output and console setup in chat mode."""
         from pidgin.experiments.runner import ExperimentRunner
 
         runner = ExperimentRunner(temp_output_dir)
         exp_dir = temp_output_dir / "test_exp"
         exp_dir.mkdir(parents=True, exist_ok=True)
 
-        sample_experiment_config.display_mode = "verbose"
+        sample_experiment_config.display_mode = "chat"
 
         with patch("pidgin.io.output_manager.OutputManager") as mock_output_class:
             mock_output = Mock()
@@ -141,7 +141,7 @@ class TestExperimentRunnerBasic:
             )
 
             assert output == mock_output
-            assert console is not None  # Console created for verbose mode
+            assert console is not None  # Console created for chat mode
 
             # Test that create_conversation_dir is overridden
             result = output.create_conversation_dir("conv_123")

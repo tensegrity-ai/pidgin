@@ -116,9 +116,9 @@ class NameCoordinator:
             agent_b.model_shortname = config_b.shortname
 
             if config_a.shortname == config_b.shortname:
-                # Same model - add numbers
-                agent_a.display_name = f"{config_a.shortname}-1"
-                agent_b.display_name = f"{config_b.shortname}-2"
+                # Same model - add letters
+                agent_a.display_name = f"{config_a.shortname}-A"
+                agent_b.display_name = f"{config_b.shortname}-B"
             else:
                 # Different models - use shortnames directly
                 agent_a.display_name = config_a.shortname
