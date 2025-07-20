@@ -135,10 +135,10 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
   - [ ] When auto-generated names collide, retry with a new random name
   - [ ] Currently fails with ugly error when name already exists
   - [ ] Should be simple retry loop in name generation
-- [ ] Simplify process names:
-  - [ ] Current implementation is overly complex
-  - [ ] Just use simple names: `pidgin-exp`, `pidgin-monitor`, `pidgin-tail`, `pidgin-chat`
-  - [ ] Remove the complex name generation with experiment IDs
+- [x] Simplify process names:
+  - [x] Current implementation is overly complex
+  - [x] Just use simple names: `pidgin-exp`, `pidgin-monitor`, `pidgin-tail`, `pidgin-chat`
+  - [x] Remove the complex name generation with experiment IDs
 
 ## Low Priority - Nice to Have
 

@@ -288,7 +288,7 @@ class ExperimentRunner:
         try:
             import setproctitle
 
-            setproctitle.setproctitle(f"pidgin-conv-{conversation_id[:8]}")
+            setproctitle.setproctitle("pidgin-exp")
         except ImportError:
             pass  # Optional dependency
 

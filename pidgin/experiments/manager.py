@@ -219,10 +219,8 @@ class ExperimentManager:
 
         if has_setproctitle:
             # Create a wrapper script that sets process title before running
-            # Use meaningful name: pidgin-exp-{name}-{id}
-            # Ensure the name is properly escaped and won't break shell syntax
-            safe_proc_name = safe_name[:20]  # Further limit for process title
-            proc_name = f"pidgin-exp-{safe_proc_name}-{experiment_id[:8]}"
+            # Use simple name for process identification
+            proc_name = "pidgin-exp"
             
             # Build the wrapper command with proper module execution
             # Use json.dumps to properly escape the config JSON

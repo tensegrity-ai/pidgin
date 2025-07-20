@@ -39,8 +39,8 @@ class ExperimentDaemon:
         try:
             import setproctitle
 
-            # Use descriptive name for daemon process
-            setproctitle.setproctitle(f"pidgin-daemon-{self.experiment_id[:8]}")
+            # Use simple name for daemon process
+            setproctitle.setproctitle("pidgin-monitor")
         except ImportError:
             pass  # Optional dependency, graceful degradation
 

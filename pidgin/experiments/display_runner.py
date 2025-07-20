@@ -29,7 +29,10 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     # Set process title for display runner
     try:
         import setproctitle
-        setproctitle.setproctitle(f"pidgin-display-{display_mode}")
+        if display_mode == "verbose":
+            setproctitle.setproctitle("pidgin-chat")
+        else:
+            setproctitle.setproctitle("pidgin-tail")
     except ImportError:
         pass  # Optional dependency
 
