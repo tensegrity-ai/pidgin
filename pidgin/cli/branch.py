@@ -259,6 +259,26 @@ def branch(
         display.error(error_msg.rstrip(), use_panel=True)
         return
 
+    # Validate API keys before starting daemon
+    from ..providers.api_key_manager import APIKeyManager
+    from ..config.models import get_model_config
+    
+    providers = set()
+    agent_a_config = get_model_config(branch_config["agent_a_model"])
+    agent_b_config = get_model_config(branch_config["agent_b_model"])
+    if agent_a_config:
+        providers.add(agent_a_config.provider)
+    if agent_b_config:
+        providers.add(agent_b_config.provider)
+    
+    try:
+        # Check all providers have API keys before starting
+        APIKeyManager.validate_required_providers(list(providers))
+    except Exception as e:
+        # Show friendly error message in the CLI
+        display.error(str(e), title="Missing API Keys", use_panel=True)
+        return
+
     # Start the branched experiment
     base_dir = get_experiments_dir()
     manager = ExperimentManager(base_dir=base_dir)
