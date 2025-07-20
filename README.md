@@ -19,7 +19,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 - **Display**: Real-time observability with convergence tracking, verbose mode, or raw event stream
 - **Output**: JSONL events, markdown transcripts, manifest tracking
 - **Experiments**: Run hundreds of conversations with smart parallelism
-- **Background**: Daemon processes with meaningful names and system-wide monitoring
+- **Background**: Background processes with meaningful names and system-wide monitoring
 - **Analysis**: 150+ metrics per turn in DuckDB wide-table format
 - **Monitoring**: Live system monitor and standard Unix tools (tail, grep, jq)
 - **Jupyter Notebooks**: Auto-generated analysis notebooks for each experiment
@@ -268,7 +268,7 @@ Pidgin is a comprehensive research tool with:
 - **Streaming support**: Real-time response display
 
 ### Experiment System
-- **Unix daemon processes**: Proper background execution
+- **Background processes**: Proper subprocess execution with detachment
 - **Sequential orchestration**: Rate limit aware execution
 - **DuckDB storage**: Async database with event sourcing
 - **Fault tolerance**: Graceful handling of API failures
@@ -283,7 +283,7 @@ Pidgin is a comprehensive research tool with:
 - `pidgin/core/` - Event bus, conductor, conversation management
 - `pidgin/providers/` - AI provider integrations
 - `pidgin/metrics/` - Unified metrics calculation system
-- `pidgin/experiments/` - Batch experiment runner with daemon support
+- `pidgin/experiments/` - Batch experiment runner with background process support
 - `pidgin/ui/` - Display components and filters
 
 ## Contributing

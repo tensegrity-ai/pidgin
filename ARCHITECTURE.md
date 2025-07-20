@@ -216,11 +216,12 @@ RateLimitEvent
 
 ## Experiment System
 
-Experiments run as Unix daemon processes:
+Experiments run as background processes using subprocess:
 
 ```
 ┌──────────────┐     ┌───────────────┐     ┌──────────────┐
-│ CLI Command  │────▶│ Daemon Process│────▶│   EventBus   │
+│ CLI Command  │────▶│ Background    │────▶│   EventBus   │
+│              │     │ Process       │     │              │
 └──────────────┘     └───────────────┘     └──────────────┘
                              │                      │
                      ┌───────▼───────-─┐    ┌───────▼──────┐
