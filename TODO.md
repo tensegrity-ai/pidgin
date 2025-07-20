@@ -31,6 +31,8 @@ See detailed plan: [PLANS/context-truncation-plan.md](PLANS/context-truncation-p
   - [ ] Queries model endpoints for Anthropic, OpenAI, Google, xAI
   - [ ] Compares against our curated list
   - [ ] Identifies new models not in our config
+  - [ ] Check PyPI for SDK updates (anthropic, openai, google-generativeai)
+  - [ ] Compare against versions in pyproject.toml
   - [ ] Filters out non-conversational models:
     - [ ] Skip image-only models (DALL-E, Stable Diffusion, etc.)
     - [ ] Skip audio-only models (Whisper, TTS, etc.)
@@ -47,9 +49,10 @@ See detailed plan: [PLANS/context-truncation-plan.md](PLANS/context-truncation-p
     - [ ] Model family updates (e.g., "replaced by X")
 - [ ] Add GitHub issue creation:
   - [ ] Create issue for any changes detected
-  - [ ] Use clear sections: "New Models", "Removed Models", "Updated Models" (no emojis)
+  - [ ] Use clear sections: "New Models", "Removed Models", "Updated Models", "SDK Updates"
   - [ ] Include before/after for metadata changes
-  - [ ] Tag appropriately: "new-model", "deprecated-model", "model-update"
+  - [ ] For SDK updates, show: "anthropic: 0.52.2 → 0.53.0"
+  - [ ] Tag appropriately: "new-model", "deprecated-model", "model-update", "sdk-update"
   - [ ] Include recommendation (add/remove/update)
 - [ ] Add GitHub Actions workflow (`.github/workflows/check-models.yml`):
   - [ ] Run weekly/monthly on schedule
@@ -99,22 +102,47 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 
 ## Medium Priority - Quality of Life
 
-### 3. Output Directory Organization
+### 3. Architectural Review & Compliance Audit
+**Goal**: Ensure recent features haven't violated core architectural principles
+
+- [ ] Review all recent features against core principles:
+  - [ ] Event-driven architecture - Are all state changes going through events?
+  - [ ] Provider agnostic - Does conductor remain unaware of provider types?
+  - [ ] JSONL-first data flow - Is JSONL still the single source of truth?
+  - [ ] Module size (<200 lines) - Have any modules grown too large?
+  - [ ] Single responsibility - Does each module maintain clear boundaries?
+- [ ] Check for architectural violations:
+  - [ ] Direct database writes bypassing events
+  - [ ] Components with multiple responsibilities
+  - [ ] Hidden state or coupling between components
+  - [ ] Features that add interpretation vs observation
+- [ ] Document any violations found
+- [ ] Create issues to fix architectural drift
+
+### 4. Output Directory Organization
 - [ ] Fix empty human-readable experiment directories (already fixed, needs testing)
 - [ ] Consider flattening structure (single experiment directory)
 
-### 4. ~~Post-Processing Pipeline Issues~~ ✅ COMPLETED
+### 5. ~~Post-Processing Pipeline Issues~~ ✅ COMPLETED
 **Goal**: Fix display runner exit and ensure correct post-processing sequence
 
 **Fixed**: Implemented proper event-driven post-processing flow with new events and status
 
-### 5. Error Handling & Logging
+### 6. Error Handling & Logging
 - [ ] Rename misleading log files (startup_error.log → startup.log) (already fixed)
 - [ ] Improve error messages for common issues (API keys, rate limits)
+- [ ] Handle experiment name collisions gracefully:
+  - [ ] When auto-generated names collide, retry with a new random name
+  - [ ] Currently fails with ugly error when name already exists
+  - [ ] Should be simple retry loop in name generation
+- [ ] Simplify process names:
+  - [ ] Current implementation is overly complex
+  - [ ] Just use simple names: `pidgin-exp`, `pidgin-monitor`, `pidgin-tail`, `pidgin-chat`
+  - [ ] Remove the complex name generation with experiment IDs
 
 ## Low Priority - Nice to Have
 
-### 6. Display Improvements
+### 7. Display Improvements
 - [ ] Rename "verbose" display to "chat" display throughout:
   - [ ] CLI flag: `--verbose` → `--chat` (keep --verbose as alias)
   - [ ] Internal naming: VerboseDisplay → ChatDisplay
@@ -124,12 +152,12 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
   - [ ] Use shortname (e.g., "Claude 3 Opus", "GPT-4")
   - [ ] Format: "[Model Name] thinks..." instead of "Agent A thinks..."
 
-### 7. Documentation Updates
+### 8. Documentation Updates
 - [ ] Update examples to reflect best practices
 - [ ] Add troubleshooting guide for common issues
 - [ ] Document context limit behavior
 
-### 8. Testing & Validation
+### 9. Testing & Validation
 - [ ] Add tests for context limit handling
 - [ ] Verify all providers handle errors consistently
 - [ ] Test migration path for existing users
