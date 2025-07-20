@@ -75,6 +75,12 @@ class VerboseDisplay:
             self.console.print(Rule(style=self.COLORS["dim"]))
             self.console.print()
 
+        # Update agent display names from event
+        if event.agent_a_display_name and "agent_a" in self.agents:
+            self.agents["agent_a"].display_name = event.agent_a_display_name
+        if event.agent_b_display_name and "agent_b" in self.agents:
+            self.agents["agent_b"].display_name = event.agent_b_display_name
+            
         # Build header
         agent_a_name = event.agent_a_display_name or "Agent A"
         agent_b_name = event.agent_b_display_name or "Agent B"

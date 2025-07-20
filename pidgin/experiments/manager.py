@@ -220,24 +220,38 @@ class ExperimentManager:
         if has_setproctitle:
             # Create a wrapper script that sets process title before running
             # Use meaningful name: pidgin-exp-{name}-{id}
-            proc_name = f"pidgin-exp-{safe_name}-{experiment_id[:8]}"
+            # Ensure the name is properly escaped and won't break shell syntax
+            safe_proc_name = safe_name[:20]  # Further limit for process title
+            proc_name = f"pidgin-exp-{safe_proc_name}-{experiment_id[:8]}"
             
             # Build the wrapper command with proper module execution
-            wrapper_cmd = [
+            # Use json.dumps to properly escape the config JSON
+            config_json = json.dumps(config.dict())
+            
+            # Build command as separate parts to avoid escaping issues
+            wrapper_script = f"""
+import sys
+try:
+    import setproctitle
+    setproctitle.setproctitle('{proc_name}')
+except ImportError:
+    pass
+sys.argv = [
+    'pidgin.experiments.daemon_launcher',
+    '--experiment-id', '{experiment_id}',
+    '--experiment-dir', '{dir_name}',
+    '--config', {json.dumps(config_json)},
+    '--working-dir', '{working_dir}'
+]
+import runpy
+runpy.run_module('pidgin.experiments.daemon_launcher', run_name='__main__')
+"""
+            
+            cmd = [
                 sys.executable,
                 "-c",
-                f"import sys; import setproctitle; "
-                f"setproctitle.setproctitle('{proc_name}'); "
-                f"sys.argv = ['pidgin.experiments.daemon_launcher', "
-                f"'--experiment-id', '{experiment_id}', "
-                f"'--experiment-dir', '{dir_name}', "
-                f"'--config', {json.dumps(config.dict())!r}, "
-                f"'--working-dir', '{working_dir}']; "
-                f"import runpy; "
-                f"runpy.run_module('pidgin.experiments.daemon_launcher', "
-                f"run_name='__main__')",
+                wrapper_script
             ]
-            cmd = wrapper_cmd
         else:
             # Fall back to regular command without process title
             cmd = [
@@ -256,22 +270,45 @@ class ExperimentManager:
 
         # Create a file to capture startup output
         startup_log = self.logs_dir / f"{experiment_id}_startup.log"
+        
+        # Create log file for experiment output
+        experiment_log = self.logs_dir / f"{experiment_id}.log"
 
-        # Start the daemon with output capture
+        # Start the subprocess as a detached process
         # Pass environment to subprocess so PIDGIN_ORIGINAL_CWD is available
         env = os.environ.copy()
         # Ensure PIDGIN_ORIGINAL_CWD is set for the subprocess
         if "PIDGIN_ORIGINAL_CWD" not in env:
             env["PIDGIN_ORIGINAL_CWD"] = working_dir
+        
+        # Log what we're passing to subprocess for debugging
+        logging.debug(f"Passing {len(env)} environment variables to subprocess")
+        logging.debug(f"ANTHROPIC_API_KEY in env: {'ANTHROPIC_API_KEY' in env}")
+        logging.debug(f"OPENAI_API_KEY in env: {'OPENAI_API_KEY' in env}")
 
-        with open(startup_log, "w") as stderr_file:
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=stderr_file,
-                stdin=subprocess.DEVNULL,
-                env=env,
-            )
+        with open(startup_log, "w") as stderr_file, open(experiment_log, "w") as stdout_file:
+            # Use platform-specific flags for creating a detached process
+            if sys.platform == "win32":
+                # Windows: use CREATE_NEW_PROCESS_GROUP flag
+                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    stdin=subprocess.DEVNULL,
+                    env=env,
+                    creationflags=creationflags,
+                )
+            else:
+                # Unix/Linux/macOS: use start_new_session to detach from terminal
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    stdin=subprocess.DEVNULL,
+                    env=env,
+                    start_new_session=True,  # Creates new session, detaches from terminal
+                )
 
         # Wait for daemon to start with retries
         max_retries = SystemDefaults.MAX_RETRIES
@@ -310,7 +347,9 @@ class ExperimentManager:
                 pass
 
         # Check if process failed immediately
-        if process.poll() is not None:
+        poll_result = process.poll()
+        if poll_result is not None and poll_result != 0:
+            # Process exited with error
             error_msg += f"\nExit code: {process.returncode}"
             error_msg += f"\nCheck logs at: {self.logs_dir / f'{experiment_id}.log'}"
             error_msg += f"\nStartup log at: {startup_log}"

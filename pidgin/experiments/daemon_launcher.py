@@ -88,24 +88,46 @@ def main():
 
     daemon = ExperimentDaemon(args.experiment_id, active_dir)
 
-    # Daemonize
+    # Set up logging first
+    log_file = active_dir.parent / "logs" / f"{args.experiment_id}.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Configure logging to write to file
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, mode='a'),
+            logging.StreamHandler(sys.stderr)  # Also log to stderr for startup
+        ],
+        force=True,  # Override any existing config
+    )
+
+    # Log environment info
+    logging.info(f"Environment has {len(os.environ)} variables")
+    logging.info(f"ANTHROPIC_API_KEY present: {'ANTHROPIC_API_KEY' in os.environ}")
+    logging.info(f"OPENAI_API_KEY present: {'OPENAI_API_KEY' in os.environ}")
+    logging.info(f"Working directory: {os.getcwd()}")
+
+    # Set up the daemon
     try:
-        daemon.daemonize()
+        daemon.setup()
     except Exception as e:
-        print(f"[pidgin-daemon] Failed to daemonize: {e}", file=sys.stderr)
+        logging.error(f"Failed to set up background process: {e}", exc_info=True)
         sys.exit(1)
 
-    # Now we're in daemon process
-    # Set up logging
+    # Remove stderr handler after setup to only log to file
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stderr:
+            root_logger.removeHandler(handler)
+    
     try:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            force=True,  # Override any existing config
-        )
-
         logging.info(f"Starting experiment {args.experiment_id}")
         logging.info(f"Config: {config.name} - {config.repetitions} repetitions")
+        logging.info(f"GOOGLE_API_KEY present: {'GOOGLE_API_KEY' in os.environ}")
+        logging.info(f"XAI_API_KEY present: {'XAI_API_KEY' in os.environ}")
+        logging.info(f"PIDGIN_ORIGINAL_CWD: {os.getenv('PIDGIN_ORIGINAL_CWD', 'Not set')}")
 
         # Run experiment
         try:

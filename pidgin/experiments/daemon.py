@@ -25,51 +25,10 @@ class ExperimentDaemon:
         self.log_file = pid_dir.parent.resolve() / "logs" / f"{experiment_id}.log"
         self.stop_requested = False
 
-    def daemonize(self):
-        """Daemonize using double-fork technique."""
-        # First fork
-        try:
-            pid = os.fork()
-            if pid > 0:
-                # Parent process, return and let it exit
-                sys.exit(0)
-        except OSError as e:
-            sys.stderr.write(f"Fork #1 failed: {e}\n")
-            sys.exit(1)
-
-        # Decouple from parent environment
-        os.chdir("/")
-        os.setsid()
-        os.umask(0)
-
-        # Second fork
-        try:
-            pid = os.fork()
-            if pid > 0:
-                # Second parent, exit
-                sys.exit(0)
-        except OSError as e:
-            sys.stderr.write(f"Fork #2 failed: {e}\n")
-            sys.exit(1)
-
-        # Now we're in the daemon process
-        # Redirect standard file descriptors
-        sys.stdout.flush()
-        sys.stderr.flush()
-
+    def setup(self):
+        """Set up the subprocess as a background process."""
         # Create log directory
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # Open log file
-        log_fd = open(self.log_file, "a", buffering=1)  # Line buffered
-
-        # Redirect stdout/stderr to log
-        os.dup2(log_fd.fileno(), sys.stdout.fileno())
-        os.dup2(log_fd.fileno(), sys.stderr.fileno())
-
-        # Close stdin
-        devnull = open("/dev/null", "r")
-        os.dup2(devnull.fileno(), sys.stdin.fileno())
 
         # Write PID file
         self.pid_file.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +51,7 @@ class ExperimentDaemon:
 
         # Log startup
         logging.info(
-            f"Daemon started for experiment {self.experiment_id} (PID: {os.getpid()})"
+            f"Background process started for experiment {self.experiment_id} (PID: {os.getpid()})"
         )
 
     def _handle_signal(self, signum, frame):
