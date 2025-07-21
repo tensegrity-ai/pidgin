@@ -243,5 +243,26 @@ class EventAwareProvider:
             # Log the error
             logger.error(f"Error in handle_message_request: {e}", exc_info=True)
 
-            # Still raise to let conductor handle it
-            raise
+            # Instead of raising, create a fallback response
+            fallback_content = "[Unable to generate response due to API error]"
+            
+            # Create a valid message response
+            message = Message(
+                role="assistant",
+                content=fallback_content,
+                agent_id=self.agent_id,
+            )
+            
+            # Emit completion event with the fallback message
+            await self.bus.emit(
+                MessageCompleteEvent(
+                    conversation_id=event.conversation_id,
+                    agent_id=self.agent_id,
+                    message=message,
+                    tokens_used=0,  # No tokens for error response
+                    duration_ms=int((time.time() - start_time) * 1000),
+                )
+            )
+            
+            # Don't raise - let conversation continue
+            return

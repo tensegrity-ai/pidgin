@@ -179,7 +179,7 @@ class TestEventSystemInitialization:
 
     @pytest.mark.asyncio
     async def test_initialize_chat_display(self, tmp_path):
-        """Test initializing with verbose display mode."""
+        """Test initializing with chat display mode."""
         console = Mock()
         lifecycle = ConversationLifecycle(console)
 
@@ -189,7 +189,7 @@ class TestEventSystemInitialization:
         }
 
         await lifecycle.initialize_event_system(
-            conv_dir=tmp_path, display_mode="verbose", show_timing=False, agents=agents
+            conv_dir=tmp_path, display_mode="chat", show_timing=False, agents=agents
         )
 
         assert lifecycle.chat_display is not None
