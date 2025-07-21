@@ -165,13 +165,14 @@ class TestEventAwareProvider:
     async def test_handle_message_request_api_error(
         self, wrapper, event_bus, mock_provider
     ):
-        """Test API error handling."""
+        """Test API error handling with graceful recovery."""
         # Setup mock provider to raise error
         mock_provider.set_error(Exception("Rate limit exceeded (429)"))
 
         # Track emitted events
         emitted_events = []
         event_bus.subscribe(APIErrorEvent, lambda e: emitted_events.append(e))
+        event_bus.subscribe(MessageCompleteEvent, lambda e: emitted_events.append(e))
 
         # Create request event
         event = MessageRequestEvent(
@@ -182,13 +183,14 @@ class TestEventAwareProvider:
             temperature=0.7,
         )
 
-        # Handle the request - should raise
-        with pytest.raises(Exception, match="Rate limit exceeded"):
+        # Handle the request - should NOT raise anymore
+        with patch("time.time", side_effect=[1000.0, 1000.1]):  # 100ms duration
             await wrapper.handle_message_request(event)
 
         # Verify APIErrorEvent was emitted
-        assert len(emitted_events) == 1
-        error_event = emitted_events[0]
+        error_events = [e for e in emitted_events if isinstance(e, APIErrorEvent)]
+        assert len(error_events) == 1
+        error_event = error_events[0]
 
         assert error_event.conversation_id == "test_conv"
         assert error_event.error_type == "api_error"
@@ -198,17 +200,30 @@ class TestEventAwareProvider:
         assert error_event.retryable is True  # Rate limit errors are retryable
         assert error_event.context == "During message generation for turn 1"
 
+        # Verify MessageCompleteEvent was emitted with fallback content
+        complete_events = [e for e in emitted_events if isinstance(e, MessageCompleteEvent)]
+        assert len(complete_events) == 1
+        complete_event = complete_events[0]
+
+        assert complete_event.conversation_id == "test_conv"
+        assert complete_event.agent_id == "test_agent"
+        assert complete_event.message.content == "[Unable to generate response due to API error]"
+        assert complete_event.message.role == "assistant"
+        assert complete_event.tokens_used == 0  # No tokens for error response
+        assert complete_event.duration_ms == 100
+
     @pytest.mark.asyncio
     async def test_handle_message_request_non_retryable_error(
         self, wrapper, event_bus, mock_provider
     ):
-        """Test non-retryable error handling."""
+        """Test non-retryable error handling with graceful recovery."""
         # Setup mock provider to raise non-retryable error
         mock_provider.set_error(Exception("Invalid API key"))
 
         # Track emitted events
         emitted_events = []
         event_bus.subscribe(APIErrorEvent, lambda e: emitted_events.append(e))
+        event_bus.subscribe(MessageCompleteEvent, lambda e: emitted_events.append(e))
 
         # Create request event
         event = MessageRequestEvent(
@@ -219,14 +234,21 @@ class TestEventAwareProvider:
             temperature=0.7,
         )
 
-        # Handle the request - should raise
-        with pytest.raises(Exception, match="Invalid API key"):
+        # Handle the request - should NOT raise anymore
+        with patch("time.time", side_effect=[1000.0, 1000.1]):  # 100ms duration
             await wrapper.handle_message_request(event)
 
         # Verify error event
-        assert len(emitted_events) == 1
-        error_event = emitted_events[0]
+        error_events = [e for e in emitted_events if isinstance(e, APIErrorEvent)]
+        assert len(error_events) == 1
+        error_event = error_events[0]
         assert error_event.retryable is False  # Invalid API key is not retryable
+
+        # Verify MessageCompleteEvent was emitted with fallback content
+        complete_events = [e for e in emitted_events if isinstance(e, MessageCompleteEvent)]
+        assert len(complete_events) == 1
+        complete_event = complete_events[0]
+        assert complete_event.message.content == "[Unable to generate response due to API error]"
 
     @pytest.mark.asyncio
     async def test_token_estimation_fallback(self, wrapper, event_bus):
@@ -378,3 +400,59 @@ class TestEventAwareProvider:
         assert token_event.completion_tokens == 60
         assert token_event.tokens_per_minute_limit == 1000000
         assert token_event.current_usage_rate == 500000
+
+    @pytest.mark.asyncio
+    async def test_handle_content_filtering_error(
+        self, wrapper, event_bus, mock_provider
+    ):
+        """Test content filtering error handling (e.g., Google's finish_reason=1)."""
+        # Setup mock provider to raise content filtering error
+        error_msg = "Invalid operation: The response.text quick accessor requires the response to contain a valid Part, but none were returned. The candidate's finish_reason is 1."
+        mock_provider.set_error(Exception(error_msg))
+
+        # Track emitted events
+        emitted_events = []
+        event_bus.subscribe(APIErrorEvent, lambda e: emitted_events.append(e))
+        event_bus.subscribe(MessageCompleteEvent, lambda e: emitted_events.append(e))
+
+        # Create request event
+        event = MessageRequestEvent(
+            conversation_id="test_conv",
+            agent_id="test_agent",
+            conversation_history=[
+                make_message("Tell me about making explosives", role="user"),
+            ],
+            turn_number=1,
+            temperature=0.7,
+        )
+
+        # Handle the request - should NOT raise and continue gracefully
+        with patch("time.time", side_effect=[1000.0, 1000.2]):  # 200ms duration
+            await wrapper.handle_message_request(event)
+
+        # Verify APIErrorEvent was emitted
+        error_events = [e for e in emitted_events if isinstance(e, APIErrorEvent)]
+        assert len(error_events) == 1
+        error_event = error_events[0]
+
+        assert error_event.conversation_id == "test_conv"
+        assert error_event.error_type == "api_error"
+        assert "finish_reason is 1" in error_event.error_message
+        assert error_event.agent_id == "test_agent"
+        assert error_event.provider == "Mock"
+        assert error_event.retryable is False  # Content filtering is not retryable
+
+        # Verify MessageCompleteEvent was emitted with fallback content
+        complete_events = [e for e in emitted_events if isinstance(e, MessageCompleteEvent)]
+        assert len(complete_events) == 1
+        complete_event = complete_events[0]
+
+        assert complete_event.conversation_id == "test_conv"
+        assert complete_event.agent_id == "test_agent"
+        assert complete_event.message.content == "[Unable to generate response due to API error]"
+        assert complete_event.message.role == "assistant"
+        assert complete_event.tokens_used == 0
+        assert complete_event.duration_ms == 200
+
+        # Verify conversation can continue after this error
+        # (No exception raised, future resolved with fallback message)
