@@ -97,6 +97,9 @@ class ImportService:
 
             self.db.begin()
 
+            # First, ensure experiment exists in database
+            self._ensure_experiment_exists(experiment_id, manifest)
+
             for jsonl_file in jsonl_files:
                 turns_count = self._process_jsonl_file(
                     jsonl_file, experiment_id, manifest
@@ -231,6 +234,45 @@ class ImportService:
                 turns_processed += 1
 
         return turns_processed
+
+    def _ensure_experiment_exists(self, experiment_id: str, manifest: Dict) -> None:
+        """Ensure experiment exists in database before importing turns.
+        
+        Args:
+            experiment_id: Experiment ID
+            manifest: Manifest data containing experiment config
+        """
+        # Check if experiment already exists
+        result = self.db.execute(
+            "SELECT experiment_id FROM experiments WHERE experiment_id = ?",
+            [experiment_id]
+        ).fetchone()
+        
+        if result is None:
+            # Create experiment record from manifest
+            config = manifest.get("config", {})
+            name = manifest.get("name", experiment_id)
+            created_at = manifest.get("created_at", datetime.now().isoformat())
+            
+            # Insert experiment
+            self.db.execute("""
+                INSERT INTO experiments (
+                    experiment_id, name, config, status,
+                    created_at, total_conversations, 
+                    completed_conversations, failed_conversations
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, [
+                experiment_id,
+                name,
+                json.dumps(config),
+                "completed",  # Status is completed since we're importing after completion
+                created_at,
+                manifest.get("total_conversations", 0),
+                manifest.get("completed_conversations", 0),
+                manifest.get("failed_conversations", 0)
+            ])
+            
+            logger.info(f"Created experiment record for {experiment_id}")
 
     def _prepare_turn_row(
         self,

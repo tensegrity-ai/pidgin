@@ -354,7 +354,7 @@ class Conductor:
         )
 
         # Batch load to database for single chat sessions
-        if conv_id and not conv_id.startswith("conv_exp_"):  # Only for standalone chats
+        if conv_id and not (conv_id.startswith("conv_experiment_") or conv_id.startswith("conv_exp_")):  # Only for standalone chats
             await self._batch_load_chat_to_database(conv_id, self.current_conv_dir)
 
     async def _batch_load_chat_to_database(self, conv_id: str, conv_dir: Path):
