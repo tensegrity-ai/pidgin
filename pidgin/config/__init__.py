@@ -3,7 +3,6 @@
 from .config import Config, get_config, load_config
 from .dimensional_prompts import DimensionalPromptGenerator
 from .models import (
-    ModelCharacteristics,
     ModelConfig,
     get_model_config,
     get_models_by_provider,
@@ -17,7 +16,6 @@ __all__ = [
     "load_config",
     # From models
     "ModelConfig",
-    "ModelCharacteristics",
     "get_model_config",
     "get_models_by_provider",
     # From system_prompts

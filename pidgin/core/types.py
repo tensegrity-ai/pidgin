@@ -95,7 +95,7 @@ class Agent(BaseModel):
         id: Unique identifier (usually "agent_a" or "agent_b")
         model: Model identifier (e.g., "gpt-4", "claude-3-opus")
         display_name: Optional custom name for display
-        model_shortname: Cached shortname from model config
+        model_display_name: Cached display name from model config
         temperature: Optional temperature override for this agent
 
     Example:
@@ -110,7 +110,7 @@ class Agent(BaseModel):
     id: str
     model: str
     display_name: Optional[str] = None
-    model_shortname: Optional[str] = None  # Store the original model shortname
+    model_display_name: Optional[str] = None  # Store the model display name from config
     temperature: Optional[float] = None  # Temperature setting for this agent
 
 

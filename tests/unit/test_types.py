@@ -99,12 +99,12 @@ class TestAgent:
             id="agent_test",
             model="claude-3-sonnet",
             display_name="Test Agent",
-            model_shortname="sonnet",
+            model_display_name="sonnet",
             temperature=0.8,
         )
 
         assert agent.display_name == "Test Agent"
-        assert agent.model_shortname == "sonnet"
+        assert agent.model_display_name == "sonnet"
         assert agent.temperature == 0.8
 
 

@@ -230,19 +230,10 @@ class TestLocalModels:
 
         config = LOCAL_MODELS["local:test"]
         assert config.model_id == "local:test"
-        assert config.shortname == "TestModel"
+        assert config.display_name == "Test"
         assert config.aliases == ["test", "local-test"]
         assert config.provider == "local"
         assert config.context_window == 8192
-        assert config.pricing_tier == "free"
-
-        # Check characteristics
-        chars = config.characteristics
-        assert chars.verbosity_level == 5
-        assert chars.avg_response_length == "medium"
-        assert chars.recommended_pairings == ["local:test", "gpt-4o-mini"]
-        assert chars.conversation_style == "analytical"
-
         assert config.notes == "Deterministic test model for offline development"
 
     def test_local_models_structure(self):
@@ -254,4 +245,6 @@ class TestLocalModels:
         for model_id, config in LOCAL_MODELS.items():
             assert hasattr(config, "model_id")
             assert hasattr(config, "provider")
-            assert hasattr(config, "characteristics")
+            assert hasattr(config, "display_name")
+            assert hasattr(config, "aliases")
+            assert hasattr(config, "context_window")

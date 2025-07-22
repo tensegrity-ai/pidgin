@@ -16,28 +16,14 @@ class TestSilentModels:
 
         silent_model = SILENT_MODELS["silent"]
         assert silent_model.model_id == "silent"
-        assert silent_model.shortname == "Silence"
+        assert silent_model.display_name == "Silence"
         assert silent_model.provider == "silent"
         assert silent_model.context_window == 999999
-        assert silent_model.pricing_tier == "free"
 
         # Test aliases
         assert "void" in silent_model.aliases
         assert "quiet" in silent_model.aliases
         assert "meditation" in silent_model.aliases
-
-        # Test characteristics
-        assert silent_model.characteristics.verbosity_level == 0
-        assert silent_model.characteristics.avg_response_length == "short"
-        assert silent_model.characteristics.conversation_style == "concise"
-
-        # Test recommended pairings
-        assert (
-            "claude-4-opus-20250514"
-            in silent_model.characteristics.recommended_pairings
-        )
-        assert "gpt-4.1" in silent_model.characteristics.recommended_pairings
-        assert "o1" in silent_model.characteristics.recommended_pairings
 
         # Test notes
         assert "meditation mode" in silent_model.notes

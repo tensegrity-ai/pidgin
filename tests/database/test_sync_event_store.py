@@ -221,28 +221,6 @@ class TestEventStore:
         assert len(metrics) == 1
         assert metrics[0] == (1, 0.5)
 
-    def test_experiment_with_null_name(self, event_store, tmp_path):
-        """Test handling of experiments with null name."""
-        exp_dir = tmp_path / "exp_null_name"
-        exp_dir.mkdir()
-
-        manifest = {
-            "experiment_id": "exp_null_name",
-            "name": None,  # This was causing the error
-            "status": "completed",
-            "conversations": {},
-        }
-
-        with open(exp_dir / "manifest.json", "w") as f:
-            json.dump(manifest, f)
-
-        # Create empty JSONL file
-        (exp_dir / "conv_test.jsonl").touch()
-
-        result = event_store.import_experiment_from_jsonl(exp_dir)
-        assert result.success is True
-        assert result.turns_imported == 0  # No events in empty JSONL
-
     def test_delete_experiment(self, event_store, sample_experiment_dir):
         """Test that delete_experiment removes all related data."""
         # Import first

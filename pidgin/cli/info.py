@@ -103,8 +103,8 @@ def models():
         "gpt-4o-mini": 0.6,
         "gpt-3.5-turbo": 1.5,
         # Anthropic
-        "claude-4-opus-20250514": 30.0,
-        "claude-4-sonnet-20250514": 10.0,
+        "claude-opus-4-20250514": 30.0,
+        "claude-sonnet-4-20250514": 10.0,
         "claude-3-5-sonnet-20241022": 3.0,
         "claude-3-5-haiku-20241022": 0.25,
         "claude-3-haiku-20240307": 0.25,

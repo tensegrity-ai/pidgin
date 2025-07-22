@@ -393,17 +393,17 @@ class ExperimentRunner:
         agent_a = Agent(
             id="agent_a",
             model=model_a_config.model_id,
-            model_shortname=config.agent_a_model,
+            model_display_name=model_a_config.display_name,
             temperature=config.temperature_a,
-            display_name=model_a_config.shortname,  # Use the model's display name
+            display_name=model_a_config.display_name,  # Use the model's display name
         )
 
         agent_b = Agent(
             id="agent_b",
             model=model_b_config.model_id,
-            model_shortname=config.agent_b_model,
+            model_display_name=model_b_config.display_name,
             temperature=config.temperature_b,
-            display_name=model_b_config.shortname,  # Use the model's display name
+            display_name=model_b_config.display_name,  # Use the model's display name
         )
 
         agents = {"agent_a": agent_a, "agent_b": agent_b}

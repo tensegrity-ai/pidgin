@@ -83,14 +83,14 @@ class TestChatDisplayTruncation:
         assert "20 remain" in output
 
     def test_truncation_info_formatting(
-        self, verbose_display, console_output, test_console
+        self, chat_display, console_output, test_console
     ):
         """Test that truncation info is properly formatted."""
         # Add handler if needed
-        if not hasattr(verbose_display, "handle_truncation"):
+        if not hasattr(chat_display, "handle_truncation"):
 
             def handle_truncation(event):
-                agent_name = verbose_display.agents[event.agent_id].display_name
+                agent_name = chat_display.agents[event.agent_id].display_name
                 info = (
                     f"⚠ Context Truncated for {agent_name} at turn {event.turn_number}"
                 )
@@ -98,8 +98,8 @@ class TestChatDisplayTruncation:
                 test_console.print(f"[bold yellow]{info}[/bold yellow]")
                 test_console.print(f"[dim]{details}[/dim]")
 
-            verbose_display.handle_truncation = handle_truncation
-            verbose_display.bus.subscribe(ContextTruncationEvent, handle_truncation)
+            chat_display.handle_truncation = handle_truncation
+            chat_display.bus.subscribe(ContextTruncationEvent, handle_truncation)
 
         # Create event for agent_b
         event = ContextTruncationEvent(
@@ -116,7 +116,7 @@ class TestChatDisplayTruncation:
         # Emit the event
         import asyncio
 
-        asyncio.run(verbose_display.bus.emit(event))
+        asyncio.run(chat_display.bus.emit(event))
 
         # Check formatting
         output = console_output.getvalue()

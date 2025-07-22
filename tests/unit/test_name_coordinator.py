@@ -147,9 +147,9 @@ class TestNameCoordinator:
         """Test assigning display names for different models."""
         # Create mock configs
         config_a = Mock(spec=ModelConfig)
-        config_a.shortname = "claude"
+        config_a.display_name = "claude"
         config_b = Mock(spec=ModelConfig)
-        config_b.shortname = "gpt4"
+        config_b.display_name = "gpt4"
 
         mock_get_config.side_effect = [config_a, config_b]
 
@@ -163,15 +163,15 @@ class TestNameCoordinator:
         # Check results
         assert agent_a.display_name == "claude"
         assert agent_b.display_name == "gpt4"
-        assert agent_a.model_shortname == "claude"
-        assert agent_b.model_shortname == "gpt4"
+        assert agent_a.model_display_name == "claude"
+        assert agent_b.model_display_name == "gpt4"
 
     @patch("pidgin.core.name_coordinator.get_model_config")
     def test_assign_display_names_same_model(self, mock_get_config, coordinator):
         """Test assigning display names for same model."""
         # Create mock config
         config = Mock(spec=ModelConfig)
-        config.shortname = "gpt4"
+        config.display_name = "gpt4"
 
         mock_get_config.side_effect = [config, config]
 
@@ -182,11 +182,11 @@ class TestNameCoordinator:
         # Assign names
         coordinator.assign_display_names(agent_a, agent_b)
 
-        # Check results - same model gets numbered
-        assert agent_a.display_name == "gpt4-1"
-        assert agent_b.display_name == "gpt4-2"
-        assert agent_a.model_shortname == "gpt4"
-        assert agent_b.model_shortname == "gpt4"
+        # Check results - same model gets letters
+        assert agent_a.display_name == "gpt4-A"
+        assert agent_b.display_name == "gpt4-B"
+        assert agent_a.model_display_name == "gpt4"
+        assert agent_b.model_display_name == "gpt4"
 
     @patch("pidgin.core.name_coordinator.get_model_config")
     def test_assign_display_names_no_config(self, mock_get_config, coordinator):
@@ -203,8 +203,8 @@ class TestNameCoordinator:
         # Check fallback names
         assert agent_a.display_name == "Agent A"
         assert agent_b.display_name == "Agent B"
-        assert agent_a.model_shortname is None
-        assert agent_b.model_shortname is None
+        assert agent_a.model_display_name is None
+        assert agent_b.model_display_name is None
 
     @patch("pidgin.core.name_coordinator.get_model_config")
     def test_assign_display_names_mixed_config(self, mock_get_config, coordinator):
@@ -224,5 +224,5 @@ class TestNameCoordinator:
         # Check fallback behavior when one config is missing
         assert agent_a.display_name == "Agent A"
         assert agent_b.display_name == "Agent B"
-        assert agent_a.model_shortname is None
-        assert agent_b.model_shortname is None
+        assert agent_a.model_display_name is None
+        assert agent_b.model_display_name is None

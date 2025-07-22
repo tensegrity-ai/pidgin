@@ -111,21 +111,21 @@ class NameCoordinator:
         config_b = get_model_config(agent_b.model)
 
         if config_a and config_b:
-            # Store the model shortnames
-            agent_a.model_shortname = config_a.shortname
-            agent_b.model_shortname = config_b.shortname
+            # Store the model display names
+            agent_a.model_display_name = config_a.display_name
+            agent_b.model_display_name = config_b.display_name
 
-            if config_a.shortname == config_b.shortname:
+            if config_a.display_name == config_b.display_name:
                 # Same model - add letters
-                agent_a.display_name = f"{config_a.shortname}-A"
-                agent_b.display_name = f"{config_b.shortname}-B"
+                agent_a.display_name = f"{config_a.display_name}-A"
+                agent_b.display_name = f"{config_b.display_name}-B"
             else:
-                # Different models - use shortnames directly
-                agent_a.display_name = config_a.shortname
-                agent_b.display_name = config_b.shortname
+                # Different models - use display names directly
+                agent_a.display_name = config_a.display_name
+                agent_b.display_name = config_b.display_name
         else:
             # Fallback to agent IDs
             agent_a.display_name = "Agent A"
             agent_b.display_name = "Agent B"
-            agent_a.model_shortname = None
-            agent_b.model_shortname = None
+            agent_a.model_display_name = None
+            agent_b.model_display_name = None

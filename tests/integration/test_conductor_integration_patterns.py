@@ -16,6 +16,7 @@ import pytest_asyncio
 from pidgin.core.conductor import Conductor
 from pidgin.core.event_bus import EventBus
 from pidgin.core.events import (
+    APIErrorEvent,
     ConversationEndEvent,
     ConversationStartEvent,
     MessageCompleteEvent,
@@ -325,13 +326,22 @@ class TestConductorIntegrationStyle:
 
         conductor.base_providers["agent_a"].stream_response = failing_stream
 
-        # Track if cleanup happened
+        # Track if cleanup happened and error events
         cleanup_events = []
+        error_events = []
+        message_events = []
+        
         conductor.bus.subscribe(
             ConversationEndEvent, lambda e: cleanup_events.append(e)
         )
+        conductor.bus.subscribe(
+            APIErrorEvent, lambda e: error_events.append(e)
+        )
+        conductor.bus.subscribe(
+            MessageCompleteEvent, lambda e: message_events.append(e)
+        )
 
-        # Run conversation - error should be handled internally
+        # Run conversation - error should be handled gracefully
         conversation = await conductor.run_conversation(
             agent_a=agent_a,
             agent_b=agent_b,
@@ -343,8 +353,17 @@ class TestConductorIntegrationStyle:
 
         # Verify cleanup still happened despite error
         assert len(cleanup_events) == 1
-        # The conversation should end with "interrupted" due to error handling
-        assert cleanup_events[0].reason in ["error", "interrupted"]
+        # With graceful error recovery, conversation completes normally
+        assert cleanup_events[0].reason == "max_turns_reached"
+        
+        # Verify error was captured
+        assert len(error_events) >= 1
+        assert "Simulated API failure" in error_events[0].error_message
+        
+        # Verify fallback message was generated
+        fallback_messages = [m for m in message_events 
+                           if "[Unable to generate response due to API error]" in m.message.content]
+        assert len(fallback_messages) >= 1
 
         # Restore original method
         conductor.base_providers["agent_a"].stream_response = original_method

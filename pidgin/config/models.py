@@ -5,28 +5,16 @@ from typing import Dict, List, Literal, Optional
 
 
 @dataclass
-class ModelCharacteristics:
-    """Research-relevant characteristics of a model."""
-
-    verbosity_level: int  # 1-10 scale
-    avg_response_length: Literal["short", "medium", "long"]
-    recommended_pairings: List[str]
-    conversation_style: Literal["concise", "verbose", "analytical", "creative"]
-
-
-@dataclass
 class ModelConfig:
-    """Complete configuration for a model."""
+    """Configuration for a model based on actual API data."""
 
-    model_id: str
-    shortname: str
-    aliases: List[str]
+    model_id: str  # Exact model ID from API
+    display_name: str  # Display name from API (if available)
+    aliases: List[str]  # Convenient aliases for CLI
     provider: Literal["anthropic", "openai", "google", "xai", "local"]
-    context_window: int
-    pricing_tier: Literal["economy", "standard", "premium", "free"]
-    characteristics: ModelCharacteristics
+    context_window: int  # Actual context window size
+    created_at: Optional[str] = None  # From API response
     deprecated: bool = False
-    deprecation_date: Optional[str] = None
     notes: Optional[str] = None
 
 

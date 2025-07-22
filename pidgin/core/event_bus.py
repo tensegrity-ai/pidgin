@@ -204,7 +204,20 @@ class EventBus:
 
         # Add experiment_id if not present but conversation_id is
         if "experiment_id" not in event_data and hasattr(event, "conversation_id"):
-            event_data["experiment_id"] = getattr(event, "experiment_id", None)
+            # Extract experiment_id from conversation_id format: conv_{experiment_id}_{uuid}
+            # where experiment_id is like "experiment_b2a10065"
+            conversation_id = getattr(event, "conversation_id", None)
+            if conversation_id and conversation_id.startswith("conv_"):
+                # Remove "conv_" prefix and split the rest
+                remainder = conversation_id[5:]  # Skip "conv_"
+                # Find the last underscore to separate experiment_id from uuid
+                last_underscore = remainder.rfind("_")
+                if last_underscore > 0:
+                    event_data["experiment_id"] = remainder[:last_underscore]
+                else:
+                    event_data["experiment_id"] = None
+            else:
+                event_data["experiment_id"] = None
 
         # Write to JSONL if configured
         if self.event_log_dir:

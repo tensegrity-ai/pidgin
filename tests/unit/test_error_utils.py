@@ -50,7 +50,7 @@ class TestProviderErrorHandler:
         error = Exception("rate_limit error occurred")
         friendly = handler.get_friendly_error(error)
 
-        assert friendly == "Rate limit reached. The system will automatically retry..."
+        assert friendly == "Rate limit reached. The system will automatically retry with exponential backoff..."
 
     def test_get_friendly_error_underscore_to_space(self):
         """Test error matching with underscores converted to spaces."""
@@ -59,7 +59,7 @@ class TestProviderErrorHandler:
         error = Exception("rate limit exceeded")
         friendly = handler.get_friendly_error(error)
 
-        assert friendly == "Rate limit reached. The system will automatically retry..."
+        assert friendly == "Rate limit reached. The system will automatically retry with exponential backoff..."
 
     def test_get_friendly_error_message_content(self):
         """Test error matching on message content."""
@@ -68,12 +68,12 @@ class TestProviderErrorHandler:
         # Test that authentication errors are caught in the message
         error = Exception("Authentication failed for user")
         friendly = handler.get_friendly_error(error)
-        assert friendly == "Authentication failed. Please verify your API key"
+        assert friendly == "Authentication failed. Please verify your API key is correct and has the necessary permissions"
 
         # Test another pattern
         error2 = Exception("Rate limit exceeded")
         friendly2 = handler.get_friendly_error(error2)
-        assert friendly2 == "Rate limit reached. The system will automatically retry..."
+        assert friendly2 == "Rate limit reached. The system will automatically retry with exponential backoff..."
 
     def test_get_friendly_error_no_match(self):
         """Test fallback to original error when no match."""
@@ -183,7 +183,7 @@ class TestErrorUtilsEdgeCases:
         error = Exception("Connection timed out after 30 seconds")
 
         friendly = handler.get_friendly_error(error)
-        assert friendly == "Request timed out. The system will automatically retry..."
+        assert friendly == "Request timed out. The system will automatically retry with a longer timeout..."
 
     def test_get_friendly_error_resource_exhausted_special_case(self):
         """Test special handling for resource exhausted errors - line 93."""
@@ -192,8 +192,8 @@ class TestErrorUtilsEdgeCases:
 
         # Need to add resource_exhausted to the friendly errors for this test
         handler.friendly_errors["resource_exhausted"] = (
-            "Rate limit reached. The system will automatically retry..."
+            "Rate limit reached. The system will automatically retry with exponential backoff..."
         )
 
         friendly = handler.get_friendly_error(error)
-        assert friendly == "Rate limit reached. The system will automatically retry..."
+        assert friendly == "Rate limit reached. The system will automatically retry with exponential backoff..."

@@ -206,6 +206,7 @@ class TestExperimentRunnerBasic:
         mock_model_config = Mock()
         mock_model_config.model_id = "test-model-id"
         mock_model_config.provider = "test-provider"
+        mock_model_config.display_name = "test-model"  # Use display_name instead of shortname
 
         with patch(
             "pidgin.experiments.runner.get_model_config", return_value=mock_model_config

@@ -10,113 +10,64 @@ from .error_utils import create_google_error_handler
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelCharacteristics, ModelConfig
+from ..config.models import ModelConfig
 
 # Google model definitions
 GOOGLE_MODELS = {
     "gemini-2.5-pro": ModelConfig(
         model_id="gemini-2.5-pro",
-        shortname="Gemini-2.5-Pro",
+        display_name="Gemini 2.5 Pro",
         aliases=["gemini"],
         provider="google",
         context_window=2097152,  # 2M context
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=7,
-            avg_response_length="long",
-            recommended_pairings=["gpt-4.1", "claude-4-opus-20250514"],
-            conversation_style="balanced",
-        ),
         notes="Latest Gemini flagship model",
     ),
     "gemini-2.0-flash-exp": ModelConfig(
         model_id="gemini-2.0-flash-exp",
-        shortname="Flash",
+        display_name="Gemini 2.0 Flash Exp",
         aliases=["gemini-flash", "flash"],
         provider="google",
         context_window=1048576,
-        pricing_tier="economy",
-        characteristics=ModelCharacteristics(
-            verbosity_level=4,
-            avg_response_length="short",
-            recommended_pairings=["gpt-4.1-nano", "gemini-2.0-flash-exp"],
-            conversation_style="concise",
-        ),
         notes="Latest and fastest Gemini model",
     ),
     "gemini-2.0-flash-thinking-exp": ModelConfig(
         model_id="gemini-2.0-flash-thinking-exp",
-        shortname="Thinking",
+        display_name="Gemini 2.0 Flash Thinking Exp",
         aliases=["gemini-thinking", "thinking", "flash-thinking"],
         provider="google",
         context_window=32767,
-        pricing_tier="standard",
-        characteristics=ModelCharacteristics(
-            verbosity_level=8,
-            avg_response_length="long",
-            recommended_pairings=["o3", "claude-4-opus-20250514"],
-            conversation_style="analytical",
-        ),
         notes="Reasoning-focused Gemini model",
     ),
     "gemini-exp-1206": ModelConfig(
         model_id="gemini-exp-1206",
-        shortname="Gemini-Exp",
+        display_name="Gemini Exp 1206",
         aliases=["gemini-exp", "exp-1206"],
         provider="google",
         context_window=2097152,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=8,
-            avg_response_length="long",
-            recommended_pairings=["claude-4-opus-20250514", "gpt-4.1"],
-            conversation_style="verbose",
-        ),
         notes="Experimental Gemini with 2M context",
     ),
     "gemini-1.5-pro": ModelConfig(
         model_id="gemini-1.5-pro",
-        shortname="Gemini-Pro",
+        display_name="Gemini 1.5 Pro",
         aliases=["gemini-pro", "1.5-pro"],
         provider="google",
         context_window=2097152,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=7,
-            avg_response_length="medium",
-            recommended_pairings=["gpt-4o", "claude-4-sonnet-20250514"],
-            conversation_style="verbose",
-        ),
         notes="Production Gemini with 2M context",
     ),
     "gemini-1.5-flash": ModelConfig(
         model_id="gemini-1.5-flash",
-        shortname="Flash-1.5",
+        display_name="Gemini 1.5 Flash",
         aliases=["flash-1.5"],
         provider="google",
         context_window=1048576,
-        pricing_tier="economy",
-        characteristics=ModelCharacteristics(
-            verbosity_level=3,
-            avg_response_length="short",
-            recommended_pairings=["gpt-4o-mini", "claude-3-5-haiku-20241022"],
-            conversation_style="concise",
-        ),
         notes="Fast Gemini 1.5 model",
     ),
     "gemini-1.5-flash-8b": ModelConfig(
         model_id="gemini-1.5-flash-8b",
-        shortname="Flash-8B",
+        display_name="Gemini 1.5 Flash 8B",
         aliases=["flash-8b", "gemini-8b"],
         provider="google",
         context_window=1048576,
-        pricing_tier="economy",
-        characteristics=ModelCharacteristics(
-            verbosity_level=2,
-            avg_response_length="short",
-            recommended_pairings=["gpt-4.1-nano", "gemini-1.5-flash-8b"],
-            conversation_style="concise",
-        ),
         notes="Smallest Gemini model",
     ),
 }

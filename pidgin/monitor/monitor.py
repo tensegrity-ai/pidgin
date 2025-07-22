@@ -183,7 +183,7 @@ class Monitor:
         table = Table(
             show_header=True, header_style=f"bold {NORD_BLUE}", box=box.ROUNDED
         )
-        table.add_column("ID", style=NORD_CYAN, width=12)
+        table.add_column("ID", style=NORD_CYAN, width=24)  # Increased width
         table.add_column("Name", style=NORD_GREEN, width=20)
         table.add_column("Status", width=10)
         table.add_column("Progress", width=15)
@@ -239,7 +239,7 @@ class Monitor:
                 status_color = NORD_BLUE
 
             table.add_row(
-                exp.experiment_id[:8],
+                exp.experiment_id[:24],  # Show more of the ID
                 exp.name[:20],
                 f"[{status_color}]{status_str}[/{status_color}]",
                 progress_str,

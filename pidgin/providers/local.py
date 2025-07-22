@@ -4,7 +4,7 @@ import asyncio
 from typing import AsyncGenerator, List, Optional
 
 # Import model config classes from central location
-from ..config.models import ModelCharacteristics, ModelConfig
+from ..config.models import ModelConfig
 from ..core.types import Message
 from .base import Provider
 
@@ -12,17 +12,10 @@ from .base import Provider
 LOCAL_MODELS = {
     "local:test": ModelConfig(
         model_id="local:test",
-        shortname="TestModel",
+        display_name="Test",
         aliases=["test", "local-test"],
         provider="local",
         context_window=8192,
-        pricing_tier="free",
-        characteristics=ModelCharacteristics(
-            verbosity_level=5,
-            avg_response_length="medium",
-            recommended_pairings=["local:test", "gpt-4o-mini"],
-            conversation_style="analytical",
-        ),
         notes="Deterministic test model for offline development",
     ),
 }

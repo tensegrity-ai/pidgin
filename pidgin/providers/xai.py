@@ -9,53 +9,32 @@ from .error_utils import ProviderErrorHandler
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelCharacteristics, ModelConfig
+from ..config.models import ModelConfig
 
 # xAI model definitions
 XAI_MODELS = {
     "grok-3": ModelConfig(
         model_id="grok-3",
-        shortname="Grok-3",
+        display_name="Grok 3",
         aliases=["grok"],
         provider="xai",
         context_window=131072,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=8,
-            avg_response_length="long",
-            recommended_pairings=["gpt-4.1", "claude-4-opus-20250514"],
-            conversation_style="analytical",
-        ),
         notes="Latest Grok model with impressive HLE scores",
     ),
     "grok-beta": ModelConfig(
         model_id="grok-beta",
-        shortname="Grok-Beta",
+        display_name="Grok Beta",
         aliases=["grok-beta", "xai"],
         provider="xai",
         context_window=131072,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=7,
-            avg_response_length="medium",
-            recommended_pairings=["gpt-4o", "claude-4-sonnet-20250514"],
-            conversation_style="analytical",
-        ),
         notes="xAI's flagship model",
     ),
     "grok-2-1212": ModelConfig(
         model_id="grok-2-1212",
-        shortname="Grok-2",
+        display_name="Grok 2 1212",
         aliases=["grok-2"],
         provider="xai",
         context_window=131072,
-        pricing_tier="premium",
-        characteristics=ModelCharacteristics(
-            verbosity_level=8,
-            avg_response_length="medium",
-            recommended_pairings=["gpt-4.1", "claude-4-sonnet-20250514"],
-            conversation_style="analytical",
-        ),
         notes="Latest Grok model",
     ),
 }
