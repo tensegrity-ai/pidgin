@@ -90,47 +90,6 @@ def models():
     """
     # No title panel needed
 
-    # Approximate costs per 1M tokens (input + output averaged)
-    MODEL_COSTS = {
-        # OpenAI
-        "gpt-4.1": 30.0,
-        "gpt-4.1-mini": 0.6,
-        "gpt-4.1-nano": 0.15,
-        "o3": 60.0,
-        "o3-mini": 12.0,
-        "o4-mini": 0.6,
-        "gpt-4o": 5.0,
-        "gpt-4o-mini": 0.6,
-        "gpt-3.5-turbo": 1.5,
-        # Anthropic
-        "claude-opus-4-20250514": 30.0,
-        "claude-sonnet-4-20250514": 10.0,
-        "claude-3-5-sonnet-20241022": 3.0,
-        "claude-3-5-haiku-20241022": 0.25,
-        "claude-3-haiku-20240307": 0.25,
-        # Google
-        "gemini-2.5-pro": 10.0,
-        "gemini-2.0-flash-exp": 0.15,
-        "gemini-2.0-flash-thinking-exp": 1.0,
-        "gemini-exp-1206": 10.0,
-        "gemini-1.5-pro": 3.5,
-        "gemini-1.5-flash": 0.35,
-        "gemini-1.5-flash-8b": 0.15,
-        # xAI
-        "grok-3": 15.0,
-        "grok-beta": 15.0,
-        "grok-2-1212": 10.0,
-        # Local
-        "local:qwen2.5:0.5b": 0.0,
-        "local:qwen2.5:1.5b": 0.0,
-        "local:qwen2.5:3b": 0.0,
-        "local:llama3.2:1b": 0.0,
-        "local:llama3.2:3b": 0.0,
-        "local:mixtral:8x7b": 0.0,
-        "local:test": 0.0,
-        "silent": 0.0,
-    }
-
     # Group models by provider
     providers = {}
     for model_id, config in MODELS.items():
@@ -151,7 +110,6 @@ def models():
         table.add_column("Model ID", style=color)
         table.add_column("Alias", style=color)
         table.add_column("Context", justify="right", style="dim")
-        table.add_column("$/1M tokens", justify="right", style="dim")
 
         for model_id, config in sorted(providers[provider], key=lambda x: x[0]):
             glyph = MODEL_GLYPHS.get(model_id, "●")
@@ -167,17 +125,10 @@ def models():
             else:
                 context = "∞"
 
-            # Get cost
-            cost = MODEL_COSTS.get(model_id, 0.0)
-            if cost == 0.0:
-                cost_display = "free"
-            else:
-                cost_display = f"${cost:.2f}"
-
             # Get the primary alias (first one) or show "-"
             primary_alias = config.aliases[0] if config.aliases else "-"
 
-            table.add_row(f"{glyph} {model_id}", primary_alias, context, cost_display)
+            table.add_row(f"{glyph} {model_id}", primary_alias, context)
 
         # Wrap table in a panel with provider name
         provider_panel = Panel(
