@@ -234,38 +234,38 @@ class DisplayFilter:
         if hasattr(event.message, "role") and event.message.role == "system":
             return
 
-        # Get agent's display name and model shortname if available
+        # Get agent's display name and model display name if available
         agent_name = None
-        model_shortname = None
+        model_display_name = None
         if event.agent_id in self.agents:
             agent = self.agents[event.agent_id]
             agent_name = agent.display_name or event.agent_id
-            model_shortname = agent.model_shortname
+            model_display_name = agent.model_display_name
 
         # Determine styling based on agent
         if event.agent_id == "agent_a":
-            # Build name with optional model shortname
+            # Build name with optional model display name
             if (
-                model_shortname
-                and agent_name != model_shortname
-                and not agent_name.startswith(model_shortname)
+                model_display_name
+                and agent_name != model_display_name
+                and not agent_name.startswith(model_display_name)
             ):
-                # Show both name and model shortname (e.g., "Kai (Haiku)")
-                display_name = f"{agent_name} ({model_shortname})"
+                # Show both name and model display name (e.g., "Kai (Haiku)")
+                display_name = f"{agent_name} ({model_display_name})"
             else:
                 # Just show the name (e.g., "Haiku-1" or "Agent A")
                 display_name = agent_name or "Agent A"
             glyph = "◆"
             color = self.COLORS["nord14"]  # Green
         elif event.agent_id == "agent_b":
-            # Build name with optional model shortname
+            # Build name with optional model display name
             if (
-                model_shortname
-                and agent_name != model_shortname
-                and not agent_name.startswith(model_shortname)
+                model_display_name
+                and agent_name != model_display_name
+                and not agent_name.startswith(model_display_name)
             ):
-                # Show both name and model shortname (e.g., "Zara (Sonnet)")
-                display_name = f"{agent_name} ({model_shortname})"
+                # Show both name and model display name (e.g., "Zara (Sonnet)")
+                display_name = f"{agent_name} ({model_display_name})"
             else:
                 # Just show the name (e.g., "Sonnet-2" or "Agent B")
                 display_name = agent_name or "Agent B"

@@ -210,7 +210,7 @@ class TestNameCoordinator:
     def test_assign_display_names_mixed_config(self, mock_get_config, coordinator):
         """Test when one agent has config and one doesn't."""
         config_a = Mock(spec=ModelConfig)
-        config_a.shortname = "claude"
+        config_a.display_name = "claude"
 
         mock_get_config.side_effect = [config_a, None]
 

@@ -88,7 +88,7 @@ def validate_model_id(model_id: str) -> Tuple[str, str]:
     # Check if it's a known model
     config = get_model_config(model_id)
     if config:
-        return model_id, config.shortname
+        return model_id, config.display_name
 
     # Try provider:model format
     if ":" in model_id:
@@ -122,7 +122,7 @@ def format_model_display(model_id: str) -> str:
     glyph = MODEL_GLYPHS.get(model_id, "●")
     color = PROVIDER_COLORS.get(config.provider, "white")
 
-    return f"{glyph} [{color}]{config.shortname}[/{color}]"
+    return f"{glyph} [{color}]{config.display_name}[/{color}]"
 
 
 def find_conversations(path: Optional[str] = None, pattern: str = "*") -> List[Path]:

@@ -808,7 +808,7 @@ def _prompt_for_model(prompt_text: str) -> Optional[str]:
 
         for model_id, config in providers[provider]:
             glyph = MODEL_GLYPHS.get(model_id, "●")
-            display.dim(f"  {idx}. {glyph} {config.shortname}")
+            display.dim(f"  {idx}. {glyph} {config.display_name}")
             model_map[str(idx)] = model_id
             idx += 1
 
