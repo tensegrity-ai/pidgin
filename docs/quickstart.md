@@ -96,6 +96,25 @@ pidgin run -a claude -b gpt -t 10 --display monitor
 pidgin run -a claude -b gpt -t 10 --display tail
 ```
 
+### Context Window Management
+
+By default, Pidgin preserves research integrity by ending conversations naturally when context limits are reached:
+
+```bash
+# Default: conversation ends when context window is full
+pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100
+
+# Enable truncation for very long conversations  
+pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100 --allow-truncation
+```
+
+When a context limit is reached without truncation enabled:
+- The conversation ends naturally
+- You'll see a "Context Window Limit Reached" message
+- The event log records this as `context_limit_reached`
+
+This preserves the complete conversation history without artificial truncation.
+
 ### Use Specific Model Versions
 
 ```bash

@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Dict, List, Optional
 
 from anthropic import AsyncAnthropic
 
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
@@ -85,6 +85,7 @@ class AnthropicProvider(Provider):
     """Anthropic API provider with friendly error handling."""
 
     def __init__(self, model: str):
+        super().__init__()
         api_key = APIKeyManager.get_api_key("anthropic")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
@@ -100,7 +101,8 @@ class AnthropicProvider(Provider):
         )
 
         truncated_messages = apply_context_truncation(
-            messages, provider="anthropic", model=self.model, logger_name=__name__
+            messages, provider="anthropic", model=self.model, logger_name=__name__,
+            allow_truncation=self.allow_truncation
         )
 
         # Extract system messages and conversation messages

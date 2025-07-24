@@ -1,5 +1,6 @@
 """Unit tests for context truncation event emission."""
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -35,12 +36,13 @@ class TestContextManagerEvents:
             )
         )
         # Add many conversation messages to trigger truncation
-        for i in range(50):
+        # Make messages much longer to exceed even small token limits
+        for i in range(100):  # More messages
             messages.append(
                 Message(
                     role="assistant" if i % 2 == 0 else "user",
                     content=f"This is message {i} with some content to make it longer. "
-                    * 10,
+                    * 50,  # Much longer content
                     agent_id="agent_a" if i % 2 == 0 else "agent_b",
                 )
             )
@@ -79,7 +81,7 @@ class TestContextManagerEvents:
         # Prepare context with a low limit to force truncation
         with patch.object(
             ProviderContextManager, "CONTEXT_LIMITS", {"anthropic": 1000}
-        ):
+        ), patch("pidgin.providers.context_manager.get_model_config", return_value=None):
             result = context_manager.prepare_context(
                 sample_messages,
                 provider="anthropic",
@@ -88,10 +90,14 @@ class TestContextManagerEvents:
                 conversation_id="test_conv",
                 agent_id="agent_a",
                 turn_number=5,
+                allow_truncation=True,
             )
 
         # Truncation should have occurred
         assert len(result) < len(sample_messages)
+
+        # Wait for the event emission task to complete
+        await asyncio.sleep(0.1)
 
         # Event should have been emitted
         mock_event_bus.emit.assert_called_once()
@@ -109,7 +115,7 @@ class TestContextManagerEvents:
         # Force truncation with low limit
         with patch.object(
             ProviderContextManager, "CONTEXT_LIMITS", {"anthropic": 1000}
-        ):
+        ), patch("pidgin.providers.context_manager.get_model_config", return_value=None):
             result = context_manager.prepare_context(
                 sample_messages,
                 provider="anthropic",
@@ -118,7 +124,11 @@ class TestContextManagerEvents:
                 conversation_id="test_conv_123",
                 agent_id="agent_b",
                 turn_number=10,
+                allow_truncation=True,
             )
+
+        # Wait for the event emission task to complete
+        await asyncio.sleep(0.1)
 
         # Get the emitted event
         event = mock_event_bus.emit.call_args[0][0]
@@ -139,11 +149,12 @@ class TestContextManagerEvents:
         # Force truncation but don't provide event bus
         with patch.object(
             ProviderContextManager, "CONTEXT_LIMITS", {"anthropic": 1000}
-        ):
+        ), patch("pidgin.providers.context_manager.get_model_config", return_value=None):
             result = context_manager.prepare_context(
                 sample_messages,
                 provider="anthropic",
                 model="claude-3-haiku",
+                allow_truncation=True,
                 # No event_bus parameter
             )
 
@@ -162,7 +173,7 @@ class TestContextManagerEvents:
         # Force truncation
         with patch.object(
             ProviderContextManager, "CONTEXT_LIMITS", {"anthropic": 1000}
-        ):
+        ), patch("pidgin.providers.context_manager.get_model_config", return_value=None):
             # This should not raise an exception
             result = context_manager.prepare_context(
                 sample_messages,
@@ -172,10 +183,14 @@ class TestContextManagerEvents:
                 conversation_id="test_conv",
                 agent_id="agent_a",
                 turn_number=5,
+                allow_truncation=True,
             )
 
         # Truncation should have completed successfully
         assert len(result) < len(sample_messages)
+
+        # Wait for the event emission task to complete
+        await asyncio.sleep(0.1)
 
         # Event emission was attempted
         mock_event_bus.emit.assert_called_once()

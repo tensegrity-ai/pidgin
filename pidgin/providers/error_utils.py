@@ -3,6 +3,33 @@
 from typing import Dict, List, Optional
 
 
+class ContextLimitError(Exception):
+    """Raised when a context window limit is reached."""
+    pass
+
+
+class ErrorClassifier:
+    """Classify different types of errors."""
+    
+    def is_context_limit_error(self, error: Exception) -> bool:
+        """Check if this is a context window limit error."""
+        error_str = str(error).lower()
+        context_patterns = [
+            "context_length",
+            "context length",
+            "context window",
+            "max_tokens",
+            "maximum context",
+            "token limit",
+            "too many tokens",
+            "context_length_exceeded",
+            "messages: array too long",
+            "exceeds the maximum",
+            "content too long",
+        ]
+        return any(pattern in error_str for pattern in context_patterns)
+
+
 class ProviderErrorHandler:
     """Base error handler with common error mapping functionality."""
 
@@ -21,6 +48,20 @@ class ProviderErrorHandler:
         "read timeout": "Request timed out. The system will automatically retry with a longer timeout...",
         "connection": "Connection error. Please check your internet connection. Retrying...",
         "503": "Service temporarily unavailable. The API is experiencing high load. Retrying...",
+        "context_length": "Context window limit reached. The conversation has grown too long for the model's context window.",
+        "context_window": "Context window limit reached. The conversation has grown too long for the model's context window.",
+        "max_tokens": "Context window limit reached. The conversation has grown too long for the model's context window.",
+        "token_limit": "Context window limit reached. The conversation has grown too long for the model's context window.",
+        # Streaming-related errors
+        "incomplete read": "Streaming connection interrupted. The system will automatically retry...",
+        "incompleteread": "Streaming connection interrupted. The system will automatically retry...",
+        "chunked read": "Streaming data transfer interrupted. The system will automatically retry...",
+        "chunkedencoding": "Streaming data transfer interrupted. The system will automatically retry...",
+        "broken pipe": "Connection lost during streaming. The system will automatically retry...",
+        "connection reset": "Connection was reset by the server. The system will automatically retry...",
+        "connection aborted": "Connection was aborted. The system will automatically retry...",
+        "ssl error": "Secure connection error. The system will automatically retry...",
+        "eof occurred": "Connection closed unexpectedly. The system will automatically retry...",
     }
 
     # Base errors that should suppress traceback
@@ -117,6 +158,34 @@ class ProviderErrorHandler:
             phrase in error_str or phrase in error_type
             for phrase in self.suppress_traceback_errors
         )
+    
+    def is_context_limit_error(self, error: Exception) -> bool:
+        """Check if this is a context window limit error.
+        
+        Args:
+            error: The exception to check
+            
+        Returns:
+            True if this is a context limit error
+        """
+        error_str = str(error).lower()
+        
+        # Common patterns for context limit errors
+        context_patterns = [
+            "context_length",
+            "context length",
+            "context window",
+            "max_tokens",
+            "maximum context",
+            "token limit",
+            "too many tokens",
+            "context_length_exceeded",
+            "messages: array too long",
+            "exceeds the maximum",
+            "content too long",
+        ]
+        
+        return any(pattern in error_str for pattern in context_patterns)
 
 
 # Provider-specific error configurations

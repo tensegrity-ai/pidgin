@@ -4,6 +4,7 @@
 import logging
 from typing import List, Optional
 
+from ..config.models import get_model_config
 from ..core.events import ContextTruncationEvent
 from ..core.types import Message
 
@@ -45,11 +46,41 @@ class ProviderContextManager:
         conversation_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         turn_number: Optional[int] = None,
+        allow_truncation: bool = False,
     ) -> List[Message]:
-        """Keep messages under context limit - that's it."""
+        """Keep messages under context limit - that's it.
+        
+        Args:
+            messages: List of messages to process
+            provider: Provider name
+            model: Model identifier
+            event_bus: Optional event bus for truncation events
+            conversation_id: Optional conversation ID
+            agent_id: Optional agent ID
+            turn_number: Optional turn number
+            allow_truncation: If False (default), return all messages even if over limit.
+                           If True, truncate to fit within context window.
+        """
 
-        # Check model-specific limit first, then provider limit
-        limit = self.MODEL_LIMITS.get(model, self.CONTEXT_LIMITS.get(provider, 8000))
+        # Get model-specific limit from config if available
+        limit = None
+        if model:
+            config = get_model_config(model)
+            if config and config.context_window:
+                # Use full context window, no conservative reduction
+                limit = config.context_window
+                logger.debug(f"Using model-specific context limit for {model}: {limit:,} tokens")
+        
+        # Fall back to local model limits
+        if limit is None and model:
+            limit = self.MODEL_LIMITS.get(model)
+            if limit:
+                logger.debug(f"Using local model context limit for {model}: {limit:,} tokens")
+        
+        # Final fallback to provider limits (as ultimate safety net)
+        if limit is None:
+            limit = self.CONTEXT_LIMITS.get(provider, 8000)
+            logger.debug(f"Using provider default context limit for {provider}: {limit:,} tokens")
 
         # Quick estimate of total size
         total_chars = sum(
@@ -61,7 +92,16 @@ class ProviderContextManager:
         if estimated_tokens < limit:
             return messages
 
-        # Over limit - keep system messages + recent conversation
+        # Over limit - check if truncation is allowed
+        if not allow_truncation:
+            logger.warning(
+                f"Context exceeds limit ({estimated_tokens:,} > {limit:,} tokens) "
+                f"but truncation is disabled. Returning all {len(messages)} messages. "
+                f"Provider may return a context limit error."
+            )
+            return messages
+
+        # Truncation is allowed - keep system messages + recent conversation
         system_messages = [m for m in messages if m.role == "system"]
         other_messages = [m for m in messages if m.role != "system"]
 

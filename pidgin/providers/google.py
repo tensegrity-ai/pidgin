@@ -6,11 +6,12 @@ from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
 from .error_utils import create_google_error_handler
+from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 
 # Google model definitions
 GOOGLE_MODELS = {
@@ -83,6 +84,7 @@ except ImportError:
 
 class GoogleProvider(Provider):
     def __init__(self, model: str):
+        super().__init__()
         if not GOOGLE_AVAILABLE:
             raise ImportError(
                 "Google Generative AI not available. Install with: "
@@ -113,6 +115,7 @@ class GoogleProvider(Provider):
             provider="google",
             model=self.model.model_name if hasattr(self.model, "model_name") else None,
             logger_name=__name__,
+            allow_truncation=self.allow_truncation
         )
 
         # Convert to Google format

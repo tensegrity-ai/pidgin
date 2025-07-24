@@ -75,7 +75,7 @@ class TestProviderContextManager:
 
     def test_prepare_context_over_limit_anthropic(self, manager, long_messages):
         """Test context truncation for Anthropic."""
-        result = manager.prepare_context(long_messages, "anthropic")
+        result = manager.prepare_context(long_messages, "anthropic", allow_truncation=True)
 
         # Should have truncated messages
         assert len(result) < len(long_messages)
@@ -87,7 +87,7 @@ class TestProviderContextManager:
 
     def test_prepare_context_local_provider(self, manager, long_messages):
         """Test context truncation for local models with small limits."""
-        result = manager.prepare_context(long_messages, "local")
+        result = manager.prepare_context(long_messages, "local", allow_truncation=True)
 
         # Local has 4000 token limit, should truncate heavily
         assert len(result) <= 3  # System + maybe 1-2 messages
@@ -114,7 +114,7 @@ class TestProviderContextManager:
 
     def test_prepare_context_unknown_provider(self, manager, long_messages):
         """Test fallback for unknown provider."""
-        result = manager.prepare_context(long_messages, "unknown_provider")
+        result = manager.prepare_context(long_messages, "unknown_provider", allow_truncation=True)
 
         # Should use default 8000 token limit
         assert len(result) < len(long_messages)
@@ -133,7 +133,7 @@ class TestProviderContextManager:
             role = "user" if i % 2 == 0 else "assistant"
             messages.append(make_message("x" * 5000, role=role))
 
-        result = manager.prepare_context(messages, "local")  # Small limit
+        result = manager.prepare_context(messages, "local", allow_truncation=True)  # Small limit
 
         # Both system messages should be preserved
         system_msgs = [m for m in result if m.role == "system"]
@@ -152,7 +152,7 @@ class TestProviderContextManager:
             messages.append(make_message("x" * 500, role=role))
 
         # Use openai with 100k limit
-        result = manager.prepare_context(messages, "openai")
+        result = manager.prepare_context(messages, "openai", allow_truncation=True)
 
         # Should keep less than all messages
         assert len(result) < len(messages)
@@ -163,17 +163,31 @@ class TestProviderContextManager:
         assert estimated_tokens < 100000
         assert estimated_tokens > 80000  # Should be reasonably close to limit
 
+    def test_prepare_context_no_truncation_by_default(self, manager, long_messages):
+        """Test that truncation is disabled by default."""
+        # Without allow_truncation, should return all messages
+        result = manager.prepare_context(long_messages, "anthropic")
+        
+        # Should return all messages unchanged
+        assert len(result) == len(long_messages)
+        assert result == long_messages
+    
     def test_prepare_context_single_message_over_limit(self, manager):
         """Test handling when even a single message exceeds limit."""
         # Create a message larger than local limit (4000 tokens)
         huge_message = make_message("x" * 20000, role="user")  # ~5714 tokens
         messages = [make_message("System", role="system"), huge_message]
 
+        # Without truncation, should return all messages
         result = manager.prepare_context(messages, "local")
-
-        # Should at minimum keep system message and try to keep the huge message
-        assert len(result) >= 1
-        assert result[0].role == "system"
+        assert len(result) == 2
+        assert result == messages
+        
+        # With truncation enabled
+        result_truncated = manager.prepare_context(messages, "local", allow_truncation=True)
+        # Should at minimum keep system message 
+        assert len(result_truncated) >= 1
+        assert result_truncated[0].role == "system"
 
     def test_prepare_context_empty_messages(self, manager):
         """Test handling empty message list."""

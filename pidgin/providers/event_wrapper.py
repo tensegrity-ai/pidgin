@@ -74,7 +74,7 @@ class EventAwareProvider:
             # Add timeout to prevent hanging
             import asyncio
 
-            timeout_seconds = 300  # 5 minute timeout
+            timeout_seconds = 120  # 2 minute timeout (with retries this is sufficient)
 
             try:
                 async with asyncio.timeout(timeout_seconds):
@@ -218,32 +218,54 @@ class EventAwareProvider:
             # Emit error event
             error_str = str(e)
 
-            # Determine if error is retryable
-            retryable = any(
-                err in error_str.lower()
-                for err in ["overloaded", "rate_limit", "rate limit", "429"]
-            )
+            # Check if this is a context limit error
+            from .error_utils import ErrorClassifier
+            error_classifier = ErrorClassifier()
+            is_context_error = error_classifier.is_context_limit_error(e)
+
+            # Determine if error is retryable using comprehensive error classification
+            from .retry_utils import is_retryable_error
+            retryable = not is_context_error and is_retryable_error(e)
 
             # Extract provider name from model
             provider_name = self.provider.__class__.__name__.replace("Provider", "")
 
-            await self.bus.emit(
-                APIErrorEvent(
-                    conversation_id=event.conversation_id,
-                    error_type="api_error",
-                    error_message=error_str,
-                    context=f"During message generation for turn {event.turn_number}",
-                    agent_id=self.agent_id,
-                    provider=provider_name,
-                    retryable=retryable,
-                    retry_count=0,  # Retry tracking is handled internally by providers
+            # Emit appropriate error event
+            if is_context_error:
+                # Emit a special context limit error event
+                from ..core.events import ContextLimitEvent
+                await self.bus.emit(
+                    ContextLimitEvent(
+                        conversation_id=event.conversation_id,
+                        agent_id=self.agent_id,
+                        turn_number=event.turn_number,
+                        error_message=error_str,
+                        provider=provider_name,
+                    )
                 )
-            )
+            else:
+                await self.bus.emit(
+                    APIErrorEvent(
+                        conversation_id=event.conversation_id,
+                        error_type="api_error",
+                        error_message=error_str,
+                        context=f"During message generation for turn {event.turn_number}",
+                        agent_id=self.agent_id,
+                        provider=provider_name,
+                        retryable=retryable,
+                        retry_count=0,  # Retry tracking is handled internally by providers
+                    )
+                )
 
             # Log the error
             logger.error(f"Error in handle_message_request: {e}", exc_info=True)
 
-            # Instead of raising, create a fallback response
+            # For context limit errors, don't create a fallback response
+            # The ContextLimitEvent will signal the conversation to end naturally
+            if is_context_error:
+                return  # Just return without sending a message
+            
+            # For other errors, create a fallback response
             fallback_content = "[Unable to generate response due to API error]"
             
             # Create a valid message response

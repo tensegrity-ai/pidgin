@@ -14,7 +14,7 @@ from .error_utils import ProviderErrorHandler
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 
 # Ollama model definitions
 OLLAMA_MODELS = {
@@ -49,6 +49,7 @@ class OllamaProvider(Provider):
     """Provider that uses Ollama for local inference."""
 
     def __init__(self, model_name: str = "qwen2.5:0.5b"):
+        super().__init__()
         self.model_name = model_name
         self.base_url = "http://localhost:11434"
 
@@ -94,6 +95,7 @@ class OllamaProvider(Provider):
             provider="local",  # Use "local" provider for Ollama models
             model=self.model_name,
             logger_name=__name__,
+            allow_truncation=self.allow_truncation
         )
 
         # Convert messages to Ollama format

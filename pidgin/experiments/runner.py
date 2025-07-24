@@ -386,7 +386,11 @@ class ExperimentRunner:
 
         if not provider_a or not provider_b:
             raise ValueError("Failed to create providers")
-            
+        
+        # Set allow_truncation on providers based on config
+        provider_a.allow_truncation = config.allow_truncation
+        provider_b.allow_truncation = config.allow_truncation
+        
         logging.info(f"Providers created successfully")
 
         # Create agents with display names from model config

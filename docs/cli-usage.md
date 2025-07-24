@@ -38,6 +38,7 @@ pidgin run [OPTIONS]
 - `--output PATH` - Output directory
 - `--no-conversation` - Skip initial "Hello" exchange
 - `--checkpoint-every INT` - Save checkpoint every N turns
+- `--allow-truncation` - Allow messages to be truncated to fit context windows (default: disabled)
 - `--info` - Show configuration and exit
 
 #### Examples
@@ -60,6 +61,11 @@ pidgin run -a claude -b gpt -t 30 \
 pidgin run -a claude -b gpt -t 15 \
   --awareness-a "You are exploring mathematics" \
   --awareness-b "You are a curious student"
+
+# Long conversation with message truncation enabled
+pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100 \
+  --allow-truncation \
+  -p "Let's explore the nature of reality"
 ```
 
 ### `pidgin experiment`

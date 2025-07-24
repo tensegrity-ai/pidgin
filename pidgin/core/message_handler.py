@@ -149,6 +149,15 @@ class MessageHandler:
             return await self._handle_timeout(
                 conversation_id, agent, turn_number, timeout, future
             )
+        except Exception as e:
+            # Check if this is a context limit error
+            from ..providers.error_utils import ContextLimitError
+            if isinstance(e, ContextLimitError):
+                # Return None to signal the conversation should end
+                return None
+            else:
+                # Re-raise other exceptions
+                raise
 
     async def _emit_message_request(
         self,
@@ -287,6 +296,20 @@ class MessageHandler:
             future = self.pending_messages.pop(event.agent_id)
             if not future.done():
                 future.set_result(event.message)
+    
+    async def handle_context_limit(self, event):
+        """Handle context limit event by failing the pending message.
+
+        Args:
+            event: ContextLimitEvent
+        """
+        # Set exception in the pending future for this agent
+        if event.agent_id in self.pending_messages:
+            future = self.pending_messages.pop(event.agent_id)
+            if not future.done():
+                # Create a specific exception for context limits
+                from ..providers.error_utils import ContextLimitError
+                future.set_exception(ContextLimitError(event.error_message))
 
     def _estimate_payload_tokens(
         self, conversation_history: List[Message], model: str

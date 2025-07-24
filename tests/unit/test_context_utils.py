@@ -41,6 +41,7 @@ class TestContextUtils:
                 conversation_id=None,
                 agent_id=None,
                 turn_number=None,
+                allow_truncation=False,
             )
 
     def test_apply_context_truncation_with_truncation(self):

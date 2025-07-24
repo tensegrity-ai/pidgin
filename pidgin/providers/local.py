@@ -4,7 +4,7 @@ import asyncio
 from typing import AsyncGenerator, List, Optional
 
 # Import model config classes from central location
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .base import Provider
 
@@ -25,6 +25,7 @@ class LocalProvider(Provider):
     """Provider for the local test model."""
 
     def __init__(self, model_name: str = "test"):
+        super().__init__()
         self.model_name = model_name
 
     async def stream_response(

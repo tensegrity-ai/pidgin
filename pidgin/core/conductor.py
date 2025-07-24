@@ -236,6 +236,12 @@ class Conductor:
         self.bus.subscribe(
             MessageCompleteEvent, self.message_handler.handle_message_complete
         )
+        
+        # Subscribe to context limit events
+        from .events import ContextLimitEvent
+        self.bus.subscribe(
+            ContextLimitEvent, self.message_handler.handle_context_limit
+        )
 
     async def _initialize_conversation(
         self,
@@ -353,60 +359,9 @@ class Conductor:
             conversation, final_turn, max_turns, self.start_time, end_reason
         )
 
-        # Batch load to database for single chat sessions
-        if conv_id and not (conv_id.startswith("conv_experiment_") or conv_id.startswith("conv_exp_")):  # Only for standalone chats
-            await self._batch_load_chat_to_database(conv_id, self.current_conv_dir)
+        # Note: We no longer load single chats to a database
+        # JSONL files are the single source of truth
 
-    async def _batch_load_chat_to_database(self, conv_id: str, conv_dir: Path):
-        """Batch load single chat session to database after completion.
-
-        Args:
-            conv_id: Conversation ID
-            conv_dir: Directory containing conversation data
-        """
-        try:
-            # Get database path from configuration
-            from ..io.paths import get_chats_database_path
-
-            db_path = get_chats_database_path()
-
-            # Check if JSONL file exists
-            jsonl_file = conv_dir / f"{conv_id}_events.jsonl"
-            if not jsonl_file.exists():
-                logger.debug(f"JSONL file not found for {conv_id}, skipping batch load")
-                return
-
-            # Import here to avoid circular dependency
-            from ..database.event_store import EventStore
-
-            # Load the chat data using EventStore
-            store = EventStore(db_path)
-            success = store.import_experiment_from_jsonl(str(conv_dir))
-            store.close()
-
-            if not success:
-                logger.error(f"Failed to import JSONL data for {conv_id}")
-                return
-
-            # Create marker file
-            marker_file = conv_dir / ".loaded_to_db"
-            marker_file.touch()
-
-            logger.info(f"Successfully batch loaded conversation {conv_id} to database")
-
-        except ImportError as e:
-            logger.error(f"Failed to import EventStore: {e}")
-            if self.console:
-                dim("Note: Database module not available")
-        except FileNotFoundError as e:
-            logger.error(f"File not found during batch load: {e}")
-        except Exception as e:
-            # Log the specific error type for better debugging
-            logger.error(
-                f"Failed to batch load conversation {conv_id}: {type(e).__name__}: {e}"
-            )
-            if self.console:
-                dim(f"Note: Failed to save analytics data: {e}")
 
     def check_interrupt(self) -> bool:
         """Check if interrupt was requested during message.

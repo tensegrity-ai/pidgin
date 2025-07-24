@@ -28,6 +28,7 @@ class EndReason:
 
     HIGH_CONVERGENCE = "high_convergence"
     INTERRUPTED = "interrupted"
+    CONTEXT_LIMIT_REACHED = "context_limit_reached"
     MAX_TURNS = "max_turns"
     ERROR = "error"
 

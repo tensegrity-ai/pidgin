@@ -18,6 +18,7 @@ def apply_context_truncation(
     conversation_id: Optional[str] = None,
     agent_id: Optional[str] = None,
     turn_number: Optional[int] = None,
+    allow_truncation: bool = False,
 ) -> List[Message]:
     """Apply context truncation to messages using ProviderContextManager.
 
@@ -33,6 +34,8 @@ def apply_context_truncation(
         conversation_id: Optional conversation ID for events
         agent_id: Optional agent ID for events
         turn_number: Optional turn number for events
+        allow_truncation: If False (default), return all messages even if over limit.
+                       If True, truncate to fit within context window.
 
     Returns:
         List of messages, potentially truncated to fit context limits
@@ -50,6 +53,7 @@ def apply_context_truncation(
         conversation_id=conversation_id,
         agent_id=agent_id,
         turn_number=turn_number,
+        allow_truncation=allow_truncation,
     )
 
     # Log if truncation occurred

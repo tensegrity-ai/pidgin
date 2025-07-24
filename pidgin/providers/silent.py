@@ -4,7 +4,7 @@
 from typing import AsyncGenerator, List, Optional
 
 # Import model config classes from central location
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .base import Provider
 
@@ -30,6 +30,7 @@ class SilentProvider(Provider):
         Args:
             model: Model ID (ignored, always silent)
         """
+        super().__init__()
         self.model = model
 
     async def stream_response(

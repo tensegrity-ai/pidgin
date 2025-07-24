@@ -5,11 +5,12 @@ from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
 from .error_utils import ProviderErrorHandler
+from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 
 # Import model config classes from central location
-from ..config.models import ModelConfig
+from ..config.model_types import ModelConfig
 
 # xAI model definitions
 XAI_MODELS = {
@@ -50,6 +51,7 @@ except ImportError:
 
 class xAIProvider(Provider):
     def __init__(self, model: str):
+        super().__init__()
         if not OPENAI_AVAILABLE:
             raise ImportError(
                 "OpenAI client not available. Install with: " "pip install openai"
@@ -72,7 +74,8 @@ class xAIProvider(Provider):
         from .context_utils import apply_context_truncation
 
         truncated_messages = apply_context_truncation(
-            messages, provider="xai", model=self.model, logger_name=__name__
+            messages, provider="xai", model=self.model, logger_name=__name__,
+            allow_truncation=self.allow_truncation
         )
 
         # Convert to OpenAI format (xAI is OpenAI-compatible)
@@ -80,7 +83,8 @@ class xAIProvider(Provider):
             {"role": m.role, "content": m.content} for m in truncated_messages
         ]
 
-        try:
+        # Define inner function for retry wrapper
+        async def _make_api_call():
             # Build parameters
             params = {
                 "model": self.model,
@@ -117,6 +121,19 @@ class xAIProvider(Provider):
                         "total_tokens": getattr(chunk.usage, "total_tokens", 0),
                     }
                     logger.debug(f"xAI usage data captured: {self._last_usage}")
+
+        # Initialize usage tracking
+        self._last_usage = None
+
+        # Use retry wrapper with exponential backoff
+        try:
+            async for chunk in retry_with_exponential_backoff(
+                _make_api_call,
+                max_retries=3,
+                base_delay=1.0,
+                retry_on=(Exception,),  # Retry on all exceptions
+            ):
+                yield chunk
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)

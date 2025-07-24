@@ -56,6 +56,9 @@ class ExperimentConfig:
         None  # Tag to prefix initial prompt (None = use config default)
     )
 
+    # Context management
+    allow_truncation: bool = False  # Allow message truncation to fit context windows
+
     # Branch metadata
     branch_from_conversation: Optional[str] = None  # Source conversation ID
     branch_from_turn: Optional[int] = None  # Turn number to branch from

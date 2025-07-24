@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 
 from pidgin.io.paths import (
-    get_chats_database_path,
     get_conversations_dir,
     get_database_path,
     get_experiments_dir,
@@ -180,13 +179,6 @@ class TestOtherPathFunctions:
             db_path == tmp_path / "pidgin_output" / "experiments" / "experiments.duckdb"
         )
 
-    def test_get_chats_database_path(self):
-        """Test get_chats_database_path."""
-        db_path = get_chats_database_path()
-
-        # Should be in home directory
-        assert db_path == Path.home() / ".pidgin" / "chats.duckdb"
-        assert db_path.parent == Path.home() / ".pidgin"
 
     def test_get_experiments_dir_calls_get_output_dir(self):
         """Test that get_experiments_dir calls get_output_dir."""
@@ -221,16 +213,6 @@ class TestOtherPathFunctions:
             assert result == mock_experiments_dir / "experiments.duckdb"
             mock_get_experiments_dir.assert_called_once()
 
-    def test_get_chats_database_path_calls_home(self):
-        """Test that get_chats_database_path calls Path.home()."""
-        with patch("pathlib.Path.home") as mock_home:
-            mock_home_dir = Path("/test/home")
-            mock_home.return_value = mock_home_dir
-
-            result = get_chats_database_path()
-
-            assert result == mock_home_dir / ".pidgin" / "chats.duckdb"
-            mock_home.assert_called_once()
 
 
 class TestIntegrationScenarios:
@@ -271,22 +253,6 @@ class TestIntegrationScenarios:
         assert conversations_dir.parent == output_dir
         assert database_path.parent == experiments_dir
 
-    def test_chats_database_separate_from_experiments(self, monkeypatch, tmp_path):
-        """Test that chats database is separate from experiments structure."""
-        test_dir = tmp_path / "separate_test"
-        test_dir.mkdir()
-
-        monkeypatch.setenv("PIDGIN_ORIGINAL_CWD", str(test_dir))
-
-        chats_db = get_chats_database_path()
-        experiments_db = get_database_path()
-
-        # Chats database should be in home directory
-        assert chats_db == Path.home() / ".pidgin" / "chats.duckdb"
-
-        # Should be completely separate from experiments path
-        assert not str(chats_db).startswith(str(experiments_db.parent))
-        assert not str(experiments_db).startswith(str(chats_db.parent))
 
 
 class TestEdgeCases:

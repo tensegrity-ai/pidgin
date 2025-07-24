@@ -143,6 +143,11 @@ from . import ORIGINAL_CWD
     default="[HUMAN]",
     help='Tag to prefix the initial prompt (default: "[HUMAN]", use "" to disable)',
 )
+@click.option(
+    "--allow-truncation",
+    is_flag=True,
+    help="Allow messages to be truncated to fit context windows (default: disabled)",
+)
 def run(
     spec_file,
     agent_a,
@@ -171,6 +176,7 @@ def run(
     name,
     max_parallel,
     prompt_tag,
+    allow_truncation,
 ):
     """Run AI conversations - single or multiple.
 
@@ -393,6 +399,7 @@ def run(
         first_speaker_id,
         output,
         prompt_tag,
+        allow_truncation,
     )
 
 
@@ -466,6 +473,7 @@ def _run_from_spec(spec, spec_file):
     first_speaker = spec.get("first_speaker", "agent_a")
     display_mode = spec.get("display_mode", "chat")
     prompt_tag = spec.get("prompt_tag", "[HUMAN]")
+    allow_truncation = spec.get("allow_truncation", False)
 
     # Notification settings
     quiet = display_mode == "quiet"
@@ -510,6 +518,7 @@ def _run_from_spec(spec, spec_file):
         first_speaker,
         output_dir,
         prompt_tag,
+        allow_truncation,
     )
 
 
@@ -538,6 +547,7 @@ def _run_conversations(
     first_speaker_id,
     output_dir,
     prompt_tag,
+    allow_truncation,
 ):
     """Run conversations using the unified execution path."""
     # Determine display mode for experiments
@@ -574,6 +584,7 @@ def _run_conversations(
         first_speaker=first_speaker_id,
         display_mode=experiment_display_mode,
         prompt_tag=prompt_tag,
+        allow_truncation=allow_truncation,
     )
 
     # Show configuration

@@ -20,6 +20,10 @@ class Provider(ABC):
                 async for chunk in self._call_api(messages):
                     yield chunk
     """
+    
+    def __init__(self):
+        """Initialize provider with default settings."""
+        self.allow_truncation = False  # Default: no truncation
 
     @abstractmethod
     async def stream_response(

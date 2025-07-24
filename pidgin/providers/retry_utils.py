@@ -15,6 +15,7 @@ async def retry_with_exponential_backoff(
     max_delay: float = 60.0,
     jitter: bool = True,
     retry_on: Optional[tuple[type[Exception], ...]] = None,
+    fallback_func: Optional[Callable[..., AsyncGenerator[str, None]]] = None,
     **kwargs,
 ) -> AsyncGenerator[str, None]:
     """
@@ -27,6 +28,7 @@ async def retry_with_exponential_backoff(
         max_delay: Maximum delay in seconds
         jitter: Whether to add random jitter to delays
         retry_on: Tuple of exception types to retry on (default: all exceptions)
+        fallback_func: Optional fallback function to try after all retries fail
         *args: Positional arguments for func
         **kwargs: Keyword arguments for func
 
@@ -54,7 +56,10 @@ async def retry_with_exponential_backoff(
 
             # Check if this is the last attempt
             if attempt >= max_retries - 1:
-                raise
+                # Don't raise yet if we have a fallback
+                if not fallback_func:
+                    raise
+                break  # Exit loop to try fallback
 
             # Calculate delay with exponential backoff
             delay = min(base_delay * (2**attempt), max_delay)
@@ -79,6 +84,20 @@ async def retry_with_exponential_backoff(
             # Wait before retrying
             await asyncio.sleep(delay)
 
+    # If we have a fallback function and all retries failed, try it
+    if fallback_func and last_exception:
+        try:
+            yield "\n[Streaming failed, falling back to non-streaming mode...]\n"
+            async for value in fallback_func(*args, **kwargs):
+                yield value
+            return  # Fallback succeeded!
+        except Exception as fallback_error:
+            # Log fallback failure but raise original error
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Fallback also failed: {fallback_error}")
+            raise last_exception
+    
     # This should never be reached, but just in case
     if last_exception:
         raise last_exception
@@ -104,6 +123,24 @@ def is_overloaded_error(error: Exception) -> bool:
 def is_retryable_error(error: Exception) -> bool:
     """Check if an error is retryable."""
     error_str = str(error).lower()
+    
+    # Context limit errors are NOT retryable
+    context_patterns = [
+        "context_length",
+        "context length",
+        "context window",
+        "max_tokens",
+        "maximum context",
+        "token limit",
+        "too many tokens",
+        "context_length_exceeded",
+        "messages: array too long",
+        "exceeds the maximum",
+        "content too long",
+    ]
+    
+    if any(pattern in error_str for pattern in context_patterns):
+        return False
 
     # Always retry overloaded errors
     if is_overloaded_error(error):
@@ -122,6 +159,17 @@ def is_retryable_error(error: Exception) -> bool:
         "500",
         "502",
         "504",
+        # Add streaming-related errors
+        "incomplete read",
+        "incompleteread",
+        "chunked read",
+        "chunkedencoding",
+        "stream",
+        "broken pipe",
+        "connection reset",
+        "connection aborted",
+        "ssl error",
+        "eof occurred",
     ]
 
     return any(pattern in error_str for pattern in retryable_patterns)

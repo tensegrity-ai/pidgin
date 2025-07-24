@@ -8,6 +8,7 @@ from rich.text import Text
 
 from ..core.events import (
     APIErrorEvent,
+    ContextLimitEvent,
     ConversationEndEvent,
     ConversationResumedEvent,
     ConversationStartEvent,
@@ -129,6 +130,8 @@ class DisplayFilter:
                 self._show_timeout_error(event)
             elif isinstance(event, ErrorEvent):
                 self._show_error(event)
+            elif isinstance(event, ContextLimitEvent):
+                self._show_context_limit(event)
             elif isinstance(event, ConversationEndEvent):
                 self._show_conversation_end(event)
             elif isinstance(event, ConversationResumedEvent):
@@ -529,6 +532,42 @@ class DisplayFilter:
                 title=" ⏱ Timeout",
                 title_align="left",
                 border_style=self.COLORS["nord13"],
+                padding=(1, 2),
+                width=width,
+                expand=False,
+            )
+        )
+        self.console.print()
+
+    def _show_context_limit(self, event: ContextLimitEvent):
+        """Show context limit reached with informative message."""
+        # Get agent's display name if available
+        agent_name = None
+        if event.agent_id in self.agents:
+            agent_name = self.agents[event.agent_id].display_name or event.agent_id
+        
+        title = "◆ Context Window Limit Reached"
+        border_style = self.COLORS["nord13"]  # Yellow
+        
+        content = (
+            f"[bold {self.COLORS['nord13']}]Natural Conversation End[/bold {self.COLORS['nord13']}]\n\n"
+            f"◈ Agent: {agent_name or event.agent_id}\n"
+            f"◈ Provider: {event.provider}\n"
+            f"◈ Turn: {event.turn_number}\n\n"
+            f"[{self.COLORS['nord4']}]The conversation has reached the model's context window limit.\n"
+            f"This is a natural endpoint for the conversation.[/{self.COLORS['nord4']}]"
+        )
+        
+        # Calculate appropriate width
+        width = self._calculate_panel_width(content, title)
+        
+        self.console.print()
+        self.console.print(
+            Panel(
+                content,
+                title=title,
+                title_align="left",
+                border_style=border_style,
                 padding=(1, 2),
                 width=width,
                 expand=False,

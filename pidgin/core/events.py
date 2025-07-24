@@ -53,6 +53,7 @@ class MessageRequestEvent(Event):
     turn_number: int
     conversation_history: List[Message]
     temperature: Optional[float] = None
+    allow_truncation: bool = False
 
 
 @dataclass
@@ -207,6 +208,17 @@ class ContextTruncationEvent(Event):
     original_message_count: int
     truncated_message_count: int
     messages_dropped: int
+
+
+@dataclass
+class ContextLimitEvent(Event):
+    """Emitted when a context window limit is reached, ending the conversation naturally."""
+
+    conversation_id: str
+    agent_id: str
+    turn_number: int
+    error_message: str
+    provider: str
 
 
 @dataclass
