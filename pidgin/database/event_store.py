@@ -337,3 +337,141 @@ class EventStore:
             List of ImportResults for each experiment
         """
         return self.importer.import_all_pending(experiments_dir)
+
+    # Query methods for generators (all read-only)
+    def get_experiment_conversations(self, experiment_id: str) -> List[Dict[str, Any]]:
+        """Get all conversations for an experiment.
+
+        Args:
+            experiment_id: Experiment ID
+
+        Returns:
+            List of conversation dictionaries
+        """
+        results = self.db.execute(
+            """
+            SELECT * FROM conversations
+            WHERE experiment_id = ?
+            ORDER BY created_at
+            """,
+            [experiment_id],
+        ).fetchall()
+
+        cols = [desc[0] for desc in self.db.description]
+        return [dict(zip(cols, row)) for row in results]
+
+    def get_experiment_turn_metrics(self, experiment_id: str) -> List[Dict[str, Any]]:
+        """Get all turn metrics for an experiment.
+
+        Args:
+            experiment_id: Experiment ID
+
+        Returns:
+            List of turn metrics dictionaries
+        """
+        results = self.db.execute(
+            """
+            SELECT tm.* FROM turn_metrics tm
+            JOIN conversations c ON tm.conversation_id = c.conversation_id
+            WHERE c.experiment_id = ?
+            ORDER BY tm.conversation_id, tm.turn_number
+            """,
+            [experiment_id],
+        ).fetchall()
+
+        cols = [desc[0] for desc in self.db.description]
+        return [dict(zip(cols, row)) for row in results]
+
+    def get_experiment_messages(self, experiment_id: str) -> List[Dict[str, Any]]:
+        """Get all messages for an experiment.
+
+        Args:
+            experiment_id: Experiment ID
+
+        Returns:
+            List of message dictionaries
+        """
+        results = self.db.execute(
+            """
+            SELECT m.* FROM messages m
+            JOIN conversations c ON m.conversation_id = c.conversation_id
+            WHERE c.experiment_id = ?
+            ORDER BY m.conversation_id, m.created_at
+            """,
+            [experiment_id],
+        ).fetchall()
+
+        cols = [desc[0] for desc in self.db.description]
+        return [dict(zip(cols, row)) for row in results]
+
+    def get_conversation_turn_metrics(self, conversation_id: str) -> List[Dict[str, Any]]:
+        """Get turn metrics for a specific conversation.
+
+        Args:
+            conversation_id: Conversation ID
+
+        Returns:
+            List of turn metrics dictionaries
+        """
+        results = self.db.execute(
+            """
+            SELECT * FROM turn_metrics
+            WHERE conversation_id = ?
+            ORDER BY turn_number
+            """,
+            [conversation_id],
+        ).fetchall()
+
+        cols = [desc[0] for desc in self.db.description]
+        return [dict(zip(cols, row)) for row in results]
+
+    def get_conversation_messages(self, conversation_id: str) -> List[Dict[str, Any]]:
+        """Get messages for a specific conversation.
+
+        Args:
+            conversation_id: Conversation ID
+
+        Returns:
+            List of message dictionaries
+        """
+        results = self.db.execute(
+            """
+            SELECT * FROM messages
+            WHERE conversation_id = ?
+            ORDER BY turn_number, agent_id
+            """,
+            [conversation_id],
+        ).fetchall()
+
+        cols = [desc[0] for desc in self.db.description]
+        return [dict(zip(cols, row)) for row in results]
+
+    def get_conversation_token_usage(self, conversation_id: str) -> Dict[str, Any]:
+        """Get token usage summary for a conversation.
+
+        Args:
+            conversation_id: Conversation ID
+
+        Returns:
+            Dictionary with total_tokens and total_cost_cents
+        """
+        result = self.db.execute(
+            """
+            SELECT
+                SUM(total_tokens) as total_tokens,
+                SUM(total_cost) as total_cost_cents
+            FROM token_usage
+            WHERE conversation_id = ?
+            """,
+            [conversation_id],
+        ).fetchone()
+
+        if result and result[0] is not None:
+            return {
+                'total_tokens': result[0],
+                'total_cost_cents': result[1] or 0
+            }
+        return {
+            'total_tokens': 0,
+            'total_cost_cents': 0
+        }

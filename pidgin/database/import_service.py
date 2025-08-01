@@ -101,12 +101,11 @@ class ImportService:
             self._ensure_experiment_exists(experiment_id, manifest)
 
             for jsonl_file in jsonl_files:
-                turns_count = self._process_jsonl_file(
+                turns_count, convs_created = self._process_jsonl_file(
                     jsonl_file, experiment_id, manifest
                 )
                 total_turns += turns_count
-                if turns_count > 0:
-                    conversations_processed += 1
+                conversations_processed += convs_created
 
             self.db.commit()
 
@@ -201,10 +200,15 @@ class ImportService:
 
         # Calculate metrics for each conversation
         turns_processed = 0
+        conversations_created = 0
 
         for conversation_id, conv_data in conversations.items():
             if not conv_data["turns"]:
                 continue
+
+            # Create conversation record if it doesn't exist
+            if self._ensure_conversation_exists(experiment_id, conversation_id, conv_data):
+                conversations_created += 1
 
             # Reset metrics calculator for this conversation
             self.metrics_calculator = FlatMetricsCalculator()
@@ -231,9 +235,14 @@ class ImportService:
 
                 # Insert into database
                 self._insert_turn(turn_row)
+                
+                # Also populate messages and turn_metrics tables for transcript generation
+                self._insert_messages(conversation_id, turn_num, turn_data, conv_data.get("messages", {}))
+                self._insert_turn_metrics(conversation_id, turn_num, turn_data, flat_metrics)
+                
                 turns_processed += 1
 
-        return turns_processed
+        return turns_processed, conversations_created
 
     def _ensure_experiment_exists(self, experiment_id: str, manifest: Dict) -> None:
         """Ensure experiment exists in database before importing turns.
@@ -273,6 +282,64 @@ class ImportService:
             ])
             
             logger.info(f"Created experiment record for {experiment_id}")
+
+    def _ensure_conversation_exists(self, experiment_id: str, conversation_id: str, conv_data: Dict) -> bool:
+        """Ensure conversation exists in database.
+        
+        Args:
+            experiment_id: Experiment ID
+            conversation_id: Conversation ID
+            conv_data: Conversation data from events
+            
+        Returns:
+            True if conversation was created, False if it already existed
+        """
+        # Check if conversation already exists
+        result = self.db.execute(
+            "SELECT conversation_id FROM conversations WHERE conversation_id = ?",
+            [conversation_id]
+        ).fetchone()
+        
+        if result is None:
+            config = conv_data.get("config", {})
+            
+            # Get first and last turn timestamps
+            turn_nums = sorted(conv_data["turns"].keys())
+            first_turn = conv_data["turns"][turn_nums[0]] if turn_nums else {}
+            last_turn = conv_data["turns"][turn_nums[-1]] if turn_nums else {}
+            
+            # Calculate conversation metrics
+            total_turns = len(turn_nums)
+            final_convergence = last_turn.get("convergence_score", 0)
+            
+            # Insert conversation record
+            self.db.execute("""
+                INSERT INTO conversations (
+                    conversation_id, experiment_id, status,
+                    agent_a_model, agent_b_model,
+                    agent_a_temperature, agent_b_temperature,
+                    initial_prompt, total_turns, 
+                    final_convergence_score,
+                    started_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, [
+                conversation_id,
+                experiment_id,
+                "completed",  # Status is completed since we're importing after completion
+                config.get("agent_a_model"),
+                config.get("agent_b_model"),
+                config.get("temperature_a"),
+                config.get("temperature_b"),
+                config.get("initial_prompt"),
+                total_turns,
+                final_convergence,
+                first_turn.get("timestamp"),
+                last_turn.get("timestamp")
+            ])
+            
+            return True
+        
+        return False
 
     def _prepare_turn_row(
         self,
@@ -371,6 +438,81 @@ class ImportService:
                 f"Failed to insert turn {row['conversation_id']}:{row['turn_number']}: {e}"
             )
             raise
+
+    def _insert_messages(self, conversation_id: str, turn_number: int, turn_data: Dict, messages: Dict) -> None:
+        """Insert messages into messages table for compatibility.
+        
+        Args:
+            conversation_id: Conversation ID
+            turn_number: Turn number
+            turn_data: Turn data containing messages
+            messages: Message metadata from events
+        """
+        # Insert agent A message
+        self.db.execute("""
+            INSERT INTO messages (
+                conversation_id, turn_number, agent_id, 
+                content, timestamp, token_count
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            conversation_id,
+            turn_number,
+            "agent_a",
+            turn_data["agent_a_message"],
+            turn_data["timestamp"],
+            messages.get("agent_a", {}).get("tokens_used", 0)
+        ])
+        
+        # Insert agent B message
+        self.db.execute("""
+            INSERT INTO messages (
+                conversation_id, turn_number, agent_id,
+                content, timestamp, token_count
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            conversation_id,
+            turn_number,
+            "agent_b",
+            turn_data["agent_b_message"],
+            turn_data["timestamp"],
+            messages.get("agent_b", {}).get("tokens_used", 0)
+        ])
+
+    def _insert_turn_metrics(self, conversation_id: str, turn_number: int, turn_data: Dict, metrics: Dict) -> None:
+        """Insert turn metrics into turn_metrics table for compatibility.
+        
+        Args:
+            conversation_id: Conversation ID
+            turn_number: Turn number
+            turn_data: Turn data containing convergence score
+            metrics: Calculated metrics
+        """
+        # Extract key metrics
+        self.db.execute("""
+            INSERT INTO turn_metrics (
+                conversation_id, turn_number, timestamp,
+                convergence_score,
+                message_a_length, message_b_length,
+                message_a_word_count, message_b_word_count,
+                message_a_unique_words, message_b_unique_words,
+                shared_vocabulary,
+                message_a_response_time_ms, message_b_response_time_ms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            conversation_id,
+            turn_number,
+            turn_data["timestamp"],
+            turn_data.get("convergence_score"),
+            metrics.get("a_message_length"),
+            metrics.get("b_message_length"),
+            metrics.get("a_word_count"),
+            metrics.get("b_word_count"),
+            metrics.get("a_unique_words"),
+            metrics.get("b_unique_words"),
+            json.dumps(metrics.get("shared_vocabulary", [])),
+            metrics.get("response_time_a"),
+            metrics.get("response_time_b")
+        ])
 
     def import_all_pending(self, experiments_dir: Path) -> List[ImportResult]:
         """Import all experiments that have JSONL files but haven't been imported.

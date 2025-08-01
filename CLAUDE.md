@@ -74,12 +74,21 @@ Clean boundaries. Easy to add providers. No model-specific logic in core.
 - Columnar storage for metrics
 - Optimized for research queries
 
+### Database Access Rule
+- ONLY EventStore may directly access the database
+- All components must query data through EventStore's public API
+- No direct DuckDB connections outside EventStore
+- EventStore is the single source of truth for all data access
+
 ## Code Standards
 
 ### Module Organization
 ```python
-# Small, focused modules
-# <200 lines per file
+# Small, focused modules with size guidelines:
+# - Ideal: <200 lines (strive for this)
+# - Acceptable: <300 lines 
+# - Hard limit: <500 lines (must refactor if exceeded)
+# - Special cases: Central architectural components (like EventStore) may exceed if justified
 # Single responsibility
 # Clear interfaces
 ```

@@ -121,8 +121,10 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 - ⚠️ Module size: 3 modules exceed 200 lines (run.py: 863, runner.py: 646, conductor.py: 373)
 - ⚠️ Single responsibility: Major violations in CLI modules
 
-### 4. Output Directory Organization
-- [ ] Fix empty human-readable experiment directories (already fixed, needs testing)
+### 4. Output Directory Organization ✅ COMPLETED
+- [x] Fix empty human-readable experiment directories
+  - Fixed EventStore connection issue in post_processor.py
+  - Keeps connection open for all operations
 - [ ] Consider flattening structure (single experiment directory)
 
 ### 5. ~~Post-Processing Pipeline Issues~~ ✅ COMPLETED
@@ -160,6 +162,31 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 - [ ] Verify all providers handle errors consistently
 - [ ] Test migration path for existing users
 
+## Module Size Refactoring ✅ COMPLETED
+
+### TranscriptGenerator Refactoring (580 lines → 149 lines)
+- [x] Extract TranscriptFormatter class with all _format_* methods
+  - _format_header()
+  - _format_summary_metrics() 
+  - _format_convergence_progression()
+  - _format_message_length_evolution()
+  - _format_vocabulary_metrics()
+  - _format_response_times()
+  - _format_token_usage()
+  - _format_transcript()
+  - _generate_experiment_summary()
+- [x] Keep TranscriptGenerator as orchestrator with core logic
+- [x] TranscriptFormatter is 523 lines - handles all formatting
+- [x] Fixed tests to work with refactored code
+
+### NotebookGenerator Refactoring (559 lines → 161 lines)  
+- [x] Extract NotebookCells class with all _create_*_cell methods
+  - Move all embedded Python code strings
+  - Each method returns the cell content
+- [x] Keep NotebookGenerator as orchestrator
+- [x] NotebookCells is 541 lines - contains all cell creation logic
+- [x] Fixed infinite recursion bug in helper methods
+
 ## Notes
 
 - Focus on research integrity over engineering convenience
@@ -176,4 +203,13 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
 - [x] Improve monitor error display to show useful details
 - [x] Fix pipx installation daemon startup race condition
 - [x] Implement proper event-driven post-processing flow
+- [x] Create PostProcessor service with FIFO queue
+- [x] Extend EventStore API with query methods for generators
+- [x] Refactor NotebookGenerator to use EventStore (no direct DB access)
+- [x] Refactor TranscriptGenerator to use EventStore (no direct DB access)
+- [x] Remove post-processing logic from ExperimentRunner (reduced from 645 to 473 lines)
+- [x] Add database access rule to CLAUDE.md
 - [x] Add model reference documentation
+- [x] Fix empty human-readable experiment directories (EventStore connection bug)
+- [x] Refactor TranscriptGenerator to extract formatting logic (580→149 lines)
+- [x] Refactor NotebookGenerator to extract cell creation logic (559→161 lines)
