@@ -5,10 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-# Mock database module to avoid import issues
+# Mock database and aiohttp modules to avoid import issues
 sys.modules["duckdb"] = MagicMock()
 sys.modules["duckdb.duckdb"] = MagicMock()
 sys.modules["duckdb.duckdb.functional"] = MagicMock()
+sys.modules["aiohttp"] = MagicMock()
 
 
 @pytest.fixture
@@ -34,6 +35,7 @@ def sample_experiment_config():
         temperature_b=0.8,
         custom_prompt="Test prompt",
         max_parallel=2,
+        allow_truncation=False,  # Add allow_truncation field
     )
 
 
@@ -88,16 +90,15 @@ class TestExperimentRunnerBasic:
         with open(manifest_path, "w") as f:
             json.dump(manifest_data, f)
 
-        with patch("pidgin.experiments.runner.ManifestManager") as mock_manifest_class:
+        with patch("pidgin.experiments.conversation_orchestrator.ManifestManager") as mock_manifest_class:
             mock_manifest = Mock()
             mock_manifest_class.return_value = mock_manifest
 
-            runner._register_conversation(exp_dir, "conv_123")
+            # Use the orchestrator to register conversation
+            runner.orchestrator.register_conversation(exp_dir, "conv_123")
 
             mock_manifest_class.assert_called_once_with(exp_dir)
-            mock_manifest.add_conversation.assert_called_once_with(
-                "conv_123", "conv_123_events.jsonl"
-            )
+            mock_manifest.add_conversation.assert_called_once_with("conv_123")
 
     @pytest.mark.asyncio
     async def test_setup_event_bus(self, temp_output_dir):
@@ -108,11 +109,11 @@ class TestExperimentRunnerBasic:
         exp_dir = temp_output_dir / "test_exp"
         exp_dir.mkdir(parents=True, exist_ok=True)
 
-        with patch("pidgin.experiments.runner.TrackingEventBus") as mock_bus_class:
+        with patch("pidgin.experiments.experiment_setup.TrackingEventBus") as mock_bus_class:
             mock_bus = AsyncMock()
             mock_bus_class.return_value = mock_bus
 
-            result = await runner._setup_event_bus(exp_dir, "conv_123")
+            result = await runner.setup.setup_event_bus(exp_dir, "conv_123")
 
             assert result == mock_bus
             mock_bus_class.assert_called_once_with(
@@ -136,7 +137,7 @@ class TestExperimentRunnerBasic:
             mock_output = Mock()
             mock_output_class.return_value = mock_output
 
-            output, console = runner._setup_output_and_console(
+            output, console = runner.setup.setup_output_and_console(
                 sample_experiment_config, exp_dir, "conv_123"
             )
 
@@ -163,7 +164,7 @@ class TestExperimentRunnerBasic:
             mock_output = Mock()
             mock_output_class.return_value = mock_output
 
-            output, console = runner._setup_output_and_console(
+            output, console = runner.setup.setup_output_and_console(
                 sample_experiment_config, exp_dir, "conv_123"
             )
 
@@ -186,7 +187,7 @@ class TestExperimentRunnerBasic:
             mock_output = Mock()
             mock_output_class.return_value = mock_output
 
-            output, console = runner._setup_output_and_console(
+            output, console = runner.setup.setup_output_and_console(
                 sample_experiment_config, exp_dir, "conv_123"
             )
 
@@ -209,15 +210,15 @@ class TestExperimentRunnerBasic:
         mock_model_config.display_name = "test-model"  # Use display_name instead of shortname
 
         with patch(
-            "pidgin.experiments.runner.get_model_config", return_value=mock_model_config
+            "pidgin.experiments.experiment_setup.get_model_config", return_value=mock_model_config
         ), patch(
-            "pidgin.experiments.runner.get_provider_for_model"
+            "pidgin.experiments.experiment_setup.get_provider_for_model"
         ) as mock_get_provider:
 
             mock_provider = AsyncMock()
             mock_get_provider.return_value = mock_provider
 
-            agents, providers = await runner._create_agents_and_providers(
+            agents, providers = await runner.setup.create_agents_and_providers(
                 sample_experiment_config
             )
 
@@ -247,9 +248,9 @@ class TestExperimentRunnerBasic:
 
         runner = ExperimentRunner(temp_output_dir)
 
-        with patch("pidgin.experiments.runner.get_model_config", return_value=None):
+        with patch("pidgin.experiments.experiment_setup.get_model_config", return_value=None):
             with pytest.raises(ValueError, match="Invalid model configuration"):
-                await runner._create_agents_and_providers(sample_experiment_config)
+                await runner.setup.create_agents_and_providers(sample_experiment_config)
 
     @pytest.mark.asyncio
     async def test_create_agents_and_providers_provider_failure(
@@ -265,11 +266,11 @@ class TestExperimentRunnerBasic:
         mock_model_config.provider = "test-provider"
 
         with patch(
-            "pidgin.experiments.runner.get_model_config", return_value=mock_model_config
-        ), patch("pidgin.experiments.runner.get_provider_for_model", return_value=None):
+            "pidgin.experiments.experiment_setup.get_model_config", return_value=mock_model_config
+        ), patch("pidgin.experiments.experiment_setup.get_provider_for_model", return_value=None):
 
             with pytest.raises(ValueError, match="Failed to create providers"):
-                await runner._create_agents_and_providers(sample_experiment_config)
+                await runner.setup.create_agents_and_providers(sample_experiment_config)
 
     @pytest.mark.asyncio
     async def test_run_parallel_conversations_with_daemon_stop(
@@ -283,13 +284,11 @@ class TestExperimentRunnerBasic:
         exp_dir = temp_output_dir / "test_exp"
         exp_dir.mkdir(parents=True, exist_ok=True)
 
-        conversations = [
-            ("conv_1", {"conversation_id": "conv_1"}),
-            ("conv_2", {"conversation_id": "conv_2"}),
-        ]
+        # Set up daemon to stop immediately
+        mock_daemon.stop_requested = True
 
         await runner._run_parallel_conversations(
-            "test_exp", sample_experiment_config, conversations, exp_dir
+            "test_exp", sample_experiment_config, exp_dir
         )
 
         # Should complete without running conversations
@@ -314,13 +313,13 @@ class TestExperimentRunnerBasic:
         mock_event_bus = AsyncMock()
 
         with patch(
-            "pidgin.experiments.runner.build_initial_prompt", return_value="Test prompt"
-        ), patch("pidgin.experiments.runner.Conductor") as mock_conductor_class:
+            "pidgin.experiments.conversation_orchestrator.build_initial_prompt", return_value="Test prompt"
+        ), patch("pidgin.experiments.conversation_orchestrator.Conductor") as mock_conductor_class:
 
             mock_conductor = AsyncMock()
             mock_conductor_class.return_value = mock_conductor
 
-            await runner._create_and_run_conductor(
+            await runner.orchestrator.create_and_run_conductor(
                 config=sample_experiment_config,
                 agents=mock_agents,
                 providers=mock_providers,
@@ -343,6 +342,8 @@ class TestExperimentRunnerBasic:
             # Check conversation run
             mock_conductor.run_conversation.assert_called_once()
             call_args = mock_conductor.run_conversation.call_args
-            assert call_args.kwargs["conversation_id"] == "conv_123"
+            assert call_args.kwargs["agents"] == mock_agents
             assert call_args.kwargs["max_turns"] == 5
             assert call_args.kwargs["initial_prompt"] == "Test prompt"
+            assert call_args.kwargs["first_speaker"] == sample_experiment_config.first_speaker
+            assert call_args.kwargs["daemon"] == runner.orchestrator.daemon
