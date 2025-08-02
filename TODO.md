@@ -144,6 +144,19 @@ See detailed plan: [PLANS/remove-chats-database.md](PLANS/remove-chats-database.
   - [x] Just use simple names: `pidgin-exp`, `pidgin-monitor`, `pidgin-tail`, `pidgin-chat`
   - [x] Remove the complex name generation with experiment IDs
 
+## High Priority - Code Quality
+
+### 9. Refactor Oversized CLI Modules
+**Goal**: Bring run.py (862 lines) and runner.py (477 lines) under 200 lines each
+
+See detailed plan: [PLANS/refactor-cli-modules-plan.md](PLANS/refactor-cli-modules-plan.md)
+
+**Summary of approach**:
+- Extract 5 new modules from run.py (SpecLoader, ModelSelector, ConfigBuilder, DisplayManager, DaemonLauncher)
+- Extract 2 new modules from runner.py (ExperimentSetup, ConversationOrchestrator)
+- Each extraction should be tested independently
+- This will reduce run.py from 862→200 lines and runner.py from 477→200 lines
+
 ## Low Priority - Nice to Have
 
 ### 7. Display Improvements
