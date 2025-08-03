@@ -47,7 +47,7 @@ This review assessed Pidgin's codebase against the core architectural principles
 
 ### 2. Provider Agnostic Principle
 
-**Status**: Fair with several violations
+**Status**: ✅ Good (violations fixed)
 
 **Strengths**:
 - Clean Provider abstract base class
@@ -55,20 +55,23 @@ This review assessed Pidgin's codebase against the core architectural principles
 - EventAwareProvider wrapper pattern
 - Configuration-based provider selection
 
-**Violations Found**:
+**Violations Fixed** (2025-08-03):
 1. **MessageHandler** (`message_handler.py`):
-   - Hardcoded token estimation: "Rough approximation - Claude tends to use fewer tokens"
-   - Provider-specific logic should be in provider configuration
+   - ~~Hardcoded token estimation~~ → Now uses ProviderCapabilities
+   - System prompt overhead moved to provider configuration
 
 2. **NameCoordinator** (`name_coordinator.py`):
-   - Pattern matching on model names to detect providers
-   - Should use model configuration exclusively
+   - ~~Pattern matching on model names~~ → Now uses model configuration only
+   - Returns "unknown" for unrecognized models
 
 3. **RateLimiter** (`rate_limiter.py`):
-   - Hardcoded rate limits per provider
-   - Should be configuration-driven or provider-supplied
+   - ~~Hardcoded rate limits~~ → Now uses ProviderCapabilities
+   - Configuration-driven with override support
 
-**Recommendation**: Create `ProviderCapabilities` interface for metadata.
+**Solution Implemented**: Created `ProviderCapabilities` system:
+- Centralized provider-specific configuration
+- Rate limits, system prompt overhead, feature support
+- Clean separation from model-specific configuration
 
 ### 3. JSONL-First Data Flow
 

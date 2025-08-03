@@ -25,7 +25,7 @@ class NameCoordinator:
         self.agent_chosen_names = {}
 
     def get_provider_name(self, model: str) -> str:
-        """Get provider name from model.
+        """Get provider name from model configuration.
 
         Args:
             model: Model name or alias
@@ -37,18 +37,9 @@ class NameCoordinator:
         if config:
             return config.provider
 
-        # Fallback pattern matching
-        model_lower = model.lower()
-        if "claude" in model_lower:
-            return "anthropic"
-        elif model_lower.startswith("gpt") or model_lower.startswith("o"):
-            return "openai"
-        elif "gemini" in model_lower:
-            return "google"
-        elif "grok" in model_lower:
-            return "xai"
-        else:
-            return "openai"  # Default
+        # Unknown model - return a generic provider name
+        # This maintains compatibility with custom models
+        return "unknown"
 
     def extract_chosen_name(self, message_content: str) -> Optional[str]:
         """Extract self-chosen name from first response.

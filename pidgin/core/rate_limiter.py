@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Any, Dict
 
 from ..config import get_config
+from ..config.provider_capabilities import get_provider_capabilities
 from ..io.logger import get_logger
 from .constants import RateLimits, SystemDefaults
 
@@ -32,29 +33,6 @@ class StreamingRateLimiter:
     provide enough spacing between requests.
     """
 
-    # Default rate limits - same as token_tracker for consistency
-    DEFAULT_RATE_LIMITS = {
-        "anthropic": {
-            "requests_per_minute": 50,
-            "tokens_per_minute": 40000,
-        },
-        "openai": {
-            "requests_per_minute": 60,
-            "tokens_per_minute": 90000,
-        },
-        "google": {
-            "requests_per_minute": 60,
-            "tokens_per_minute": 60000,
-        },
-        "xai": {
-            "requests_per_minute": 60,
-            "tokens_per_minute": 60000,
-        },
-        "local": {
-            "requests_per_minute": float("inf"),  # No limits for local models
-            "tokens_per_minute": float("inf"),
-        },
-    }
 
     def __init__(self):
         """Initialize the rate limiter."""
@@ -75,8 +53,16 @@ class StreamingRateLimiter:
         self.backoff_until: Dict[str, float] = {}
 
     def _load_limits(self) -> Dict[str, Dict[str, int]]:
-        """Load rate limits from config with defaults."""
-        limits = self.DEFAULT_RATE_LIMITS.copy()
+        """Load rate limits from provider capabilities."""
+        limits = {}
+        
+        # Load from provider capabilities
+        for provider in ["anthropic", "openai", "google", "xai", "local"]:
+            capabilities = get_provider_capabilities(provider)
+            limits[provider] = {
+                "requests_per_minute": capabilities.requests_per_minute,
+                "tokens_per_minute": capabilities.tokens_per_minute,
+            }
 
         # Override with config if provided
         config = get_config()
@@ -127,7 +113,15 @@ class StreamingRateLimiter:
                 del self.backoff_until[provider]
 
         # Get provider limits
-        limits = self.rate_limits.get(provider, self.DEFAULT_RATE_LIMITS["openai"])
+        # Get provider limits or use defaults from capabilities
+        if provider not in self.rate_limits:
+            capabilities = get_provider_capabilities(provider)
+            limits = {
+                "requests_per_minute": capabilities.requests_per_minute,
+                "tokens_per_minute": capabilities.tokens_per_minute,
+            }
+        else:
+            limits = self.rate_limits[provider]
         request_limit = limits["requests_per_minute"]
         token_limit = limits["tokens_per_minute"]
 
@@ -336,7 +330,15 @@ class StreamingRateLimiter:
             Status dictionary
         """
         provider = self._normalize_provider(provider)
-        limits = self.rate_limits.get(provider, self.DEFAULT_RATE_LIMITS["openai"])
+        # Get provider limits or use defaults from capabilities
+        if provider not in self.rate_limits:
+            capabilities = get_provider_capabilities(provider)
+            limits = {
+                "requests_per_minute": capabilities.requests_per_minute,
+                "tokens_per_minute": capabilities.tokens_per_minute,
+            }
+        else:
+            limits = self.rate_limits[provider]
 
         with self.lock:
             current_tokens = self._get_current_token_rate(provider)

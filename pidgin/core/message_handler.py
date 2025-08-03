@@ -333,10 +333,15 @@ class MessageHandler:
             * RateLimits.TOKEN_OVERHEAD_MULTIPLIER
         )
 
-        # Add base system prompt overhead
-        if "claude" in model.lower():
-            estimated += 200  # Anthropic system prompts
+        # Add base system prompt overhead from provider capabilities
+        from ..config.models import get_model_config
+        from ..config.provider_capabilities import get_provider_capabilities
+        
+        model_config = get_model_config(model)
+        if model_config:
+            capabilities = get_provider_capabilities(model_config.provider)
+            estimated += capabilities.system_prompt_overhead
         else:
-            estimated += 100  # Other providers
+            estimated += 100  # Default if model not found
 
         return estimated
