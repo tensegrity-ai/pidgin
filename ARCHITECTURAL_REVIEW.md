@@ -26,9 +26,14 @@ This review assessed Pidgin's codebase against the core architectural principles
 - No direct coupling between core components
 
 **Violations Found**:
-1. **Direct State Manipulation in TurnExecutor**:
+1. **Direct State Manipulation in TurnExecutor** *(Acknowledged - see note)*:
    - Lines 112, 125, 189, 209: Direct `conversation.messages.append()`
-   - Should emit `MessageAddedEvent` instead
+   - **Note**: After review, these direct appends are intentional and acceptable because:
+     - MessageCompleteEvent is already emitted by message_handler
+     - Appends only maintain runtime conversation state
+     - JSONL events remain the authoritative source of truth
+     - Appends are necessary for agents to see full conversation context
+   - Added clarifying comments in code (2025-08-03)
 
 2. **NameCoordinator State Changes**:
    - Directly modifies agent display names without events
@@ -38,7 +43,7 @@ This review assessed Pidgin's codebase against the core architectural principles
    - Tracks `self.truncation_occurred` directly
    - Minor issue, acceptable for display components
 
-**Recommendation**: Create new events for message additions and name assignments.
+**Recommendation**: Create NameAssignedEvent for name changes. Message appends are acceptable as documented.
 
 ### 2. Provider Agnostic Principle
 

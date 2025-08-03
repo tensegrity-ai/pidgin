@@ -109,6 +109,12 @@ class TurnExecutor:
         if agent_a_message is None:
             return None
 
+        # NOTE: Direct append is intentional here. While this bypasses the event system,
+        # it's acceptable because:
+        # 1. MessageCompleteEvent was already emitted by message_handler
+        # 2. This is just maintaining runtime conversation state
+        # 3. The JSONL events are the authoritative source of truth
+        # 4. The append is needed for the next agent to see the full context
         conversation.messages.append(agent_a_message)
 
         # Get Agent B message
@@ -122,6 +128,7 @@ class TurnExecutor:
         if agent_b_message is None:
             return None
 
+        # NOTE: Direct append is intentional (see comment above for agent_a_message)
         conversation.messages.append(agent_b_message)
 
         # Build turn
@@ -186,6 +193,9 @@ class TurnExecutor:
                 system_msg = Message(
                     role="system", content=prompts["agent_a"], agent_id="system"
                 )
+                # NOTE: Direct append for system prompts is intentional.
+                # SystemPromptEvent is emitted below for tracking.
+                # The append ensures the prompt is in context for the next message.
                 conversation.messages.append(system_msg)
 
                 # Emit event for tracking
@@ -206,6 +216,7 @@ class TurnExecutor:
                 system_msg = Message(
                     role="system", content=prompts["agent_b"], agent_id="system"
                 )
+                # NOTE: Direct append for system prompts is intentional (see above)
                 conversation.messages.append(system_msg)
 
                 # Emit event for tracking
