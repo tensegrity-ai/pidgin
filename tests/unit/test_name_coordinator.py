@@ -45,28 +45,21 @@ class TestNameCoordinator:
 
     @patch("pidgin.core.name_coordinator.get_model_config")
     def test_get_provider_name_fallback_patterns(self, mock_get_config, coordinator):
-        """Test provider name fallback pattern matching."""
+        """Test provider name fallback for unknown models."""
         mock_get_config.return_value = None
 
-        # Test Claude models
-        assert coordinator.get_provider_name("claude-3-opus") == "anthropic"
-        assert coordinator.get_provider_name("CLAUDE-instant") == "anthropic"
-
-        # Test GPT models
-        assert coordinator.get_provider_name("gpt-4") == "openai"
-        assert coordinator.get_provider_name("GPT-3.5-turbo") == "openai"
-        assert coordinator.get_provider_name("o1-preview") == "openai"
-
-        # Test Gemini models
-        assert coordinator.get_provider_name("gemini-pro") == "google"
-        assert coordinator.get_provider_name("GEMINI-1.5") == "google"
-
-        # Test Grok models
-        assert coordinator.get_provider_name("grok-1") == "xai"
-        assert coordinator.get_provider_name("GROK-beta") == "xai"
-
-        # Test unknown model defaults to openai
-        assert coordinator.get_provider_name("unknown-model") == "openai"
+        # When model config is not found, should return "unknown"
+        # This is the new behavior - no assumptions about provider
+        assert coordinator.get_provider_name("claude-3-opus") == "unknown"
+        assert coordinator.get_provider_name("CLAUDE-instant") == "unknown"
+        assert coordinator.get_provider_name("gpt-4") == "unknown"
+        assert coordinator.get_provider_name("GPT-3.5-turbo") == "unknown"
+        assert coordinator.get_provider_name("o1-preview") == "unknown"
+        assert coordinator.get_provider_name("gemini-pro") == "unknown"
+        assert coordinator.get_provider_name("GEMINI-1.5") == "unknown"
+        assert coordinator.get_provider_name("grok-1") == "unknown"
+        assert coordinator.get_provider_name("GROK-beta") == "unknown"
+        assert coordinator.get_provider_name("unknown-model") == "unknown"
 
     def test_extract_chosen_name_patterns(self, coordinator):
         """Test extracting self-chosen names from various patterns."""

@@ -263,16 +263,17 @@ class TestMessageHandler:
         """Test token estimation for Claude models."""
         history = [make_message("Test message", "user")]
 
-        tokens = handler._estimate_payload_tokens(history, "claude-3-sonnet")
+        # Use a valid Claude model alias
+        tokens = handler._estimate_payload_tokens(history, "claude")
 
-        # Should add more overhead for Claude
+        # Should add overhead based on provider capabilities (200 for Anthropic)
         total_chars = len("Test message")
         expected = int(
             total_chars
             / RateLimits.TOKEN_CHAR_RATIO
             * RateLimits.TOKEN_OVERHEAD_MULTIPLIER
         )
-        expected += 200  # Claude overhead
+        expected += 200  # Claude/Anthropic overhead from ProviderCapabilities
 
         assert tokens == expected
 

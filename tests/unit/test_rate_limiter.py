@@ -37,17 +37,18 @@ class TestStreamingRateLimiter:
     # Removed test_provider_normalization - broken fixture
 
     def test_default_rate_limits(self):
-        """Test default rate limits are set correctly."""
+        """Test rate limits are loaded from provider capabilities."""
         limiter = StreamingRateLimiter()
 
-        assert "anthropic" in limiter.DEFAULT_RATE_LIMITS
-        assert "openai" in limiter.DEFAULT_RATE_LIMITS
-        assert "google" in limiter.DEFAULT_RATE_LIMITS
-        assert "xai" in limiter.DEFAULT_RATE_LIMITS
+        # Check that rate limits are loaded from ProviderCapabilities
+        assert "anthropic" in limiter.rate_limits
+        assert "openai" in limiter.rate_limits
+        assert "google" in limiter.rate_limits
+        assert "xai" in limiter.rate_limits
 
-        # Check anthropic limits
-        assert limiter.DEFAULT_RATE_LIMITS["anthropic"]["requests_per_minute"] == 50
-        assert limiter.DEFAULT_RATE_LIMITS["anthropic"]["tokens_per_minute"] == 40000
+        # Check anthropic limits from ProviderCapabilities
+        assert limiter.rate_limits["anthropic"]["requests_per_minute"] == 50
+        assert limiter.rate_limits["anthropic"]["tokens_per_minute"] == 40000
 
     # Removed test_release_updates_history - broken fixture
 
@@ -473,11 +474,11 @@ class TestStreamingRateLimiter:
 
             status = limiter.get_status("unknown_provider")
 
-            # Should use openai defaults from DEFAULT_RATE_LIMITS
+            # Should use defaults from ProviderCapabilities for unknown providers
             # Provider name is normalized by _normalize_provider
             assert status["provider"] == "unknown_"
-            # Check that the defaults are used (values will be from OpenAI)
-            assert status["token_limit"] == 90000
+            # Check that the defaults are used (60/60000 from ProviderCapabilities default)
+            assert status["token_limit"] == 60000
             assert status["request_limit"] == 60
 
     def test_get_status_no_backoff(self):
@@ -518,12 +519,10 @@ class TestStreamingRateLimiter:
 
             limiter = StreamingRateLimiter()
 
-            # Should merge custom with defaults
+            # Should merge custom with defaults from ProviderCapabilities
             assert limiter.rate_limits["anthropic"]["requests_per_minute"] == 25
-            assert (
-                limiter.rate_limits["anthropic"]["tokens_per_minute"]
-                == limiter.DEFAULT_RATE_LIMITS["anthropic"]["tokens_per_minute"]
-            )
+            # Default tokens_per_minute from ProviderCapabilities for anthropic is 40000
+            assert limiter.rate_limits["anthropic"]["tokens_per_minute"] == 40000
 
             # Should add new provider
             assert limiter.rate_limits["new_provider"]["requests_per_minute"] == 100
