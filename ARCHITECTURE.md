@@ -23,7 +23,7 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
                     │     Router     │           ▼
                     │ (msg transform)│    ┌─────────────────┐
                     └───────┬────────┘    │  TrackingBus    │
-                            │              │  (experiments)  │
+                            │             │  (experiments)  │
                     ┌───────▼────────┐    └────────┬────────┘
                     │    Providers   │             │
                     ├────────────────┤             ▼
@@ -90,7 +90,44 @@ Provider types:
 - **API Providers**: Anthropic, OpenAI, Google, xAI
 - **Local Providers**: LocalProvider (test), OllamaProvider
 
+## Local Model Support
+
+Pidgin supports local models through two mechanisms:
+
+### Test Model
+- Built-in deterministic model for testing
+- No dependencies required
+- Available as `local:test`
+- Provides consistent responses for development
+
+### Ollama Integration
+- External Ollama server handles model management
+- Pidgin communicates via HTTP API
+- Models: qwen2.5:0.5b, phi3, mistral, llama3.2
+- Auto-downloads models on first use
+- Automatic installation support with user consent
+
+```
+┌──────────────┐     HTTP      ┌──────────────┐
+│   Pidgin     │ ────────────▶ │ Ollama Server│
+│OllamaProvider│               │ (port 11434) │
+└──────────────┘               └──────────────┘
+                                     │
+                              ┌──────▼────────┐
+                              │ Local Models  │
+                              │ (GGUF format) │
+                              └───────────────┘
+```
+
+Ollama installation flow:
+1. Detect if Ollama is installed
+2. Offer to install if missing (with user consent)
+3. Start server automatically if not running
+4. Pull models on first use
+
 ## Data Flow Architecture (JSONL-First)
+
+Pidgin uses a JSONL-first architecture that eliminates database contention:
 
 ```
 ┌──────────────┐
@@ -116,6 +153,21 @@ Provider types:
 │ • Jupyter Notebooks     │
 └─────────────────────────┘
 ```
+
+### Key Benefits:
+- **No lock contention**: JSONL files are append-only
+- **Complete observability**: Every event recorded and accessible
+- **Instant monitoring**: manifest.json provides efficient state
+- **Standard tools**: Use tail, grep, jq for debugging
+- **Batch import**: Load to DuckDB when convenient
+- **Reproducible analysis**: Generate notebooks and transcripts on-demand
+
+### Data Processing Pipeline:
+1. **Record**: Conversations emit events to JSONL files in real-time
+2. **Track**: Manifest.json provides real-time state for monitoring
+3. **Orchestrate**: PostProcessor manages post-experiment processing queue
+4. **Import**: EventStore imports JSONL to DuckDB (only DB interface)
+5. **Generate**: Create transcripts and notebooks using EventStore data
 
 ### File Structure:
 ```
@@ -155,10 +207,18 @@ Real-time experiment state:
 ### PostProcessor (`experiments/post_processor.py`)
 Post-experiment processing pipeline:
 - FIFO queue for sequential processing
-- Imports JSONL to DuckDB
-- Generates transcripts
-- Creates README files
+- Orchestrates all post-processing steps
+- Calls EventStore for JSONL import
+- Generates transcripts and README files
 - Runs after experiment completion
+
+### EventStore (`database/event_store.py`)
+Single interface to DuckDB database:
+- **Exclusive DB access**: No other component accesses DuckDB directly
+- Imports JSONL files to database tables
+- Provides repository pattern for data access
+- Used by analysis tools and notebook generation
+- Enforces data integrity and consistency
 
 ## Monitor System
 
@@ -175,6 +235,17 @@ Core monitor loop (137 lines) that coordinates:
 - `metrics_calculator.py` - Calculates tokens and costs
 - `error_tracker.py` - Tracks and analyzes errors
 - `file_reader.py` - Efficient file operations
+
+## Message Flow and Memory Management
+
+The Router is critical for proper message handling:
+
+- **Message Transformation**: Each agent sees the conversation from their perspective (their messages as "assistant", other's as "user")
+- **Context Truncation**: Providers automatically truncate messages to fit their context windows
+- **Memory Efficiency**: Only recent messages need to be kept in memory since all messages are stored in JSONL files
+- **Token Accuracy**: Token tracking is based on truncated messages sent to APIs, not the full history
+
+This transformation is essential - without it, agents would see incorrect role assignments and conversations would fail.
 
 ## Advanced Features
 
@@ -259,6 +330,26 @@ Current architecture achieves this through aggressive modularization.
 - **google-generativeai**: Gemini models
 - **aiohttp**: Ollama and xAI support
 
+## Data Flow Example
+
+1. User runs: `pidgin chat -a claude -b gpt`
+2. CLI creates Conductor with providers
+3. Conductor emits `ConversationStartEvent`
+4. TrackingEventBus starts writing to JSONL
+5. For each turn:
+   - Conductor emits `TurnStartEvent`
+   - Router transforms messages for agent's perspective
+   - Sends `MessageRequestEvent` to agent
+   - Provider streams response chunks
+   - Complete message triggers `MessageCompleteEvent`
+   - Metrics calculator computes ~150 metrics
+   - `TurnCompleteEvent` with metrics emitted
+6. All events written to JSONL files
+7. Manifest updated in real-time
+8. `ConversationEndEvent` completes the flow
+9. PostProcessor imports to DuckDB
+10. Transcripts and README generated
+
 ## Performance Considerations
 
 ### Sequential by Default
@@ -277,3 +368,4 @@ Current architecture achieves this through aggressive modularization.
 - Token counting per provider
 - Cost tracking in real-time
 - Efficient batching strategies
+
