@@ -110,6 +110,7 @@ def models():
         table.add_column("Model ID", style=color)
         table.add_column("Alias", style=color)
         table.add_column("Context", justify="right", style="dim")
+        table.add_column("$/1M tokens", justify="right", style="dim")
 
         for model_id, config in sorted(providers[provider], key=lambda x: x[0]):
             glyph = MODEL_GLYPHS.get(model_id, "●")
@@ -127,8 +128,24 @@ def models():
 
             # Get the primary alias (first one) or show "-"
             primary_alias = config.aliases[0] if config.aliases else "-"
+            
+            # Format pricing
+            if config.input_cost_per_million is not None:
+                # Show average of input/output costs for simplicity
+                avg_cost = (
+                    (config.input_cost_per_million or 0) + 
+                    (config.output_cost_per_million or 0)
+                ) / 2
+                if avg_cost == 0:
+                    price = "free"
+                elif avg_cost < 1.0:
+                    price = f"${avg_cost:.2f}"
+                else:
+                    price = f"${avg_cost:.1f}"
+            else:
+                price = "-"
 
-            table.add_row(f"{glyph} {model_id}", primary_alias, context)
+            table.add_row(f"{glyph} {model_id}", primary_alias, context, price)
 
         # Wrap table in a panel with provider name
         provider_panel = Panel(

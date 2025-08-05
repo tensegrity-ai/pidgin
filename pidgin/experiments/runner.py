@@ -112,10 +112,9 @@ class ExperimentRunner:
             logging.error(f"Experiment failed: {e}", exc_info=True)
             
             # Update manifest status
-            manifest.update_status(
+            manifest.update_experiment_status(
                 status=ExperimentStatus.FAILED,
-                completed_conversations=self.completed_count,
-                failed_conversations=self.failed_count,
+                error=str(e)
             )
             
             await self.experiment_event_bus.emit(
@@ -133,10 +132,8 @@ class ExperimentRunner:
             await self.experiment_event_bus.stop()
             
             # Final manifest update
-            manifest.update_status(
-                status=ExperimentStatus.COMPLETED,
-                completed_conversations=self.completed_count,
-                failed_conversations=self.failed_count,
+            manifest.update_experiment_status(
+                status=ExperimentStatus.COMPLETED
             )
 
     async def _run_parallel_conversations(

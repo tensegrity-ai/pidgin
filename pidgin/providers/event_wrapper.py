@@ -179,6 +179,8 @@ class EventAwareProvider:
                         tokens_per_minute_limit=usage_stats["rate_limit"],
                         current_usage_rate=usage_stats["current_rate"],
                     )
+                    # Add agent_id as dynamic attribute (needed by tracking_event_bus)
+                    token_event.agent_id = self.agent_id
                     # Add model as custom attribute (ensure it's a string)
                     # CRITICAL: Only set model if it's actually a string to prevent serialization issues
                     if isinstance(model_name, str) and model_name != "unknown":

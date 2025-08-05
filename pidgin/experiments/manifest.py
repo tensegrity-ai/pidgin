@@ -66,6 +66,21 @@ class ManifestManager:
                 "last_line": 0,
                 "turns_completed": 0,
                 "last_updated": datetime.now(timezone.utc).isoformat(),
+                "token_usage": {
+                    "agent_a": {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                        "model": None,
+                    },
+                    "agent_b": {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                        "model": None,
+                    },
+                    "total": 0,
+                },
             }
 
             # Update experiment status if needed
@@ -113,6 +128,77 @@ class ManifestManager:
 
             self._write_atomic(manifest)
 
+    def update_token_usage(
+        self,
+        conversation_id: str,
+        agent_id: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        model: str = None,
+    ) -> None:
+        """Update token usage for a conversation.
+        
+        Args:
+            conversation_id: Conversation ID
+            agent_id: Either "agent_a" or "agent_b"
+            prompt_tokens: Number of prompt tokens used
+            completion_tokens: Number of completion tokens used
+            model: Model name (optional, will be set on first update)
+        """
+        with self._lock:
+            manifest = self._read()
+            
+            if conversation_id not in manifest["conversations"]:
+                return
+                
+            conv = manifest["conversations"][conversation_id]
+            
+            # Update agent's token usage
+            agent_usage = conv["token_usage"][agent_id]
+            agent_usage["prompt_tokens"] += prompt_tokens
+            agent_usage["completion_tokens"] += completion_tokens
+            agent_usage["total_tokens"] += prompt_tokens + completion_tokens
+            
+            # Set model if provided and not already set
+            if model and not agent_usage["model"]:
+                agent_usage["model"] = model
+            
+            # Update total
+            conv["token_usage"]["total"] = (
+                conv["token_usage"]["agent_a"]["total_tokens"] +
+                conv["token_usage"]["agent_b"]["total_tokens"]
+            )
+            
+            self._write_atomic(manifest)
+
+    def update_conversation_status(self, conversation_id: str, status: str, 
+                                  completed_count: int, failed_count: int) -> None:
+        """Update the status of a conversation.
+        
+        Args:
+            conversation_id: ID of the conversation
+            status: New status (completed, failed, etc)
+            completed_count: Number of completed conversations
+            failed_count: Number of failed conversations
+        """
+        manifest = self._read()
+        
+        # Update conversation status
+        if conversation_id in manifest.get("conversations", {}):
+            manifest["conversations"][conversation_id]["status"] = status
+            manifest["conversations"][conversation_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
+        
+        # Update experiment counts
+        manifest["completed_conversations"] = completed_count
+        manifest["failed_conversations"] = failed_count
+        
+        # Update running count
+        running_count = len([c for c in manifest.get("conversations", {}).values() 
+                           if c.get("status") == "running"])
+        manifest["running_conversations"] = running_count
+        
+        self._write_atomic(manifest)
+    
     def update_experiment_status(self, status: str, error: str = None) -> None:
         """Update experiment status.
 

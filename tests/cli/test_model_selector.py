@@ -310,11 +310,13 @@ class TestModelSelector:
     
     # Tests for prompt_for_custom_model method
     
-    def test_prompt_for_custom_model_success(self, model_selector, mock_console):
+    def test_prompt_for_custom_model_success(self, model_selector):
         """Test successful custom model prompt."""
-        mock_console.input.return_value = "my-custom-model"
+        # Set the return value on the actual console being used
+        model_selector.console.input.return_value = "my-custom-model"
         
-        with patch('pidgin.cli.helpers.check_ollama_available', return_value=True):
+        # Need to patch where it's used, not where it's defined
+        with patch('pidgin.cli.model_selector.check_ollama_available', return_value=True):
             result = model_selector.prompt_for_custom_model()
         
         assert result == "local:my-custom-model"

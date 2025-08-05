@@ -22,6 +22,9 @@ GOOGLE_MODELS = {
         provider="google",
         context_window=2097152,  # 2M context
         notes="Latest Gemini flagship model",
+        input_cost_per_million=1.25,
+        output_cost_per_million=10.00,
+        pricing_updated="2025-08-04",
     ),
     "gemini-2.0-flash-exp": ModelConfig(
         model_id="gemini-2.0-flash-exp",
@@ -30,6 +33,9 @@ GOOGLE_MODELS = {
         provider="google",
         context_window=1048576,
         notes="Latest and fastest Gemini model",
+        input_cost_per_million=0.15,
+        output_cost_per_million=0.60,
+        pricing_updated="2025-08-04",
     ),
     "gemini-2.0-flash-thinking-exp": ModelConfig(
         model_id="gemini-2.0-flash-thinking-exp",
@@ -54,6 +60,9 @@ GOOGLE_MODELS = {
         provider="google",
         context_window=2097152,
         notes="Production Gemini with 2M context",
+        input_cost_per_million=1.25,
+        output_cost_per_million=5.00,
+        pricing_updated="2025-08-04",
     ),
     "gemini-1.5-flash": ModelConfig(
         model_id="gemini-1.5-flash",
@@ -62,6 +71,9 @@ GOOGLE_MODELS = {
         provider="google",
         context_window=1048576,
         notes="Fast Gemini 1.5 model",
+        input_cost_per_million=0.075,
+        output_cost_per_million=0.30,
+        pricing_updated="2025-08-04",
     ),
     "gemini-1.5-flash-8b": ModelConfig(
         model_id="gemini-1.5-flash-8b",
@@ -70,6 +82,9 @@ GOOGLE_MODELS = {
         provider="google",
         context_window=1048576,
         notes="Smallest Gemini model",
+        input_cost_per_million=0.0375,
+        output_cost_per_million=0.15,
+        pricing_updated="2025-08-04",
     ),
 }
 

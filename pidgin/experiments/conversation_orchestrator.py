@@ -32,7 +32,8 @@ class ConversationOrchestrator:
             conversation_id: Unique conversation ID
         """
         manifest = ManifestManager(exp_dir)
-        manifest.add_conversation(conversation_id)
+        jsonl_filename = f"{conversation_id}.jsonl"
+        manifest.add_conversation(conversation_id, jsonl_filename)
 
     async def create_and_run_conductor(
         self,
@@ -74,13 +75,22 @@ class ConversationOrchestrator:
         # Set display mode on the conductor
         conductor.display_mode = config.display_mode
 
-        # Run conversation with daemon stop detection
+        # Run conversation
+        # Note: first_speaker is not supported - agent_a always speaks first
         await conductor.run_conversation(
-            agents=agents,
+            agent_a=agents["agent_a"],
+            agent_b=agents["agent_b"],
             initial_prompt=initial_prompt,
-            first_speaker=config.first_speaker,
             max_turns=config.max_turns,
-            daemon=self.daemon,
+            display_mode=config.display_mode,
+            show_timing=False,
+            choose_names=config.choose_names,
+            awareness_a=config.awareness_a or config.awareness,
+            awareness_b=config.awareness_b or config.awareness,
+            temperature_a=config.temperature_a or config.temperature,
+            temperature_b=config.temperature_b or config.temperature,
+            conversation_id=conversation_id,
+            prompt_tag=config.prompt_tag,
         )
 
     async def handle_branching(
@@ -139,14 +149,22 @@ class ConversationOrchestrator:
             conductor.display_mode = config.display_mode
 
             # Run branched conversation
-            await conductor.run_branched_conversation(
-                agents=agents,
-                branch_from_conversation_id=branch_from,
-                branch_at_turn=branch_at,
+            # Note: first_speaker is not supported - agent_a always speaks first
+            await conductor.run_conversation(
+                agent_a=agents["agent_a"],
+                agent_b=agents["agent_b"],
                 initial_prompt=initial_prompt,
-                first_speaker=config.first_speaker,
                 max_turns=config.max_turns,
-                daemon=self.daemon,
+                display_mode=config.display_mode,
+                show_timing=False,
+                choose_names=config.choose_names,
+                awareness_a=config.awareness_a or config.awareness,
+                awareness_b=config.awareness_b or config.awareness,
+                temperature_a=config.temperature_a or config.temperature,
+                temperature_b=config.temperature_b or config.temperature,
+                conversation_id=conversation_id,
+                prompt_tag=config.prompt_tag,
+                branch_messages=config.branch_messages,
             )
         else:
             # Run normal conversation

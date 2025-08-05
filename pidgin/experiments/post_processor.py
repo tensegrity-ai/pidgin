@@ -41,6 +41,17 @@ class PostProcessor:
         # Subscribe to experiment completion events
         self.bus.subscribe(ExperimentCompleteEvent, self.handle_experiment_complete)
 
+    async def wait_for_completion(self):
+        """Wait for all queued post-processing to complete.
+        
+        This method blocks until the queue is empty and processing is done.
+        """
+        # Wait for queue to be empty
+        await self.queue.join()
+        
+        # Wait a bit more to ensure the last item finishes processing
+        await asyncio.sleep(0.5)
+    
     async def handle_experiment_complete(self, event: ExperimentCompleteEvent):
         """Queue experiment for post-processing.
 
@@ -88,10 +99,14 @@ class PostProcessor:
         try:
             while not self.queue.empty():
                 item = await self.queue.get()
-                await self.process_experiment(
-                    item['experiment_id'],
-                    item['experiment_dir']
-                )
+                try:
+                    await self.process_experiment(
+                        item['experiment_id'],
+                        item['experiment_dir']
+                    )
+                finally:
+                    # Mark task as done for wait_for_completion
+                    self.queue.task_done()
         finally:
             self.processing = False
 

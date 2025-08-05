@@ -98,7 +98,7 @@ class TestExperimentRunnerBasic:
             runner.orchestrator.register_conversation(exp_dir, "conv_123")
 
             mock_manifest_class.assert_called_once_with(exp_dir)
-            mock_manifest.add_conversation.assert_called_once_with("conv_123")
+            mock_manifest.add_conversation.assert_called_once_with("conv_123", "conv_123.jsonl")
 
     @pytest.mark.asyncio
     async def test_setup_event_bus(self, temp_output_dir):
@@ -342,8 +342,9 @@ class TestExperimentRunnerBasic:
             # Check conversation run
             mock_conductor.run_conversation.assert_called_once()
             call_args = mock_conductor.run_conversation.call_args
-            assert call_args.kwargs["agents"] == mock_agents
+            # Should pass individual agents, not the dict
+            assert call_args.kwargs["agent_a"] == mock_agents["agent_a"]
+            assert call_args.kwargs["agent_b"] == mock_agents["agent_b"]
             assert call_args.kwargs["max_turns"] == 5
             assert call_args.kwargs["initial_prompt"] == "Test prompt"
-            assert call_args.kwargs["first_speaker"] == sample_experiment_config.first_speaker
-            assert call_args.kwargs["daemon"] == runner.orchestrator.daemon
+            # first_speaker and daemon are not passed to conductor

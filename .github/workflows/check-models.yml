@@ -24,10 +24,35 @@ jobs:
         # Only need pidgin itself to read model config
         pip install -e .
     
-    - name: Check for model updates
+    - name: Check for model updates from LiteLLM
       id: check
       run: |
-        python scripts/check_model_updates.py
+        # Run the sync script which returns exit code 1 if updates found
+        python scripts/sync_models_from_litellm.py > model_updates.txt 2>&1 || true
+        
+        # Check if updates were found
+        if grep -q "New models found\|Pricing updates found" model_updates.txt; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          
+          # Format the output for the issue
+          echo "issue_body<<EOF" >> $GITHUB_OUTPUT
+          echo "## Model and Pricing Updates Available" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "The weekly sync with LiteLLM's model database found updates:" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          cat model_updates.txt >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "To apply these updates:" >> $GITHUB_OUTPUT
+          echo "1. Review the suggested changes above" >> $GITHUB_OUTPUT
+          echo "2. Run \`python scripts/sync_models_from_litellm.py\` locally" >> $GITHUB_OUTPUT
+          echo "3. Copy the generated code snippets to the appropriate provider files" >> $GITHUB_OUTPUT
+          echo "4. Test and commit the changes" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
     
     - name: Create issue if changes found
       if: steps.check.outputs.has_changes == 'true'

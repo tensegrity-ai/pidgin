@@ -118,7 +118,8 @@ class DaemonLauncher:
         cmd_lines.append("pidgin monitor              # Monitor all experiments")
         cmd_lines.append(f"pidgin stop {name}    # Stop by name")
         cmd_lines.append(f"pidgin stop {exp_id[:8]}  # Stop by ID")
-        cmd_lines.append(f"tail -f {get_experiments_dir()}/{exp_id}/*.jsonl")
+        # Use relative path with full prefix for better glob matching
+        cmd_lines.append(f"tail -f pidgin_output/experiments/{exp_id}*/*.jsonl")
         self.display.info("\n".join(cmd_lines), title="Commands", use_panel=True)
 
     def show_interactive_mode_info(self) -> None:

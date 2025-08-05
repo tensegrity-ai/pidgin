@@ -1,39 +1,35 @@
 # pidgin/metrics/cost_estimator.py
 """Simple cost estimation for AI conversations."""
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
+from ..config.models import get_model_config
 from ..core.types import Message
 
 
 class CostEstimator:
     """Estimate costs for AI API usage."""
 
-    # Pricing per 1M tokens (as of late 2024)
-    # Format: (input_cost, output_cost) in USD
-    PRICING = {
-        # Anthropic
-        "claude-3-5-sonnet-20241022": (3.00, 15.00),
-        "claude-3-5-haiku-20241022": (1.00, 5.00),
-        "claude-3-opus-20240229": (15.00, 75.00),
-        # OpenAI
-        "gpt-4o": (2.50, 10.00),
-        "gpt-4o-mini": (0.15, 0.60),
-        "o1-preview": (15.00, 60.00),
-        "o1-mini": (3.00, 12.00),
-        # Google
-        "gemini-1.5-pro": (1.25, 5.00),
-        "gemini-1.5-flash": (0.075, 0.30),
-        "gemini-2.0-flash-exp": (0.00, 0.00),  # Free during preview
-        # xAI
-        "grok-beta": (5.00, 15.00),
-        "grok-2-beta": (2.00, 10.00),
-        # Local models
-        "local": (0.00, 0.00),  # Free!
-    }
-
     # Same as context manager
     CHARS_PER_TOKEN = 3.5
+    
+    def get_model_pricing(self, model_id: str) -> Tuple[float, float]:
+        """Get pricing for a model from its configuration.
+        
+        Returns:
+            Tuple of (input_cost_per_million, output_cost_per_million)
+        """
+        # Try to get from model config first
+        config = get_model_config(model_id)
+        if config and config.input_cost_per_million is not None:
+            return (
+                config.input_cost_per_million or 0.0,
+                config.output_cost_per_million or 0.0
+            )
+        
+        # Fallback for unknown models or models without pricing
+        # Conservative estimate
+        return (2.00, 8.00)
 
     def estimate_message_cost(
         self, message: Message, model: str, is_input: bool = True
@@ -42,7 +38,7 @@ class CostEstimator:
         tokens = len(message.content) / self.CHARS_PER_TOKEN
 
         # Get pricing for model
-        pricing = self.PRICING.get(model, (0.0, 0.0))
+        pricing = self.get_model_pricing(model)
         rate = pricing[0] if is_input else pricing[1]
 
         # Cost per million tokens

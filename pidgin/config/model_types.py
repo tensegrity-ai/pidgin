@@ -20,3 +20,12 @@ class ModelConfig:
     created_at: Optional[str] = None  # From API response
     deprecated: bool = False
     notes: Optional[str] = None
+    # Pricing information (per million tokens in USD)
+    input_cost_per_million: Optional[float] = None
+    output_cost_per_million: Optional[float] = None
+    # For providers with caching support (e.g., Anthropic)
+    supports_caching: bool = False
+    cache_read_cost_per_million: Optional[float] = None
+    cache_write_cost_per_million: Optional[float] = None
+    # Track when pricing was last updated
+    pricing_updated: Optional[str] = None  # ISO date string

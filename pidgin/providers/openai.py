@@ -39,6 +39,9 @@ OPENAI_MODELS = {
         aliases=["nano"],
         provider="openai",
         context_window=1000000,
+        input_cost_per_million=0.10,
+        output_cost_per_million=0.40,
+        pricing_updated="2025-08-04",
     ),
     "o3": ModelConfig(
         model_id="o3",
@@ -47,6 +50,9 @@ OPENAI_MODELS = {
         provider="openai",
         context_window=128000,
         notes="Premium reasoning model",
+        input_cost_per_million=2.00,
+        output_cost_per_million=8.00,
+        pricing_updated="2025-08-04",
     ),
     "o3-mini": ModelConfig(
         model_id="o3-mini",
@@ -55,6 +61,9 @@ OPENAI_MODELS = {
         provider="openai",
         context_window=128000,
         notes="Small reasoning model",
+        input_cost_per_million=1.10,
+        output_cost_per_million=4.40,
+        pricing_updated="2025-08-04",
     ),
     "o4-mini": ModelConfig(
         model_id="o4-mini",
@@ -63,6 +72,9 @@ OPENAI_MODELS = {
         provider="openai",
         context_window=128000,
         notes="Latest small reasoning model (recommended over o3-mini)",
+        input_cost_per_million=1.10,
+        output_cost_per_million=4.40,
+        pricing_updated="2025-08-04",
     ),
     "o4-mini-high": ModelConfig(
         model_id="o4-mini-high",
@@ -88,6 +100,9 @@ OPENAI_MODELS = {
         provider="openai",
         context_window=128000,
         notes="Multimodal model",
+        input_cost_per_million=2.50,
+        output_cost_per_million=10.00,
+        pricing_updated="2025-08-04",
     ),
     "gpt-4o-mini": ModelConfig(
         model_id="gpt-4o-mini",
@@ -96,6 +111,9 @@ OPENAI_MODELS = {
         provider="openai",
         context_window=128000,
         notes="Fast multimodal model",
+        input_cost_per_million=0.15,
+        output_cost_per_million=0.60,
+        pricing_updated="2025-08-04",
     ),
 }
 

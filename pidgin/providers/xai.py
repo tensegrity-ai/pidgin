@@ -21,6 +21,9 @@ XAI_MODELS = {
         provider="xai",
         context_window=131072,
         notes="Latest Grok model with impressive HLE scores",
+        input_cost_per_million=3.00,
+        output_cost_per_million=15.00,
+        pricing_updated="2025-08-04",
     ),
     "grok-beta": ModelConfig(
         model_id="grok-beta",
@@ -29,6 +32,9 @@ XAI_MODELS = {
         provider="xai",
         context_window=131072,
         notes="xAI's flagship model",
+        input_cost_per_million=5.00,
+        output_cost_per_million=15.00,
+        pricing_updated="2025-08-04",
     ),
     "grok-2-1212": ModelConfig(
         model_id="grok-2-1212",
@@ -37,6 +43,9 @@ XAI_MODELS = {
         provider="xai",
         context_window=131072,
         notes="Latest Grok model",
+        input_cost_per_million=2.00,
+        output_cost_per_million=10.00,
+        pricing_updated="2025-08-04",
     ),
 }
 

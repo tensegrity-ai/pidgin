@@ -120,6 +120,7 @@ class StateBuilder:
             total_conversations=manifest.get("total_conversations", 0),
             completed_conversations=manifest.get("completed_conversations", 0),
             failed_conversations=manifest.get("failed_conversations", 0),
+            directory=exp_dir,  # Store the full directory path
         )
 
         # Parse timestamps
@@ -198,6 +199,7 @@ class StateBuilder:
             name=metadata.get("name", exp_id),
             status=metadata.get("status", "unknown"),
             total_conversations=metadata.get("total_conversations", 0),
+            directory=exp_dir,  # Store the full directory path
             completed_conversations=metadata.get("completed_conversations", 0),
             failed_conversations=metadata.get("failed_conversations", 0),
         )

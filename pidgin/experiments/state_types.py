@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..constants import ConversationStatus, ExperimentStatus
@@ -41,6 +42,8 @@ class ExperimentState:
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     conversations: Dict[str, ConversationState] = field(default_factory=dict)
+    error: Optional[str] = None
+    directory: Optional[Path] = None  # Full path to experiment directory
 
     @property
     def active_conversations(self) -> int:

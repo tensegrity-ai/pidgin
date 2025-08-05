@@ -10,6 +10,7 @@ from ..core.events import (
     ConversationStartEvent,
     ErrorEvent,
     Event,
+    TokenUsageEvent,
     TurnCompleteEvent,
 )
 from .manifest import ManifestManager
@@ -89,6 +90,17 @@ class TrackingEventBus(EventBus):
             )
             # Close JSONL file on conversation end
             self.close_conversation_log(self.conversation_id)
+
+        elif isinstance(event, TokenUsageEvent):
+            # Determine which agent based on event data
+            agent_id = "agent_a" if event.agent_id == "agent_a" else "agent_b"
+            self.manifest.update_token_usage(
+                self.conversation_id,
+                agent_id,
+                event.prompt_tokens,
+                event.completion_tokens,
+                event.model
+            )
 
         elif isinstance(event, ErrorEvent):
             self.manifest.update_conversation(

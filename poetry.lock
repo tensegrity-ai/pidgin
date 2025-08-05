@@ -2385,10 +2385,9 @@ pyasn1 = ">=0.1.3"
 name = "setproctitle"
 version = "1.3.6"
 description = "A Python module to customize the process title"
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"daemon\""
 files = [
     {file = "setproctitle-1.3.6-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ebcf34b69df4ca0eabaaaf4a3d890f637f355fed00ba806f7ebdd2d040658c26"},
     {file = "setproctitle-1.3.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:1aa1935aa2195b76f377e5cb018290376b7bf085f0b53f5a95c0c21011b74367"},
@@ -2775,10 +2774,7 @@ idna = ">=2.0"
 multidict = ">=4.0"
 propcache = ">=0.2.1"
 
-[extras]
-daemon = ["setproctitle"]
-
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "20b38595579493c82eab15d558d7c11bcddd03592965117d7ae70965a0aa8744"
+content-hash = "ad8e839fce458cca98fa2f32896443c76f991eada9b49ea14ccdb09c1627f967"
