@@ -9,40 +9,28 @@ Per CLAUDE.md guidelines:
 - **Acceptable**: <300 lines
 - **Hard limit**: <500 lines (must refactor if exceeded)
 
-Current state: ~19 modules need refactoring, with 6 critical modules over 500 lines.
+**Status**: Phase 1 complete, Phase 2 partially complete (3 of 6 critical modules refactored)
 
 ## Priority 1: Critical Modules (>600 lines)
 
-### 1. database/schema.py (651 lines)
-**Current Structure**: 
-- 8 SQL schema definitions as large multiline strings
-- 2 helper functions
+### 1. ✅ database/schema.py (651 → 42 lines) - COMPLETED
+**Refactored Into**:
+- `database/schemas/` directory with 9 SQL files
+- `database/schema_loader.py` (125 lines) - Dynamic SQL loader
+- Main module now just 42 lines with backward compatibility
 
-**Refactor Into**:
-- `database/schemas/conversation_turns.sql` - CONVERSATION_TURNS_SCHEMA
-- `database/schemas/events.sql` - EVENT_SCHEMA  
-- `database/schemas/experiments.sql` - EXPERIMENTS_SCHEMA
-- `database/schemas/conversations.sql` - CONVERSATIONS_SCHEMA
-- `database/schemas/turn_metrics.sql` - TURN_METRICS_SCHEMA
-- `database/schemas/messages.sql` - MESSAGES_SCHEMA
-- `database/schemas/token_usage.sql` - TOKEN_USAGE_SCHEMA
-- `database/schemas/context_truncations.sql` - CONTEXT_TRUNCATIONS_SCHEMA
-- `database/schema_loader.py` - Load SQL files and provide helper functions
+**Result**: Clean separation, SQL syntax highlighting, maintained all functionality
 
-**Benefits**: Clean separation, SQL files can be syntax-highlighted, easier to maintain
+### 2. ✅ ui/display_filter.py (637 → 137 lines) - COMPLETED
+**Refactored Into**:
+- `ui/display_filter.py` (137 lines) - Main routing class
+- `ui/display_handlers/base.py` (82 lines) - Shared utilities
+- `ui/display_handlers/conversation.py` (177 lines) - Conversation lifecycle
+- `ui/display_handlers/messages.py` (83 lines) - Message display
+- `ui/display_handlers/errors.py` (185 lines) - Error handling
+- `ui/display_handlers/system.py` (106 lines) - System events
 
-### 2. ui/display_filter.py (637 lines)
-**Current Structure**: 
-- 1 class with 18 methods handling different event displays
-
-**Refactor Into**:
-- `ui/display_filter.py` (~150 lines) - Main class with routing logic
-- `ui/display_handlers/conversation.py` - Start/end/resume handlers
-- `ui/display_handlers/messages.py` - Message/turn complete handlers  
-- `ui/display_handlers/errors.py` - Error/timeout/context limit handlers
-- `ui/display_handlers/system.py` - System prompt, pacing, token usage handlers
-
-**Benefits**: Each handler module focuses on specific event types, easier testing
+**Result**: All modules under 200 lines, clear separation by event type
 
 ## Priority 2: High Priority (500-600 lines)
 
@@ -58,18 +46,16 @@ Current state: ~19 modules need refactoring, with 6 critical modules over 500 li
 
 **Benefits**: Clear separation of responsibilities, reusable components
 
-### 4. io/event_deserializer.py (580 lines)
-**Current Structure**: 
-- 1 class with 24 deserialization methods
+### 4. ✅ io/event_deserializer.py (580 → 235 lines) - COMPLETED
+**Refactored Into**:
+- `io/event_deserializer.py` (235 lines) - Main routing and legacy support
+- `io/deserializers/base.py` (48 lines) - Shared timestamp parsing
+- `io/deserializers/conversation.py` (180 lines) - Conversation events
+- `io/deserializers/message.py` (96 lines) - Message events
+- `io/deserializers/error.py` (58 lines) - Error events
+- `io/deserializers/system.py` (76 lines) - System events
 
-**Refactor Into**:
-- `io/event_deserializer.py` (~150 lines) - Main deserializer with routing
-- `io/deserializers/conversation.py` - Conversation event builders
-- `io/deserializers/message.py` - Message event builders
-- `io/deserializers/error.py` - Error event builders
-- `io/deserializers/system.py` - System event builders
-
-**Benefits**: Parallel structure to display handlers, easier to add new event types
+**Result**: Clean separation by event category, easier to extend
 
 ### 5. database/import_service.py (563 lines)
 **Current Structure**: 
@@ -111,19 +97,19 @@ These should also be refactored but are lower priority:
 - `cli/branch.py` (391 lines)
 - `core/conductor.py` (372 lines)
 
-## Implementation Strategy
+## Implementation Progress
 
-### Phase 1: Quick Wins
-1. **database/schema.py** - Simply move SQL to .sql files
-2. **ui/display_filter.py** - Clear event type boundaries
+### ✅ Phase 1: Quick Wins - COMPLETED
+1. **database/schema.py** - ✅ Moved SQL to .sql files (651 → 42 lines)
+2. **ui/display_filter.py** - ✅ Split by event type (637 → 137 lines)
 
-### Phase 2: Core Refactoring
-3. **io/event_deserializer.py** - Similar pattern to display_filter
-4. **experiments/manager.py** - Well-defined functional boundaries
-5. **database/import_service.py** - Clear data type boundaries
+### 🔄 Phase 2: Core Refactoring - IN PROGRESS
+3. **io/event_deserializer.py** - ✅ Split by event category (580 → 235 lines)
+4. **experiments/manager.py** - ⏳ TODO (584 lines)
+5. **database/import_service.py** - ⏳ TODO (563 lines)
 
-### Phase 3: CLI Cleanup
-6. **cli/run.py** - Requires careful handling of Click decorators
+### ⏳ Phase 3: CLI Cleanup - TODO
+6. **cli/run.py** - ⏳ TODO (454 lines)
 
 ## Testing Strategy
 

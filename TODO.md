@@ -6,25 +6,31 @@ This document tracks remaining tasks for Pidgin development.
 
 ### Large Module Refactoring
 **Goal**: Bring all modules under 200 lines per CLAUDE.md guidelines
+**Progress**: 3 of 6 critical modules completed (see PLANS/large-module-refactoring.md)
 
-**Critical Modules (>600 lines)**:
-- [ ] database/schema.py - 651 lines → ~200 lines  
-- [ ] ui/display_filter.py - 637 lines → ~200 lines
+**✅ Completed (2025-08-05)**:
+- [x] database/schema.py - 651 → 42 lines (extracted to SQL files)
+- [x] ui/display_filter.py - 637 → 137 lines (split into handlers)
+- [x] io/event_deserializer.py - 580 → 235 lines (split by event type)
 
-**High Priority (>500 lines)**:
+**High Priority - Remaining (>500 lines)**:
 - [ ] experiments/manager.py - 584 lines
-- [ ] io/event_deserializer.py - 580 lines
 - [ ] database/import_service.py - 563 lines
 - [ ] cli/run.py - 454 lines (partially refactored from 862)
-- [ ] core/router.py - 400+ lines
-- [ ] providers/base.py - 400+ lines
 
 **Medium Priority (>300 lines)**:
+- [ ] analysis/notebook_cells.py - 540 lines
+- [ ] database/transcript_formatter.py - 522 lines
+- [ ] ui/tail_display.py - 520 lines
+- [ ] experiments/state_builder.py - 514 lines
+- [ ] ui/display_utils.py - 484 lines
+- [ ] database/event_store.py - 477 lines (architectural component)
+- [ ] database/metrics_repository.py - 434 lines
+- [ ] config/config.py - 402 lines
+- [ ] cli/branch.py - 391 lines
 - [ ] core/conductor.py - 372 lines
-- [ ] experiments/runner.py - 249 lines (partially refactored from 477)
-- [ ] Plus ~8 more modules between 300-400 lines
 
-Total: ~19 modules need refactoring to meet architectural guidelines
+Total: 16 modules remaining (down from 19)
 
 ## Medium Priority - Quality of Life
 
@@ -61,6 +67,13 @@ Total: ~19 modules need refactoring to meet architectural guidelines
 
 ## Recently Completed (2025-08-05)
 
+**Module Refactoring (Phase 1 & partial Phase 2)**:
+- ✅ Refactored database/schema.py from 651 to 42 lines (extracted SQL to .sql files)
+- ✅ Refactored ui/display_filter.py from 637 to 137 lines (split into handler modules)
+- ✅ Refactored io/event_deserializer.py from 580 to 235 lines (split by event type)
+- ✅ Created comprehensive refactoring plan in PLANS/large-module-refactoring.md
+
+**Previous completions**:
 - ✅ Fixed post-processing chain (missing ManifestManager methods)
 - ✅ Refactored monitor.py from 928 lines to 137 lines (split into 8 modules)
 - ✅ Fixed token display in monitor
