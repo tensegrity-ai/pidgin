@@ -9,7 +9,8 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
 1. **Event-Driven Everything**: All state changes flow through events
 2. **Provider Agnostic**: Conductors don't know if responses come from APIs or local models
 3. **Observable by Default**: Every interaction can be tracked and analyzed
-4. **Modular Components**: Each module has a single, clear responsibility
+4. **Modular Components**: Each module has a single, clear responsibility (<300 lines per module)
+5. **JSONL-First Storage**: Append-only logs as the source of truth
 
 ## System Architecture
 
@@ -19,16 +20,52 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
 └─────────────┘     └──────────────┘     └─────────────┘
                             │                    │
                     ┌───────▼────────┐           │
-                    │    Providers   │           ▼
-                    ├────────────────┤    ┌─────────────────┐
-                    │ • Anthropic    │    │     Storage     │
-                    │ • OpenAI       │    ├─────────────────┤
-                    │ • Google       │    │ • JSONL (live)  │
-                    │ • xAI          │    │ • manifest.json │
-                    │ • Ollama       │    │ • Markdown      │
+                    │     Router     │           ▼
+                    │ (msg transform)│    ┌─────────────────┐
+                    └───────┬────────┘    │  TrackingBus    │
+                            │              │  (experiments)  │
+                    ┌───────▼────────┐    └────────┬────────┘
+                    │    Providers   │             │
+                    ├────────────────┤             ▼
+                    │ • Anthropic    │    ┌─────────────────┐
+                    │ • OpenAI       │    │     Storage     │
+                    │ • Google       │    ├─────────────────┤
+                    │ • xAI          │    │ • JSONL (live)  │
+                    │ • Ollama       │    │ • manifest.json │
                     │ • Local (test) │    │ • DuckDB (post) │
                     └────────────────┘    └─────────────────┘
 ```
+
+## Core Components
+
+### Conductor (`core/conductor.py`)
+Orchestrates conversations between agents. Modularized into:
+- `interrupt_handler.py` - Interrupt and pause management
+- `name_coordinator.py` - Agent naming and identity
+- `turn_executor.py` - Turn execution logic
+- `message_handler.py` - Message processing
+- `conversation_lifecycle.py` - Start/end lifecycle events
+
+### Router (`core/router.py`)
+Critical component that transforms messages for each agent's perspective:
+- Converts messages between user/assistant roles
+- Manages conversation history for each agent
+- Handles message truncation for context limits
+- Ensures each agent sees the correct perspective
+
+### EventBus (`core/event_bus.py`)
+Central event distribution system:
+- Type-safe event subscriptions
+- Async event handling
+- Zero coupling between components
+- Supports multiple subscribers per event type
+
+### TrackingEventBus (`experiments/tracking_event_bus.py`)
+Specialized event bus for experiment tracking:
+- Writes events to JSONL files
+- Updates manifest.json in real-time
+- Tracks token usage per agent
+- Manages conversation state
 
 ## Provider Architecture
 
@@ -42,50 +79,18 @@ class Provider(ABC):
     ) -> AsyncGenerator[str, None]
 ```
 
+### EventAwareProvider Wrapper
+All providers are wrapped with `EventAwareProvider` which:
+- Subscribes to `MessageRequestEvent` for their agent
+- Emits `MessageCompleteEvent` when done
+- Tracks token usage via `TokenUsageEvent`
+- Handles API errors gracefully
+
 Provider types:
-- **API Providers**: AnthropicProvider, OpenAIProvider, GoogleProvider, xAIProvider
-- **Local Providers**: LocalProvider (test model), OllamaProvider
-
-The Conductor doesn't distinguish between provider types - all implement the same streaming interface.
-
-## Local Model Support
-
-Pidgin supports local models through two mechanisms:
-
-### Test Model
-- Built-in deterministic model for testing
-- No dependencies required
-- Available as `local:test`
-- Provides consistent responses for development
-
-### Ollama Integration
-- External Ollama server handles model management
-- Pidgin communicates via HTTP API
-- Models: qwen2.5:0.5b, phi3, mistral
-- Auto-downloads models on first use
-- Automatic installation support with user consent
-
-```
-┌────────────-─┐     HTTP      ┌──────────────┐
-│   Pidgin     │ ────-──────▶  │ Ollama Server│
-│OllamaProvider│               │ (port 11434) │
-└─────────────-┘               └──────────────┘
-                                     │
-                              ┌──────▼────────┐
-                              │ Local Models  │
-                              │ (GGUF format) │
-                              └───────────────┘
-```
-
-Ollama installation flow:
-1. Detect if Ollama is installed
-2. Offer to install if missing (with user consent)
-3. Start server automatically if not running
-4. Pull models on first use
+- **API Providers**: Anthropic, OpenAI, Google, xAI
+- **Local Providers**: LocalProvider (test), OllamaProvider
 
 ## Data Flow Architecture (JSONL-First)
-
-Pidgin uses a JSONL-first architecture that eliminates database contention:
 
 ```
 ┌──────────────┐
@@ -98,252 +103,177 @@ Pidgin uses a JSONL-first architecture that eliminates database contention:
 │   (append)   │     │   .json     │
 └──────┬───────┘     └─────────────┘
        │
-       ▼ (events)
-┌──────────────┐
-│  EventStore  │
-│  (in-memory) │
-└──────┬───────┘
+       ▼ (post-experiment)
+┌──────────────┐     ┌─────────────┐
+│PostProcessor │────▶│   DuckDB    │
+│              │     │  (analysis) │
+└──────┬───────┘     └─────────────┘
        │
-       │ (post-experiment)
-       ▼
-┌──────────────┐
-│   DuckDB     │
-│  (analysis)  │
-└──────┬───────┘
-       │
-       ▼ (generated outputs)
+       ▼ (generated)
 ┌─────────────────────────┐
 │ • Transcripts (.md)     │
+│ • README.md             │
 │ • Jupyter Notebooks     │
-│ • Metrics/Analysis      │
 └─────────────────────────┘
 ```
-
-### Key Benefits:
-- **No lock contention**: JSONL files are append-only
-- **Complete observability**: Every event recorded and accessible
-- **Instant monitoring**: manifest.json provides efficient state
-- **Standard tools**: Use tail, grep, jq for debugging
-- **Batch import**: Load to DuckDB when convenient
-- **Reproducible analysis**: Generate notebooks and transcripts on-demand
 
 ### File Structure:
 ```
 pidgin_output/
 ├── experiments/
-│   ├── exp_abc123/
-│   │   ├── manifest.json       # Experiment metadata & state
-│   │   ├── conv_001.jsonl      # Conversation events
-│   │   ├── conv_002.jsonl      # Conversation events
-│   │   ├── transcripts/        # Human-readable output
-│   │   │   ├── conv_001.md
-│   │   │   └── conv_002.md
-│   │   └── notebooks/          # Analysis notebooks
-│   │       └── experiment_analysis.ipynb
-│   └── active/
-│       └── exp_abc123.pid      # Daemon process ID
-└── db/
-    └── pidgin.duckdb           # Analysis database (post-experiment)
+│   ├── experiment_[id]_[name]_[date]/
+│   │   ├── manifest.json           # Real-time state
+│   │   ├── conv_[id]_events.jsonl  # Event stream
+│   │   ├── README.md               # Auto-generated
+│   │   ├── post_processing.log     # Processing log
+│   │   └── transcripts/            # Human-readable
+│   │       ├── conv_[id].md
+│   │       └── summary.md
+│   ├── active/
+│   │   └── exp_[id].pid           # Daemon PID
+│   ├── logs/
+│   │   └── experiment_[id].log    # Debug logs
+│   └── experiments.duckdb         # Analysis database
 ```
-
-### Data Processing Pipeline:
-1. **Record**: Conversations emit events to JSONL files in real-time
-2. **Track**: Manifest tracks experiment state and conversation metadata
-3. **Process**: EventStore maintains in-memory view for live monitoring
-4. **Analyze**: Post-experiment batch load to DuckDB for metrics
-5. **Generate**: Create transcripts and notebooks for research
-
-## Event System
-
-The EventBus is the central nervous system of Pidgin:
-
-```python
-# Core events
-ConversationStartEvent
-TurnStartEvent
-MessageRequestEvent
-MessageChunkEvent
-MessageCompleteEvent
-TurnCompleteEvent
-ConversationEndEvent
-
-# Analysis events
-ConvergenceWarningEvent
-ExperimentCompleteEvent
-
-# Error events
-APIErrorEvent
-RateLimitEvent
-```
-
-## Component Responsibilities
-
-### Conductor (`core/conductor.py`)
-- Orchestrates conversations between agents
-- Manages turn-taking and message flow
-- Emits events for all state changes
-- Handles interrupts and pausing
-- Modularized into focused components:
-  - `interrupt_handler.py` - Interrupt management
-  - `name_coordinator.py` - Agent naming logic
-  - `turn_executor.py` - Turn execution
-  - `message_handler.py` - Message processing
-  - `conversation_lifecycle.py` - Lifecycle events
-
-### EventBus (`core/event_bus.py`)
-- Central event distribution
-- Async event handling
-- Type-safe event subscriptions
-- Zero coupling between components
-
-### Providers (`providers/`)
-- Implement streaming interface
-- Handle API-specific details
-- Emit token usage events
-- Manage rate limiting
-
-### Metrics Calculator (`metrics/calculator.py`)
-- Subscribes to turn events
-- Calculates ~150 metrics per turn
-- Emits metrics events
-- Single source of truth for all metrics
-
-### Storage (`io/`)
-- Subscribes to relevant events
-- Persists to DuckDB/JSON/Markdown
-- No direct coupling to other components
-- Optimized for analytical queries
 
 ## Experiment System
 
-Experiments run as background processes using subprocess:
+### Runner (`experiments/runner.py`)
+Manages experiment execution:
+- Sequential execution by default (rate limit aware)
+- Handles multiple conversations
+- Graceful error recovery
+- Progress tracking via manifest
 
-```
-┌──────────────┐     ┌───────────────┐     ┌──────────────┐
-│ CLI Command  │────▶│ Background    │────▶│   EventBus   │
-│              │     │ Process       │     │              │
-└──────────────┘     └───────────────┘     └──────────────┘
-                             │                      │
-                     ┌───────▼───────-─┐    ┌───────▼──────┐
-                     │ Experiment      │    │ DuckDB Store │
-                     │ Runner          │    │ • Metrics    │
-                     │ • Rate aware    │    │ • Messages   │
-                     │ • Fault tolerant│    │ • Metadata   │
-                     │ • Progress track│    │ • Events     │
-                     └────────────────-┘    └──────────────┘
-```
+### ManifestManager (`experiments/manifest.py`)
+Real-time experiment state:
+- Atomic updates to manifest.json
+- Tracks conversation status
+- Records token usage
+- Thread-safe operations
 
-**Important Note**: While the architecture supports parallel execution, experiments run sequentially by default due to:
-- API provider rate limits
-- Local model hardware constraints
-- Better reliability and reproducibility
+### PostProcessor (`experiments/post_processor.py`)
+Post-experiment processing pipeline:
+- FIFO queue for sequential processing
+- Imports JSONL to DuckDB
+- Generates transcripts
+- Creates README files
+- Runs after experiment completion
 
-Users can increase parallelism if their environment supports it, but sequential execution is the sensible default.
+## Monitor System
 
-## Dependencies
+### Monitor (`monitor/monitor.py`)
+Core monitor loop (137 lines) that coordinates:
 
-### Core (always required)
-- **click**: CLI framework
-- **rich**: Terminal UI
-- **asyncio**: Async operations (built-in)
-- **duckdb**: Analytical database with async wrapper
-- **aiofiles**: Async file operations
+### Display Components
+- `display_builder.py` - Main display coordination
+- `conversation_panel_builder.py` - Conversation details
+- `error_panel_builder.py` - Error tracking display
 
-### Optional
-- **aiohttp**: For Ollama communication (when using local models)
-- **API provider SDKs**: Only needed for specific providers
+### Data Components
+- `experiment_reader.py` - Reads experiment states
+- `metrics_calculator.py` - Calculates tokens and costs
+- `error_tracker.py` - Tracks and analyzes errors
+- `file_reader.py` - Efficient file operations
 
-This modular approach keeps the base installation minimal while allowing users to add only what they need.
+## Advanced Features
 
-## Data Flow Example
+### Conversation Branching
+- Branch from any turn in existing conversations
+- Create alternate timelines
+- Compare different conversation paths
+- Useful for testing different prompts
 
-1. User runs: `pidgin chat -a claude -b ollama:qwen`
-2. CLI creates Conductor with providers
-3. Conductor emits `ConversationStartEvent`
-4. Storage components start recording
-5. For each turn:
-   - Conductor emits `TurnStartEvent`
-   - Sends `MessageRequestEvent` to agent
-   - Provider streams response chunks
-   - Each chunk triggers `MessageChunkEvent`
-   - Complete message triggers `MessageCompleteEvent`
-   - Metrics calculator computes metrics
-   - `TurnCompleteEvent` with metrics emitted
-6. Storage components persist all data
-7. `ConversationEndEvent` completes the flow
+### Dimensions System
+- Apply semantic dimensions to conversations
+- Generate variations (e.g., formal/casual, technical/simple)
+- Create controlled experiments
+- Study linguistic variation
 
-## Message Flow and Memory Management
+### Custom Awareness
+- Configure what agents know about the conversation
+- Options: none, basic, full, custom
+- Control meta-conversation awareness
+- Enable self-referential discussions
 
-Pidgin uses a sophisticated message flow system that transforms messages for each agent's perspective and manages memory efficiently. Key points:
+## Event Types
 
-- **Message Transformation**: Each agent sees the conversation from their perspective (their messages as "assistant", other's as "user")
-- **Context Truncation**: Providers automatically truncate messages to fit their context windows
-- **Memory Efficiency**: Only recent messages need to be kept in memory since all messages are stored in JSONL files
-- **Token Accuracy**: Token tracking is based on truncated messages sent to APIs, not the full history
+### Core Events
+- `ConversationStartEvent` - Conversation begins
+- `TurnStartEvent` - Turn begins
+- `MessageRequestEvent` - Request to provider
+- `MessageCompleteEvent` - Response complete
+- `TurnCompleteEvent` - Turn ends with metrics
+- `ConversationEndEvent` - Conversation ends
 
-For detailed information, see [docs/MESSAGE_FLOW.md](docs/MESSAGE_FLOW.md).
+### Tracking Events
+- `TokenUsageEvent` - Token usage per provider
+- `ConvergenceWarningEvent` - High convergence detected
+- `ContextLimitEvent` - Context window exceeded
+- `ExperimentCompleteEvent` - Experiment finished
+
+### Error Events
+- `APIErrorEvent` - Provider API errors
+- `RateLimitEvent` - Rate limit hit
+- `ErrorEvent` - General errors
+
+## Module Size Guidelines
+
+Per CLAUDE.md development guidelines:
+- **Ideal**: <200 lines
+- **Acceptable**: <300 lines  
+- **Must refactor**: >500 lines
+
+Current architecture achieves this through aggressive modularization.
 
 ## Extension Points
 
 ### Adding a New Provider
 1. Implement the `Provider` interface
-2. Add to provider factory
-3. Add model configurations
-4. No other changes needed
+2. Add to `provider_factory.py`
+3. Add model configurations to `model_types.py`
+4. Provider automatically wrapped with events
 
 ### Adding New Metrics
 1. Add calculation in `metrics/calculator.py`
-2. Add to database schema if needed
-3. Metrics automatically flow through events
+2. Metrics flow through `TurnCompleteEvent`
+3. Automatically stored in JSONL and DuckDB
 
 ### Adding Analysis Tools
 1. Subscribe to relevant events
-2. Process data as needed
-3. No core system changes required
+2. Process data from JSONL files
+3. Generate output in post-processing
 
-## Design Decisions
+## Dependencies
 
-### Why Event-Driven?
-- Complete decoupling between components
-- Natural audit trail
-- Easy to extend without modifying core
-- Simplifies testing and debugging
+### Core (always required)
+- **click**: CLI framework
+- **rich**: Terminal UI and formatting
+- **asyncio**: Async operations (built-in)
+- **duckdb**: Analytical database
+- **aiofiles**: Async file operations
 
-### Why Providers Are Agnostic
-- Allows mixing local and API models
-- Simplifies testing with deterministic models
-- Future-proof for new model sources
-- Clean abstraction boundary
-
-### Why DuckDB?
-- Optimized for analytical queries
-- Columnar storage for metrics data
-- Single file, zero configuration
-- Excellent pandas integration
-- Perfect for research workloads
-
-### Why Sequential Execution?
-- Rate limits make parallel execution problematic
-- Hardware constraints for local models
-- Better reproducibility for research
-- Architecture supports parallel when feasible
+### Provider-specific
+- **anthropic**: Claude models
+- **openai**: GPT models
+- **google-generativeai**: Gemini models
+- **aiohttp**: Ollama and xAI support
 
 ## Performance Considerations
 
-- **Streaming**: All providers stream to minimize latency
-- **Async Throughout**: Non-blocking I/O everywhere
-- **Lazy Loading**: Models load only when needed
-- **Sequential Execution**: Avoids rate limit issues
-- **DuckDB**: Fast analytical queries with columnar storage
-- **Async Operations**: Non-blocking database access
+### Sequential by Default
+- Experiments run sequentially to respect rate limits
+- Parallel execution available but not recommended
+- Better reliability and reproducibility
 
-## Security Notes
+### Memory Management
+- Only recent messages kept in memory
+- Full history in JSONL files
+- Streaming responses to minimize memory
+- Efficient manifest updates
 
-- API keys never logged or stored
-- All file I/O respects system permissions
-- No network access except to configured endpoints
-- Local models run in isolated processes (via Ollama)
-
----
-
-This architecture enables Pidgin to be both simple to use and powerful to extend, while maintaining complete observability of AI conversation dynamics without unnecessary complexity.
+### Token Optimization
+- Automatic context truncation
+- Token counting per provider
+- Cost tracking in real-time
+- Efficient batching strategies
