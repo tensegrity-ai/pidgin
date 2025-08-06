@@ -1,22 +1,15 @@
 """New import service for wide-table conversation turns."""
 
-import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import duckdb
 
-from ..core.events import (
-    ConversationStartEvent,
-    MessageCompleteEvent,
-    TurnCompleteEvent,
-)
-from ..io.event_deserializer import EventDeserializer
 from ..io.logger import get_logger
-from ..metrics.flat_calculator import FlatMetricsCalculator
+from .importers import ConversationImporter, EventProcessor, MetricsImporter
 from .schema_manager import schema_manager
 
 logger = get_logger("import_service")
@@ -35,7 +28,13 @@ class ImportResult:
 
 
 class ImportService:
-    """Service for importing JSONL experiment data into DuckDB conversation_turns table."""
+    """Service for importing JSONL experiment data into DuckDB conversation_turns table.
+    
+    This service orchestrates the import process, delegating specific tasks to:
+    - ConversationImporter: Handles conversation and message data
+    - MetricsImporter: Handles metrics and turn data
+    - EventProcessor: Processes JSONL files and coordinates importers
+    """
 
     def __init__(self, db_path: str):
         """Initialize with database path.
@@ -49,8 +48,12 @@ class ImportService:
         # Ensure schema exists
         schema_manager.ensure_schema(self.db, db_path)
 
-        self.metrics_calculator = FlatMetricsCalculator()
-        self.event_deserializer = EventDeserializer()
+        # Initialize importers
+        self.conversation_importer = ConversationImporter(self.db)
+        self.metrics_importer = MetricsImporter(self.db)
+        self.event_processor = EventProcessor(
+            self.conversation_importer, self.metrics_importer
+        )
 
     def import_experiment_from_jsonl(self, exp_dir: Path) -> ImportResult:
         """Import experiment data from JSONL files into conversation_turns table.
@@ -98,10 +101,10 @@ class ImportService:
             self.db.begin()
 
             # First, ensure experiment exists in database
-            self._ensure_experiment_exists(experiment_id, manifest)
+            self.conversation_importer.ensure_experiment_exists(experiment_id, manifest)
 
             for jsonl_file in jsonl_files:
-                turns_count, convs_created = self._process_jsonl_file(
+                turns_count, convs_created = self.event_processor.process_jsonl_file(
                     jsonl_file, experiment_id, manifest
                 )
                 total_turns += turns_count
@@ -136,383 +139,6 @@ class ImportService:
                 error=str(e),
                 duration_seconds=(datetime.now() - start_time).total_seconds(),
             )
-
-    def _process_jsonl_file(
-        self, jsonl_file: Path, experiment_id: str, manifest: Dict
-    ) -> int:
-        """Process a single JSONL file and extract turns.
-
-        Args:
-            jsonl_file: Path to JSONL file
-            experiment_id: Experiment ID
-            manifest: Experiment manifest
-
-        Returns:
-            Number of turns processed
-        """
-        # Group events by conversation and turn
-        conversations = {}
-
-        # Read all events from the file
-        for line_num, event in self.event_deserializer.read_jsonl_events(jsonl_file):
-            if not event:
-                continue
-
-            conversation_id = event.conversation_id
-
-            # Initialize conversation if not seen
-            if conversation_id not in conversations:
-                conversations[conversation_id] = {
-                    "turns": {},
-                    "config": {},
-                    "messages": {},
-                }
-
-            conv = conversations[conversation_id]
-
-            # Process different event types
-            if isinstance(event, ConversationStartEvent):
-                conv["config"] = {
-                    "agent_a_model": event.agent_a_model,
-                    "agent_b_model": event.agent_b_model,
-                    "temperature_a": event.temperature_a,
-                    "temperature_b": event.temperature_b,
-                    "initial_prompt": event.initial_prompt,
-                    "awareness_a": getattr(event, "awareness_a", None),
-                    "awareness_b": getattr(event, "awareness_b", None),
-                }
-
-            elif isinstance(event, TurnCompleteEvent):
-                turn_num = event.turn_number
-                conv["turns"][turn_num] = {
-                    "timestamp": event.timestamp,
-                    "convergence_score": event.convergence_score,
-                    "agent_a_message": event.turn.agent_a_message.content,
-                    "agent_b_message": event.turn.agent_b_message.content,
-                }
-
-            elif isinstance(event, MessageCompleteEvent):
-                # Store message for token counting
-                conv["messages"][event.agent_id] = {
-                    "tokens_used": event.tokens_used,
-                    "duration_ms": event.duration_ms,
-                }
-
-        # Calculate metrics for each conversation
-        turns_processed = 0
-        conversations_created = 0
-
-        for conversation_id, conv_data in conversations.items():
-            if not conv_data["turns"]:
-                continue
-
-            # Create conversation record if it doesn't exist
-            if self._ensure_conversation_exists(experiment_id, conversation_id, conv_data):
-                conversations_created += 1
-
-            # Reset metrics calculator for this conversation
-            self.metrics_calculator = FlatMetricsCalculator()
-
-            # Process turns in order
-            for turn_num in sorted(conv_data["turns"].keys()):
-                turn_data = conv_data["turns"][turn_num]
-
-                # Calculate metrics
-                flat_metrics = self.metrics_calculator.calculate_turn_metrics(
-                    turn_num, turn_data["agent_a_message"], turn_data["agent_b_message"]
-                )
-
-                # Prepare data for insertion
-                turn_row = self._prepare_turn_row(
-                    experiment_id,
-                    conversation_id,
-                    turn_num,
-                    turn_data,
-                    conv_data["config"],
-                    flat_metrics,
-                    conv_data.get("messages", {}),
-                )
-
-                # Insert into database
-                self._insert_turn(turn_row)
-                
-                # Also populate messages and turn_metrics tables for transcript generation
-                self._insert_messages(conversation_id, turn_num, turn_data, conv_data.get("messages", {}))
-                self._insert_turn_metrics(conversation_id, turn_num, turn_data, flat_metrics)
-                
-                turns_processed += 1
-
-        return turns_processed, conversations_created
-
-    def _ensure_experiment_exists(self, experiment_id: str, manifest: Dict) -> None:
-        """Ensure experiment exists in database before importing turns.
-        
-        Args:
-            experiment_id: Experiment ID
-            manifest: Manifest data containing experiment config
-        """
-        # Check if experiment already exists
-        result = self.db.execute(
-            "SELECT experiment_id FROM experiments WHERE experiment_id = ?",
-            [experiment_id]
-        ).fetchone()
-        
-        if result is None:
-            # Create experiment record from manifest
-            config = manifest.get("config", {})
-            name = manifest.get("name", experiment_id)
-            created_at = manifest.get("created_at", datetime.now().isoformat())
-            
-            # Insert experiment
-            self.db.execute("""
-                INSERT INTO experiments (
-                    experiment_id, name, config, status,
-                    created_at, total_conversations, 
-                    completed_conversations, failed_conversations
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, [
-                experiment_id,
-                name,
-                json.dumps(config),
-                "completed",  # Status is completed since we're importing after completion
-                created_at,
-                manifest.get("total_conversations", 0),
-                manifest.get("completed_conversations", 0),
-                manifest.get("failed_conversations", 0)
-            ])
-            
-            logger.info(f"Created experiment record for {experiment_id}")
-
-    def _ensure_conversation_exists(self, experiment_id: str, conversation_id: str, conv_data: Dict) -> bool:
-        """Ensure conversation exists in database.
-        
-        Args:
-            experiment_id: Experiment ID
-            conversation_id: Conversation ID
-            conv_data: Conversation data from events
-            
-        Returns:
-            True if conversation was created, False if it already existed
-        """
-        # Check if conversation already exists
-        result = self.db.execute(
-            "SELECT conversation_id FROM conversations WHERE conversation_id = ?",
-            [conversation_id]
-        ).fetchone()
-        
-        if result is None:
-            config = conv_data.get("config", {})
-            
-            # Get first and last turn timestamps
-            turn_nums = sorted(conv_data["turns"].keys())
-            first_turn = conv_data["turns"][turn_nums[0]] if turn_nums else {}
-            last_turn = conv_data["turns"][turn_nums[-1]] if turn_nums else {}
-            
-            # Calculate conversation metrics
-            total_turns = len(turn_nums)
-            final_convergence = last_turn.get("convergence_score", 0)
-            
-            # Insert conversation record
-            self.db.execute("""
-                INSERT INTO conversations (
-                    conversation_id, experiment_id, status,
-                    agent_a_model, agent_b_model,
-                    agent_a_temperature, agent_b_temperature,
-                    initial_prompt, total_turns, 
-                    final_convergence_score,
-                    started_at, completed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, [
-                conversation_id,
-                experiment_id,
-                "completed",  # Status is completed since we're importing after completion
-                config.get("agent_a_model"),
-                config.get("agent_b_model"),
-                config.get("temperature_a"),
-                config.get("temperature_b"),
-                config.get("initial_prompt"),
-                total_turns,
-                final_convergence,
-                first_turn.get("timestamp"),
-                last_turn.get("timestamp")
-            ])
-            
-            return True
-        
-        return False
-
-    def _prepare_turn_row(
-        self,
-        experiment_id: str,
-        conversation_id: str,
-        turn_number: int,
-        turn_data: Dict,
-        config: Dict,
-        metrics: Dict,
-        messages: Dict,
-    ) -> Dict[str, Any]:
-        """Prepare a complete row for the conversation_turns table.
-
-        Args:
-            experiment_id: Experiment ID
-            conversation_id: Conversation ID
-            turn_number: Turn number
-            turn_data: Turn data from events
-            config: Conversation configuration
-            metrics: Flat metrics dictionary
-            messages: Message metadata
-
-        Returns:
-            Dictionary ready for database insertion
-        """
-        # Calculate message hashes
-        a_hash = hashlib.sha256(turn_data["agent_a_message"].encode()).hexdigest()
-        b_hash = hashlib.sha256(turn_data["agent_b_message"].encode()).hexdigest()
-
-        # Base row with identifiers and metadata
-        row = {
-            "experiment_id": experiment_id,
-            "conversation_id": conversation_id,
-            "turn_number": turn_number,
-            "timestamp": turn_data["timestamp"],
-            # Model and context
-            "agent_a_model": config.get("agent_a_model", ""),
-            "agent_b_model": config.get("agent_b_model", ""),
-            "awareness_a": config.get("awareness_a"),
-            "awareness_b": config.get("awareness_b"),
-            "temperature_a": config.get("temperature_a"),
-            "temperature_b": config.get("temperature_b"),
-            "initial_prompt": config.get("initial_prompt"),
-            # Message content and hashes
-            "agent_a_message": turn_data["agent_a_message"],
-            "agent_b_message": turn_data["agent_b_message"],
-            "a_message_hash": a_hash,
-            "b_message_hash": b_hash,
-            # Token usage
-            "a_prompt_tokens": None,  # TODO: extract from events if available
-            "a_completion_tokens": messages.get("agent_a", {}).get("tokens_used"),
-            "b_prompt_tokens": None,
-            "b_completion_tokens": messages.get("agent_b", {}).get("tokens_used"),
-            # Timing
-            "response_time_a": messages.get("agent_a", {}).get("duration_ms"),
-            "response_time_b": messages.get("agent_b", {}).get("duration_ms"),
-            "processing_time_ms": None,
-            "api_latency_a": None,
-            "api_latency_b": None,
-            "turn_duration_ms": None,
-            "conversation_velocity": 0.0,
-            "adaptation_rate": 0.0,
-        }
-
-        # Add all metrics to the row
-        row.update(metrics)
-
-        # Override overall_convergence with live calculated value if available
-        if turn_data.get("convergence_score") is not None:
-            row["overall_convergence"] = turn_data["convergence_score"]
-
-        return row
-
-    def _insert_turn(self, row: Dict[str, Any]) -> None:
-        """Insert a turn row into the conversation_turns table.
-
-        Args:
-            row: Complete row dictionary
-        """
-        # Generate INSERT statement dynamically
-        columns = list(row.keys())
-        placeholders = ", ".join(["?" for _ in columns])
-        column_names = ", ".join(columns)
-
-        query = f"""
-            INSERT INTO conversation_turns ({column_names})
-            VALUES ({placeholders})
-        """
-
-        values = [row[col] for col in columns]
-
-        try:
-            self.db.execute(query, values)
-        except Exception as e:
-            logger.error(
-                f"Failed to insert turn {row['conversation_id']}:{row['turn_number']}: {e}"
-            )
-            raise
-
-    def _insert_messages(self, conversation_id: str, turn_number: int, turn_data: Dict, messages: Dict) -> None:
-        """Insert messages into messages table for compatibility.
-        
-        Args:
-            conversation_id: Conversation ID
-            turn_number: Turn number
-            turn_data: Turn data containing messages
-            messages: Message metadata from events
-        """
-        # Insert agent A message
-        self.db.execute("""
-            INSERT INTO messages (
-                conversation_id, turn_number, agent_id, 
-                content, timestamp, token_count
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, [
-            conversation_id,
-            turn_number,
-            "agent_a",
-            turn_data["agent_a_message"],
-            turn_data["timestamp"],
-            messages.get("agent_a", {}).get("tokens_used", 0)
-        ])
-        
-        # Insert agent B message
-        self.db.execute("""
-            INSERT INTO messages (
-                conversation_id, turn_number, agent_id,
-                content, timestamp, token_count
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, [
-            conversation_id,
-            turn_number,
-            "agent_b",
-            turn_data["agent_b_message"],
-            turn_data["timestamp"],
-            messages.get("agent_b", {}).get("tokens_used", 0)
-        ])
-
-    def _insert_turn_metrics(self, conversation_id: str, turn_number: int, turn_data: Dict, metrics: Dict) -> None:
-        """Insert turn metrics into turn_metrics table for compatibility.
-        
-        Args:
-            conversation_id: Conversation ID
-            turn_number: Turn number
-            turn_data: Turn data containing convergence score
-            metrics: Calculated metrics
-        """
-        # Extract key metrics
-        self.db.execute("""
-            INSERT INTO turn_metrics (
-                conversation_id, turn_number, timestamp,
-                convergence_score,
-                message_a_length, message_b_length,
-                message_a_word_count, message_b_word_count,
-                message_a_unique_words, message_b_unique_words,
-                shared_vocabulary,
-                message_a_response_time_ms, message_b_response_time_ms
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, [
-            conversation_id,
-            turn_number,
-            turn_data["timestamp"],
-            turn_data.get("convergence_score"),
-            metrics.get("a_message_length"),
-            metrics.get("b_message_length"),
-            metrics.get("a_word_count"),
-            metrics.get("b_word_count"),
-            metrics.get("a_unique_words"),
-            metrics.get("b_unique_words"),
-            json.dumps(metrics.get("shared_vocabulary", [])),
-            metrics.get("response_time_a"),
-            metrics.get("response_time_b")
-        ])
 
     def import_all_pending(self, experiments_dir: Path) -> List[ImportResult]:
         """Import all experiments that have JSONL files but haven't been imported.

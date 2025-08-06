@@ -1,7 +1,9 @@
 """Deserialize JSONL events back to Event dataclasses."""
 
+import json
 from datetime import datetime
-from typing import Any, Dict, Optional, Type
+from pathlib import Path
+from typing import Any, Dict, Generator, Optional, Tuple, Type
 
 from ..core.events import (
     APIErrorEvent,
@@ -234,3 +236,26 @@ class EventDeserializer:
         from .deserializers.base import BaseDeserializer
 
         return BaseDeserializer.parse_timestamp(timestamp_str)
+    
+    def read_jsonl_events(
+        self, jsonl_file: Path
+    ) -> Generator[Tuple[int, Optional[Event]], None, None]:
+        """Read and deserialize events from a JSONL file.
+        
+        Args:
+            jsonl_file: Path to JSONL file
+            
+        Yields:
+            Tuple of (line_number, event) where event may be None if deserialization fails
+        """
+        with open(jsonl_file, "r") as f:
+            for line_num, line in enumerate(f, 1):
+                if not line.strip():
+                    continue
+                try:
+                    event_data = json.loads(line)
+                    event = self.deserialize_event(event_data)
+                    yield line_num, event
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.warning(f"Failed to deserialize line {line_num}: {e}")
+                    yield line_num, None

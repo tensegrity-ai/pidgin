@@ -34,17 +34,15 @@ Per CLAUDE.md guidelines:
 
 ## Priority 2: High Priority (500-600 lines)
 
-### 3. experiments/manager.py (584 lines)
-**Current Structure**: 
-- 1 class with 12 methods managing experiments
+### 3. ✅ experiments/manager.py (584 → 173 lines) - COMPLETED
+**Refactored Into**:
+- `experiments/manager.py` (173 lines) - Core manager interface
+- `experiments/experiment_resolver.py` (139 lines) - ID resolution and discovery
+- `experiments/daemon_manager.py` (216 lines) - Start/stop daemon processes
+- `experiments/experiment_status.py` (138 lines) - Status checking and listing
+- `experiments/process_launcher.py` (239 lines) - Process launching utilities
 
-**Refactor Into**:
-- `experiments/manager.py` (~200 lines) - Core manager interface
-- `experiments/experiment_resolver.py` - ID resolution and discovery
-- `experiments/daemon_manager.py` - Start/stop daemon processes
-- `experiments/experiment_status.py` - Status checking and listing
-
-**Benefits**: Clear separation of responsibilities, reusable components
+**Result**: Clear separation of responsibilities, all modules near 200-line target
 
 ### 4. ✅ io/event_deserializer.py (580 → 235 lines) - COMPLETED
 **Refactored Into**:
@@ -57,31 +55,26 @@ Per CLAUDE.md guidelines:
 
 **Result**: Clean separation by event category, easier to extend
 
-### 5. database/import_service.py (563 lines)
-**Current Structure**: 
-- 1 class with 11 methods for importing data
+### 5. ✅ database/import_service.py (563 → 188 lines) - COMPLETED
+**Refactored Into**:
+- `database/import_service.py` (188 lines) - Main import orchestration
+- `database/importers/conversation_importer.py` (174 lines) - Import conversation data
+- `database/importers/metrics_importer.py` (161 lines) - Import metrics data
+- `database/importers/event_processor.py` (149 lines) - Process JSONL events
 
-**Refactor Into**:
-- `database/import_service.py` (~150 lines) - Main import orchestration
-- `database/importers/conversation_importer.py` - Import conversation data
-- `database/importers/metrics_importer.py` - Import metrics data
-- `database/importers/event_importer.py` - Import events
-
-**Benefits**: Each importer can be optimized independently, clearer data flow
+**Result**: Each importer is focused and under 200 lines, clearer data flow
 
 ## Priority 3: Medium Priority (400-500 lines)
 
-### 6. cli/run.py (454 lines)
-**Current Structure**: 
-- Single Click command with many options
+### 6. ✅ cli/run.py (454 → 192 lines) - COMPLETED
+**Refactored Into**:
+- `cli/run.py` (192 lines) - Main command definition
+- `cli/run_handlers/command_handler.py` (175 lines) - Main command logic
+- `cli/run_handlers/setup.py` (149 lines) - Setup and validation logic
+- `cli/run_handlers/execution.py` (129 lines) - Execution logic
+- `cli/run_handlers/spec_handler.py` (69 lines) - YAML spec handling
 
-**Refactor Into**:
-- `cli/run.py` (~150 lines) - Main command definition
-- `cli/run_handlers/setup.py` - Setup and validation logic
-- `cli/run_handlers/execution.py` - Execution logic
-- `cli/run_handlers/display.py` - Display configuration
-
-**Benefits**: Easier to test CLI logic, cleaner command definition
+**Result**: Clean separation of concerns, all modules under 200 lines
 
 ## Other Notable Modules (300-400 lines)
 
@@ -103,13 +96,13 @@ These should also be refactored but are lower priority:
 1. **database/schema.py** - ✅ Moved SQL to .sql files (651 → 42 lines)
 2. **ui/display_filter.py** - ✅ Split by event type (637 → 137 lines)
 
-### 🔄 Phase 2: Core Refactoring - IN PROGRESS
+### ✅ Phase 2: Core Refactoring - COMPLETED
 3. **io/event_deserializer.py** - ✅ Split by event category (580 → 235 lines)
-4. **experiments/manager.py** - ⏳ TODO (584 lines)
-5. **database/import_service.py** - ⏳ TODO (563 lines)
+4. **experiments/manager.py** - ✅ Split into 5 modules (584 → 173 lines)
+5. **database/import_service.py** - ✅ Split into 4 modules (563 → 188 lines)
 
-### ⏳ Phase 3: CLI Cleanup - TODO
-6. **cli/run.py** - ⏳ TODO (454 lines)
+### ✅ Phase 3: CLI Cleanup - COMPLETED
+6. **cli/run.py** - ✅ Split into 5 handler modules (454 → 192 lines)
 
 ## Testing Strategy
 

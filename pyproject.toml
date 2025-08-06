@@ -69,7 +69,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=pidgin"
+# Removed coverage - we don't care about percentages
+addopts = ""
 filterwarnings = [
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
     "ignore::RuntimeWarning:coverage.parser",

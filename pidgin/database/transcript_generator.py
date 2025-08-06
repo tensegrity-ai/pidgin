@@ -44,12 +44,8 @@ class TranscriptGenerator:
             logger.error(f"Experiment {experiment_id} not found in database")
             return
 
-        # Create transcripts directory only if experiment exists
-        transcripts_dir = output_dir / "transcripts"
-        transcripts_dir.mkdir(exist_ok=True)
-
-        # Generate experiment summary
-        summary_path = transcripts_dir / "summary.md"
+        # Generate experiment summary directly in output directory
+        summary_path = output_dir / "transcript_summary.md"
         with open(summary_path, "w") as f:
             f.write(self.formatter.generate_experiment_summary(exp_data))
         logger.debug(f"Generated experiment summary: {summary_path}")
@@ -67,8 +63,8 @@ class TranscriptGenerator:
             conv_id = conv["conversation_id"]
             transcript = self.generate_conversation_transcript(conv_id)
 
-            # Write transcript
-            transcript_path = transcripts_dir / f"{conv_id}.md"
+            # Write transcript directly in output directory
+            transcript_path = output_dir / f"transcript_{conv_id}.md"
             with open(transcript_path, "w") as f:
                 f.write(transcript)
             logger.debug(f"Generated transcript: {transcript_path}")

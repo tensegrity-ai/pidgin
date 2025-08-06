@@ -4,19 +4,17 @@ This document tracks remaining tasks for Pidgin development.
 
 ## High Priority - Code Quality
 
-### Large Module Refactoring
+### ✅ Large Module Refactoring - COMPLETED
 **Goal**: Bring all modules under 200 lines per CLAUDE.md guidelines
-**Progress**: 3 of 6 critical modules completed (see PLANS/large-module-refactoring.md)
+**Progress**: All 6 critical modules completed! (see PLANS/large-module-refactoring.md)
 
 **✅ Completed (2025-08-05)**:
 - [x] database/schema.py - 651 → 42 lines (extracted to SQL files)
 - [x] ui/display_filter.py - 637 → 137 lines (split into handlers)
 - [x] io/event_deserializer.py - 580 → 235 lines (split by event type)
-
-**High Priority - Remaining (>500 lines)**:
-- [ ] experiments/manager.py - 584 lines
-- [ ] database/import_service.py - 563 lines
-- [ ] cli/run.py - 454 lines (partially refactored from 862)
+- [x] experiments/manager.py - 584 → 173 lines (split into 5 modules)
+- [x] database/import_service.py - 563 → 188 lines (split into 4 modules)
+- [x] cli/run.py - 454 → 192 lines (split into 5 handler modules)
 
 **Medium Priority (>300 lines)**:
 - [ ] analysis/notebook_cells.py - 540 lines

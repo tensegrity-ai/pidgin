@@ -18,7 +18,6 @@ from ..database.event_store import EventStore
 from ..database.transcript_generator import TranscriptGenerator
 from ..io.paths import get_database_path
 from .manifest import ManifestManager
-from .readme_generator import ExperimentReadmeGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -145,19 +144,7 @@ class PostProcessor:
             manifest = ManifestManager(exp_dir)
             manifest.update_experiment_status("post_processing")
             
-            # 1. Generate README
-            log_file.write(f"[{datetime.now().isoformat()}] Generating README...\n")
-            try:
-                readme_gen = ExperimentReadmeGenerator(exp_dir)
-                readme_gen.generate()
-                steps_completed.append("README")
-                log_file.write(f"[{datetime.now().isoformat()}] ✓ README generated\n")
-            except Exception as e:
-                logger.error(f"Failed to generate README: {e}")
-                steps_failed.append("README")
-                log_file.write(f"[{datetime.now().isoformat()}] ✗ README failed: {e}\n")
-            
-            # 2. Import to database and run post-processing with same EventStore
+            # 1. Import to database and run post-processing with same EventStore
             log_file.write(f"[{datetime.now().isoformat()}] Importing to database...\n")
             try:
                 db_path = get_database_path()
@@ -169,7 +156,7 @@ class PostProcessor:
                         steps_completed.append("Database import")
                         log_file.write(f"[{datetime.now().isoformat()}] ✓ Database import complete\n")
                         
-                        # 3. Generate Jupyter notebook (using same EventStore)
+                        # 2. Generate Jupyter notebook (using same EventStore)
                         log_file.write(f"[{datetime.now().isoformat()}] Generating notebook...\n")
                         try:
                             from ..analysis.notebook_generator import NotebookGenerator
@@ -186,7 +173,7 @@ class PostProcessor:
                             steps_failed.append("Jupyter notebook")
                             log_file.write(f"[{datetime.now().isoformat()}] ✗ Notebook failed: {e}\n")
                         
-                        # 4. Generate transcripts (using same EventStore)
+                        # 3. Generate transcripts (using same EventStore)
                         log_file.write(f"[{datetime.now().isoformat()}] Generating transcripts...\n")
                         try:
                             generator = TranscriptGenerator(event_store)
