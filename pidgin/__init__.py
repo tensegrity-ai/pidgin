@@ -9,10 +9,8 @@ from .analysis import ConvergenceCalculator
 from .config import (
     Config,
     DimensionalPromptGenerator,
-    get_config,
     get_model_config,
     get_system_prompts,
-    load_config,
 )
 
 # Core exports
@@ -50,8 +48,6 @@ __all__ = [
     "ChatDisplay",
     # Config
     "Config",
-    "get_config",
-    "load_config",
     "get_model_config",
     "get_system_prompts",
     "DimensionalPromptGenerator",

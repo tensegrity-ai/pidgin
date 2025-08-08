@@ -119,12 +119,17 @@ class ExecutionHandler:
             self.daemon_launcher.show_interactive_mode_info()
 
             # Run display and handle completion
-            asyncio.run(
-                self.daemon_launcher.run_display_and_handle_completion(
-                    exp_id,
-                    config.name,
-                    display_mode,
-                    notify,
-                    config.repetitions,
+            try:
+                asyncio.run(
+                    self.daemon_launcher.run_display_and_handle_completion(
+                        exp_id,
+                        config.name,
+                        display_mode,
+                        notify,
+                        config.repetitions,
+                    )
                 )
-            )
+            except KeyboardInterrupt:
+                # Display was exited with Ctrl+C, but experiment continues
+                # The daemon_launcher already handles showing the appropriate message
+                pass

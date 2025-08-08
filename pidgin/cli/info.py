@@ -170,9 +170,9 @@ def models():
 @info.command()
 def config():
     """Show current configuration."""
-    from ..config import get_config
+    from ..config.config import Config
 
-    config = get_config()
+    config = Config()
 
     console.print("\n[bold]Configuration[/bold]\n")
 

@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from rich.console import Console
 
 from ..constants import ExperimentStatus
+from ..core.app_context import AppContext
 from ..core.event_bus import EventBus
 from ..core.events import ExperimentCompleteEvent
 from ..ui.display_utils import DisplayUtils
@@ -24,11 +25,12 @@ from .post_processor import PostProcessor
 class ExperimentRunner:
     """Runs experiment conversations with configurable parallelism."""
 
-    def __init__(self, output_dir: Path, daemon: Optional[ExperimentDaemon] = None):
+    def __init__(self, output_dir: Path, app_context: Optional[AppContext] = None, daemon: Optional[ExperimentDaemon] = None):
         """Initialize experiment runner.
 
         Args:
             output_dir: Base output directory for experiments
+            app_context: Optional application context with dependencies
             daemon: Optional daemon instance for stop detection
         """
         self.output_dir = output_dir
@@ -40,9 +42,12 @@ class ExperimentRunner:
         self.failed_count = 0
         self.experiment_event_bus = None
         
+        # Create app context if not provided
+        self.app_context = app_context or AppContext()
+        
         # Initialize helper classes
         self.setup = ExperimentSetup()
-        self.orchestrator = ConversationOrchestrator(daemon)
+        self.orchestrator = ConversationOrchestrator(self.app_context, daemon)
 
     async def run_experiment_with_id(
         self, experiment_id: str, experiment_dir: str, config: ExperimentConfig

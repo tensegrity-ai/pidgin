@@ -20,58 +20,57 @@ class SystemDeserializer(BaseDeserializer):
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> InterruptRequestEvent:
         """Build InterruptRequestEvent from data."""
-        return InterruptRequestEvent(
-            timestamp=timestamp,
+        event = InterruptRequestEvent(
             conversation_id=data.get("conversation_id"),
-            experiment_id=data.get("experiment_id"),
-            source=data.get("source", "user"),
+            turn_number=data.get("turn_number", 0),
+            interrupt_source=data.get("interrupt_source", data.get("source", "user")),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_rate_limit_pace(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> RateLimitPaceEvent:
         """Build RateLimitPaceEvent from data."""
-        return RateLimitPaceEvent(
-            timestamp=timestamp,
+        event = RateLimitPaceEvent(
             conversation_id=data.get("conversation_id"),
-            experiment_id=data.get("experiment_id"),
-            agent_id=data["agent_id"],
             provider=data["provider"],
-            wait_seconds=data["wait_seconds"],
+            wait_time=data.get("wait_time", data.get("wait_seconds", 0)),
             reason=data.get("reason", "rate_limit"),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_token_usage(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> TokenUsageEvent:
         """Build TokenUsageEvent from data."""
-        return TokenUsageEvent(
-            timestamp=timestamp,
+        event = TokenUsageEvent(
             conversation_id=data.get("conversation_id"),
-            experiment_id=data.get("experiment_id"),
-            agent_id=data["agent_id"],
             provider=data["provider"],
-            model=data["model"],
-            prompt_tokens=data.get("prompt_tokens", 0),
-            completion_tokens=data.get("completion_tokens", 0),
-            total_tokens=data.get("total_tokens", 0),
+            tokens_used=data.get("tokens_used", data.get("total_tokens", 0)),
+            tokens_per_minute_limit=data.get("tokens_per_minute_limit", 0),
+            current_usage_rate=data.get("current_usage_rate", 0.0),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_context_truncation(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ContextTruncationEvent:
         """Build ContextTruncationEvent from data."""
-        return ContextTruncationEvent(
-            timestamp=timestamp,
+        event = ContextTruncationEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_id=data["agent_id"],
+            provider=data.get("provider", "unknown"),
+            model=data.get("model", "unknown"),
             turn_number=data["turn_number"],
-            messages_before=data["messages_before"],
-            messages_after=data["messages_after"],
-            tokens_before=data.get("tokens_before"),
-            tokens_after=data.get("tokens_after"),
+            original_message_count=data.get("original_message_count", data.get("messages_before", 0)),
+            truncated_message_count=data.get("truncated_message_count", data.get("messages_after", 0)),
+            messages_dropped=data.get("messages_dropped", 0),
         )
+        event.timestamp = timestamp
+        return event

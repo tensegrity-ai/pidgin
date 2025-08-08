@@ -1,6 +1,6 @@
 """Configuration and model definitions for pidgin."""
 
-from .config import Config, get_config, load_config
+from .config import Config
 from .dimensional_prompts import DimensionalPromptGenerator
 from .models import (
     ModelConfig,
@@ -12,8 +12,6 @@ from .system_prompts import get_awareness_info, get_system_prompts
 __all__ = [
     # From config
     "Config",
-    "get_config",
-    "load_config",
     # From models
     "ModelConfig",
     "get_model_config",

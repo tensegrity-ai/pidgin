@@ -91,36 +91,14 @@ class SchemaLoader:
             return ""
 
 
-# Module-level convenience functions for backward compatibility
-_loader = SchemaLoader()
-
-
+# Module-level convenience functions - create new instance each time
 def get_all_schemas() -> List[str]:
     """Get all schema definitions in order."""
-    return _loader.get_all_schemas()
+    loader = SchemaLoader()
+    return loader.get_all_schemas()
 
 
 def get_drop_all_sql() -> str:
     """Get SQL to drop all tables (for clean migrations)."""
-    return _loader.get_drop_all_sql()
-
-
-# Individual schema constants for backward compatibility
-def _load_schema_constant(name: str) -> str:
-    """Load a schema constant."""
-    try:
-        return _loader.load_schema(name)
-    except FileNotFoundError:
-        return ""
-
-
-# Lazy-loaded schema constants
-CONVERSATION_TURNS_SCHEMA = property(lambda self: _load_schema_constant("conversation_turns"))
-EVENT_SCHEMA = property(lambda self: _load_schema_constant("events"))
-EXPERIMENTS_SCHEMA = property(lambda self: _load_schema_constant("experiments"))
-CONVERSATIONS_SCHEMA = property(lambda self: _load_schema_constant("conversations"))
-TURN_METRICS_SCHEMA = property(lambda self: _load_schema_constant("turn_metrics"))
-MESSAGES_SCHEMA = property(lambda self: _load_schema_constant("messages"))
-TOKEN_USAGE_SCHEMA = property(lambda self: _load_schema_constant("token_usage"))
-CONTEXT_TRUNCATIONS_SCHEMA = property(lambda self: _load_schema_constant("context_truncations"))
-MATERIALIZED_VIEWS = property(lambda self: _load_schema_constant("views"))
+    loader = SchemaLoader()
+    return loader.get_drop_all_sql()

@@ -11,8 +11,9 @@ from typing import Dict, Optional
 from rich.console import Console
 
 from ..analysis.convergence import ConvergenceCalculator
-from ..config.config import get_config
+from ..config.config import Config
 from ..config.system_prompts import get_system_prompts
+from ..providers.token_tracker import GlobalTokenTracker
 from ..io.logger import get_logger
 from ..io.output_manager import OutputManager
 from ..ui.display_utils import DisplayUtils, dim
@@ -35,6 +36,8 @@ class Conductor:
     def __init__(
         self,
         output_manager: OutputManager,
+        config: Config,
+        token_tracker: GlobalTokenTracker,
         user_interaction=None,
         console: Optional[Console] = None,
         bus: Optional[EventBus] = None,
@@ -47,6 +50,8 @@ class Conductor:
 
         Args:
             output_manager: Manager for output files
+            config: Application configuration
+            token_tracker: Token tracker for rate limiting
             user_interaction: Optional user interaction handler
             console: Optional console for display output
             bus: Optional shared EventBus
@@ -59,7 +64,8 @@ class Conductor:
         self.output_manager = output_manager
         self.user_interaction = user_interaction
         self.console = console if console else Console()
-        self.config = get_config()
+        self.config = config
+        self.token_tracker = token_tracker
 
         # Get convergence weights from config
         conv_config = self.config.get_convergence_config()
@@ -68,11 +74,11 @@ class Conductor:
         # Initialize specialized handlers
         self.interrupt_handler = InterruptHandler(bus or EventBus(), console)
         self.name_coordinator = NameCoordinator()
-        self.rate_limiter = StreamingRateLimiter()
+        self.rate_limiter = StreamingRateLimiter(config)
         self.convergence_calculator = ConvergenceCalculator(weights=convergence_weights)
 
         # Lifecycle manager needs to be set up
-        self.lifecycle = ConversationLifecycle(console)
+        self.lifecycle = ConversationLifecycle(console, token_tracker)
 
         # Message handler needs references
         self.message_handler = MessageHandler(

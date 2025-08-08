@@ -13,19 +13,12 @@ logger = get_logger("schema_manager")
 
 
 class SchemaManager:
-    """Singleton schema manager that ensures schema is created only once per session."""
+    """Schema manager that ensures schema is created only once per session."""
 
-    _instance: Optional["SchemaManager"] = None
-    _lock = threading.Lock()
-    _initialized_databases: Set[str] = set()
-
-    def __new__(cls):
-        """Create singleton instance."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-        return cls._instance
+    def __init__(self):
+        """Initialize the schema manager."""
+        self._lock = threading.Lock()
+        self._initialized_databases: Set[str] = set()
 
     def ensure_schema(self, db: duckdb.DuckDBPyConnection, db_path: str) -> None:
         """Ensure schema exists for the given database connection.
@@ -77,5 +70,3 @@ class SchemaManager:
         return cache_key in self._initialized_databases
 
 
-# Global instance
-schema_manager = SchemaManager()

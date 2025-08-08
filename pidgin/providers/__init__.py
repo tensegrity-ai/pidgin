@@ -12,7 +12,7 @@ from .ollama_helper import (
 from .openai import OpenAIProvider
 from .silent import SilentProvider
 from .test_model import LocalTestModel
-from .token_tracker import GlobalTokenTracker, get_token_tracker
+from .token_tracker import GlobalTokenTracker
 from .xai import xAIProvider
 
 __all__ = [
@@ -25,7 +25,6 @@ __all__ = [
     "SilentProvider",
     "ProviderContextManager",
     "GlobalTokenTracker",
-    "get_token_tracker",
     "LocalTestModel",
     "ensure_ollama_ready",
     "check_ollama_running",

@@ -10,7 +10,7 @@ import yaml
 from rich.console import Console
 
 from ..experiments import ExperimentConfig, ExperimentManager
-from ..experiments.state_builder import get_state_builder
+from ..experiments.state_builder import StateBuilder
 from ..io.paths import get_experiments_dir
 from ..ui.display_utils import DisplayUtils
 from . import ORIGINAL_CWD
@@ -91,7 +91,7 @@ def branch(
     """
     # Find the conversation
     experiments_dir = get_experiments_dir()
-    state_builder = get_state_builder()
+    state_builder = StateBuilder()
 
     # Search for the conversation across all experiments
     conversation_state = None

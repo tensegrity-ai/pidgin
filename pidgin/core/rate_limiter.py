@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any, Dict
 
-from ..config import get_config
+from ..config.config import Config
 from ..config.provider_capabilities import get_provider_capabilities
 from ..io.logger import get_logger
 from .constants import RateLimits, SystemDefaults
@@ -34,8 +34,13 @@ class StreamingRateLimiter:
     """
 
 
-    def __init__(self):
-        """Initialize the rate limiter."""
+    def __init__(self, config: Config):
+        """Initialize the rate limiter.
+        
+        Args:
+            config: Application configuration
+        """
+        self.config = config
         self.rate_limits = self._load_limits()
 
         # Track request history per provider
@@ -65,8 +70,7 @@ class StreamingRateLimiter:
             }
 
         # Override with config if provided
-        config = get_config()
-        custom_limits = config.get("rate_limiting.custom_limits", {})
+        custom_limits = self.config.get("rate_limiting.custom_limits", {})
 
         for provider, custom in custom_limits.items():
             if provider not in limits:
@@ -92,8 +96,7 @@ class StreamingRateLimiter:
         provider = self._normalize_provider(provider)
 
         # Check if rate limiting is enabled
-        config = get_config()
-        if not config.get("rate_limiting.enabled", True):
+        if not self.config.get("rate_limiting.enabled", True):
             return 0.0
 
         # Skip rate limiting for local models

@@ -38,20 +38,46 @@ class DaemonLauncher:
         Raises:
             Exception: If validation fails
         """
-        # Check if experiment already exists
+        # Check if experiment already exists and retry with new name if needed
         from ..io.jsonl_reader import JSONLExperimentReader
+        from .name_generator import generate_experiment_name
 
         jsonl_reader = JSONLExperimentReader(get_experiments_dir())
         experiments = jsonl_reader.list_experiments()
-        existing = next((exp for exp in experiments if exp.get("name") == config.name), None)
-
-        if existing:
-            self.display.error(
-                f"Experiment session '{config.name}' already exists",
-                context=f"Use 'pidgin attach {config.name}' to monitor",
+        existing_names = {exp.get("name") for exp in experiments if exp.get("name")}
+        
+        # Try up to 10 times to find a unique name
+        max_retries = 10
+        retry_count = 0
+        original_name = config.name
+        
+        while config.name in existing_names:
+            retry_count += 1
+            if retry_count > max_retries:
+                self.display.error(
+                    f"Failed to generate unique name after {max_retries} attempts",
+                    context=f"Original name: '{original_name}'",
+                    use_panel=False,
+                )
+                raise ValueError(f"Could not generate unique experiment name")
+            
+            # Generate new name and update config
+            new_name = generate_experiment_name()
+            config.name = new_name
+            
+            if retry_count == 1:
+                # First retry, show that we're generating a new name
+                self.display.info(
+                    f"Name '{original_name}' already exists, generating new name...",
+                    use_panel=False,
+                )
+        
+        # If we had to generate a new name, show it
+        if retry_count > 0:
+            self.display.info(
+                f"Using generated name: {config.name} (original '{original_name}' was already in use)",
                 use_panel=False,
             )
-            raise ValueError(f"Experiment '{config.name}' already exists")
 
         # Validate configuration
         errors = config.validate()

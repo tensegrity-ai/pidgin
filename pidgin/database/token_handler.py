@@ -5,7 +5,7 @@ from typing import Dict, Optional
 from ..core.events import MessageCompleteEvent, TokenUsageEvent
 from ..config.provider_capabilities import get_provider_capabilities
 from ..io.logger import get_logger
-from ..providers.token_tracker import get_token_tracker
+from ..providers.token_tracker import GlobalTokenTracker
 from .event_store import EventStore
 
 logger = get_logger("token_handler")
@@ -41,10 +41,15 @@ class TokenUsageHandler:
         },
     }
 
-    def __init__(self, storage: EventStore):
-        """Initialize handler with storage backend."""
+    def __init__(self, storage: EventStore, token_tracker: GlobalTokenTracker):
+        """Initialize handler with storage backend.
+        
+        Args:
+            storage: Event store for persisting token usage
+            token_tracker: Token tracker for rate limiting
+        """
         self.storage = storage
-        self.token_tracker = get_token_tracker()
+        self.token_tracker = token_tracker
 
         # Track token counts for conversations
         self.conversation_tokens: Dict[str, Dict[str, int]] = {}

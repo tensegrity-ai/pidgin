@@ -10,7 +10,7 @@ import duckdb
 
 from ..io.logger import get_logger
 from .importers import ConversationImporter, EventProcessor, MetricsImporter
-from .schema_manager import schema_manager
+from .schema_manager import SchemaManager
 
 logger = get_logger("import_service")
 
@@ -45,8 +45,9 @@ class ImportService:
         self.db_path = db_path
         self.db = duckdb.connect(db_path)
 
-        # Ensure schema exists
-        schema_manager.ensure_schema(self.db, db_path)
+        # Create schema manager and ensure schema exists
+        self._schema_manager = SchemaManager()
+        self._schema_manager.ensure_schema(self.db, db_path)
 
         # Initialize importers
         self.conversation_importer = ConversationImporter(self.db)

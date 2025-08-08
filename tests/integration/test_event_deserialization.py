@@ -287,3 +287,84 @@ def test_handles_extra_fields():
     assert not hasattr(event, "experiment_id")
     assert not hasattr(event, "extra_field")
     assert not hasattr(event, "random_data")
+
+
+def test_system_events_deserialization():
+    """Test that system events like TokenUsageEvent deserialize correctly."""
+    from pidgin.core.events import TokenUsageEvent, RateLimitPaceEvent, InterruptRequestEvent, ContextTruncationEvent
+    
+    deserializer = EventDeserializer()
+    
+    # Test TokenUsageEvent
+    token_event_data = {
+        "event_type": "TokenUsageEvent",
+        "timestamp": "2024-01-01T00:00:00",
+        "conversation_id": "test-123",
+        "provider": "openai",
+        "tokens_used": 150,
+        "total_tokens": 150,  # Alternative field name
+        "tokens_per_minute_limit": 10000,
+        "current_usage_rate": 2.5
+    }
+    
+    event = deserializer.deserialize_event(token_event_data)
+    assert event is not None
+    assert isinstance(event, TokenUsageEvent)
+    assert event.conversation_id == "test-123"
+    assert event.provider == "openai"
+    assert event.tokens_used == 150
+    
+    # Test RateLimitPaceEvent
+    rate_limit_data = {
+        "event_type": "RateLimitPaceEvent",
+        "timestamp": "2024-01-01T00:00:00",
+        "conversation_id": "test-123",
+        "provider": "anthropic",
+        "wait_time": 5.0,
+        "wait_seconds": 5.0,  # Alternative field name
+        "reason": "request_rate"
+    }
+    
+    event = deserializer.deserialize_event(rate_limit_data)
+    assert event is not None
+    assert isinstance(event, RateLimitPaceEvent)
+    assert event.conversation_id == "test-123"
+    assert event.wait_time == 5.0
+    
+    # Test InterruptRequestEvent
+    interrupt_data = {
+        "event_type": "InterruptRequestEvent",
+        "timestamp": "2024-01-01T00:00:00",
+        "conversation_id": "test-123",
+        "turn_number": 5,
+        "interrupt_source": "user",
+        "source": "user"  # Alternative field name
+    }
+    
+    event = deserializer.deserialize_event(interrupt_data)
+    assert event is not None
+    assert isinstance(event, InterruptRequestEvent)
+    assert event.conversation_id == "test-123"
+    assert event.interrupt_source == "user"
+    
+    # Test ContextTruncationEvent
+    truncation_data = {
+        "event_type": "ContextTruncationEvent",
+        "timestamp": "2024-01-01T00:00:00",
+        "conversation_id": "test-123",
+        "agent_id": "agent_a",
+        "provider": "openai",
+        "model": "gpt-4",
+        "turn_number": 10,
+        "original_message_count": 20,
+        "messages_before": 20,  # Alternative field name
+        "truncated_message_count": 15,
+        "messages_after": 15,  # Alternative field name
+        "messages_dropped": 5
+    }
+    
+    event = deserializer.deserialize_event(truncation_data)
+    assert event is not None
+    assert isinstance(event, ContextTruncationEvent)
+    assert event.conversation_id == "test-123"
+    assert event.messages_dropped == 5

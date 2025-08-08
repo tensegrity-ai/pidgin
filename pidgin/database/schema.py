@@ -4,17 +4,14 @@ This module maintains backward compatibility while delegating to schema_loader.
 All SQL schemas are now stored in individual .sql files in the schemas/ directory.
 """
 
-from .schema_loader import SchemaLoader
-
-# Initialize the schema loader
-_loader = SchemaLoader()
-
+from .schema_loader import SchemaLoader, get_all_schemas, get_drop_all_sql
 
 # Load all schemas as module-level constants for backward compatibility
 def _load_schema(name: str) -> str:
     """Load a schema by name."""
+    loader = SchemaLoader()
     try:
-        return _loader.load_schema(name)
+        return loader.load_schema(name)
     except FileNotFoundError:
         # Return empty string if schema file not found
         return ""
@@ -30,14 +27,3 @@ MESSAGES_SCHEMA = _load_schema("messages")
 TOKEN_USAGE_SCHEMA = _load_schema("token_usage")
 CONTEXT_TRUNCATIONS_SCHEMA = _load_schema("context_truncations")
 MATERIALIZED_VIEWS = _load_schema("views")
-
-
-# Helper functions for schema creation
-def get_all_schemas():
-    """Get all schema definitions in order."""
-    return _loader.get_all_schemas()
-
-
-def get_drop_all_sql():
-    """Get SQL to drop all tables (for clean migrations)."""
-    return _loader.get_drop_all_sql()

@@ -4,10 +4,11 @@ import time
 from pathlib import Path
 from typing import Dict, Optional
 
-from ..config import Config
+from ..config.config import Config
+from ..providers.token_tracker import GlobalTokenTracker
 from ..providers.event_wrapper import EventAwareProvider
 from ..ui.display_filter import DisplayFilter
-from ..ui.tail_display import TailDisplay
+from ..ui.tail import TailDisplay
 from .event_bus import EventBus
 from .events import (
     ConversationEndEvent,
@@ -21,14 +22,16 @@ from .types import Agent, Conversation, Message
 class ConversationLifecycle:
     """Manages conversation initialization, start/end events, and cleanup."""
 
-    def __init__(self, console=None):
+    def __init__(self, console=None, token_tracker: Optional[GlobalTokenTracker] = None):
         """Initialize lifecycle manager.
 
         Args:
             console: Optional console for output
+            token_tracker: Optional token tracker for rate limiting
         """
         self.console = console
         self.bus = None
+        self.token_tracker = token_tracker
         self._owns_bus = False
         self.db_store = None
         self._owns_db_store = False
@@ -110,12 +113,12 @@ class ConversationLifecycle:
 
         if "agent_a" in self.base_providers:
             self.wrapped_providers["agent_a"] = EventAwareProvider(
-                self.base_providers["agent_a"], self.bus, "agent_a"
+                self.base_providers["agent_a"], self.bus, "agent_a", self.token_tracker
             )
 
         if "agent_b" in self.base_providers:
             self.wrapped_providers["agent_b"] = EventAwareProvider(
-                self.base_providers["agent_b"], self.bus, "agent_b"
+                self.base_providers["agent_b"], self.bus, "agent_b", self.token_tracker
             )
 
     def create_conversation(

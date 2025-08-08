@@ -3,7 +3,7 @@
 import random
 from typing import Optional, Tuple
 
-from ..config import get_config
+from ..config.config import Config
 from ..config.defaults import get_smart_convergence_defaults
 from ..experiments import ExperimentConfig
 from ..config.resolution import resolve_temperatures
@@ -72,7 +72,7 @@ class ConfigBuilder:
         initial_prompt = build_initial_prompt(prompt, list(parsed_dimensions) if parsed_dimensions else [])
 
         # Set convergence profile in config
-        config = get_config()
+        config = Config()
         config.set("convergence.profile", convergence_profile)
 
         # Add smart convergence defaults for API models

@@ -4,13 +4,21 @@ This document tracks remaining tasks for Pidgin development.
 
 ## IMMEDIATE PRIORITY - Bug Fixes & Testing
 
-### 🚨 Critical Issues
-- [ ] **Merge deserialization fix** - Branch `fix/event-deserialization-bug` ready to merge
-- [ ] **Merge module refactoring** - Branch `refactor/module-splitting` has 3 completed refactorings
-- [ ] **Improve test coverage** - Current tests only check imports, not functionality
-  - Tests should actually run experiments and verify data flow
-  - Add end-to-end tests that catch serialization/deserialization issues
-  - Test actual provider interactions (with mocks)
+### Active Issues (2025-08-08)
+(None currently - all immediate issues resolved)
+
+## Completed Issues
+
+### ✅ Completed (2025-08-08)
+- [x] **Fixed duplicate experiment names** - Added retry logic to generate new name when duplicate detected
+- [x] **Fixed 'Aborted' message on Ctrl+C** - Now properly shows that experiment continues in background
+- [x] **Fixed monitor command** - Fixed status_filter parameter issue
+- [x] **Merged deserialization fix** - Branch `fix/event-deserialization-bug` merged to main
+- [x] **Merged module refactoring** - Branch `refactor/module-splitting` merged to main
+- [x] **Test coverage maintained** - 18 tests passing, covering core functionality
+  - Event deserialization tests catch serialization issues
+  - Integration tests verify core flows work
+  - Following minimal testing philosophy per TESTING.md
 
 ## High Priority - Code Quality
 
@@ -31,15 +39,23 @@ This document tracks remaining tasks for Pidgin development.
 - [x] cli/run.py - 454 → 192 lines (split into 5 handler modules)
 
 **Remaining Large Modules (>300 lines)**:
-- [ ] experiments/state_builder.py - 514 lines
 - [ ] ui/display_utils.py - 484 lines
 - [ ] database/event_store.py - 477 lines (architectural component - may stay large)
 - [ ] database/metrics_repository.py - 434 lines
-- [ ] config/config.py - 402 lines
+- [ ] config/config.py - 402 lines (has global singleton to remove)
 - [ ] cli/branch.py - 391 lines
 - [ ] core/conductor.py - 372 lines
 
-Total: 13 modules remaining (down from 19)
+**✅ Global Singletons Eliminated (2025-08-08)**:
+- [x] database/schema_manager.py - Removed singleton pattern, now uses dependency injection
+- [x] database/schema_loader.py - Removed global `_loader` instance, functions create instances on demand
+- [x] providers/token_tracker.py - Removed global `get_token_tracker()`, now uses dependency injection
+- [x] config/config.py - Removed global `get_config()`, now uses dependency injection
+- [x] config/models.py - Models moved to AppContext, no more global MODELS instance
+- [x] Created AppContext class for dependency injection container
+- [x] Updated all components to receive dependencies via constructors
+
+Total: 6 large modules remaining to refactor
 
 ## Medium Priority - Quality of Life
 

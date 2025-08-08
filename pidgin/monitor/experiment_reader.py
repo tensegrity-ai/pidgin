@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..experiments.state_builder import get_state_builder
+from ..experiments.state_builder import StateBuilder
 from ..io.logger import get_logger
 
 logger = get_logger("experiment_reader")
@@ -20,7 +20,7 @@ class ExperimentReader:
             exp_base: Base experiments directory
         """
         self.exp_base = exp_base
-        self.state_builder = get_state_builder()
+        self.state_builder = StateBuilder()
 
     def get_experiment_states(self, status_filter: Optional[List[str]] = None) -> List[Any]:
         """Get all experiment states efficiently.
@@ -39,7 +39,13 @@ class ExperimentReader:
         self.state_builder.clear_cache()
 
         # Get all experiments (not just running)
-        return self.state_builder.list_experiments(self.exp_base, status_filter=status_filter)
+        experiments = self.state_builder.list_experiments(self.exp_base)
+        
+        # Filter by status if requested
+        if status_filter:
+            experiments = [exp for exp in experiments if exp.status in status_filter]
+        
+        return experiments
 
     def get_failed_conversations(self) -> List[Dict[str, Any]]:
         """Get failed conversations from manifest files.

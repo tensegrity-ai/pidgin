@@ -36,7 +36,7 @@ async def run_experiment(
     output_dir = output_dir.resolve()
     logging.info(f"Using output directory: {output_dir}")
 
-    runner = ExperimentRunner(output_dir, daemon)
+    runner = ExperimentRunner(output_dir, daemon=daemon)
 
     try:
         await runner.run_experiment_with_id(experiment_id, experiment_dir, config)

@@ -10,7 +10,7 @@ from ..core.event_bus import EventBus
 from ..core.types import Agent
 from ..io.event_deserializer import EventDeserializer
 from ..io.paths import get_experiments_dir
-from ..ui.tail_display import TailDisplay
+from ..ui.tail import TailDisplay
 from ..ui.chat_display import ChatDisplay
 
 console = Console()

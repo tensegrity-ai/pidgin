@@ -383,20 +383,3 @@ experiments:
         return self.config.copy()
 
 
-# Global config instance
-_config: Optional[Config] = None
-
-
-def get_config() -> Config:
-    """Get global config instance."""
-    global _config
-    if _config is None:
-        _config = Config()
-    return _config
-
-
-def load_config(path: Path) -> Config:
-    """Load config from specific path."""
-    global _config
-    _config = Config(path)
-    return _config

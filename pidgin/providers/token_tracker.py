@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any, Dict, Optional, Tuple
 
-from ..config import get_config
+from ..config.config import Config
 from ..io.logger import get_logger
 
 logger = get_logger("token_tracker")
@@ -48,13 +48,14 @@ class GlobalTokenTracker:
         },
     }
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Config):
         """Initialize token tracker with configuration.
 
         Args:
-            config: Rate limiting configuration
+            config: Application configuration
         """
-        self.config = config or get_config().get("providers.rate_limiting", {})
+        self.config_obj = config
+        self.config = config.get("providers.rate_limiting", {})
         self._load_limits()
 
         # Thread-safe usage history per provider
@@ -70,7 +71,7 @@ class GlobalTokenTracker:
         self.rate_limits = self.DEFAULT_RATE_LIMITS.copy()
 
         # Override with config if provided
-        overrides = get_config().get("providers.overrides", {})
+        overrides = self.config_obj.get("providers.overrides", {})
         for provider, settings in overrides.items():
             if provider not in self.rate_limits:
                 self.rate_limits[provider] = {}
@@ -264,14 +265,3 @@ class GlobalTokenTracker:
             "backoff_until": self.backoff_until.get(provider_key, 0),
         }
 
-
-# Global tracker instance
-_tracker: Optional[GlobalTokenTracker] = None
-
-
-def get_token_tracker() -> GlobalTokenTracker:
-    """Get global token tracker instance."""
-    global _tracker
-    if _tracker is None:
-        _tracker = GlobalTokenTracker()
-    return _tracker

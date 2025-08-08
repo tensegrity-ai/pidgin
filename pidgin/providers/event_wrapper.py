@@ -13,6 +13,7 @@ from ..core.events import (
 from ..core.router import DirectRouter  # For message transformation
 from ..core.types import Message
 from .base import Provider
+from .token_tracker import GlobalTokenTracker
 from .token_utils import estimate_tokens
 
 logger = logging.getLogger(__name__)
@@ -21,17 +22,19 @@ logger = logging.getLogger(__name__)
 class EventAwareProvider:
     """Wraps existing providers to emit events."""
 
-    def __init__(self, provider: Provider, bus: EventBus, agent_id: str):
+    def __init__(self, provider: Provider, bus: EventBus, agent_id: str, token_tracker: GlobalTokenTracker):
         """Initialize wrapper.
 
         Args:
             provider: The underlying provider
             bus: Event bus for emitting events
             agent_id: ID of the agent using this provider
+            token_tracker: Token tracker for rate limiting
         """
         self.provider = provider
         self.bus = bus
         self.agent_id = agent_id
+        self.token_tracker = token_tracker
 
         # Create a router for message transformation
         self.router = DirectRouter(
@@ -158,18 +161,13 @@ class EventAwareProvider:
                     if not isinstance(model_name, str):
                         model_name = str(model_name)
 
-                    # Get token tracker and record usage FIRST
-                    from ..providers.token_tracker import get_token_tracker
-
-                    tracker = get_token_tracker()
-
                     # Record the usage before getting stats so current_rate includes this request
-                    tracker.record_usage(
+                    self.token_tracker.record_usage(
                         provider_name.lower(), usage_data["total_tokens"], model_name
                     )
 
                     # Now get the updated usage stats
-                    usage_stats = tracker.get_usage_stats(provider_name.lower())
+                    usage_stats = self.token_tracker.get_usage_stats(provider_name.lower())
 
                     # Create enhanced token usage event
                     token_event = TokenUsageEvent(

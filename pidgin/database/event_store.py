@@ -45,6 +45,9 @@ class EventStore:
         # Create parent directory if it doesn't exist
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db = duckdb.connect(str(db_path))
+        
+        # Create schema manager instance
+        self._schema_manager = None
         self._ensure_schema()
 
         # Initialize repositories
@@ -61,9 +64,12 @@ class EventStore:
 
     def _ensure_schema(self):
         """Ensure database schema exists."""
-        from .schema_manager import schema_manager
-
-        schema_manager.ensure_schema(self.db, str(self.db_path))
+        from .schema_manager import SchemaManager
+        
+        if self._schema_manager is None:
+            self._schema_manager = SchemaManager()
+        
+        self._schema_manager.ensure_schema(self.db, str(self.db_path))
 
     def close(self):
         """Close database connection."""

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from ..config.prompts import build_initial_prompt
+from ..core.app_context import AppContext
 from ..core.conductor import Conductor
 from ..core.events import ConversationBranchedEvent
 from .config import ExperimentConfig
@@ -16,12 +17,14 @@ from .tracking_event_bus import TrackingEventBus
 class ConversationOrchestrator:
     """Orchestrate conversation execution."""
 
-    def __init__(self, daemon: Optional[ExperimentDaemon] = None):
+    def __init__(self, app_context: AppContext, daemon: Optional[ExperimentDaemon] = None):
         """Initialize conversation orchestrator.
         
         Args:
+            app_context: Application context with dependencies
             daemon: Optional daemon instance for stop detection
         """
+        self.app_context = app_context
         self.daemon = daemon
 
     def register_conversation(self, exp_dir: Path, conversation_id: str) -> None:
@@ -64,8 +67,10 @@ class ConversationOrchestrator:
 
         # Create conductor with the isolated event bus
         conductor = Conductor(
-            base_providers=providers,
             output_manager=output_manager,
+            config=self.app_context.config,
+            token_tracker=self.app_context.token_tracker,
+            base_providers=providers,
             console=console,
             convergence_threshold_override=config.convergence_threshold,
             convergence_action_override=config.convergence_action,
@@ -137,8 +142,10 @@ class ConversationOrchestrator:
 
             # Create conductor for branched conversation
             conductor = Conductor(
-                base_providers=providers,
                 output_manager=output_manager,
+                config=self.app_context.config,
+                token_tracker=self.app_context.token_tracker,
+                base_providers=providers,
                 console=console,
                 convergence_threshold_override=config.convergence_threshold,
                 convergence_action_override=config.convergence_action,
