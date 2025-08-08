@@ -26,6 +26,9 @@ rc.FORCE_TERMINAL = True
 
 # Configure rich console directly
 from rich.console import Console
+from rich.panel import Panel
+from rich.columns import Columns
+from rich.text import Text
 
 rc.CONSOLE = Console(force_terminal=True, color_system="truecolor")
 
@@ -65,7 +68,97 @@ console = Console()
 display = DisplayUtils(console)
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+class CustomGroup(click.Group):
+    """Custom Click group with enhanced help formatting."""
+    
+    def format_help(self, ctx, formatter):
+        """Override help formatting to add panels."""
+        # Print the basic description
+        console.print("\n[bold #8fbcbb]Usage:[/bold #8fbcbb] pidgin [OPTIONS] COMMAND [ARGS]...\n")
+        console.print("[#d8dee9]AI conversation research tool for studying emergent communication patterns.[/#d8dee9]")
+        console.print("[#d8dee9]Pidgin enables controlled experiments between AI agents to discover how they[/#d8dee9]")
+        console.print("[#d8dee9]develop communication patterns, convergence behaviors, and linguistic adaptations.[/#d8dee9]\n")
+        
+        # Quick Start section
+        quick_start = Text("pidgin run -a claude -b gpt", style="cyan")
+        console.print(Panel(
+            quick_start,
+            title="[bold #a3be8c]Quick Start[/bold #a3be8c]",
+            border_style="#4c566a",
+            padding=(0, 2)
+        ))
+        
+        # Examples panel
+        examples_content = """[cyan]From YAML spec:[/cyan]         pidgin run experiment.yaml
+[cyan]Single conversation:[/cyan]    pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+[cyan]Multiple conversations:[/cyan] pidgin run -a claude -b gpt -r 20 --name "test"
+[cyan]Using dimensions:[/cyan]       pidgin run -a claude -b gpt -d peers:philosophy:analytical
+[cyan]Monitor experiments:[/cyan]    pidgin monitor"""
+        
+        # Configuration panel
+        config_content = """• Configuration files: ~/.pidgin/ or ./.pidgin/
+• Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.
+• Output directory: ./pidgin_output/
+• Database: ./pidgin_output/experiments/experiments.duckdb"""
+        
+        # Display panels based on terminal width
+        terminal_width = console.width
+        
+        if terminal_width > 140:
+            # Side-by-side panels for wide terminals
+            console.print("\n", Columns([
+                Panel(examples_content, 
+                      title="[bold #88c0d0]Examples[/bold #88c0d0]", 
+                      border_style="#4c566a",
+                      padding=(1, 2)),
+                Panel(config_content, 
+                      title="[bold #8fbcbb]Configuration[/bold #8fbcbb]", 
+                      border_style="#4c566a",
+                      padding=(1, 2))
+            ], equal=True, expand=True))
+        else:
+            # Stacked panels for narrower terminals
+            console.print("\n", Panel(
+                examples_content,
+                title="[bold #88c0d0]Examples[/bold #88c0d0]",
+                border_style="#4c566a",
+                padding=(1, 2)
+            ))
+            
+            console.print("\n", Panel(
+                config_content,
+                title="[bold #8fbcbb]Configuration[/bold #8fbcbb]",
+                border_style="#4c566a",
+                padding=(1, 2)
+            ))
+        
+        # Options section
+        console.print("\n[bold #5e81ac]Options:[/bold #5e81ac]")
+        console.print("  [#a3be8c]--version[/#a3be8c]         Show the version and exit.")
+        console.print("  [#a3be8c]-h, --help[/#a3be8c]        Show this message and exit.")
+        
+        # Commands section with panel
+        commands_text = """[bold #5e81ac]branch[/bold #5e81ac]      Branch a conversation from any point with parameter changes.
+[bold #5e81ac]info[/bold #5e81ac]        View information about models, dimensions, and configuration.
+[bold #5e81ac]monitor[/bold #5e81ac]     System health monitor reading from JSONL files.
+[bold #5e81ac]run[/bold #5e81ac]         Run AI conversations between two agents.
+[bold #5e81ac]stop[/bold #5e81ac]        Stop a running experiment gracefully."""
+        
+        console.print("\n", Panel(
+            commands_text,
+            title="[bold #5e81ac]Commands[/bold #5e81ac]",
+            border_style="#4c566a",
+            padding=(1, 2)
+        ))
+        
+        # Footer hint
+        console.print("\n[dim]Use 'pidgin COMMAND --help' for more information about a command.[/dim]\n")
+
+
+@click.group(
+    cls=CustomGroup,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 @click.version_option()
 def cli():
     """AI conversation research tool for studying emergent communication patterns.
@@ -73,30 +166,20 @@ def cli():
     Pidgin enables controlled experiments between AI agents to discover how they
     develop communication patterns, convergence behaviors, and linguistic
     adaptations.
-
-    [bold]QUICK START:[/bold]
-    pidgin run -a claude -b gpt
-
-    [bold]EXAMPLES:[/bold]
-
-    [#4c566a]From YAML spec:[/#4c566a]
-        pidgin run experiment.yaml
-
-    [#4c566a]Single conversation:[/#4c566a]
-        pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
-
-    [#4c566a]Multiple conversations (experiment):[/#4c566a]
-        pidgin run -a claude -b gpt -r 20 --name "test"
-
-    [#4c566a]Using dimensional prompts:[/#4c566a]
-        pidgin run -a claude -b gpt -d peers:philosophy:analytical
-
-    [#4c566a]Monitor experiments:[/#4c566a]
-        pidgin monitor
-
-    [bold]CONFIGURATION:[/bold]
-
+    
+    QUICK START: pidgin run -a claude -b gpt
+    
+    EXAMPLES:
+    From YAML spec:          pidgin run experiment.yaml
+    Single conversation:     pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
+    Multiple conversations:  pidgin run -a claude -b gpt -r 20 --name "test"
+    Using dimensions:        pidgin run -a claude -b gpt -d peers:philosophy:analytical
+    Monitor experiments:     pidgin monitor
+    
+    CONFIGURATION:
     • Configuration files: ~/.pidgin/ or ./.pidgin/
+    • Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY
+    • Output directory: ./pidgin_output/
     """
 
 
