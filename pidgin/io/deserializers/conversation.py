@@ -27,14 +27,10 @@ class ConversationDeserializer(BaseDeserializer):
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ConversationStartEvent:
         """Build ConversationStartEvent from data."""
-        return ConversationStartEvent(
-            timestamp=timestamp,
+        event = ConversationStartEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_a_model=data["agent_a_model"],
             agent_b_model=data["agent_b_model"],
-            agent_a_provider=data.get("agent_a_provider"),
-            agent_b_provider=data.get("agent_b_provider"),
             initial_prompt=data["initial_prompt"],
             max_turns=data["max_turns"],
             temperature_a=data.get("temperature_a"),
@@ -42,70 +38,70 @@ class ConversationDeserializer(BaseDeserializer):
             agent_a_display_name=data.get("agent_a_display_name"),
             agent_b_display_name=data.get("agent_b_display_name"),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_conversation_end(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ConversationEndEvent:
         """Build ConversationEndEvent from data."""
-        return ConversationEndEvent(
-            timestamp=timestamp,
+        event = ConversationEndEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             total_turns=data["total_turns"],
             reason=data["reason"],
             duration_ms=data.get("duration_ms", 0),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_turn_start(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> TurnStartEvent:
         """Build TurnStartEvent from data."""
-        return TurnStartEvent(
-            timestamp=timestamp,
+        event = TurnStartEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             turn_number=data["turn_number"],
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_turn_complete(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> TurnCompleteEvent:
         """Build TurnCompleteEvent from data."""
-        # Build Turn objects for agent messages
-        agent_a_turn = None
-        agent_b_turn = None
-
-        if "agent_a_message" in data:
-            agent_a_turn = Turn(
-                agent_id="agent_a",
-                message=data["agent_a_message"],
-                tokens_used=data.get("agent_a_tokens", 0),
-                timestamp=timestamp,
-            )
-
-        if "agent_b_message" in data:
-            agent_b_turn = Turn(
-                agent_id="agent_b",
-                message=data["agent_b_message"],
-                tokens_used=data.get("agent_b_tokens", 0),
-                timestamp=timestamp,
-            )
-
-        return TurnCompleteEvent(
-            timestamp=timestamp,
-            conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
-            turn_number=data["turn_number"],
-            agent_a_turn=agent_a_turn,
-            agent_b_turn=agent_b_turn,
-            convergence_score=data.get("convergence_score"),
-            vocabulary_overlap=data.get("vocabulary_overlap"),
-            style_similarity=data.get("style_similarity"),
-            topic_consistency=data.get("topic_consistency"),
+        from ...core.types import Message
+        
+        # Build Message objects for the Turn
+        agent_a_msg = Message(
+            role="assistant",
+            content=data.get("agent_a_message", ""),
+            agent_id="agent_a",
         )
+        
+        agent_b_msg = Message(
+            role="assistant",
+            content=data.get("agent_b_message", ""),
+            agent_id="agent_b",
+        )
+        
+        # Create the Turn object with both messages
+        turn = Turn(
+            agent_a_message=agent_a_msg,
+            agent_b_message=agent_b_msg,
+        )
+        
+        # Create the event
+        event = TurnCompleteEvent(
+            conversation_id=data["conversation_id"],
+            turn_number=data["turn_number"],
+            turn=turn,
+            convergence_score=data.get("convergence_score"),
+        )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_conversation_paused(

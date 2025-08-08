@@ -30,68 +30,77 @@ class MessageDeserializer(BaseDeserializer):
                         Message(
                             role=msg_data.get("role", "user"),
                             content=msg_data.get("content", ""),
+                            agent_id=msg_data.get("agent_id", "unknown"),
                         )
                     )
 
-        return MessageRequestEvent(
-            timestamp=timestamp,
+        event = MessageRequestEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_id=data["agent_id"],
             turn_number=data.get("turn_number", 0),
-            messages=messages,
-            model=data.get("model"),
+            conversation_history=messages,  # Note: field is conversation_history, not messages
             temperature=data.get("temperature"),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_message_chunk(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> MessageChunkEvent:
         """Build MessageChunkEvent from data."""
-        return MessageChunkEvent(
-            timestamp=timestamp,
+        event = MessageChunkEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_id=data["agent_id"],
-            turn_number=data.get("turn_number", 0),
             chunk=data.get("chunk", ""),
             chunk_index=data.get("chunk_index", 0),
+            elapsed_ms=data.get("elapsed_ms", 0),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_message_complete(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> MessageCompleteEvent:
         """Build MessageCompleteEvent from data."""
-        # Reconstruct message
-        message = Message(
-            role=data.get("role", "assistant"),
-            content=data.get("content", data.get("message", "")),
-        )
+        # Reconstruct message - handle both nested and flat structures
+        if "message" in data and isinstance(data["message"], dict):
+            # Message is nested as an object
+            msg_data = data["message"]
+            message = Message(
+                role=msg_data.get("role", "assistant"),
+                content=msg_data.get("content", ""),
+                agent_id=msg_data.get("agent_id", data.get("agent_id", "unknown")),
+            )
+        else:
+            # Message fields are flat in data
+            message = Message(
+                role=data.get("role", "assistant"),
+                content=data.get("content", data.get("message", "")),
+                agent_id=data.get("agent_id", "unknown"),
+            )
 
-        return MessageCompleteEvent(
-            timestamp=timestamp,
+        event = MessageCompleteEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_id=data["agent_id"],
-            turn_number=data.get("turn_number", 0),
             message=message,
-            model=data.get("model"),
             tokens_used=data.get("tokens_used", 0),
             duration_ms=data.get("duration_ms", 0),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_system_prompt(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> SystemPromptEvent:
         """Build SystemPromptEvent from data."""
-        return SystemPromptEvent(
-            timestamp=timestamp,
+        event = SystemPromptEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             agent_id=data["agent_id"],
             prompt=data["prompt"],
             agent_display_name=data.get("agent_display_name"),
         )
+        event.timestamp = timestamp
+        return event
