@@ -1,0 +1,63 @@
+{
+  "experiment_id": "experiment_2f4a2ddd",
+  "name": "bright-orbit",
+  "created_at": "2025-08-08T04:28:03.394106+00:00",
+  "config": {
+    "name": "bright-orbit",
+    "agent_a_model": "claude",
+    "agent_b_model": "claude",
+    "custom_prompt": "I'm looking forward to your conversation.",
+    "dimensions": null,
+    "max_turns": 10,
+    "repetitions": 1,
+    "temperature": null,
+    "temperature_a": null,
+    "temperature_b": null,
+    "awareness": "basic",
+    "awareness_a": null,
+    "awareness_b": null,
+    "max_parallel": 1,
+    "first_speaker": "agent_a",
+    "choose_names": false,
+    "convergence_threshold": 0.95,
+    "convergence_action": "stop",
+    "display_mode": "chat",
+    "prompt_tag": "[HUMAN]",
+    "allow_truncation": false,
+    "branch_from_conversation": null,
+    "branch_from_turn": null,
+    "branch_messages": null,
+    "metadata": {}
+  },
+  "total_conversations": 1,
+  "status": "completed",
+  "conversations": {
+    "conv_5bda660f": {
+      "status": "completed",
+      "jsonl": "conv_5bda660f.jsonl",
+      "last_line": 86,
+      "turns_completed": 10,
+      "last_updated": "2025-08-08T04:32:02.145157+00:00",
+      "token_usage": {
+        "agent_a": {
+          "prompt_tokens": 28124,
+          "completion_tokens": 2896,
+          "total_tokens": 31020,
+          "model": "claude-sonnet-4-20250514"
+        },
+        "agent_b": {
+          "prompt_tokens": 31000,
+          "completion_tokens": 3099,
+          "total_tokens": 34099,
+          "model": "claude-sonnet-4-20250514"
+        },
+        "total": 65119
+      }
+    }
+  },
+  "started_at": "2025-08-08T04:28:03.394721+00:00",
+  "completed_conversations": 1,
+  "failed_conversations": 0,
+  "running_conversations": 0,
+  "completed_at": "2025-08-08T04:32:02.914019+00:00"
+}

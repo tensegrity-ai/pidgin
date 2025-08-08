@@ -1,0 +1,64 @@
+{
+  "experiment_id": "experiment_83cca050",
+  "name": "curious-trace",
+  "created_at": "2025-08-05T18:40:23.832529+00:00",
+  "config": {
+    "name": "curious-trace",
+    "agent_a_model": "haiku",
+    "agent_b_model": "haiku",
+    "custom_prompt": "I'm looking forward to your conversation.",
+    "dimensions": null,
+    "max_turns": 10,
+    "repetitions": 1,
+    "temperature": null,
+    "temperature_a": null,
+    "temperature_b": null,
+    "awareness": "basic",
+    "awareness_a": null,
+    "awareness_b": null,
+    "max_parallel": 1,
+    "first_speaker": "agent_a",
+    "choose_names": false,
+    "convergence_threshold": 0.95,
+    "convergence_action": "stop",
+    "display_mode": "quiet",
+    "prompt_tag": "[HUMAN]",
+    "allow_truncation": false,
+    "branch_from_conversation": null,
+    "branch_from_turn": null,
+    "branch_messages": null,
+    "metadata": {}
+  },
+  "total_conversations": 1,
+  "status": "completed",
+  "conversations": {
+    "conv_9ded6d41": {
+      "status": "completed",
+      "jsonl": "conv_9ded6d41.jsonl",
+      "last_line": 87,
+      "turns_completed": 10,
+      "last_updated": "2025-08-05T18:42:33.104417+00:00",
+      "token_usage": {
+        "agent_a": {
+          "prompt_tokens": 15117,
+          "completion_tokens": 1835,
+          "total_tokens": 16952,
+          "model": "claude-3-5-haiku-20241022"
+        },
+        "agent_b": {
+          "prompt_tokens": 16932,
+          "completion_tokens": 1760,
+          "total_tokens": 18692,
+          "model": "claude-3-5-haiku-20241022"
+        },
+        "total": 35644
+      }
+    }
+  },
+  "started_at": "2025-08-05T18:40:23.833184+00:00",
+  "completed_conversations": 1,
+  "failed_conversations": 0,
+  "running_conversations": 0,
+  "error": "'ManifestManager' object has no attribute 'update_conversation_status'",
+  "completed_at": "2025-08-05T18:42:33.108642+00:00"
+}

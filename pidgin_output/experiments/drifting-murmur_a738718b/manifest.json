@@ -1,0 +1,63 @@
+{
+  "experiment_id": "experiment_a738718b",
+  "name": "drifting-murmur",
+  "created_at": "2025-08-08T19:07:07.809863+00:00",
+  "config": {
+    "name": "drifting-murmur",
+    "agent_a_model": "haiku",
+    "agent_b_model": "haiku",
+    "custom_prompt": "What is good in life?",
+    "dimensions": null,
+    "max_turns": 5,
+    "repetitions": 1,
+    "temperature": null,
+    "temperature_a": null,
+    "temperature_b": null,
+    "awareness": "basic",
+    "awareness_a": null,
+    "awareness_b": null,
+    "max_parallel": 1,
+    "first_speaker": "agent_a",
+    "choose_names": false,
+    "convergence_threshold": 0.95,
+    "convergence_action": "stop",
+    "display_mode": "chat",
+    "prompt_tag": "[HUMAN]",
+    "allow_truncation": false,
+    "branch_from_conversation": null,
+    "branch_from_turn": null,
+    "branch_messages": null,
+    "metadata": {}
+  },
+  "total_conversations": 1,
+  "status": "completed",
+  "conversations": {
+    "conv_7e5f10bd": {
+      "status": "completed",
+      "jsonl": "conv_7e5f10bd.jsonl",
+      "last_line": 44,
+      "turns_completed": 5,
+      "last_updated": "2025-08-08T19:08:12.538582+00:00",
+      "token_usage": {
+        "agent_a": {
+          "prompt_tokens": 5778,
+          "completion_tokens": 1253,
+          "total_tokens": 7031,
+          "model": "claude-3-5-haiku-20241022"
+        },
+        "agent_b": {
+          "prompt_tokens": 7029,
+          "completion_tokens": 1166,
+          "total_tokens": 8195,
+          "model": "claude-3-5-haiku-20241022"
+        },
+        "total": 15226
+      }
+    }
+  },
+  "started_at": "2025-08-08T19:07:07.810592+00:00",
+  "completed_conversations": 1,
+  "failed_conversations": 0,
+  "running_conversations": 0,
+  "completed_at": "2025-08-08T19:08:13.315202+00:00"
+}

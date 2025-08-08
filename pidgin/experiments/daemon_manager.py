@@ -25,14 +25,14 @@ class DaemonManager:
             base_dir: Base directory for experiments
         """
         self.base_dir = base_dir
-        self.active_dir = base_dir / "active"
-        self.logs_dir = base_dir / "logs"
+        # Import get_cache_dir for active directory
+        from ..io.directories import get_cache_dir
+        self.active_dir = get_cache_dir() / "active_experiments"
         self.resolver = ExperimentResolver(base_dir)
-        self.launcher = ProcessLauncher(self.active_dir, self.logs_dir)
+        self.launcher = ProcessLauncher(self.base_dir)
 
         # Ensure directories exist
         self.active_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_dir.mkdir(parents=True, exist_ok=True)
 
     def start_experiment(
         self, config: ExperimentConfig, working_dir: Optional[str] = None
@@ -79,9 +79,10 @@ class DaemonManager:
             experiment_id, dir_name, config, working_dir
         )
 
-        # Create log files
-        startup_log = self.logs_dir / f"{experiment_id}_startup.log"
-        experiment_log = self.logs_dir / f"{experiment_id}.log"
+        # Create log files in experiment directory
+        exp_dir = self.base_dir / dir_name
+        startup_log = exp_dir / "startup.log"
+        experiment_log = exp_dir / "experiment.log"
 
         # Start the subprocess as a detached process
         env = self.launcher.prepare_environment(working_dir)

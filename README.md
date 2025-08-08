@@ -81,7 +81,7 @@ pidgin info dimensions
 # Branch from an existing conversation
 pidgin branch conv_abc123 --turn 10
 
-# Output saved to ./pidgin_output/
+# Output saved to ./pidgin/
 ```
 
 ### YAML Specifications

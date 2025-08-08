@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+from ..constants.files import DEFAULT_OUTPUT_DIR
 from .logger import get_logger
 
 logger = get_logger("paths")
@@ -12,7 +13,7 @@ def get_output_dir() -> Path:
     """Get the base output directory, resolving from the original working directory.
 
     Returns:
-        Path to pidgin_output directory in user's current working directory
+        Path to output directory in user's current working directory
     """
     # Priority order for determining the working directory:
     # 1. PIDGIN_ORIGINAL_CWD (set at CLI startup)
@@ -31,7 +32,14 @@ def get_output_dir() -> Path:
             # Final fallback
             base_path = Path(os.getcwd())
 
-    output_dir = base_path / "pidgin_output"
+    # Check if we're running from the pidgin source directory during development
+    # If there's a pidgin/ subdirectory with __init__.py, we're in the dev directory
+    if (base_path / "pidgin" / "__init__.py").exists() and (base_path / "pyproject.toml").exists():
+        # We're in the development directory, use a different output name
+        output_dir = base_path / "pidgin_dev_output"
+    else:
+        # Normal usage - use the standard output directory name
+        output_dir = base_path / DEFAULT_OUTPUT_DIR
 
     # Debug logging (only if PIDGIN_DEBUG is set)
     if os.environ.get("PIDGIN_DEBUG"):
@@ -47,7 +55,7 @@ def get_experiments_dir() -> Path:
     """Get the experiments output directory.
 
     Returns:
-        Path to pidgin_output/experiments directory
+        Path to pidgin/experiments directory
     """
     return get_output_dir() / "experiments"
 
@@ -56,7 +64,7 @@ def get_conversations_dir() -> Path:
     """Get the conversations output directory.
 
     Returns:
-        Path to pidgin_output/conversations directory
+        Path to pidgin/conversations directory
     """
     return get_output_dir() / "conversations"
 
@@ -65,8 +73,8 @@ def get_database_path() -> Path:
     """Get the path to the experiments database.
 
     Returns:
-        Path to experiments.duckdb
+        Path to pidgin/experiments.duckdb
     """
-    return get_experiments_dir() / "experiments.duckdb"
+    return get_output_dir() / "experiments.duckdb"
 
 

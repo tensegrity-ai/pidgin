@@ -15,8 +15,9 @@ dist/
 *.egg-info/
 
 # Project Output
-pidgin_output/
-.pidgin_data/
+pidgin_dev_output/  # Development output directory
+pidgin_output/      # Legacy output directory
+experiments.duckdb
 *.log
 logs/
 

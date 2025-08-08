@@ -28,9 +28,9 @@ class DirectoryNames:
 
 # File patterns
 class FilePatterns:
-    CONVERSATION_JSONL = "{conversation_id}_events.jsonl"
+    CONVERSATION_JSONL = "events.jsonl"
     MANIFEST_JSON = "manifest.json"
-    TRANSCRIPT_MD = "{conversation_id}_transcript.md"
+    TRANSCRIPT_MD = "transcript.md"
     PID_FILE = "{experiment_id}.pid"
     IMPORTED_MARKER = ".imported"
     IMPORTING_MARKER = ".importing"
@@ -45,6 +45,6 @@ class SpecialFiles:
 
 
 # Default paths
-DEFAULT_OUTPUT_DIR = "pidgin_output"
-DEFAULT_DB_NAME = "pidgin.db"
+DEFAULT_OUTPUT_DIR = "pidgin"
+DEFAULT_DB_NAME = "experiments.duckdb"
 DEFAULT_CONFIG_FILE = "pidgin.yaml"

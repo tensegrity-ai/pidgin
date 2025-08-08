@@ -15,6 +15,7 @@ from ..constants import (
     ConvergenceComponents,
     ConvergenceProfiles,
 )
+from ..io.directories import get_config_dir
 from ..io.logger import get_logger
 from .schema import PidginConfig
 
@@ -122,14 +123,14 @@ class Config:
             self.load_from_file(config_path)
         else:
             # Check standard location (but don't prompt)
-            config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+            config_path = get_config_dir() / "pidgin.yaml"
             if config_path.exists():
                 logger.info(f"Loading config from: {config_path}")
                 self.load_from_file(config_path)
 
     def _check_and_create_config(self):
         """Check for config file and offer to create one if missing."""
-        config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+        config_path = get_config_dir() / "pidgin.yaml"
 
         if config_path.exists():
             logger.info(f"Loading config from: {config_path}")

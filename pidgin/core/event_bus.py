@@ -117,8 +117,8 @@ class EventBus:
                 log_dir = Path(self.event_log_dir)
                 log_dir.mkdir(parents=True, exist_ok=True)
 
-                # Open file in append mode
-                log_path = log_dir / f"{conversation_id}_events.jsonl"
+                # Open file in append mode - simplified name
+                log_path = log_dir / "events.jsonl"
                 self._jsonl_files[conversation_id] = open(
                     log_path, "a", buffering=1
                 )  # Line buffered

@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..config.models import MODELS
+from ..io.directories import get_config_dir
 from ..ui.display_utils import DisplayUtils
 from .constants import MODEL_GLYPHS, PROVIDER_COLORS
 
@@ -20,7 +21,7 @@ def _create_config_file(force):
     """Create a configuration file with example settings."""
     from ..config import Config
 
-    config_path = Path.home() / ".config" / "pidgin" / "pidgin.yaml"
+    config_path = get_config_dir() / "pidgin.yaml"
 
     if config_path.exists() and not force:
         display.warning(
@@ -178,9 +179,9 @@ def config():
 
     # Check for config file
     config_paths = [
-        Path.home() / ".config" / "pidgin" / "pidgin.yaml",
-        Path.home() / ".pidgin.yaml",
-        Path(".pidgin.yaml"),
+        get_config_dir() / "pidgin.yaml",
+        Path.home() / ".pidgin.yaml",  # Legacy support for checking
+        Path(".pidgin.yaml"),  # Legacy support for checking
         Path("pidgin.yaml"),
     ]
 

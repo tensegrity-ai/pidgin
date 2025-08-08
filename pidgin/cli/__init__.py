@@ -100,10 +100,10 @@ class CustomGroup(click.Group):
 [cyan]Monitor experiments:[/cyan]    pidgin monitor"""
         
         # Configuration panel
-        config_content = """• Configuration files: ~/.pidgin/ or ./.pidgin/
+        config_content = """• Configuration files: ~/.config/pidgin/
 • Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.
-• Output directory: ./pidgin_output/
-• Database: ./pidgin_output/experiments/experiments.duckdb"""
+• Output directory: ./pidgin/
+• Database: ./pidgin/experiments.duckdb"""
         
         # Display panels with consistent width
         console.print("\n", Panel(
@@ -168,9 +168,9 @@ def cli():
     Monitor experiments:     pidgin monitor
     
     CONFIGURATION:
-    • Configuration files: ~/.pidgin/ or ./.pidgin/
+    • Configuration files: ~/.config/pidgin/
     • Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY
-    • Output directory: ./pidgin_output/
+    • Output directory: ./pidgin/
     """
 
 

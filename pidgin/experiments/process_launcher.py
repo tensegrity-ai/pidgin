@@ -15,15 +15,16 @@ from ..core.constants import SystemDefaults
 class ProcessLauncher:
     """Handles launching and monitoring daemon processes."""
 
-    def __init__(self, active_dir: Path, logs_dir: Path):
+    def __init__(self, base_dir: Path):
         """Initialize process launcher.
 
         Args:
-            active_dir: Directory for PID files
-            logs_dir: Directory for log files
+            base_dir: Base directory for experiments
         """
-        self.active_dir = active_dir
-        self.logs_dir = logs_dir
+        self.base_dir = base_dir
+        # Import get_cache_dir for active directory
+        from ..io.directories import get_cache_dir
+        self.active_dir = get_cache_dir() / "active_experiments"
 
     def build_daemon_command(
         self, experiment_id: str, dir_name: str, config, working_dir: str
@@ -230,7 +231,7 @@ runpy.run_module('pidgin.experiments.daemon_launcher', run_name='__main__')
         if poll_result is not None and poll_result != 0:
             # Process exited with error
             error_msg += f"\nExit code: {process.returncode}"
-            error_msg += f"\nCheck logs at: {self.logs_dir / f'{experiment_id}.log'}"
+            error_msg += f"\nCheck logs in experiment directory"
             error_msg += f"\nStartup log at: {startup_log}"
             raise RuntimeError(error_msg)
 

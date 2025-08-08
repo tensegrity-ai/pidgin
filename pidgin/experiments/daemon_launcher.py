@@ -77,7 +77,8 @@ def main():
     os.environ["PIDGIN_PROJECT_BASE"] = str(working_dir)
 
     # Create daemon with absolute path based on working directory
-    active_dir = working_dir / "pidgin_output" / "experiments" / "active"
+    from ..io.directories import get_cache_dir
+    active_dir = get_cache_dir() / "active_experiments"
 
     # Ensure directories exist before daemonizing
     try:
@@ -88,9 +89,12 @@ def main():
 
     daemon = ExperimentDaemon(args.experiment_id, active_dir)
 
-    # Set up logging first
-    log_file = active_dir.parent / "logs" / f"{args.experiment_id}.log"
-    log_file.parent.mkdir(parents=True, exist_ok=True)
+    # Set up logging first - put log file in experiment directory
+    from ..io.paths import get_experiments_dir
+    experiments_dir = get_experiments_dir()
+    exp_dir = experiments_dir / args.experiment_dir
+    log_file = exp_dir / "experiment.log"
+    exp_dir.mkdir(parents=True, exist_ok=True)
     
     # Configure logging to write to file
     logging.basicConfig(

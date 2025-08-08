@@ -20,7 +20,6 @@ class ExperimentStatus:
             base_dir: Base directory for experiments
         """
         self.base_dir = base_dir
-        self.logs_dir = base_dir / "logs"
         self.resolver = ExperimentResolver(base_dir)
         self.daemon_manager = DaemonManager(base_dir)
 
@@ -90,7 +89,12 @@ class ExperimentStatus:
         if not resolved_id:
             return [f"Could not resolve experiment identifier: {experiment_id}"]
 
-        log_file = self.logs_dir / f"{resolved_id}.log"
+        # Get log file from experiment directory
+        dir_name = self.resolver.get_experiment_directory(resolved_id)
+        if not dir_name:
+            return [f"Could not find experiment directory for: {experiment_id}"]
+        
+        log_file = self.base_dir / dir_name / "experiment.log"
 
         if not log_file.exists():
             return [f"No log file found at: {log_file}"]
@@ -120,7 +124,13 @@ class ExperimentStatus:
             logging.error(f"Could not resolve experiment identifier: {experiment_id}")
             return
 
-        log_file = self.logs_dir / f"{resolved_id}.log"
+        # Get log file from experiment directory
+        dir_name = self.resolver.get_experiment_directory(resolved_id)
+        if not dir_name:
+            logging.error(f"Could not find experiment directory for: {experiment_id}")
+            return
+        
+        log_file = self.base_dir / dir_name / "experiment.log"
 
         if not log_file.exists():
             logging.warning(f"No log file found at: {log_file}")

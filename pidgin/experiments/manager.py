@@ -34,10 +34,12 @@ class ExperimentManager:
             base_dir = base_dir.resolve()
 
         self.base_dir = base_dir
-        self.active_dir = base_dir / "active"
-        self.logs_dir = base_dir / "logs"
+        # Import get_cache_dir for active directory
+        from ..io.directories import get_cache_dir
+        self.active_dir = get_cache_dir() / "active_experiments"
         # Store the database path but don't keep a connection open
-        self.db_path = base_dir / "experiments.duckdb"
+        from ..io.directories import get_database_path
+        self.db_path = get_database_path()
 
         # Initialize specialized components
         self.resolver = ExperimentResolver(base_dir)
@@ -46,7 +48,6 @@ class ExperimentManager:
 
         # Ensure directories exist
         self.active_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Delegation methods for resolver
     def _find_experiment_by_name(self, name: str) -> Optional[str]:
