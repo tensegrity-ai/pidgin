@@ -27,7 +27,6 @@ rc.FORCE_TERMINAL = True
 # Configure rich console directly
 from rich.console import Console
 from rich.panel import Panel
-from rich.columns import Columns
 from rich.text import Text
 
 rc.CONSOLE = Console(force_terminal=True, color_system="truecolor")
@@ -79,13 +78,18 @@ class CustomGroup(click.Group):
         console.print("[#d8dee9]Pidgin enables controlled experiments between AI agents to discover how they[/#d8dee9]")
         console.print("[#d8dee9]develop communication patterns, convergence behaviors, and linguistic adaptations.[/#d8dee9]\n")
         
+        # Calculate max panel width
+        terminal_width = console.width
+        max_panel_width = min(100, terminal_width - 4)  # Cap at 100 chars, leave margin
+        
         # Quick Start section
         quick_start = Text("pidgin run -a claude -b gpt", style="cyan")
         console.print(Panel(
             quick_start,
             title="[bold #a3be8c]Quick Start[/bold #a3be8c]",
             border_style="#4c566a",
-            padding=(0, 2)
+            padding=(0, 2),
+            width=max_panel_width
         ))
         
         # Examples panel
@@ -101,36 +105,22 @@ class CustomGroup(click.Group):
 • Output directory: ./pidgin_output/
 • Database: ./pidgin_output/experiments/experiments.duckdb"""
         
-        # Display panels based on terminal width
-        terminal_width = console.width
+        # Display panels with consistent width
+        console.print("\n", Panel(
+            examples_content,
+            title="[bold #88c0d0]Examples[/bold #88c0d0]",
+            border_style="#4c566a",
+            padding=(1, 2),
+            width=max_panel_width
+        ))
         
-        if terminal_width > 140:
-            # Side-by-side panels for wide terminals
-            console.print("\n", Columns([
-                Panel(examples_content, 
-                      title="[bold #88c0d0]Examples[/bold #88c0d0]", 
-                      border_style="#4c566a",
-                      padding=(1, 2)),
-                Panel(config_content, 
-                      title="[bold #8fbcbb]Configuration[/bold #8fbcbb]", 
-                      border_style="#4c566a",
-                      padding=(1, 2))
-            ], equal=True, expand=True))
-        else:
-            # Stacked panels for narrower terminals
-            console.print("\n", Panel(
-                examples_content,
-                title="[bold #88c0d0]Examples[/bold #88c0d0]",
-                border_style="#4c566a",
-                padding=(1, 2)
-            ))
-            
-            console.print("\n", Panel(
-                config_content,
-                title="[bold #8fbcbb]Configuration[/bold #8fbcbb]",
-                border_style="#4c566a",
-                padding=(1, 2)
-            ))
+        console.print("\n", Panel(
+            config_content,
+            title="[bold #8fbcbb]Configuration[/bold #8fbcbb]",
+            border_style="#4c566a",
+            padding=(1, 2),
+            width=max_panel_width
+        ))
         
         # Options section
         console.print("\n[bold #5e81ac]Options:[/bold #5e81ac]")
@@ -148,7 +138,8 @@ class CustomGroup(click.Group):
             commands_text,
             title="[bold #5e81ac]Commands[/bold #5e81ac]",
             border_style="#4c566a",
-            padding=(1, 2)
+            padding=(1, 2),
+            width=max_panel_width
         ))
         
         # Footer hint
