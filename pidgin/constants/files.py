@@ -40,7 +40,7 @@ class FilePatterns:
 class SpecialFiles:
     MANIFEST = "manifest.json"
     CLAUDE_MD = "CLAUDE.md"
-    TODO_MD = "TODO.md"
+    PLANS_MD = "PLANS.md"
     README_MD = "README.md"
 
 

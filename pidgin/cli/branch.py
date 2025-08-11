@@ -1,20 +1,21 @@
 # pidgin/cli/branch.py
 """Branch command for forking conversations from any point."""
 
-import asyncio
-import json
 from typing import Optional
 
 import rich_click as click
 import yaml
 from rich.console import Console
 
-from ..experiments import ExperimentConfig, ExperimentManager
-from ..experiments.state_builder import StateBuilder
 from ..io.paths import get_experiments_dir
 from ..ui.display_utils import DisplayUtils
 from . import ORIGINAL_CWD
-from .helpers import validate_model_id
+from .branch_handlers import (
+    BranchConfigBuilder,
+    BranchExecutor,
+    BranchSourceFinder,
+    BranchSpecWriter,
+)
 from .name_generator import generate_experiment_name
 
 console = Console()
@@ -89,257 +90,68 @@ def branch(
     [#4c566a]Save as spec:[/#4c566a]
       pidgin branch conv_exp_abc123 --spec branch_spec.yaml
     """
-    # Find the conversation
-    experiments_dir = get_experiments_dir()
-    state_builder = StateBuilder()
-
-    # Search for the conversation across all experiments
-    conversation_state = None
-    source_exp_dir = None
-
-    for exp_dir in experiments_dir.glob("exp_*"):
-        if not exp_dir.is_dir():
-            continue
-
-        # Try to extract state
-        state = state_builder.get_conversation_state(exp_dir, conversation_id, turn)
-        if state:
-            conversation_state = state
-            source_exp_dir = exp_dir
-            break
-
-    if not conversation_state:
+    # 1. Find source conversation
+    finder = BranchSourceFinder(get_experiments_dir())
+    source = finder.find_conversation(conversation_id, turn)
+    if not source:
         display.error(
             f"Conversation '{conversation_id}' not found",
             context="Check the conversation ID and try again",
         )
         return
 
-    # Extract original configuration
-    original_config = conversation_state["config"]
-    messages = conversation_state["messages"]
-    metadata = conversation_state["metadata"]
-    branch_point = conversation_state["branch_point"]
+    # 2. Display source info
+    display.info(source.get_info(), title="◆ Branch Source", use_panel=True)
 
-    # Show what we found
-    info_lines = [
-        f"Source: {source_exp_dir.name}",
-        f"Conversation: {conversation_id}",
-        f"Branch point: Turn {branch_point} of {len(messages)}",
-        f"Original models: {original_config['agent_a_model']} ↔ {original_config['agent_b_model']}",
-    ]
-
-    display.info("\n".join(info_lines), title="◆ Branch Source", use_panel=True)
-
-    # Build new configuration
-    branch_config = original_config.copy()
+    # 3. Build configuration
+    builder = BranchConfigBuilder(source.config)
 
     # Apply overrides
-    if agent_a:
-        try:
-            branch_config["agent_a_model"] = validate_model_id(agent_a)[0]
-        except ValueError as e:
-            display.error(f"Invalid agent A model: {e}")
-            return
+    if errors := builder.apply_model_overrides(agent_a, agent_b):
+        for error in errors:
+            display.error(error)
+        return
 
-    if agent_b:
-        try:
-            branch_config["agent_b_model"] = validate_model_id(agent_b)[0]
-        except ValueError as e:
-            display.error(f"Invalid agent B model: {e}")
-            return
+    builder.apply_temperature_overrides(temperature, temp_a, temp_b)
+    builder.apply_awareness_overrides(awareness, awareness_a, awareness_b)
+    builder.apply_other_overrides(max_turns)
 
-    # Temperature overrides
-    if temperature is not None:
-        branch_config["temperature_a"] = temperature
-        branch_config["temperature_b"] = temperature
-    if temp_a is not None:
-        branch_config["temperature_a"] = temp_a
-    if temp_b is not None:
-        branch_config["temperature_b"] = temp_b
-
-    # Awareness overrides
-    if awareness:
-        branch_config["awareness_a"] = awareness
-        branch_config["awareness_b"] = awareness
-    if awareness_a:
-        branch_config["awareness_a"] = awareness_a
-    if awareness_b:
-        branch_config["awareness_b"] = awareness_b
-
-    # Other overrides
-    if max_turns is not None:
-        branch_config["max_turns"] = max_turns
-
-    # Generate name if not provided
+    # 4. Generate name if needed
     if not name:
         name = f"{generate_experiment_name()}_branch"
         display.dim(f"Generated branch name: {name}")
 
-    # Save as spec if requested
+    # 5. Save spec if requested
     if spec:
-        spec_data = {
-            "name": name,
-            "agent_a_model": branch_config["agent_a_model"],
-            "agent_b_model": branch_config["agent_b_model"],
-            "repetitions": repetitions,
-            "max_turns": branch_config["max_turns"],
-            "temperature_a": branch_config.get("temperature_a"),
-            "temperature_b": branch_config.get("temperature_b"),
-            "awareness_a": branch_config.get("awareness_a", "basic"),
-            "awareness_b": branch_config.get("awareness_b", "basic"),
-            "branch_from": {
-                "conversation_id": conversation_id,
-                "turn": branch_point,
-                "experiment_id": metadata.get("original_experiment_id"),
-            },
-            "initial_messages": [
-                {"role": msg.role, "content": msg.content} for msg in messages
-            ],
-        }
-
-        try:
-            with open(spec, "w") as f:
-                yaml.dump(spec_data, f, default_flow_style=False)
-            display.info(f"Saved branch spec to: {spec}")
-        except Exception as e:
-            display.error(f"Failed to save spec: {e}")
+        writer = BranchSpecWriter()
+        if error := writer.save_spec(
+            spec,
+            builder.branch_config,
+            source.metadata,
+            source.messages,
+            name,
+            repetitions,
+            conversation_id,
+            source.branch_point,
+        ):
+            display.error(f"Failed to save spec: {error}")
             return
+        display.info(f"Saved branch spec to: {spec}")
 
-    # Show branch configuration
-    changes = []
-    if branch_config["agent_a_model"] != original_config["agent_a_model"]:
-        changes.append(
-            f"Agent A: {original_config['agent_a_model']} → {branch_config['agent_a_model']}"
-        )
-    if branch_config["agent_b_model"] != original_config["agent_b_model"]:
-        changes.append(
-            f"Agent B: {original_config['agent_b_model']} → {branch_config['agent_b_model']}"
-        )
-    if branch_config.get("temperature_a") != original_config.get("temperature_a"):
-        changes.append(
-            f"Temp A: {original_config.get('temperature_a', 'default')} → {branch_config.get('temperature_a')}"
-        )
-    if branch_config.get("temperature_b") != original_config.get("temperature_b"):
-        changes.append(
-            f"Temp B: {original_config.get('temperature_b', 'default')} → {branch_config.get('temperature_b')}"
-        )
-
-    if changes:
+    # 6. Show changes
+    if changes := builder.get_changes():
         display.info("\n".join(changes), title="◆ Branch Changes", use_panel=True)
     else:
         display.info("No parameter changes (exact replay)", use_panel=False)
 
-    # Create experiment configuration
-    config = ExperimentConfig(
-        name=name,
-        agent_a_model=branch_config["agent_a_model"],
-        agent_b_model=branch_config["agent_b_model"],
-        repetitions=repetitions,
-        max_turns=branch_config["max_turns"],
-        temperature_a=branch_config.get("temperature_a"),
-        temperature_b=branch_config.get("temperature_b"),
-        custom_prompt=branch_config.get("initial_prompt"),
-        awareness_a=branch_config.get("awareness_a", "basic"),
-        awareness_b=branch_config.get("awareness_b", "basic"),
-        first_speaker=branch_config.get("first_speaker", "agent_a"),
-        prompt_tag=branch_config.get("prompt_tag"),
-        # Branch metadata
-        branch_from_conversation=conversation_id,
-        branch_from_turn=branch_point,
-        branch_messages=messages,  # Pass the pre-populated messages
+    # 7. Build experiment config
+    config = builder.build_experiment_config(
+        name, repetitions, source.messages, conversation_id, source.branch_point
     )
 
-    # Validate configuration
-    errors = config.validate()
-    if errors:
-        error_msg = "Configuration errors:\n\n"
-        for error in errors:
-            error_msg += f"  • {error}\n"
-        display.error(error_msg.rstrip(), use_panel=True)
-        return
-
-    # Validate API keys before starting daemon
-    from ..providers.api_key_manager import APIKeyManager
-    from ..config.models import get_model_config
-    
-    providers = set()
-    agent_a_config = get_model_config(branch_config["agent_a_model"])
-    agent_b_config = get_model_config(branch_config["agent_b_model"])
-    if agent_a_config:
-        providers.add(agent_a_config.provider)
-    if agent_b_config:
-        providers.add(agent_b_config.provider)
-    
-    try:
-        # Check all providers have API keys before starting
-        APIKeyManager.validate_required_providers(list(providers))
-    except Exception as e:
-        # Show friendly error message in the CLI
-        display.error(str(e), title="Missing API Keys", use_panel=True)
-        return
-
-    # Start the branched experiment
-    base_dir = get_experiments_dir()
-    manager = ExperimentManager(base_dir=base_dir)
-
-    try:
-        # Start via manager
-        exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-
-        # Show start message
-        console.print(f"\n[#a3be8c]✓ Started branch: {exp_id}[/#a3be8c]")
-
-        if quiet:
-            # Quiet mode: show commands and exit
-            console.print(
-                "\n[#4c566a]Running in background. Check progress:[/#4c566a]"
-            )
-            cmd_lines = [
-                "pidgin monitor              # Monitor all experiments",
-                f"pidgin stop {name}    # Stop by name",
-                f"pidgin stop {exp_id[:8]}  # Stop by ID",
-            ]
-            display.info("\n".join(cmd_lines), title="Commands", use_panel=True)
-        else:
-            # Show live display
-            console.print(
-                "[#4c566a]Ctrl+C to exit display • experiment continues[/#4c566a]"
-            )
-            console.print()
-
-            from ..experiments.display_runner import run_display
-
-            try:
-                asyncio.run(run_display(exp_id, "chat"))
-
-                # Show completion info
-                exp_dir = get_experiments_dir() / exp_id
-                manifest_path = exp_dir / "manifest.json"
-
-                if manifest_path.exists():
-                    with open(manifest_path, "r") as f:
-                        manifest = json.load(f)
-
-                    completed = manifest.get("completed_conversations", 0)
-                    # _failed = manifest.get("failed_conversations", 0)  # For future use
-                    total = manifest.get("total_conversations", repetitions)
-
-                    display.info(
-                        f"Branch complete: {completed}/{total} conversations",
-                        context=f"Output: {exp_dir}",
-                        use_panel=True,
-                    )
-
-            except KeyboardInterrupt:
-                console.print()
-                display.info(
-                    "Display exited. Branch continues in background.", use_panel=False
-                )
-
-    except Exception as e:
-        display.error(f"Failed to start branch: {str(e)}", use_panel=True)
-        raise
+    # 8. Execute
+    executor = BranchExecutor(display, console)
+    executor.execute(config, quiet, ORIGINAL_CWD)
 
 
 def branch_from_spec(spec_file: str):

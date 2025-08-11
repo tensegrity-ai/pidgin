@@ -82,6 +82,14 @@ Clean boundaries. Easy to add providers. No model-specific logic in core.
 
 ## Code Standards
 
+### No Backwards Compatibility Required
+**IMPORTANT**: This is a research tool under active development. We prioritize clean, optimal design over backwards compatibility. When refactoring:
+- Make the best architectural decisions without legacy constraints
+- Break interfaces if it improves the design
+- Use clean, modern patterns throughout
+- Don't maintain deprecated code paths
+- Version the tool properly if breaking changes affect users
+
 ### Module Organization
 ```python
 # Small, focused modules with size guidelines:
@@ -235,6 +243,6 @@ The core architecture is complete with JSONL-first data flow. We're now focused 
 2. **Performance optimization** - Token caching, metric calculation
 3. **Statistical validation** - Proper significance testing for observations
 
-## Note on TODOs
+## Note on Development Plans
 
-All project TODOs are tracked in TODO.md. This file focuses on development guidelines and philosophy.
+All project development plans and tasks are tracked in PLANS.md. This file focuses on development guidelines and philosophy.
