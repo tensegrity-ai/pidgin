@@ -119,7 +119,7 @@ This preserves the complete conversation history without artificial truncation.
 
 ```bash
 # List available models
-pidgin info models
+pidgin models
 
 # Use specific versions
 pidgin run -a claude-3-5-sonnet-20241022 -b gpt-4-turbo -t 20
@@ -164,7 +164,8 @@ After running a conversation:
 
 ```bash
 # See basic stats
-pidgin info output cosmic-prism
+# View experiment output
+ls -la pidgin_output/experiments/cosmic-prism/
 
 # Import to DuckDB for analysis
 pidgin analyze cosmic-prism
@@ -196,7 +197,7 @@ pidgin --help
 pidgin run --help
 
 # List all commands
-pidgin info commands
+pidgin --help
 ```
 
 See the [CLI Usage Guide](cli-usage.md) for comprehensive documentation.

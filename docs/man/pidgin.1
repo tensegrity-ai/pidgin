@@ -31,9 +31,11 @@ warnings, and completion estimates. Updates live every 2 seconds.
 Branch from an existing conversation at a specific turn to explore alternate
 conversation paths.
 .TP
-.B info
-Display information about available models, experiments, or specific conversations.
-Includes subcommands: models, experiments, conversation.
+.B models
+List all available AI models with their providers and context windows.
+.TP
+.B config
+Create a configuration file with example settings at ~/.config/pidgin/pidgin.yaml.
 .SH OPTIONS
 .TP
 .BR \-\-version
@@ -88,7 +90,7 @@ pidgin stop --all
 View available models:
 .RS
 .nf
-pidgin info models
+pidgin models
 .fi
 .RE
 .PP
@@ -152,13 +154,11 @@ The tool is designed to be stateless - all experiment state is derived from
 the JSONL event logs, making it robust against interruptions and allowing
 experiments to be resumed or analyzed later.
 .SH SEE ALSO
-.BR pidgin-run (1),
-.BR pidgin-stop (1),
-.BR pidgin-monitor (1),
-.BR pidgin-branch (1),
-.BR pidgin-info (1),
-.BR pidgin-yaml (5),
-.BR pidgin-metrics (7)
+Full documentation at: https://github.com/nicholas-lange/pidgin
+.PP
+API documentation: https://github.com/nicholas-lange/pidgin/tree/main/docs/api
+.PP
+YAML specification format: https://github.com/nicholas-lange/pidgin/blob/main/docs/yaml-specs.md
 .SH BUGS
 Report bugs at: https://github.com/nicholas-lange/pidgin/issues
 .SH AUTHOR

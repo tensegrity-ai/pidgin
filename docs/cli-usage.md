@@ -28,7 +28,7 @@ pidgin run [OPTIONS]
 - `-t, --turns INTEGER` - Number of turns
 
 #### Optional Options
-- `-p, --prompt TEXT` - Initial prompt (default: dimensional question)
+- `-p, --prompt TEXT` - Initial prompt for the conversation
 - `--awareness-a TEXT` - Agent A's awareness level
 - `--awareness-b TEXT` - Agent B's awareness level
 - `--temperature-a FLOAT` - Override agent A temperature
@@ -39,7 +39,6 @@ pidgin run [OPTIONS]
 - `--no-conversation` - Skip initial "Hello" exchange
 - `--checkpoint-every INT` - Save checkpoint every N turns
 - `--allow-truncation` - Allow messages to be truncated to fit context windows (default: disabled)
-- `--info` - Show configuration and exit
 
 #### Examples
 
@@ -193,45 +192,24 @@ pidgin stop --all
 pidgin stop experiment_abc --force
 ```
 
-### `pidgin info`
+### `pidgin models`
 
-Display various information about models, outputs, and configuration.
+List all available AI models with their providers and context windows.
 
 ```bash
-pidgin info [SUBCOMMAND]
+pidgin models
 ```
 
-#### Subcommands
+### `pidgin config`
 
-##### `models`
-List all available models and their details.
+Create a configuration file with example settings.
+
 ```bash
-pidgin info models [--provider PROVIDER]
+pidgin config [--force]
 ```
 
-##### `output`
-Show information about a completed conversation.
-```bash
-pidgin info output PATH
-```
-
-##### `costs`
-Display current token costs by provider.
-```bash
-pidgin info costs
-```
-
-##### `api-keys`
-Check which API keys are configured.
-```bash
-pidgin info api-keys
-```
-
-##### `commands`
-List all available commands.
-```bash
-pidgin info commands
-```
+Options:
+- `--force` - Overwrite existing configuration file
 
 ## Display Modes
 
@@ -336,13 +314,14 @@ export PATH="$HOME/.local/bin:$PATH"
 ### API Key Errors
 Check your keys are set:
 ```bash
-pidgin info api-keys
+# Check API keys in environment
+env | grep API_KEY
 ```
 
 ### Model Not Found
 List available models:
 ```bash
-pidgin info models
+pidgin models
 ```
 
 ### Output Directory Issues
