@@ -36,31 +36,14 @@ class CommandHandler:
                 
                 # Run the experiment from spec
                 self.execution_handler.run_conversations(
-                    config.agent_a_model,
-                    config.agent_b_model,
+                    config,
                     agent_a_name,
                     agent_b_name,
-                    config.repetitions,
-                    config.max_turns,
-                    config.temperature_a,
-                    config.temperature_b,
                     config.custom_prompt or "Hello",
-                    config.dimensions,
-                    config.name,
-                    config.max_parallel,
-                    config.convergence_threshold,
-                    config.convergence_action,
-                    config.awareness,
-                    config.awareness_a,
-                    config.awareness_b,
-                    config.choose_names,
                     config.display_mode == "quiet",
                     config.display_mode == "quiet" or spec_notify,
                     config.display_mode,
-                    config.first_speaker,
                     spec_output_dir or config.execution.output,
-                    config.prompt_tag,
-                    config.allow_truncation,
                 )
                 return
             elif config.spec_file.endswith((".yaml", ".yml")):
@@ -123,29 +106,12 @@ class CommandHandler:
 
         # Run conversations
         self.execution_handler.run_conversations(
-            experiment_config.agent_a_model,
-            experiment_config.agent_b_model,
+            experiment_config,
             agent_a_name,
             agent_b_name,
-            experiment_config.repetitions,
-            experiment_config.max_turns,
-            experiment_config.temperature_a,
-            experiment_config.temperature_b,
             initial_prompt,
-            experiment_config.dimensions,
-            experiment_config.name,
-            experiment_config.max_parallel,
-            experiment_config.convergence_threshold,
-            experiment_config.convergence_action,
-            experiment_config.awareness,
-            experiment_config.awareness_a,
-            experiment_config.awareness_b,
-            experiment_config.choose_names,
             quiet,
             notify,
             display_mode,
-            experiment_config.first_speaker,
             config.execution.output,
-            experiment_config.prompt_tag,
-            experiment_config.allow_truncation,
         )
