@@ -4,7 +4,7 @@ import rich_click as click
 from rich.console import Console
 
 from .constants import DEFAULT_TURNS
-from .run_handlers import CommandHandler
+from .run_handlers import CommandHandler, RunConfig
 
 console = Console()
 
@@ -159,9 +159,8 @@ def run(
       pidgin run -a claude -b gpt -d philosophy  # Dimensional
       pidgin run -a claude --meditation  # Meditation mode
     """
-    # Create command handler and delegate all logic to it
-    handler = CommandHandler(console)
-    handler.handle_command(
+    # Build configuration from CLI arguments
+    config = RunConfig.from_cli_args(
         spec_file=spec_file,
         agent_a=agent_a,
         agent_b=agent_b,
@@ -191,3 +190,7 @@ def run(
         prompt_tag=prompt_tag,
         allow_truncation=allow_truncation,
     )
+    
+    # Create command handler and delegate with config
+    handler = CommandHandler(console)
+    handler.handle_command(config)
