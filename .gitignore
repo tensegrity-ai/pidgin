@@ -42,3 +42,7 @@ examples/
 *_api_key*
 *_API_KEY*
 temp/
+
+# Experiment output directories
+pidgin_output/
+pidgin_dev_output/

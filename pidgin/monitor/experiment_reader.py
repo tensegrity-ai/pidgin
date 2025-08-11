@@ -11,14 +11,18 @@ logger = get_logger("experiment_reader")
 
 
 class ExperimentReader:
-    """Reads experiment states and conversation data."""
+    """Reads experiment states and conversation data.
+    
+    The ExperimentReader provides a high-level interface for monitoring experiment
+    states. It uses the StateBuilder for efficient caching and handles filtering
+    of experiments by status. The reader periodically clears the cache to ensure
+    fresh data is available for monitoring operations.
+    
+    This class is primarily used by the monitor command to display real-time
+    experiment status and by the transcript generation tools.
+    """
 
     def __init__(self, exp_base: Path):
-        """Initialize experiment reader.
-        
-        Args:
-            exp_base: Base experiments directory
-        """
         self.exp_base = exp_base
         self.state_builder = StateBuilder()
 

@@ -23,11 +23,9 @@ class ConversationLifecycle:
         self.console = console
         self.token_tracker = token_tracker
         
-        # Components
         self.setup = ConversationSetup(console, token_tracker)
-        self.state = None  # Created after bus initialization
+        self.state = None
         
-        # Runtime state
         self.bus = None
         self.display_filter = None
         self.chat_display = None
@@ -37,7 +35,6 @@ class ConversationLifecycle:
         self.db_store = None
         
     def set_providers(self, base_providers):
-        """Set base providers for wrapping."""
         self.setup.set_providers(base_providers)
         self.base_providers = base_providers
         
@@ -52,7 +49,6 @@ class ConversationLifecycle:
         prompt_tag: Optional[str] = None,
     ):
         """Initialize EventBus and display components."""
-        # Use setup component
         result = await self.setup.initialize_event_system(
             conv_dir=conv_dir,
             display_mode=display_mode,
@@ -72,7 +68,6 @@ class ConversationLifecycle:
             self._owns_bus,
         ) = result
         
-        # Initialize state manager with bus
         self.state = ConversationState(self.bus, self.display_filter)
         self.db_store = db_store
         
@@ -84,7 +79,6 @@ class ConversationLifecycle:
         initial_prompt: str,
         conversation_id: Optional[str] = None,
     ) -> Conversation:
-        """Create a new conversation instance."""
         if not self.state:
             raise RuntimeError("Must initialize event system before creating conversation")
         return self.state.create_conversation(
@@ -97,7 +91,6 @@ class ConversationLifecycle:
         initial_messages: list[Message],
         loaded_from_checkpoint: bool = False,
     ):
-        """Add initial messages to conversation."""
         if not self.state:
             raise RuntimeError("Must initialize event system before adding messages")
         await self.state.add_initial_messages(
@@ -111,7 +104,6 @@ class ConversationLifecycle:
         show_system_prompts: bool,
         config: dict,
     ):
-        """Emit conversation start events."""
         if not self.state:
             raise RuntimeError("Must initialize event system before emitting events")
         await self.state.emit_start_events(
@@ -125,7 +117,6 @@ class ConversationLifecycle:
         reason: Optional[str] = None,
         error: Optional[str] = None,
     ):
-        """Emit conversation end event with specific reason."""
         if not self.state:
             raise RuntimeError("Must initialize event system before emitting events")
         await self.state.emit_end_event(conversation, status, reason, error)
@@ -135,12 +126,9 @@ class ConversationLifecycle:
         conversation: Conversation,
         status: str = "completed",
     ):
-        """Emit conversation end event."""
         await self.emit_end_event_with_reason(conversation, status)
         
     async def cleanup(self):
-        """Clean up resources."""
-        # Clean up displays
         if self.chat_display:
             if hasattr(self.chat_display, "cleanup"):
                 await self.chat_display.cleanup()
@@ -151,12 +139,10 @@ class ConversationLifecycle:
                 await self.tail_display.cleanup()
             self.tail_display = None
             
-        # Clean up bus if we own it
         if self._owns_bus and self.bus:
             await self.bus.stop()
             self.bus = None
             
-        # Clear references
         self.display_filter = None
         self.wrapped_providers = {}
         self.state = None

@@ -35,13 +35,10 @@ def config(force: bool):
         display.info("Use --force to overwrite", use_panel=False)
         return
     
-    # Create config instance to access the write method
     config_instance = Config()
     
-    # Create directory if needed
     config_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Write example config
     config_instance._write_example_config(config_path)
     
     display.success("◆ Created configuration file")

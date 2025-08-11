@@ -8,7 +8,6 @@ class SchemaLoader:
     """Load SQL schemas from files."""
 
     def __init__(self):
-        """Initialize schema loader."""
         self.schemas_dir = Path(__file__).parent / "schemas"
 
     def load_schema(self, name: str) -> str:

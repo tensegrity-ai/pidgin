@@ -15,7 +15,6 @@ class ModelSelector:
     """Handle interactive model selection and validation."""
 
     def __init__(self):
-        """Initialize the model selector."""
         self.console = Console()
         self.display = DisplayUtils(self.console)
 
@@ -30,7 +29,6 @@ class ModelSelector:
         """
         self.display.info(prompt, use_panel=False)
 
-        # Get available models grouped by provider
         providers = self.get_available_models()
 
         # Show available models
@@ -50,18 +48,15 @@ class ModelSelector:
                 model_map[str(idx)] = model_id
                 idx += 1
 
-        # Add option for custom local model
         self.display.dim("\nOther:")
         self.display.dim(f"  {idx}. ▸ Custom local model (requires Ollama)")
 
-        # Get selection
         try:
             selection = self.console.input(
                 f"\n[{NORD_BLUE}]Enter selection (1-{idx}) "
                 f"or model name: [/{NORD_BLUE}]"
             )
         except (KeyboardInterrupt, EOFError):
-            # User cancelled
             return None
 
         if selection in model_map:

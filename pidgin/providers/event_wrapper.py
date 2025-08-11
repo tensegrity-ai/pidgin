@@ -14,7 +14,7 @@ from ..core.router import DirectRouter  # For message transformation
 from ..core.types import Message
 from .base import Provider
 from .token_tracker import GlobalTokenTracker
-from .token_utils import estimate_tokens
+from .token_utils import estimate_tokens, estimate_messages_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +64,9 @@ class EventAwareProvider:
                 event.conversation_history, self.agent_id
             )
 
-            # Estimate input tokens
-            # Try model_name first (for providers that store model name separately)
-            # Fall back to model if model_name doesn't exist
             model_name = getattr(self.provider, "model_name", None) or getattr(
                 self.provider, "model", None
             )
-            # input_tokens = estimate_messages_tokens(agent_messages, model_name)  # Not used currently
 
             # Stream response and buffer chunks (no longer emitting chunk events)
             chunks = []
@@ -113,18 +109,25 @@ class EventAwareProvider:
                 self.provider, "model", None
             )
 
-            # Try to get actual token usage from provider
-            tokens_used = 0
+            prompt_tokens = 0
+            completion_tokens = 0
+            
             if hasattr(self.provider, "get_last_usage"):
                 usage_data = self.provider.get_last_usage()
-                if usage_data and "completion_tokens" in usage_data:
-                    tokens_used = usage_data["completion_tokens"]
-                else:
-                    # Fall back to estimation
-                    tokens_used = estimate_tokens(content, model_name)
+                if usage_data:
+                    prompt_tokens = usage_data.get("prompt_tokens", 0)
+                    completion_tokens = usage_data.get("completion_tokens", 0)
+                    
+                if not completion_tokens:
+                    completion_tokens = estimate_tokens(content, model_name)
+                    
+                if not prompt_tokens:
+                    prompt_tokens = estimate_messages_tokens(agent_messages, model_name)
             else:
-                # Provider doesn't support usage tracking, use estimation
-                tokens_used = estimate_tokens(content, model_name)
+                prompt_tokens = estimate_messages_tokens(agent_messages, model_name)
+                completion_tokens = estimate_tokens(content, model_name)
+            
+            total_tokens = prompt_tokens + completion_tokens
 
             # Emit completion event
             await self.bus.emit(
@@ -132,7 +135,9 @@ class EventAwareProvider:
                     conversation_id=event.conversation_id,
                     agent_id=self.agent_id,
                     message=message,
-                    tokens_used=tokens_used,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
                     duration_ms=duration_ms,
                 )
             )

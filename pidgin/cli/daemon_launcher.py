@@ -38,7 +38,6 @@ class DaemonLauncher:
         Raises:
             Exception: If validation fails
         """
-        # Check if experiment already exists and retry with new name if needed
         from ..io.jsonl_reader import JSONLExperimentReader
         from .name_generator import generate_experiment_name
 
@@ -91,7 +90,6 @@ class DaemonLauncher:
         # Validate API keys before starting daemon
         providers = self._get_required_providers(config)
         try:
-            # Check all providers have API keys before starting
             APIKeyManager.validate_required_providers(list(providers))
         except APIKeyError as e:
             # Show friendly error message in the CLI
@@ -179,7 +177,6 @@ class DaemonLauncher:
         manager = ExperimentManager(base_dir=get_experiments_dir())
 
         try:
-            # Get the actual directory name
             exp_dir_name = manager.get_experiment_directory(exp_id)
             if not exp_dir_name:
                 self.display.error(f"Could not find directory for experiment {exp_id}")

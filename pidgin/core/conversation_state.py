@@ -33,18 +33,6 @@ class ConversationState:
         initial_prompt: str,
         conversation_id: Optional[str] = None,
     ) -> Conversation:
-        """Create a new conversation instance.
-        
-        Args:
-            experiment_id: ID of the parent experiment
-            agent_a: First agent
-            agent_b: Second agent  
-            initial_prompt: Initial prompt for conversation
-            conversation_id: Optional specific conversation ID
-            
-        Returns:
-            New Conversation instance
-        """
         return Conversation(
             experiment_id=experiment_id,
             agent_a=agent_a,
@@ -60,19 +48,10 @@ class ConversationState:
         initial_messages: List[Message],
         loaded_from_checkpoint: bool = False,
     ):
-        """Add initial messages to conversation.
-        
-        Args:
-            conversation: Conversation instance
-            initial_messages: List of initial messages
-            loaded_from_checkpoint: Whether messages are from checkpoint
-        """
         if initial_messages:
             if loaded_from_checkpoint:
-                # Messages from checkpoint already have proper timestamps
                 conversation.messages.extend(initial_messages)
             else:
-                # New messages need timestamps
                 for msg in initial_messages:
                     msg.timestamp = time.time()
                     conversation.messages.append(msg)
@@ -84,15 +63,6 @@ class ConversationState:
         show_system_prompts: bool,
         config: dict,
     ):
-        """Emit conversation start events.
-        
-        Args:
-            conversation: Conversation instance
-            system_prompts: System prompts for agents
-            show_system_prompts: Whether to show system prompts
-            config: Experiment configuration
-        """
-        # Emit system prompts if requested
         if show_system_prompts:
             for agent_id, prompt in system_prompts.items():
                 if prompt:
@@ -135,7 +105,6 @@ class ConversationState:
             
         self._end_event_emitted = True
         
-        # Determine final status
         if not conversation.messages:
             actual_status = "empty"
         else:

@@ -188,6 +188,5 @@ def run(
         allow_truncation=allow_truncation,
     )
     
-    # Create command handler and delegate with config
     handler = CommandHandler(console)
     handler.handle_command(config)

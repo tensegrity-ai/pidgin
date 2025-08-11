@@ -84,7 +84,9 @@ class MessageCompleteEvent(Event):
     conversation_id: str
     agent_id: str
     message: Message
-    tokens_used: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
     duration_ms: int
 
 

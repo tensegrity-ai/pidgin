@@ -11,10 +11,18 @@ logger = get_logger("state_builder")
 
 
 class StateBuilder:
-    """Builds experiment state efficiently using manifest files."""
+    """Builds experiment state efficiently using manifest files.
+    
+    This class implements a caching mechanism to avoid repeated parsing of manifest
+    files. It uses file modification times (mtime) to detect changes and invalidate
+    the cache when necessary. The state builder coordinates between the manifest
+    parser and conversation parser to build complete experiment states.
+    
+    The caching strategy significantly improves performance when monitoring multiple
+    experiments, as manifest files only need to be re-parsed when they change.
+    """
 
     def __init__(self):
-        """Initialize with empty cache and parsers."""
         self.cache: Dict[Path, Tuple[float, ExperimentState]] = {}
         self.manifest_parser = ManifestParser()
         self.conversation_parser = ConversationParser()

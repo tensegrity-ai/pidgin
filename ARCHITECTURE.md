@@ -11,6 +11,7 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
 3. **Observable by Default**: Every interaction can be tracked and analyzed
 4. **Modular Components**: Each module has a single, clear responsibility (<300 lines per module)
 5. **JSONL-First Storage**: Append-only logs as the source of truth
+6. **Repository Pattern**: Database access exclusively through repository layer
 
 ## System Architecture
 
@@ -28,23 +29,34 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
                     │    Providers   │             │
                     ├────────────────┤             ▼
                     │ • Anthropic    │    ┌─────────────────┐
-                    │ • OpenAI       │    │     Storage     │
-                    │ • Google       │    ├─────────────────┤
-                    │ • xAI          │    │ • JSONL (live)  │
-                    │ • Ollama       │    │ • manifest.json │
-                    │ • Local (test) │    │ • DuckDB (post) │
-                    └────────────────┘    └─────────────────┘
+                    │ • OpenAI       │    │  JSONL Storage  │
+                    │ • Google       │    │ + manifest.json │
+                    │ • xAI          │    └────────┬────────┘
+                    │ • Ollama       │             │ (post-exp)
+                    │ • Local (test) │    ┌────────▼────────┐
+                    └────────────────┘    │   EventStore   │
+                                          └────────┬────────┘
+                                                   │
+                                          ┌────────▼────────┐
+                                          │  Repositories   │
+                                          └────────┬────────┘
+                                                   │
+                                          ┌────────▼────────┐
+                                          │     DuckDB      │
+                                          └─────────────────┘
 ```
 
 ## Core Components
 
 ### Conductor (`core/conductor.py`)
-Orchestrates conversations between agents. Modularized into:
+Orchestrates conversations between agents. Supporting modules:
 - `interrupt_handler.py` - Interrupt and pause management
-- `name_coordinator.py` - Agent naming and identity
+- `name_coordinator.py` - Agent naming and identity  
 - `turn_executor.py` - Turn execution logic
 - `message_handler.py` - Message processing
-- `conversation_lifecycle.py` - Start/end lifecycle events
+- `conversation_lifecycle.py` - Start/end lifecycle events (split into 3 modules)
+- `conversation_setup.py` - Initialization logic
+- `conversation_state.py` - State management
 
 ### Router (`core/router.py`)
 Critical component that transforms messages for each agent's perspective:
@@ -213,17 +225,27 @@ Post-experiment processing pipeline:
 - Runs after experiment completion
 
 ### EventStore (`database/event_store.py`)
-Single interface to DuckDB database:
-- **Exclusive DB access**: No other component accesses DuckDB directly
-- Imports JSONL files to database tables
-- Provides repository pattern for data access
+Orchestrator for database operations:
+- **Public API**: External components only interact with EventStore
+- **Repository delegation**: EventStore delegates to specialized repositories
+- **No direct DB access**: Components outside database package cannot import duckdb
+- Coordinates JSONL imports and data access
 - Used by analysis tools and notebook generation
-- Enforces data integrity and consistency
+
+### Repository Layer (`database/repositories/`)
+Specialized data access components:
+- `ExperimentRepository` - Experiment CRUD operations
+- `ConversationRepository` - Conversation data access
+- `MessageRepository` - Message operations
+- `MetricsRepository` - Metrics queries and calculations
+- `BaseRepository` - Shared connection and query logic
+
+All database access flows through: External Component → EventStore → Repository → DuckDB
 
 ## Monitor System
 
 ### Monitor (`monitor/monitor.py`)
-Core monitor loop (137 lines) that coordinates:
+Core monitor loop that coordinates:
 
 ### Display Components
 - `display_builder.py` - Main display coordination
@@ -255,12 +277,6 @@ This transformation is essential - without it, agents would see incorrect role a
 - Compare different conversation paths
 - Useful for testing different prompts
 
-### Dimensions System
-- Apply semantic dimensions to conversations
-- Generate variations (e.g., formal/casual, technical/simple)
-- Create controlled experiments
-- Study linguistic variation
-
 ### Custom Awareness
 - Configure what agents know about the conversation
 - Options: none, basic, full, custom
@@ -288,20 +304,31 @@ This transformation is essential - without it, agents would see incorrect role a
 - `RateLimitEvent` - Rate limit hit
 - `ErrorEvent` - General errors
 
-## Module Size Guidelines
+## Module Design Philosophy
 
-Per CLAUDE.md development guidelines:
-- **Ideal**: <200 lines
-- **Acceptable**: <300 lines  
-- **Must refactor**: >500 lines
+### Single Responsibility Principle
+While we aim for smaller modules (<300 lines), some core orchestration components are necessarily longer when they have a single, focused responsibility. Examples include:
+- **EventStore**: Central database orchestrator managing all repository interactions
+- **Conductor**: Core conversation orchestrator coordinating multiple subsystems
 
-Current architecture achieves this through aggressive modularization.
+These larger orchestration modules remain cohesive despite their size because they:
+- Have one clear purpose
+- Don't mix concerns (e.g., orchestration vs implementation)
+- Delegate specific tasks to focused helper modules
+- Act as coordination points rather than implementing details
+
+### Modularization Strategy
+For complex functionality, we split into:
+- **Orchestrator**: Coordinates the overall process
+- **Helpers**: Handle specific aspects (e.g., `interrupt_handler.py`, `turn_executor.py`)
+- **Services**: Provide reusable functionality
+- **Repositories**: Manage data access patterns
 
 ## Extension Points
 
 ### Adding a New Provider
 1. Implement the `Provider` interface
-2. Add to `provider_factory.py`
+2. Add to `providers/builder.py`
 3. Add model configurations to `model_types.py`
 4. Provider automatically wrapped with events
 

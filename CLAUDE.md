@@ -243,6 +243,3 @@ The core architecture is complete with JSONL-first data flow. We're now focused 
 2. **Performance optimization** - Token caching, metric calculation
 3. **Statistical validation** - Proper significance testing for observations
 
-## Note on Development Plans
-
-All project development plans and tasks are tracked in PLANS.md. This file focuses on development guidelines and philosophy.

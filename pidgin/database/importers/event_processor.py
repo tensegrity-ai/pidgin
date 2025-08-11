@@ -91,9 +91,10 @@ class EventProcessor:
                 }
 
             elif isinstance(event, MessageCompleteEvent):
-                # Store message for token counting
                 conv["messages"][event.agent_id] = {
-                    "tokens_used": event.tokens_used,
+                    "prompt_tokens": event.prompt_tokens,
+                    "completion_tokens": event.completion_tokens,
+                    "total_tokens": event.total_tokens,
                     "duration_ms": event.duration_ms,
                 }
 

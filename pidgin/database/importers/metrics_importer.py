@@ -70,10 +70,10 @@ class MetricsImporter:
             "a_message_hash": a_hash,
             "b_message_hash": b_hash,
             # Token usage
-            "a_prompt_tokens": None,  # TODO: extract from events if available
-            "a_completion_tokens": messages.get("agent_a", {}).get("tokens_used"),
-            "b_prompt_tokens": None,
-            "b_completion_tokens": messages.get("agent_b", {}).get("tokens_used"),
+            "a_prompt_tokens": messages.get("agent_a", {}).get("prompt_tokens"),
+            "a_completion_tokens": messages.get("agent_a", {}).get("completion_tokens"),
+            "b_prompt_tokens": messages.get("agent_b", {}).get("prompt_tokens"),
+            "b_completion_tokens": messages.get("agent_b", {}).get("completion_tokens"),
             # Timing
             "response_time_a": messages.get("agent_a", {}).get("duration_ms"),
             "response_time_b": messages.get("agent_b", {}).get("duration_ms"),

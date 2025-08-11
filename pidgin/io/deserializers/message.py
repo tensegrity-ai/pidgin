@@ -85,7 +85,9 @@ class MessageDeserializer(BaseDeserializer):
             conversation_id=data["conversation_id"],
             agent_id=data["agent_id"],
             message=message,
-            tokens_used=data.get("tokens_used", 0),
+            prompt_tokens=data.get("prompt_tokens", 0),
+            completion_tokens=data.get("completion_tokens", 0),
+            total_tokens=data.get("total_tokens", 0),
             duration_ms=data.get("duration_ms", 0),
         )
         event.timestamp = timestamp

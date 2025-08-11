@@ -25,11 +25,6 @@ class ConversationSetup:
         self.base_providers = {}
         
     def set_providers(self, base_providers):
-        """Set base providers for wrapping.
-        
-        Args:
-            base_providers: Dict of agent_id -> provider
-        """
         self.base_providers = base_providers
         
     async def initialize_event_system(
@@ -47,7 +42,6 @@ class ConversationSetup:
         Returns:
             Tuple of (bus, display_filter, chat_display, tail_display, wrapped_providers)
         """
-        # Create or use existing bus
         if existing_bus is None:
             bus = EventBus(db_store=None, event_log_dir=conv_dir)
             await bus.start()
@@ -56,7 +50,6 @@ class ConversationSetup:
             bus = existing_bus
             owns_bus = False
             
-        # Initialize display components
         display_filter = None
         chat_display = None
         tail_display = None
@@ -76,7 +69,6 @@ class ConversationSetup:
                     prompt_tag=prompt_tag,
                 )
                 
-        # Wrap providers with event awareness
         wrapped_providers = {}
         for agent_id, provider in self.base_providers.items():
             wrapped_providers[agent_id] = EventAwareProvider(

@@ -152,7 +152,7 @@ class ConversationImporter:
                 "agent_a",
                 turn_data["agent_a_message"],
                 turn_data["timestamp"],
-                messages.get("agent_a", {}).get("tokens_used", 0),
+                messages.get("agent_a", {}).get("total_tokens", 0),
             ],
         )
 
@@ -170,6 +170,6 @@ class ConversationImporter:
                 "agent_b",
                 turn_data["agent_b_message"],
                 turn_data["timestamp"],
-                messages.get("agent_b", {}).get("tokens_used", 0),
+                messages.get("agent_b", {}).get("total_tokens", 0),
             ],
         )
