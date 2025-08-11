@@ -62,7 +62,7 @@ class ConversationOrchestrator:
         # Build initial prompt
         initial_prompt = build_initial_prompt(
             custom_prompt=config.custom_prompt,
-            dimensions=config.dimensions,
+            dimensions=None,
         )
 
         # Create conductor with the isolated event bus

@@ -85,7 +85,6 @@ class CommandHandler:
             temp_a=config.agents.temp_a,
             temp_b=config.agents.temp_b,
             prompt=config.conversation.prompt,
-            dimensions=list(config.conversation.dimension) if config.conversation.dimension else None,
             name=config.execution.name,
             convergence_threshold=config.convergence.convergence_threshold,
             convergence_action=config.convergence.convergence_action,
