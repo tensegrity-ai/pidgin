@@ -77,8 +77,8 @@ class EventHandlers:
                 full_prompt = event.initial_prompt
 
             prompt_truncated = full_prompt.strip().replace("\n", " ")
-            if len(prompt_truncated) > 100:
-                prompt_truncated = prompt_truncated[:97] + "..."
+            if len(prompt_truncated) > 130:
+                prompt_truncated = prompt_truncated[:127] + "..."
 
             prompt_header = Text()
             prompt_header.append(
@@ -150,11 +150,11 @@ class EventHandlers:
             else str(event.message)
         )
 
-        # Truncate message to first line, max 20 chars
+        # Truncate message to first line, max 40 chars
         msg_lines = msg_content.strip().replace("\n", " ").split()
         truncated_msg = " ".join(msg_lines)
-        if len(truncated_msg) > 20:
-            truncated_msg = truncated_msg[:17] + "..."
+        if len(truncated_msg) > 40:
+            truncated_msg = truncated_msg[:37] + "..."
 
         # Build metadata
         metadata = []
@@ -185,8 +185,8 @@ class EventHandlers:
 
         # Truncate chunk to 20 chars
         truncated_chunk = chunk_content.strip().replace("\n", " ")
-        if len(truncated_chunk) > 20:
-            truncated_chunk = truncated_chunk[:17] + "..."
+        if len(truncated_chunk) > 40:
+            truncated_chunk = truncated_chunk[:37] + "..."
 
         content = f"{self.formatter.format_agent_id(event.agent_id)}: {truncated_chunk}"
         self._print(header, content)
