@@ -47,7 +47,7 @@ def send_notification(title: str, message: str):
                 encoded = base64.b64encode(ps_script.encode("utf-16le")).decode("ascii")
                 subprocess.run(["powershell", "-EncodedCommand", encoded], check=True)
 
-    except Exception:
+    except (subprocess.CalledProcessError, OSError, FileNotFoundError):
         # If desktop notifications fail, just use terminal bell
         print("\a", end="", flush=True)
 

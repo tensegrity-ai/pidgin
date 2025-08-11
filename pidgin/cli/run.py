@@ -1,5 +1,7 @@
 """Unified run command for conversations and experiments."""
 
+from typing import Optional, Tuple
+
 import rich_click as click
 from rich.console import Console
 
@@ -44,9 +46,6 @@ console = Console()
     "--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for agent B only"
 )
 @click.option("--output", "-o", help="Custom output directory")
-@click.option(
-    "--dimension", "-d", multiple=True, help="Predefined conversation dimensions"
-)
 @click.option(
     "--convergence-threshold",
     type=float,
@@ -118,35 +117,34 @@ console = Console()
     help="Allow messages to be truncated to fit context windows (default: disabled)",
 )
 def run(
-    spec_file,
-    agent_a,
-    agent_b,
-    prompt,
-    turns,
-    repetitions,
-    temperature,
-    temp_a,
-    temp_b,
-    output,
-    dimension,
-    convergence_threshold,
-    convergence_action,
-    convergence_profile,
-    first_speaker,
-    choose_names,
-    awareness,
-    awareness_a,
-    awareness_b,
-    show_system_prompts,
-    meditation,
-    quiet,
-    tail,
-    notify,
-    name,
-    max_parallel,
-    prompt_tag,
-    allow_truncation,
-):
+    spec_file: Optional[str],
+    agent_a: Optional[str],
+    agent_b: Optional[str],
+    prompt: Optional[str],
+    turns: int,
+    repetitions: int,
+    temperature: Optional[float],
+    temp_a: Optional[float],
+    temp_b: Optional[float],
+    output: Optional[str],
+    convergence_threshold: Optional[float],
+    convergence_action: Optional[str],
+    convergence_profile: str,
+    first_speaker: str,
+    choose_names: bool,
+    awareness: str,
+    awareness_a: Optional[str],
+    awareness_b: Optional[str],
+    show_system_prompts: bool,
+    meditation: bool,
+    quiet: bool,
+    tail: bool,
+    notify: bool,
+    name: Optional[str],
+    max_parallel: int,
+    prompt_tag: str,
+    allow_truncation: bool,
+) -> None:
     """Run AI conversations between two agents.
 
     [bold]EXAMPLES:[/bold]
@@ -156,7 +154,7 @@ def run(
       pidgin run -a claude -b gpt --tail # Event stream
       pidgin run -a claude -b gpt -q     # Run in background
       pidgin run -a claude -b gpt -r 20  # Multiple runs
-      pidgin run -a claude -b gpt -d philosophy  # Dimensional
+      pidgin run -a claude -b gpt -p "Explore philosophy together"
       pidgin run -a claude --meditation  # Meditation mode
     """
     # Build configuration from CLI arguments
@@ -171,7 +169,6 @@ def run(
         temp_a=temp_a,
         temp_b=temp_b,
         output=output,
-        dimension=dimension,
         convergence_threshold=convergence_threshold,
         convergence_action=convergence_action,
         convergence_profile=convergence_profile,

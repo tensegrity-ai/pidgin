@@ -38,7 +38,7 @@ class ExperimentManager:
         from ..io.directories import get_cache_dir
         self.active_dir = get_cache_dir() / "active_experiments"
         # Store the database path but don't keep a connection open
-        from ..io.directories import get_database_path
+        from ..io.paths import get_database_path
         self.db_path = get_database_path()
 
         # Initialize specialized components
@@ -47,6 +47,7 @@ class ExperimentManager:
         self.status_handler = ExperimentStatus(base_dir)
 
         # Ensure directories exist
+        self.base_dir.mkdir(parents=True, exist_ok=True)
         self.active_dir.mkdir(parents=True, exist_ok=True)
 
     # Delegation methods for resolver

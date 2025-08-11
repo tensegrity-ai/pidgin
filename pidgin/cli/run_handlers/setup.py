@@ -80,7 +80,7 @@ class SetupHandler:
             except (KeyboardInterrupt, EOFError) as e:
                 self.display_manager.handle_model_selection_error(e, type(e).__name__)
                 return None
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 self.display_manager.handle_model_selection_error(e, "Exception")
                 return None
 
@@ -92,7 +92,7 @@ class SetupHandler:
             except (KeyboardInterrupt, EOFError) as e:
                 self.display_manager.handle_model_selection_error(e, type(e).__name__)
                 return None
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 self.display_manager.handle_model_selection_error(e, "Exception")
                 return None
 

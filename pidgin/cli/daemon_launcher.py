@@ -12,7 +12,7 @@ from ..experiments import ExperimentConfig
 from ..config.models import get_model_config
 from ..experiments import ExperimentManager
 from ..io.paths import get_experiments_dir
-from ..providers.api_key_manager import APIKeyManager
+from ..providers.api_key_manager import APIKeyManager, APIKeyError
 from ..ui.display_utils import DisplayUtils
 from .constants import NORD_DARK
 from .notify import send_notification
@@ -93,7 +93,7 @@ class DaemonLauncher:
         try:
             # Check all providers have API keys before starting
             APIKeyManager.validate_required_providers(list(providers))
-        except Exception as e:
+        except APIKeyError as e:
             # Show friendly error message in the CLI
             self.display.error(str(e), title="Missing API Keys", use_panel=True)
             raise
@@ -126,7 +126,7 @@ class DaemonLauncher:
             
             return exp_id
             
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
             self.display.error(f"Failed to start experiment: {str(e)}", use_panel=True)
             raise
 
@@ -288,7 +288,7 @@ class DaemonLauncher:
                 else:
                     # Terminal bell notification
                     print("\a", end="", flush=True)
-            except Exception:
+            except (OSError, FileNotFoundError, json.JSONDecodeError):
                 # If can't read manifest, just note that display exited
                 self.display.info(
                     (

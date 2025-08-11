@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from ..config.dimensional_prompts import DimensionalPromptGenerator
 from ..config.models import get_model_config
 # Removed import - build_initial_prompt is defined locally
 from ..providers.builder import build_provider
@@ -35,37 +34,18 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
     return await build_provider(model_id, temperature)
 
 
-def build_initial_prompt(
-    custom_prompt: Optional[str] = None, dimensions: Optional[List[str]] = None
-) -> str:
+def build_initial_prompt(custom_prompt: Optional[str] = None) -> str:
     """Build the initial prompt for a conversation.
 
     Args:
-        custom_prompt: Custom prompt text (overrides dimensions)
-        dimensions: List of dimension specifications (e.g., ["peers:philosophy:analytical"])
+        custom_prompt: Custom prompt text
 
     Returns:
         The initial prompt string
     """
     if custom_prompt:
         return custom_prompt
-
-    if not dimensions:
-        return "I'm looking forward to your conversation."
-
-    # Use the DimensionalPromptGenerator
-    generator = DimensionalPromptGenerator()
-
-    # If multiple dimensions provided, use the first one
-    # (The original CLI only uses one dimension spec at a time)
-    if dimensions:
-        try:
-            dimension_spec = dimensions[0]  # Take the first dimension spec
-            return generator.generate(dimension_spec)
-        except ValueError as e:
-            display.warning(str(e), use_panel=False)
-            return "I'm looking forward to your conversation."
-
+    
     return "I'm looking forward to your conversation."
 
 
@@ -222,31 +202,6 @@ def parse_temperature(value: str) -> float:
         return temp
     except ValueError as e:
         raise ValueError(str(e))
-
-
-def parse_dimensions(dimensions: List[str]) -> List[str]:
-    """Parse and validate dimension specifications.
-
-    Args:
-        dimensions: List of dimension specs like ["peers:philosophy:analytical"]
-
-    Returns:
-        List of valid dimension specifications
-    """
-    generator = DimensionalPromptGenerator()
-    valid_dims = []
-
-    for dim_spec in dimensions:
-        try:
-            # Try to generate a prompt to validate the dimension spec
-            generator.generate(dim_spec)
-            valid_dims.append(dim_spec)
-        except ValueError as e:
-            display.warning(
-                f"Invalid dimension spec '{dim_spec}': {e}", use_panel=False
-            )
-
-    return valid_dims
 
 
 def get_experiment_dir(base_dir: Optional[Path] = None) -> Path:

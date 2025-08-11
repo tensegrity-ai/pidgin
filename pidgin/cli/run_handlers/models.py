@@ -29,7 +29,6 @@ class ConversationConfig:
     choose_names: bool = False
     prompt_tag: str = "[HUMAN]"
     meditation: bool = False
-    dimension: Tuple[str, ...] = ()
 
 
 @dataclass
@@ -101,7 +100,6 @@ class RunConfig:
                 choose_names=kwargs.get("choose_names", False),
                 prompt_tag=kwargs.get("prompt_tag", "[HUMAN]"),
                 meditation=kwargs.get("meditation", False),
-                dimension=kwargs.get("dimension", ()),
             ),
             convergence=ConvergenceConfig(
                 convergence_threshold=kwargs.get("convergence_threshold"),

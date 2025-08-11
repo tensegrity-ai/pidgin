@@ -73,10 +73,10 @@ pidgin stop my_experiment
 pidgin stop --all  # Stop all experiments
 
 # List available models
-pidgin info models
+pidgin models
 
-# View standard prompt dimensions
-pidgin info dimensions
+# Create configuration file
+pidgin config
 
 # Branch from an existing conversation
 pidgin branch conv_abc123 --turn 10

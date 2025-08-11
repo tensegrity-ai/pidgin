@@ -115,7 +115,7 @@ async def check_and_pull_model(model_name: str, console: Console) -> bool:
 
         # Check if our model is in the output
         model_exists = model_name in result.stdout
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         model_exists = False
 
     result_returncode = 0 if model_exists else 1

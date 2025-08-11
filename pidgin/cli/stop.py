@@ -58,7 +58,7 @@ def stop(experiment_id, all):
                 display.dim(f"  → Stopped {exp_id} (PID: {pid})")
             except ProcessLookupError:
                 display.dim(f"  ! {exp_id} already dead (PID: {pid})")
-            except Exception as e:
+            except OSError as e:
                 display.error(f"Failed to stop {exp_id}: {e}", use_panel=False)
 
         console.print()  # Add spacing

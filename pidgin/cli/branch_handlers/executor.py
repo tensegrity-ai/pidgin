@@ -10,7 +10,7 @@ from rich.console import Console
 from ...config.models import get_model_config
 from ...experiments import ExperimentConfig, ExperimentManager
 from ...io.paths import get_experiments_dir
-from ...providers.api_key_manager import APIKeyManager
+from ...providers.api_key_manager import APIKeyManager, APIKeyError
 from ...ui.display_utils import DisplayUtils
 
 
@@ -52,7 +52,7 @@ class BranchExecutor:
         try:
             APIKeyManager.validate_required_providers(list(providers))
             return None
-        except Exception as e:
+        except APIKeyError as e:
             return str(e)
 
     def execute(
@@ -86,7 +86,7 @@ class BranchExecutor:
 
             return exp_id
 
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
             self.display.error(f"Failed to start branch: {str(e)}", use_panel=True)
             return None
 

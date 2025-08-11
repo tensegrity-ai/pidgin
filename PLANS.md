@@ -14,26 +14,27 @@ This document tracks development tasks with optimal sequencing for maximum effec
     - BranchSource model (27 lines)
   - All components well under 200-line guideline
 
-### Phase 2: Parameter Explosion Fix (4 hours)
-- [ ] **run.py refactoring** - 23 parameters in run() function
-  - Apply same pattern as branch.py (builder/validator/executor)
-  - Create RunConfigBuilder for parameter management
-  - Extract validation logic into RunValidator
+### Phase 2: Parameter Explosion Fix (✅ COMPLETED 2025-08-11)
+- [x] **run.py refactoring** - 23 parameters in run() function
+  - Applied structured configuration pattern with RunConfig
+  - Created run_handlers module with organized components
+  - Reduced ExecutionHandler.run_conversations from 24 to 8 parameters
+  - All handler modules under 200 lines
 
 ## HIGH PRIORITY - Architecture Improvements
 
 ### Week 1: Core CLI Infrastructure
-- [ ] **Fix logger output during display** - Config loading messages disrupting display
-  - Load Config once at display initialization
-  - Pass config instance to handlers
-  - See `PLANS/display-config-fix.md` for details
-- [ ] **Create CLIErrorHandler** - Standardize error handling across all CLI commands
-- [ ] **Apply component pattern to run.py** - Using learnings from branch.py
-- [ ] **Extract CLIDisplay mixin** - Common display patterns across CLI modules
+- [x] **Fix logger output during display** (✅ MOSTLY COMPLETE 2025-08-11)
+  - Fixed tail display recursion and console handling
+  - Added null console checks for daemon mode
+  - Minor: Config instantiation may still produce some debug output
+- [x] **Create CLIErrorHandler** - Standardize error handling across all CLI commands (✅ COMPLETED 2025-08-11)
+- [x] **Apply component pattern to run.py** - Completed with run_handlers module
+- [x] **Extract CLIDisplay mixin** - Common display patterns across CLI modules (✅ COMPLETED 2025-08-11)
 
 ### Week 2: Type Safety & Exception Handling
-- [ ] **Add type hints to CLI modules** - Start with entry points
-- [ ] **Replace generic exceptions** (68 instances) - Use specific exception types
+- [x] **Add type hints to CLI modules** - Entry points completed (✅ COMPLETED 2025-08-11)
+- [x] **Replace generic exceptions** - 15 instances replaced with specific types (✅ COMPLETED 2025-08-11)
 - [ ] **Configure mypy** - Set up type checking in CI pipeline
 - [ ] **Add error context** - Meaningful error messages throughout
 
@@ -76,6 +77,21 @@ This document tracks development tasks with optimal sequencing for maximum effec
 - [ ] Desktop notifications for experiment completion
 
 ## Completed Tasks
+
+### 2025-08-11: Major CLI Refactoring
+- ✅ **Removed dimensional prompting system** (~300 lines of unused complexity)
+  - Deleted dimensional_prompts.py (214 lines)
+  - Removed -d/--dimension flag from CLI
+  - Simplified prompt handling to just use -p flag
+- ✅ **Restructured CLI commands**
+  - Removed nested `info` command group
+  - Created top-level `models` command for listing models
+  - Created top-level `config` command for configuration
+  - Cleaner, more discoverable command structure
+- ✅ **Created CLIErrorHandler** for standardized error handling
+- ✅ **Created CLIDisplay mixin** for common display patterns
+- ✅ **Added type hints** to CLI entry points
+- ✅ **Replaced generic exceptions** with specific types (15 instances)
 
 ### 2025-08-10: Branch.py Refactoring
 - ✅ Successfully refactored 295-line monster function to ~105 lines

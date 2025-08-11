@@ -15,7 +15,6 @@ class ExperimentConfig:
 
     # Prompt configuration (matching CLI)
     custom_prompt: Optional[str] = None  # Custom prompt or path to .md file
-    dimensions: Optional[str] = None  # Dimensional prompt specification
 
     # Experiment parameters
     max_turns: int = 50  # Match CLI default

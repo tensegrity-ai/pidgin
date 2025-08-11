@@ -50,7 +50,7 @@ class ExecutionHandler:
         # Launch daemon
         try:
             exp_id = self.daemon_launcher.start_daemon(config)
-        except Exception:
+        except (RuntimeError, OSError):
             # Error already displayed by daemon launcher
             return
 

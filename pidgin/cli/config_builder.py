@@ -10,7 +10,6 @@ from ..config.resolution import resolve_temperatures
 from ..ui.display_utils import DisplayUtils
 from .helpers import (
     build_initial_prompt,
-    parse_dimensions,
     validate_model_id,
 )
 from .name_generator import generate_experiment_name
@@ -34,7 +33,6 @@ class ConfigBuilder:
         temp_a: Optional[float] = None,
         temp_b: Optional[float] = None,
         prompt: str = "Hello",
-        dimensions: Optional[list] = None,
         name: Optional[str] = None,
         max_parallel: int = 1,
         convergence_threshold: Optional[float] = None,
@@ -63,13 +61,8 @@ class ConfigBuilder:
             temperature, temp_a, temp_b
         )
 
-        # Parse and validate dimensions
-        parsed_dimensions = None
-        if dimensions:
-            parsed_dimensions = parse_dimensions(list(dimensions))
-
         # Build initial prompt
-        initial_prompt = build_initial_prompt(prompt, list(parsed_dimensions) if parsed_dimensions else [])
+        initial_prompt = build_initial_prompt(prompt)
 
         # Set convergence profile in config
         config = Config()
@@ -119,7 +112,6 @@ class ConfigBuilder:
             temperature_a=resolved_temp_a,
             temperature_b=resolved_temp_b,
             custom_prompt=initial_prompt if initial_prompt != "Hello" else None,
-            dimensions=list(parsed_dimensions) if parsed_dimensions else None,
             max_parallel=max_parallel,
             convergence_threshold=final_convergence_threshold,
             convergence_action=final_convergence_action,

@@ -22,13 +22,14 @@ class ExperimentDaemon:
         self.experiment_id = experiment_id
         # Convert to absolute paths before daemonizing
         self.pid_file = pid_dir.resolve() / f"{experiment_id}.pid"
-        self.log_file = pid_dir.parent.resolve() / "logs" / f"{experiment_id}.log"
+        # Note: log_file is not actually used - daemon_launcher sets up logging
+        # We keep this for backward compatibility but it's unused
+        self.log_file = None
         self.stop_requested = False
 
     def setup(self):
         """Set up the subprocess as a background process."""
-        # Create log directory
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        # Note: log directory is created by daemon_launcher.py, not here
 
         # Write PID file
         self.pid_file.parent.mkdir(parents=True, exist_ok=True)

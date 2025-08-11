@@ -16,10 +16,12 @@ from .branch_handlers import (
     BranchSourceFinder,
     BranchSpecWriter,
 )
+from .error_handler import CLIErrorHandler, FileNotFoundError as CLIFileNotFoundError, ValidationError
 from .name_generator import generate_experiment_name
 
 console = Console()
 display = DisplayUtils(console)
+error_handler = CLIErrorHandler(console)
 
 
 @click.command()
@@ -199,5 +201,15 @@ def branch_from_spec(spec_file: str):
         if result.exit_code != 0:
             display.error(f"Branch failed: {result.output}")
 
-    except Exception as e:
+    except yaml.YAMLError as e:
+        raise ValidationError(
+            f"Invalid YAML in spec file: {e}",
+            suggestion="Check YAML syntax with a validator"
+        )
+    except FileNotFoundError:
+        raise CLIFileNotFoundError(
+            spec_path,
+            suggestion="Verify the spec file path is correct"
+        )
+    except (PermissionError, OSError) as e:
         display.error(f"Failed to load branch spec: {e}")

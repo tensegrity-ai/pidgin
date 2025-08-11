@@ -57,8 +57,9 @@ import rich_click as click  # noqa: E402
 
 from ..ui.display_utils import DisplayUtils  # noqa: E402
 from .branch import branch  # noqa: E402
+from .config import config  # noqa: E402
 from .constants import BANNER  # noqa: E402
-from .info import info  # noqa: E402
+from .models import models  # noqa: E402
 from .monitor import monitor  # noqa: E402
 from .run import run  # noqa: E402
 from .stop import stop  # noqa: E402
@@ -70,7 +71,7 @@ display = DisplayUtils(console)
 class CustomGroup(click.Group):
     """Custom Click group with enhanced help formatting."""
     
-    def format_help(self, ctx, formatter):
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         """Override help formatting to add panels."""
         # Print the basic description
         console.print("\n[bold #8fbcbb]Usage:[/bold #8fbcbb] pidgin [OPTIONS] COMMAND [ARGS]...\n")
@@ -96,7 +97,7 @@ class CustomGroup(click.Group):
         examples_content = """[cyan]From YAML spec:[/cyan]         pidgin run experiment.yaml
 [cyan]Single conversation:[/cyan]    pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
 [cyan]Multiple conversations:[/cyan] pidgin run -a claude -b gpt -r 20 --name "test"
-[cyan]Using dimensions:[/cyan]       pidgin run -a claude -b gpt -d peers:philosophy:analytical
+[cyan]With custom prompt:[/cyan]     pidgin run -a claude -b gpt -p "Explore philosophy together"
 [cyan]Monitor experiments:[/cyan]    pidgin monitor"""
         
         # Configuration panel
@@ -128,11 +129,12 @@ class CustomGroup(click.Group):
         console.print("  [#a3be8c]-h, --help[/#a3be8c]        Show this message and exit.")
         
         # Commands section with panel
-        commands_text = """[bold #5e81ac]branch[/bold #5e81ac]      Branch a conversation from any point with parameter changes.
-[bold #5e81ac]info[/bold #5e81ac]        View information about models, dimensions, and configuration.
+        commands_text = """[bold #5e81ac]run[/bold #5e81ac]         Run AI conversations between two agents.
+[bold #5e81ac]branch[/bold #5e81ac]      Branch a conversation from any point with parameter changes.
 [bold #5e81ac]monitor[/bold #5e81ac]     System health monitor reading from JSONL files.
-[bold #5e81ac]run[/bold #5e81ac]         Run AI conversations between two agents.
-[bold #5e81ac]stop[/bold #5e81ac]        Stop a running experiment gracefully."""
+[bold #5e81ac]stop[/bold #5e81ac]        Stop a running experiment gracefully.
+[bold #5e81ac]models[/bold #5e81ac]      List all available AI models.
+[bold #5e81ac]config[/bold #5e81ac]      Create configuration file with example settings."""
         
         console.print("\n", Panel(
             commands_text,
@@ -151,7 +153,7 @@ class CustomGroup(click.Group):
     context_settings={"help_option_names": ["-h", "--help"]}
 )
 @click.version_option()
-def cli():
+def cli() -> None:
     """AI conversation research tool for studying emergent communication patterns.
 
     Pidgin enables controlled experiments between AI agents to discover how they
@@ -178,11 +180,12 @@ def cli():
 cli.add_command(run)
 cli.add_command(stop)
 cli.add_command(monitor)
-cli.add_command(info)
+cli.add_command(models)
+cli.add_command(config)
 cli.add_command(branch)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     # Check if help is being requested
     import sys

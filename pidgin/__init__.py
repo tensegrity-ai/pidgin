@@ -8,7 +8,6 @@ from .analysis import ConvergenceCalculator
 # Config exports
 from .config import (
     Config,
-    DimensionalPromptGenerator,
     get_model_config,
     get_system_prompts,
 )
@@ -50,7 +49,6 @@ __all__ = [
     "Config",
     "get_model_config",
     "get_system_prompts",
-    "DimensionalPromptGenerator",
     # IO
     "OutputManager",
     "get_logger",

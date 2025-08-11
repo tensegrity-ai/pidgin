@@ -61,6 +61,10 @@ class TailDisplay:
         Args:
             event: Event to log
         """
+        # Skip if no console (daemon mode)
+        if self.console is None:
+            return
+            
         # Get event type for styling
         event_type = type(event)
         color = EVENT_COLORS.get(event_type, NORD_GRAY)
@@ -118,6 +122,10 @@ class TailDisplay:
             event: Event to display
             header: Formatted header text
         """
+        # Skip if no console (daemon mode)
+        if self.console is None:
+            return
+            
         # Get event attributes
         event_dict = vars(event)
         

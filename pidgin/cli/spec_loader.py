@@ -47,7 +47,7 @@ class SpecLoader:
         except yaml.YAMLError as e:
             self.display.error(f"Invalid YAML in {spec_file}: {e}")
             raise
-        except Exception as e:
+        except (PermissionError, OSError) as e:
             self.display.error(f"Error loading spec: {e}")
             raise
 
