@@ -240,10 +240,10 @@ class EventHandlers:
 
     def display_token_usage(self, event: TokenUsageEvent, header: Text) -> None:
         """Display token usage event."""
-        content = f"agent: {self.formatter.format_agent_id(event.agent_id)} | "
-        content += f"input: {event.input_tokens:,} | "
-        content += f"output: {event.output_tokens:,} | "
-        content += f"total: {event.total_tokens:,}"
+        content = f"provider: {event.provider} | "
+        content += f"tokens: {event.tokens_used:,} | "
+        content += f"rate: {event.current_usage_rate:.1f}/min | "
+        content += f"limit: {event.tokens_per_minute_limit:,}/min"
         
         if hasattr(event, "cost_cents") and event.cost_cents:
             content += f" | cost: ${event.cost_cents/100:.3f}"

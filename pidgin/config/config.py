@@ -125,7 +125,7 @@ class Config:
             # Check standard location (but don't prompt)
             config_path = get_config_dir() / "pidgin.yaml"
             if config_path.exists():
-                logger.info(f"Loading config from: {config_path}")
+                logger.debug(f"Loading config from: {config_path}")
                 self.load_from_file(config_path)
 
     def _check_and_create_config(self):
@@ -133,7 +133,7 @@ class Config:
         config_path = get_config_dir() / "pidgin.yaml"
 
         if config_path.exists():
-            logger.info(f"Loading config from: {config_path}")
+            logger.debug(f"Loading config from: {config_path}")
             self.load_from_file(config_path)
             return
 

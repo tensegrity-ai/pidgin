@@ -23,6 +23,10 @@ This document tracks development tasks with optimal sequencing for maximum effec
 ## HIGH PRIORITY - Architecture Improvements
 
 ### Week 1: Core CLI Infrastructure
+- [ ] **Fix logger output during display** - Config loading messages disrupting display
+  - Load Config once at display initialization
+  - Pass config instance to handlers
+  - See `PLANS/display-config-fix.md` for details
 - [ ] **Create CLIErrorHandler** - Standardize error handling across all CLI commands
 - [ ] **Apply component pattern to run.py** - Using learnings from branch.py
 - [ ] **Extract CLIDisplay mixin** - Common display patterns across CLI modules
