@@ -23,7 +23,7 @@ class EventRepository(BaseRepository):
             conversation_id: Conversation ID
         """
         # Convert event to dict for storage
-        event_dict = {
+        event_dict: Dict[str, Any] = {
             "event_type": event.__class__.__name__,
             "conversation_id": conversation_id,
             "timestamp": event.timestamp.isoformat(),
@@ -72,9 +72,7 @@ class EventRepository(BaseRepository):
                         elif hasattr(item, "__dict__") and not isinstance(
                             item, (str, int, float, bool)
                         ):
-                            serialized_list.append(
-                                {k: v for k, v in item.__dict__.items()}
-                            )
+                            serialized_list.append(dict(item.__dict__.items()))
                         else:
                             serialized_list.append(item)
                     event_dict[field_name] = serialized_list
@@ -144,7 +142,7 @@ class EventRepository(BaseRepository):
             List of event dictionaries
         """
         conditions = []
-        params = []
+        params: List[Any] = []
 
         if conversation_id:
             conditions.append("conversation_id = ?")
@@ -161,11 +159,11 @@ class EventRepository(BaseRepository):
 
         if start_time:
             conditions.append("timestamp >= ?")
-            params.append(start_time)
+            params.append(start_time.isoformat() if hasattr(start_time, 'isoformat') else start_time)
 
         if end_time:
             conditions.append("timestamp <= ?")
-            params.append(end_time)
+            params.append(end_time.isoformat() if hasattr(end_time, 'isoformat') else end_time)
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 

@@ -99,8 +99,8 @@ def calculate_structural_similarity(
     )
 
     # Punctuation similarity
-    punct_a = Counter()
-    punct_b = Counter()
+    punct_a: Counter[str] = Counter()
+    punct_b: Counter[str] = Counter()
 
     for m in messages_a:
         for p in ".!?,;:-—":

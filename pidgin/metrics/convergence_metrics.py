@@ -160,22 +160,26 @@ class ConvergenceCalculator:
         if max_len == 0:
             return 1.0
 
-        dist_a = [0] * (max_len + 1)
-        dist_b = [0] * (max_len + 1)
+        dist_a_int = [0] * (max_len + 1)
+        dist_b_int = [0] * (max_len + 1)
 
         for length in lengths_a:
-            dist_a[length] += 1
+            dist_a_int[length] += 1
         for length in lengths_b:
-            dist_b[length] += 1
+            dist_b_int[length] += 1
 
         # Normalize
-        total_a = sum(dist_a)
-        total_b = sum(dist_b)
+        total_a = sum(dist_a_int)
+        total_b = sum(dist_b_int)
 
         if total_a > 0:
-            dist_a = [x / total_a for x in dist_a]
+            dist_a = [x / total_a for x in dist_a_int]
+        else:
+            dist_a = [0.0] * len(dist_a_int)
         if total_b > 0:
-            dist_b = [x / total_b for x in dist_b]
+            dist_b = [x / total_b for x in dist_b_int]
+        else:
+            dist_b = [0.0] * len(dist_b_int)
 
         # Calculate cosine similarity
         dot_product = sum(a * b for a, b in zip(dist_a, dist_b))

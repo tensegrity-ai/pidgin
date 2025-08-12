@@ -26,7 +26,7 @@ def check_ollama_running() -> bool:
         result = sock.connect_ex(("localhost", 11434))
         sock.close()
         return result == 0
-    except (OSError, socket.error):
+    except OSError:
         # Socket creation or connection failed
         return False
 
@@ -53,8 +53,10 @@ async def start_ollama_server(console) -> bool:
     try:
         # Start in background silently
         if platform.system() == "Windows":
+            # CREATE_NEW_CONSOLE is Windows-specific
+            creation_flags = getattr(subprocess, 'CREATE_NEW_CONSOLE', 0x00000010)
             subprocess.Popen(
-                ["ollama", "serve"], creationflags=subprocess.CREATE_NEW_CONSOLE
+                ["ollama", "serve"], creationflags=creation_flags
             )
         else:
             subprocess.Popen(
@@ -140,13 +142,18 @@ async def auto_install_ollama(console) -> bool:
                 "Download from: https://ollama.ai/download/windows", use_panel=False
             )
             return False
+        else:
+            # Unsupported system
+            display = DisplayUtils(console)
+            display.warning(f"Unsupported system: {system}", use_panel=False)
+            return False
 
     except KeyboardInterrupt:
         console.print()  # Add spacing
         display.warning("Installation cancelled", use_panel=False)
         return False
     except Exception as e:
-        display.error(f"Install error: {str(e)}", use_panel=False)
+        display.error(f"Install error: {e!s}", use_panel=False)
         return False
 
 

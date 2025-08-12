@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..constants import ConversationStatus, ExperimentStatus
+from ..core.constants import ConversationStatus, ExperimentStatus
 
 logger = logging.getLogger("jsonl_reader")
 
@@ -96,7 +96,7 @@ class JSONLExperimentReader:
         """
         # Aggregate data from all conversation event files
         conversations = {}
-        experiment_info = {
+        experiment_info: Dict[str, Any] = {
             "experiment_id": experiment_id,
             "status": "unknown",
             "created_at": None,
@@ -166,7 +166,7 @@ class JSONLExperimentReader:
         Returns:
             Conversation info dict
         """
-        conv_info = {
+        conv_info: Dict[str, Any] = {
             "status": "unknown",
             "started_at": None,
             "ended_at": None,
@@ -176,7 +176,7 @@ class JSONLExperimentReader:
         }
 
         try:
-            with open(jsonl_file, "r") as f:
+            with open(jsonl_file) as f:
                 for line in f:
                     if not line.strip():
                         continue

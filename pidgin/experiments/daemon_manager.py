@@ -5,7 +5,6 @@ import os
 import signal
 import time
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -27,6 +26,7 @@ class DaemonManager:
         self.base_dir = base_dir
         # Import get_cache_dir for active directory
         from ..io.directories import get_cache_dir
+
         self.active_dir = get_cache_dir() / "active_experiments"
         self.resolver = ExperimentResolver(base_dir)
         self.launcher = ProcessLauncher(self.base_dir)
@@ -87,9 +87,10 @@ class DaemonManager:
         # Start the subprocess as a detached process
         env = self.launcher.prepare_environment(working_dir)
 
-        with open(startup_log, "w") as stderr_file, open(
-            experiment_log, "w"
-        ) as stdout_file:
+        with (
+            open(startup_log, "w") as stderr_file,
+            open(experiment_log, "w") as stdout_file,
+        ):
             process = self.launcher.launch_detached_process(
                 cmd, stdout_file, stderr_file, env
             )
@@ -100,7 +101,7 @@ class DaemonManager:
 
         # If we get here, daemon failed to start
         self.launcher.handle_startup_failure(experiment_id, process, startup_log)
-
+        return experiment_id  # Return the ID even if startup failed
 
     def stop_experiment(self, experiment_id: str) -> bool:
         """Stop running experiment gracefully.

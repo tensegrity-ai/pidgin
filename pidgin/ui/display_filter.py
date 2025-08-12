@@ -52,18 +52,34 @@ class DisplayFilter:
         self.prompt_tag = prompt_tag
 
         # Initialize handlers with shared state
-        handler_args = {
-            "console": console,
-            "mode": mode,
-            "show_timing": show_timing,
-            "agents": agents,
-            "prompt_tag": prompt_tag,
-        }
-
-        self.conversation_handler = ConversationDisplayHandler(**handler_args)
-        self.message_handler = MessageDisplayHandler(**handler_args)
-        self.error_handler = ErrorDisplayHandler(**handler_args)
-        self.system_handler = SystemDisplayHandler(**handler_args)
+        self.conversation_handler = ConversationDisplayHandler(
+            console=console,
+            mode=mode,
+            show_timing=show_timing,
+            agents=agents,
+            prompt_tag=prompt_tag,
+        )
+        self.message_handler = MessageDisplayHandler(
+            console=console,
+            mode=mode,
+            show_timing=show_timing,
+            agents=agents,
+            prompt_tag=prompt_tag,
+        )
+        self.error_handler = ErrorDisplayHandler(
+            console=console,
+            mode=mode,
+            show_timing=show_timing,
+            agents=agents,
+            prompt_tag=prompt_tag,
+        )
+        self.system_handler = SystemDisplayHandler(
+            console=console,
+            mode=mode,
+            show_timing=show_timing,
+            agents=agents,
+            prompt_tag=prompt_tag,
+        )
 
         # Track conversation state
         self.current_turn = 0

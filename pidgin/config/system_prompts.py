@@ -60,7 +60,7 @@ class CustomAwareness:
         if not self.path.exists():
             raise FileNotFoundError(f"Custom awareness file not found: {yaml_path}")
 
-        with open(self.path, "r") as f:
+        with open(self.path) as f:
             self.config = yaml.safe_load(f)
 
         self._validate_config()
@@ -169,7 +169,7 @@ class CustomAwareness:
         # Get the config for this turn
         turn_config = prompts.get(turn_number, prompts.get(turn_key, {}))
 
-        result = {"agent_a": None, "agent_b": None}
+        result: Dict[str, Optional[str]] = {"agent_a": None, "agent_b": None}
 
         # Handle 'both' key
         if "both" in turn_config:

@@ -31,7 +31,7 @@ class BranchSourceFinder:
                 continue
 
             state = self.state_builder.get_conversation_state(
-                exp_dir, conversation_id, turn
+                exp_dir, conversation_id
             )
             if state:
                 return BranchSource(

@@ -39,7 +39,7 @@ class EventBus:
         self.db_store = db_store
         self.event_log_dir = event_log_dir
         self._running = False
-        self._jsonl_files = {}  # conversation_id -> file handle
+        self._jsonl_files: Dict[str, Any] = {}  # conversation_id -> file handle
         self._jsonl_lock = threading.RLock()  # Protect JSONL file access (reentrant)
         self._history_lock = threading.RLock()  # Protect event history (reentrant)
         self._subscriber_lock = threading.RLock()  # Protect subscriber list (reentrant)
@@ -186,15 +186,9 @@ class EventBus:
                     elif hasattr(v, "model_name"):
                         # Alternative attribute name
                         event_data[k] = getattr(v, "model_name", str(v))
-                    elif isinstance(v, str):
-                        # It's already a string, use it
-                        event_data[k] = v
                     else:
-                        # Log warning and convert to string
-                        logger.warning(
-                            f"Unexpected type for model field in {type(event).__name__}: {type(v)}"
-                        )
-                        event_data[k] = str(v)
+                        # String or None - just use as is
+                        event_data[k] = v
                 else:
                     event_data[k] = self._serialize_value(v)
 
