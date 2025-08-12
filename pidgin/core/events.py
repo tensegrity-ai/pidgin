@@ -95,14 +95,10 @@ class ConversationStartEvent(Event):
     """Conversation is beginning."""
 
     conversation_id: str
-    agent_a_model: str
-    agent_b_model: str
-    initial_prompt: str
-    max_turns: int
-    agent_a_display_name: Optional[str] = None
-    agent_b_display_name: Optional[str] = None
-    temperature_a: Optional[float] = None
-    temperature_b: Optional[float] = None
+    agent_a: Any
+    agent_b: Any
+    experiment_id: Optional[str] = None
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -110,9 +106,12 @@ class ConversationEndEvent(Event):
     """Conversation has ended."""
 
     conversation_id: str
-    reason: str  # "max_turns", "pause", "error", "high_convergence"
-    total_turns: int
-    duration_ms: int
+    turns_completed: int
+    status: str  # "completed", "failed", "interrupted", "empty"
+    experiment_id: Optional[str] = None
+    reason: Optional[str] = None
+    error: Optional[str] = None
+    duration_seconds: float = 0.0
 
 
 @dataclass

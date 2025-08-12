@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS conversations (
     -- Conversation settings
     initial_prompt TEXT,
     max_turns INTEGER,
-    first_speaker TEXT DEFAULT 'agent_a',
 
     -- Final metrics
     total_turns INTEGER DEFAULT 0,

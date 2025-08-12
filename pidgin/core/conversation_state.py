@@ -15,31 +15,22 @@ class ConversationState:
     """Manages conversation state and events."""
     
     def __init__(self, bus, display_filter=None):
-        """Initialize state manager.
-        
-        Args:
-            bus: Event bus for emitting events
-            display_filter: Optional display filter
-        """
         self.bus = bus
         self.display_filter = display_filter
         self._end_event_emitted = False
         
     def create_conversation(
         self,
-        experiment_id: str,
         agent_a: Agent,
         agent_b: Agent,
         initial_prompt: str,
         conversation_id: Optional[str] = None,
     ) -> Conversation:
         return Conversation(
-            experiment_id=experiment_id,
-            agent_a=agent_a,
-            agent_b=agent_b,
+            id=conversation_id,
+            agents=[agent_a, agent_b],
             messages=[],
             initial_prompt=initial_prompt,
-            id=conversation_id,
         )
         
     async def add_initial_messages(
@@ -52,9 +43,7 @@ class ConversationState:
             if loaded_from_checkpoint:
                 conversation.messages.extend(initial_messages)
             else:
-                for msg in initial_messages:
-                    msg.timestamp = time.time()
-                    conversation.messages.append(msg)
+                conversation.messages.extend(initial_messages)
                     
     async def emit_start_events(
         self,
@@ -62,6 +51,7 @@ class ConversationState:
         system_prompts: Dict[str, str],
         show_system_prompts: bool,
         config: dict,
+        experiment_id: Optional[str] = None,
     ):
         if show_system_prompts:
             for agent_id, prompt in system_prompts.items():
@@ -74,13 +64,12 @@ class ConversationState:
                         )
                     )
                     
-        # Emit conversation start event
         await self.bus.emit(
             ConversationStartEvent(
                 conversation_id=conversation.id,
-                experiment_id=conversation.experiment_id,
                 agent_a=conversation.agent_a,
                 agent_b=conversation.agent_b,
+                experiment_id=experiment_id,
                 config=config,
             )
         )
@@ -91,15 +80,8 @@ class ConversationState:
         status: str,
         reason: Optional[str] = None,
         error: Optional[str] = None,
+        experiment_id: Optional[str] = None,
     ):
-        """Emit conversation end event.
-        
-        Args:
-            conversation: Conversation instance
-            status: Final status (completed, failed, interrupted)
-            reason: Optional reason for ending
-            error: Optional error message
-        """
         if self._end_event_emitted:
             return
             
@@ -113,9 +95,9 @@ class ConversationState:
         await self.bus.emit(
             ConversationEndEvent(
                 conversation_id=conversation.id,
-                experiment_id=conversation.experiment_id,
                 turns_completed=conversation.turn_count,
                 status=actual_status,
+                experiment_id=experiment_id,
                 reason=reason,
                 error=error,
                 duration_seconds=time.time() - conversation.start_time,

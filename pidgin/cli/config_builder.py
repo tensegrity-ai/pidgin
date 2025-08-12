@@ -42,7 +42,6 @@ class ConfigBuilder:
         awareness_a: bool = False,
         awareness_b: bool = False,
         choose_names: bool = False,
-        first_speaker: str = "a",
         display_mode: str = "chat",
         prompt_tag: Optional[str] = None,
         allow_truncation: bool = False,
@@ -96,12 +95,6 @@ class ConfigBuilder:
             final_name = generate_experiment_name()
             display.dim(f"Generated experiment name: {final_name}")
 
-        # Determine first speaker
-        final_first_speaker = first_speaker
-        if first_speaker == "random":
-            final_first_speaker = random.choice(["a", "b"])
-        first_speaker_id = f"agent_{final_first_speaker}"
-
         # Create experiment configuration
         experiment_config = ExperimentConfig(
             name=final_name,
@@ -119,7 +112,6 @@ class ConfigBuilder:
             awareness_a=awareness_a,
             awareness_b=awareness_b,
             choose_names=choose_names,
-            first_speaker=first_speaker_id,
             display_mode=display_mode,
             prompt_tag=prompt_tag,
             allow_truncation=allow_truncation,

@@ -25,7 +25,6 @@ class ConversationConfig:
     prompt: Optional[str] = None
     turns: int = 5  # Default from constants
     repetitions: int = 1
-    first_speaker: str = "a"
     choose_names: bool = False
     prompt_tag: str = "[HUMAN]"
     meditation: bool = False
@@ -96,7 +95,6 @@ class RunConfig:
                 prompt=kwargs.get("prompt"),
                 turns=kwargs.get("turns", 5),
                 repetitions=kwargs.get("repetitions", 1),
-                first_speaker=kwargs.get("first_speaker", "a"),
                 choose_names=kwargs.get("choose_names", False),
                 prompt_tag=kwargs.get("prompt_tag", "[HUMAN]"),
                 meditation=kwargs.get("meditation", False),

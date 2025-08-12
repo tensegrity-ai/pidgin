@@ -127,6 +127,7 @@ class Conductor:
         conversation_id: Optional[str] = None,
         prompt_tag: Optional[str] = None,
         branch_messages: Optional[list] = None,
+        experiment_id: Optional[str] = None,
     ) -> Conversation:
         """Run a complete conversation using events.
 
@@ -174,6 +175,7 @@ class Conductor:
             max_turns,
             prompt_tag,
             branch_messages,
+            experiment_id,
         )
 
         # Run conversation turns
@@ -183,7 +185,7 @@ class Conductor:
 
         # Finalize conversation
         await self._finalize_conversation(
-            conversation, conv_id, conv_dir, final_turn, max_turns, end_reason
+            conversation, conv_id, conv_dir, final_turn, max_turns, end_reason, experiment_id
         )
 
         return conversation
@@ -264,14 +266,12 @@ class Conductor:
         max_turns: int,
         prompt_tag: Optional[str],
         branch_messages: Optional[list] = None,
+        experiment_id: Optional[str] = None,
     ) -> Conversation:
-        """Initialize conversation and emit start events."""
-        # Create conversation
         conversation = self.lifecycle.create_conversation(
-            conv_id, agent_a, agent_b, initial_prompt, branch_messages
+            agent_a, agent_b, initial_prompt, conv_id
         )
 
-        # Get system prompts and add initial messages
         system_prompts, custom_awareness = get_system_prompts(
             awareness_a=awareness_a,
             awareness_b=awareness_b,
@@ -279,32 +279,56 @@ class Conductor:
             model_a_name=agent_a.model,
             model_b_name=agent_b.model,
         )
-        # Only add initial messages if not branching
         if not branch_messages:
-            await self.lifecycle.add_initial_messages(
-                conversation, system_prompts, initial_prompt, prompt_tag
-            )
+            # Create initial messages from system prompts and initial prompt
+            initial_messages = []
+            
+            if system_prompts.get("agent_a"):
+                from .types import Message
+                initial_messages.append(Message(
+                    role="system",
+                    content=system_prompts["agent_a"],
+                    agent_id="system"
+                ))
+            
+            if initial_prompt:
+                from .types import Message
+                initial_messages.append(Message(
+                    role="user",
+                    content=initial_prompt,
+                    agent_id="human"
+                ))
+            
+            if initial_messages:
+                await self.lifecycle.add_initial_messages(
+                    conversation, initial_messages
+                )
 
-        # Store custom awareness for turn injection
         self.turn_executor.set_custom_awareness(custom_awareness)
 
-        # Set up interrupt handling
         self.interrupt_handler.setup_interrupt_handler()
-        self.interrupt_handler.interrupt_requested = False  # Reset flag
+        self.interrupt_handler.interrupt_requested = False
 
-        # Emit start events
         self.start_time = time.time()
         self.turn_executor.start_time = self.start_time
+        
+        config = {
+            "initial_prompt": initial_prompt,
+            "max_turns": max_turns,
+            "temperature_a": temperature_a,
+            "temperature_b": temperature_b,
+            "awareness_a": awareness_a,
+            "awareness_b": awareness_b,
+            "choose_names": choose_names,
+            "prompt_tag": prompt_tag,
+        }
+        
         await self.lifecycle.emit_start_events(
             conversation,
-            agent_a,
-            agent_b,
-            initial_prompt,
-            max_turns,
             system_prompts,
-            temperature_a,
-            temperature_b,
-            prompt_tag,
+            True,  # show_system_prompts
+            config,
+            experiment_id,
         )
 
         return conversation
@@ -358,11 +382,18 @@ class Conductor:
         final_turn: int,
         max_turns: int,
         end_reason: Optional[str],
+        experiment_id: Optional[str] = None,
     ):
-        """Finalize conversation with end events and cleanup."""
-        # Always emit end event with appropriate reason
+        # Determine status based on reason
+        if end_reason == "interrupt":
+            status = "interrupted"
+        elif end_reason and "error" in end_reason.lower():
+            status = "failed"
+        else:
+            status = "completed"
+            
         await self.lifecycle.emit_end_event_with_reason(
-            conversation, final_turn, max_turns, self.start_time, end_reason
+            conversation, status, end_reason, None, experiment_id
         )
 
         # Note: We no longer load single chats to a database

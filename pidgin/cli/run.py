@@ -62,12 +62,6 @@ console = Console()
     default="balanced",
     help="Convergence weight profile (default: balanced)",
 )
-@click.option(
-    "--first-speaker",
-    type=click.Choice(["a", "b", "random"]),
-    default="a",
-    help="Which agent speaks first",
-)
 @click.option("--choose-names", is_flag=True, help="Let agents choose their own names")
 @click.option(
     "-w",
@@ -130,7 +124,6 @@ def run(
     convergence_threshold: Optional[float],
     convergence_action: Optional[str],
     convergence_profile: str,
-    first_speaker: str,
     choose_names: bool,
     awareness: str,
     awareness_a: Optional[str],
@@ -172,7 +165,6 @@ def run(
         convergence_threshold=convergence_threshold,
         convergence_action=convergence_action,
         convergence_profile=convergence_profile,
-        first_speaker=first_speaker,
         choose_names=choose_names,
         awareness=awareness,
         awareness_a=awareness_a,

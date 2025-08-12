@@ -29,12 +29,15 @@ def test_conversation_start_event_deserialization():
         "event_type": "ConversationStartEvent",
         "timestamp": "2024-01-01T12:00:00",
         "conversation_id": "test-conv-123",
-        "agent_a_model": "gpt-4",
-        "agent_b_model": "claude-3",
-        "initial_prompt": "Let's have a conversation",
-        "max_turns": 10,
-        "temperature_a": 0.7,
-        "temperature_b": 0.8,
+        "agent_a": {"id": "agent_a", "model": "gpt-4"},
+        "agent_b": {"id": "agent_b", "model": "claude-3"},
+        "experiment_id": "exp-123",
+        "config": {
+            "initial_prompt": "Let's have a conversation",
+            "max_turns": 10,
+            "temperature_a": 0.7,
+            "temperature_b": 0.8,
+        }
     }
     
     # Deserialize the event
@@ -45,12 +48,10 @@ def test_conversation_start_event_deserialization():
     assert event is not None, "Event should not be None"
     assert isinstance(event, ConversationStartEvent)
     assert event.conversation_id == "test-conv-123"
-    assert event.agent_a_model == "gpt-4"
-    assert event.agent_b_model == "claude-3"
-    assert event.initial_prompt == "Let's have a conversation"
-    assert event.max_turns == 10
-    assert event.temperature_a == 0.7
-    assert event.temperature_b == 0.8
+    assert event.agent_a["model"] == "gpt-4"
+    assert event.agent_b["model"] == "claude-3"
+    assert event.config["initial_prompt"] == "Let's have a conversation"
+    assert event.config["max_turns"] == 10
 
 
 def test_turn_complete_event_deserialization():
@@ -138,10 +139,12 @@ def test_full_conversation_deserialization():
                 "event_type": "ConversationStartEvent",
                 "timestamp": "2024-01-01T12:00:00",
                 "conversation_id": "test-conv-full",
-                "agent_a_model": "gpt-4",
-                "agent_b_model": "claude-3",
-                "initial_prompt": "Discuss the weather",
-                "max_turns": 2,
+                "agent_a": {"id": "agent_a", "model": "gpt-4"},
+                "agent_b": {"id": "agent_b", "model": "claude-3"},
+                "config": {
+                    "initial_prompt": "Discuss the weather",
+                    "max_turns": 2,
+                }
             },
             {
                 "event_type": "SystemPromptEvent",
@@ -190,9 +193,10 @@ def test_full_conversation_deserialization():
                 "event_type": "ConversationEndEvent",
                 "timestamp": "2024-01-01T12:00:10",
                 "conversation_id": "test-conv-full",
+                "turns_completed": 2,
+                "status": "completed",
                 "reason": "max_turns",
-                "total_turns": 2,
-                "duration_ms": 10000,
+                "duration_seconds": 10.0,
             },
         ]
         
@@ -244,11 +248,9 @@ def test_handles_missing_optional_fields():
         "event_type": "ConversationStartEvent",
         "timestamp": "2024-01-01T12:00:00",
         "conversation_id": "minimal",
-        "agent_a_model": "model-a",
-        "agent_b_model": "model-b",
-        "initial_prompt": "start",
-        "max_turns": 1,
-        # No temperature_a, temperature_b, or display names
+        "agent_a": {"id": "agent_a", "model": "model-a"},
+        "agent_b": {"id": "agent_b", "model": "model-b"},
+        # experiment_id and config are optional
     }
     
     deserializer = EventDeserializer()
@@ -256,10 +258,8 @@ def test_handles_missing_optional_fields():
     
     assert event is not None
     assert isinstance(event, ConversationStartEvent)
-    assert event.temperature_a is None
-    assert event.temperature_b is None
-    assert event.agent_a_display_name is None
-    assert event.agent_b_display_name is None
+    assert event.experiment_id is None
+    assert event.config == {}  # Should default to empty dict
 
 
 def test_handles_extra_fields():

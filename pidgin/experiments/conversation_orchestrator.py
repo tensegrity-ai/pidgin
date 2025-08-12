@@ -47,6 +47,7 @@ class ConversationOrchestrator:
         console,
         event_bus: TrackingEventBus,
         conversation_id: str,
+        experiment_id: Optional[str] = None,
     ) -> None:
         """Create conductor and run the conversation.
         
@@ -61,8 +62,7 @@ class ConversationOrchestrator:
         """
         # Build initial prompt
         initial_prompt = build_initial_prompt(
-            custom_prompt=config.custom_prompt,
-            dimensions=None,
+            custom_prompt=config.custom_prompt
         )
 
         # Create conductor with the isolated event bus
@@ -77,11 +77,8 @@ class ConversationOrchestrator:
             bus=event_bus,
         )
 
-        # Set display mode on the conductor
         conductor.display_mode = config.display_mode
 
-        # Run conversation
-        # Note: first_speaker is not supported - agent_a always speaks first
         await conductor.run_conversation(
             agent_a=agents["agent_a"],
             agent_b=agents["agent_b"],
@@ -96,6 +93,7 @@ class ConversationOrchestrator:
             temperature_b=config.temperature_b or config.temperature,
             conversation_id=conversation_id,
             prompt_tag=config.prompt_tag,
+            experiment_id=experiment_id,
         )
 
     async def handle_branching(
@@ -109,6 +107,7 @@ class ConversationOrchestrator:
         conversation_id: str,
         branch_from: Optional[str] = None,
         branch_at: Optional[int] = None,
+        experiment_id: Optional[str] = None,
     ) -> None:
         """Handle conversation branching if configured.
         
@@ -152,11 +151,8 @@ class ConversationOrchestrator:
                 bus=event_bus,
             )
 
-            # Set display mode
             conductor.display_mode = config.display_mode
 
-            # Run branched conversation
-            # Note: first_speaker is not supported - agent_a always speaks first
             await conductor.run_conversation(
                 agent_a=agents["agent_a"],
                 agent_b=agents["agent_b"],
@@ -172,9 +168,9 @@ class ConversationOrchestrator:
                 conversation_id=conversation_id,
                 prompt_tag=config.prompt_tag,
                 branch_messages=config.branch_messages,
+                experiment_id=experiment_id,
             )
         else:
-            # Run normal conversation
             await self.create_and_run_conductor(
                 config=config,
                 agents=agents,
@@ -183,4 +179,5 @@ class ConversationOrchestrator:
                 console=console,
                 event_bus=event_bus,
                 conversation_id=conversation_id,
+                experiment_id=experiment_id,
             )

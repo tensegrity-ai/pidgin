@@ -139,3 +139,20 @@ class Conversation(BaseModel):
     messages: List[Message] = []
     started_at: datetime = Field(default_factory=datetime.now)
     initial_prompt: Optional[str] = None
+
+    @property
+    def agent_a(self) -> Optional[Agent]:
+        return self.agents[0] if self.agents else None
+
+    @property
+    def agent_b(self) -> Optional[Agent]:
+        return self.agents[1] if len(self.agents) > 1 else None
+
+    @property
+    def turn_count(self) -> int:
+        # Each turn is 2 messages (agent_a then agent_b)
+        return len(self.messages) // 2
+
+    @property
+    def start_time(self) -> float:
+        return self.started_at.timestamp()

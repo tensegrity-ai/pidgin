@@ -14,12 +14,6 @@ class ConversationLifecycle:
     """Manages conversation lifecycle using focused components."""
     
     def __init__(self, console=None, token_tracker: Optional[GlobalTokenTracker] = None):
-        """Initialize lifecycle manager.
-        
-        Args:
-            console: Optional console for output
-            token_tracker: Optional token tracker for rate limiting
-        """
         self.console = console
         self.token_tracker = token_tracker
         
@@ -48,7 +42,6 @@ class ConversationLifecycle:
         db_store=None,
         prompt_tag: Optional[str] = None,
     ):
-        """Initialize EventBus and display components."""
         result = await self.setup.initialize_event_system(
             conv_dir=conv_dir,
             display_mode=display_mode,
@@ -73,7 +66,6 @@ class ConversationLifecycle:
         
     def create_conversation(
         self,
-        experiment_id: str,
         agent_a: Agent,
         agent_b: Agent,
         initial_prompt: str,
@@ -82,7 +74,7 @@ class ConversationLifecycle:
         if not self.state:
             raise RuntimeError("Must initialize event system before creating conversation")
         return self.state.create_conversation(
-            experiment_id, agent_a, agent_b, initial_prompt, conversation_id
+            agent_a, agent_b, initial_prompt, conversation_id
         )
         
     async def add_initial_messages(
@@ -103,11 +95,12 @@ class ConversationLifecycle:
         system_prompts: Dict[str, str],
         show_system_prompts: bool,
         config: dict,
+        experiment_id: Optional[str] = None,
     ):
         if not self.state:
             raise RuntimeError("Must initialize event system before emitting events")
         await self.state.emit_start_events(
-            conversation, system_prompts, show_system_prompts, config
+            conversation, system_prompts, show_system_prompts, config, experiment_id
         )
         
     async def emit_end_event_with_reason(
@@ -116,17 +109,19 @@ class ConversationLifecycle:
         status: str,
         reason: Optional[str] = None,
         error: Optional[str] = None,
+        experiment_id: Optional[str] = None,
     ):
         if not self.state:
             raise RuntimeError("Must initialize event system before emitting events")
-        await self.state.emit_end_event(conversation, status, reason, error)
+        await self.state.emit_end_event(conversation, status, reason, error, experiment_id)
         
     async def emit_end_event(
         self,
         conversation: Conversation,
         status: str = "completed",
+        experiment_id: Optional[str] = None,
     ):
-        await self.emit_end_event_with_reason(conversation, status)
+        await self.emit_end_event_with_reason(conversation, status, experiment_id=experiment_id)
         
     async def cleanup(self):
         if self.chat_display:

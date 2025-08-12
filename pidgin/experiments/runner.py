@@ -211,29 +211,22 @@ class ExperimentRunner:
             conv_config: Conversation-specific configuration
             exp_dir: Experiment directory
         """
-        # Set process title for this conversation
         try:
             import setproctitle
             setproctitle.setproctitle("pidgin-exp")
         except ImportError:
             pass
 
-        # Register conversation in manifest
         self.orchestrator.register_conversation(exp_dir, conversation_id)
-
-        # Set up event bus
         event_bus = await self.setup.setup_event_bus(exp_dir, conversation_id)
 
         try:
-            # Create agents and providers
             agents, providers = await self.setup.create_agents_and_providers(config)
 
-            # Set up output and console
             output_manager, console = self.setup.setup_output_and_console(
                 config, exp_dir, conversation_id
             )
 
-            # Handle branching if configured
             await self.orchestrator.handle_branching(
                 config=config,
                 agents=agents,
@@ -244,8 +237,8 @@ class ExperimentRunner:
                 conversation_id=conversation_id,
                 branch_from=config.branch_from_conversation,
                 branch_at=config.branch_from_turn,
+                experiment_id=experiment_id,
             )
 
         finally:
-            # Stop the event bus
             await event_bus.stop()

@@ -121,7 +121,6 @@ class BranchConfigBuilder:
             custom_prompt=self.branch_config.get("initial_prompt"),
             awareness_a=self.branch_config.get("awareness_a", "basic"),
             awareness_b=self.branch_config.get("awareness_b", "basic"),
-            first_speaker=self.branch_config.get("first_speaker", "agent_a"),
             prompt_tag=self.branch_config.get("prompt_tag"),
             branch_from_conversation=conversation_id,
             branch_from_turn=branch_point,

@@ -77,7 +77,6 @@ CREATE TABLE conversations (
     -- Conversation settings
     initial_prompt TEXT,
     max_turns INTEGER,
-    first_speaker TEXT,               -- 'agent_a' or 'agent_b'
     
     -- Results
     total_turns INTEGER DEFAULT 0,

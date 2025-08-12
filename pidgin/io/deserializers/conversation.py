@@ -29,14 +29,10 @@ class ConversationDeserializer(BaseDeserializer):
         """Build ConversationStartEvent from data."""
         event = ConversationStartEvent(
             conversation_id=data["conversation_id"],
-            agent_a_model=data["agent_a_model"],
-            agent_b_model=data["agent_b_model"],
-            initial_prompt=data["initial_prompt"],
-            max_turns=data["max_turns"],
-            temperature_a=data.get("temperature_a"),
-            temperature_b=data.get("temperature_b"),
-            agent_a_display_name=data.get("agent_a_display_name"),
-            agent_b_display_name=data.get("agent_b_display_name"),
+            agent_a=data["agent_a"],
+            agent_b=data["agent_b"],
+            experiment_id=data.get("experiment_id"),
+            config=data.get("config", {}),
         )
         event.timestamp = timestamp
         return event
@@ -48,9 +44,12 @@ class ConversationDeserializer(BaseDeserializer):
         """Build ConversationEndEvent from data."""
         event = ConversationEndEvent(
             conversation_id=data["conversation_id"],
-            total_turns=data["total_turns"],
-            reason=data["reason"],
-            duration_ms=data.get("duration_ms", 0),
+            turns_completed=data.get("turns_completed", data.get("total_turns", 0)),
+            status=data.get("status", "completed"),
+            experiment_id=data.get("experiment_id"),
+            reason=data.get("reason"),
+            error=data.get("error"),
+            duration_seconds=data.get("duration_seconds", 0.0),
         )
         event.timestamp = timestamp
         return event

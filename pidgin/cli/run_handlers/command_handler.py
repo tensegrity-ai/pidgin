@@ -93,7 +93,6 @@ class CommandHandler:
             awareness_a=config.agents.awareness_a,
             awareness_b=config.agents.awareness_b,
             choose_names=config.conversation.choose_names,
-            first_speaker=config.conversation.first_speaker,
             prompt_tag=config.conversation.prompt_tag,
             allow_truncation=config.execution.allow_truncation,
         )

@@ -36,7 +36,6 @@ prompt: "Hello, let's discuss AI safety"
 | `awareness_a` | No | string | - | Override awareness for agent A |
 | `awareness_b` | No | string | - | Override awareness for agent B |
 | `max_parallel` | No | int | 1 | Number of parallel conversations |
-| `first_speaker` | No | string | "agent_a" | Which agent speaks first |
 | `choose_names` | No | bool | false | Let agents choose their own names |
 | `display_mode` | No | string | "chat" | Display mode: none, quiet, tail, chat |
 | `prompt_tag` | No | string | "[HUMAN]" | Tag to prefix initial prompt |

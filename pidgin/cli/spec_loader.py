@@ -123,7 +123,6 @@ class SpecLoader:
         # Other settings
         choose_names = spec.get("choose_names", False)
         max_parallel = spec.get("max_parallel", 1)
-        first_speaker = spec.get("first_speaker", "agent_a")
         display_mode = spec.get("display_mode", "chat")
         prompt_tag = spec.get("prompt_tag", "[HUMAN]")
         allow_truncation = spec.get("allow_truncation", False)
@@ -146,7 +145,6 @@ class SpecLoader:
             awareness_a=awareness_a,
             awareness_b=awareness_b,
             choose_names=choose_names,
-            first_speaker=first_speaker,
             display_mode=display_mode,
             prompt_tag=prompt_tag,
             allow_truncation=allow_truncation,

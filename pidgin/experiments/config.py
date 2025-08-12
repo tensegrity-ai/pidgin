@@ -33,9 +33,6 @@ class ExperimentConfig:
     # Parallel execution
     max_parallel: int = 1  # Default to sequential execution (1 conversation at a time)
 
-    # Turn control
-    first_speaker: str = "agent_a"  # Alternates per repetition for fairness
-
     # Agent capabilities
     choose_names: bool = False
 
@@ -81,10 +78,6 @@ class ExperimentConfig:
         """
         config = self.dict()
 
-        # Alternate first speaker for fairness
-        if repetition % 2 == 1:
-            config["first_speaker"] = "agent_b"
-
         # Add repetition info
         config["repetition_number"] = repetition
 
@@ -99,9 +92,6 @@ class ExperimentConfig:
 
         if self.max_turns < 1:
             errors.append("max_turns must be at least 1")
-
-        if self.first_speaker not in ("agent_a", "agent_b"):
-            errors.append("first_speaker must be 'agent_a' or 'agent_b'")
 
         # Validate awareness levels (matching CLI choices)
         valid_awareness = ("none", "basic", "firm", "research")

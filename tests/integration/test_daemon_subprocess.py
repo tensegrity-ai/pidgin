@@ -137,12 +137,15 @@ def test_daemon_handles_missing_console():
         display = TailDisplay(bus, None)
         
         # This should not raise an error
+        from pidgin.core.types import Agent
+        
+        agent_a = Agent(id="agent_a", model="test")
+        agent_b = Agent(id="agent_b", model="test")
+        
         event = ConversationStartEvent(
             conversation_id="test_conv",
-            agent_a_model="test",
-            agent_b_model="test",
-            max_turns=1,
-            initial_prompt="test"
+            agent_a=agent_a,
+            agent_b=agent_b
         )
         
         # Should handle event without error
