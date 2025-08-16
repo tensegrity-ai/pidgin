@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from ..constants import ConversationStatus
+from ..core.constants import ConversationStatus
 from ..core.event_bus import EventBus
 from ..core.events import (
     ConversationEndEvent,
@@ -44,7 +44,7 @@ class TrackingEventBus(EventBus):
         self.conversation_id = conversation_id
         self.manifest = ManifestManager(experiment_dir)
         self.line_count = 0
-        self.turns_completed = 0
+        self.total_turns = 0
 
     async def emit(self, event: Event) -> None:
         """Emit event and update manifest progress.
@@ -67,11 +67,11 @@ class TrackingEventBus(EventBus):
             )
 
         elif isinstance(event, TurnCompleteEvent):
-            self.turns_completed += 1
+            self.total_turns += 1
             self.manifest.update_conversation(
                 self.conversation_id,
                 last_line=self.line_count,
-                turns_completed=self.turns_completed,
+                total_turns=self.total_turns,
             )
 
         elif isinstance(event, ConversationEndEvent):
@@ -86,7 +86,7 @@ class TrackingEventBus(EventBus):
                 self.conversation_id,
                 status=status,
                 last_line=self.line_count,
-                turns_completed=self.turns_completed,
+                total_turns=self.total_turns,
             )
             # Close JSONL file on conversation end
             self.close_conversation_log(self.conversation_id)
@@ -99,7 +99,7 @@ class TrackingEventBus(EventBus):
                 agent_id,
                 event.prompt_tokens,
                 event.completion_tokens,
-                event.model
+                event.model,
             )
 
         elif isinstance(event, ErrorEvent):

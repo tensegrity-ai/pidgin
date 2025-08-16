@@ -1,12 +1,11 @@
 """Generate markdown transcripts from database data."""
 
-import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from ..io.logger import get_logger
 from .event_store import EventStore
 from .transcript_formatter import TranscriptFormatter
-from ..io.logger import get_logger
 
 logger = get_logger("transcript_generator")
 
@@ -14,7 +13,9 @@ logger = get_logger("transcript_generator")
 class TranscriptGenerator:
     """Generate rich markdown transcripts from database data."""
 
-    def __init__(self, event_store: EventStore, formatter: Optional[TranscriptFormatter] = None):
+    def __init__(
+        self, event_store: EventStore, formatter: Optional[TranscriptFormatter] = None
+    ):
         """Initialize with EventStore.
 
         Args:
@@ -59,7 +60,7 @@ class TranscriptGenerator:
             if conv.get("status") == "failed":
                 logger.debug(f"Skipping failed conversation: {conv['conversation_id']}")
                 continue
-                
+
             conv_id = conv["conversation_id"]
             transcript = self.generate_conversation_transcript(conv_id)
 
@@ -95,7 +96,9 @@ class TranscriptGenerator:
 
         # Summary metrics table
         sections.append(
-            self.formatter.format_summary_metrics(conv_data, token_data, len(turn_metrics))
+            self.formatter.format_summary_metrics(
+                conv_data, token_data, len(turn_metrics)
+            )
         )
 
         # Convergence progression

@@ -54,30 +54,26 @@ After running, find your results in `pidgin_output/`:
 
 ```
 pidgin_output/
-└── cosmic-prism_2024-07-16/
-    ├── events/
-    │   └── events.jsonl         # All events (source of truth)
-    ├── transcripts/
-    │   └── cosmic-prism_0.md    # Human-readable transcript
-    └── state/
-        └── metrics_0.json       # Convergence metrics
+├── experiments.duckdb           # Analytics database (auto-imported)
+└── cosmic-prism/
+    ├── manifest.json            # Experiment metadata and state
+    ├── events_conv001.jsonl     # All events for conversation 1
+    ├── events_conv002.jsonl     # All events for conversation 2
+    └── analysis.ipynb           # Auto-generated Jupyter notebook
 ```
 
-### View the Transcript
+### View the Events
 
 ```bash
-cat pidgin_output/cosmic-prism_2024-07-16/transcripts/cosmic-prism_0.md
-```
+# Follow live events as they happen
+tail -f pidgin_output/cosmic-prism/events_*.jsonl
 
-### Analyze the Events
-
-```bash
 # Count events by type
-cat pidgin_output/cosmic-prism_2024-07-16/events/events.jsonl | \
+cat pidgin_output/cosmic-prism/events_*.jsonl | \
   jq -r '.event_type' | sort | uniq -c
 
 # Extract just the messages
-cat pidgin_output/cosmic-prism_2024-07-16/events/events.jsonl | \
+cat pidgin_output/cosmic-prism/events_*.jsonl | \
   jq -r 'select(.event_type == "message_complete") | .content'
 ```
 

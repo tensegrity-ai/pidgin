@@ -12,12 +12,12 @@ logger = get_logger("experiment_reader")
 
 class ExperimentReader:
     """Reads experiment states and conversation data.
-    
+
     The ExperimentReader provides a high-level interface for monitoring experiment
     states. It uses the StateBuilder for efficient caching and handles filtering
     of experiments by status. The reader periodically clears the cache to ensure
     fresh data is available for monitoring operations.
-    
+
     This class is primarily used by the monitor command to display real-time
     experiment status and by the transcript generation tools.
     """
@@ -26,12 +26,14 @@ class ExperimentReader:
         self.exp_base = exp_base
         self.state_builder = StateBuilder()
 
-    def get_experiment_states(self, status_filter: Optional[List[str]] = None) -> List[Any]:
+    def get_experiment_states(
+        self, status_filter: Optional[List[str]] = None
+    ) -> List[Any]:
         """Get all experiment states efficiently.
-        
+
         Args:
             status_filter: Optional list of statuses to include
-            
+
         Returns:
             List of ExperimentState objects
         """
@@ -44,16 +46,16 @@ class ExperimentReader:
 
         # Get all experiments (not just running)
         experiments = self.state_builder.list_experiments(self.exp_base)
-        
+
         # Filter by status if requested
         if status_filter:
             experiments = [exp for exp in experiments if exp.status in status_filter]
-        
+
         return experiments
 
     def get_failed_conversations(self) -> List[Dict[str, Any]]:
         """Get failed conversations from manifest files.
-        
+
         Returns:
             List of failed conversation details
         """
@@ -73,11 +75,13 @@ class ExperimentReader:
                     continue
 
                 try:
-                    with open(manifest_path, "r") as f:
+                    with open(manifest_path) as f:
                         manifest = json.load(f)
 
                     for conv_id, conv_data in manifest.get("conversations", {}).items():
-                        if conv_data.get("status") == "failed" and conv_data.get("error"):
+                        if conv_data.get("status") == "failed" and conv_data.get(
+                            "error"
+                        ):
                             failed_convs.append(
                                 {
                                     "experiment_id": exp_dir.name,
@@ -98,16 +102,16 @@ class ExperimentReader:
 
     def is_recent(self, timestamp, minutes: int = 5) -> bool:
         """Check if a timestamp is recent.
-        
+
         Args:
             timestamp: datetime object
             minutes: How many minutes to consider recent
-            
+
         Returns:
             True if timestamp is within the last N minutes
         """
         from datetime import datetime, timezone
-        
+
         try:
             now = datetime.now(timezone.utc)
             if timestamp.tzinfo is None:

@@ -34,7 +34,7 @@ This installs Pidgin in an isolated environment, perfect for CLI usage.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/pidgin.git
+git clone https://github.com/tensegrity-ai/pidgin.git
 cd pidgin
 
 # Install with Poetry
@@ -48,7 +48,7 @@ poetry shell
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/pidgin.git
+git clone https://github.com/tensegrity-ai/pidgin.git
 cd pidgin
 
 # Install in editable mode
@@ -111,7 +111,7 @@ pidgin --version
 pidgin --help
 
 # List available models
-pidgin info models
+pidgin models
 ```
 
 Run a test conversation:
@@ -151,7 +151,9 @@ python --version  # Should show 3.9 or higher
 ### API Key Issues
 Verify your API keys are set:
 ```bash
-pidgin info api-keys
+# Check that your API keys are set
+echo $ANTHROPIC_API_KEY
+echo $OPENAI_API_KEY
 ```
 
 ### Permission Errors

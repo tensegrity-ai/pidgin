@@ -93,7 +93,7 @@ class ModelSelector:
         Returns:
             Dictionary mapping provider names to lists of (model_id, config) tuples
         """
-        providers = {}
+        providers: Dict[str, List[Tuple[str, ModelConfig]]] = {}
         for model_id, config in MODELS.items():
             if model_id == "silent":  # Skip silent model in normal selection
                 continue

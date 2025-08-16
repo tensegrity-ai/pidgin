@@ -1,7 +1,8 @@
 """Handle YAML spec file loading and processing."""
 
+from typing import Optional, Tuple
+
 import yaml
-from typing import Tuple, Optional
 
 from ...config.models import get_model_config
 from ...experiments import ExperimentConfig

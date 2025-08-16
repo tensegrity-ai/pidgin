@@ -7,7 +7,9 @@ import yaml
 from pydantic import ValidationError
 from rich.console import Console
 
-from ..constants import (
+from ..io.directories import get_config_dir
+from ..io.logger import get_logger
+from ..metrics.constants import (
     DEFAULT_CONVERGENCE_ACTION,
     DEFAULT_CONVERGENCE_PROFILE,
     DEFAULT_CONVERGENCE_THRESHOLD,
@@ -15,8 +17,6 @@ from ..constants import (
     ConvergenceComponents,
     ConvergenceProfiles,
 )
-from ..io.directories import get_config_dir
-from ..io.logger import get_logger
 from .schema import PidginConfig
 
 logger = get_logger("config")
@@ -106,10 +106,9 @@ class Config:
     }
 
     def __init__(self, config_path: Optional[Path] = None):
-        """Initialize configuration."""
         # Validate default config
         try:
-            validated_config = PidginConfig(**self.DEFAULT_CONFIG)
+            validated_config = PidginConfig(**self.DEFAULT_CONFIG)  # type: ignore[arg-type]
             self.config = validated_config.model_dump()
         except ValidationError as e:
             # This should never happen with our defaults
@@ -208,7 +207,7 @@ experiments:
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
 
-        with open(path, "r") as f:
+        with open(path) as f:
             user_config = yaml.safe_load(f)
 
         if user_config:
@@ -382,5 +381,3 @@ experiments:
     def to_dict(self) -> Dict[str, Any]:
         """Return the full configuration as a dictionary."""
         return self.config.copy()
-
-

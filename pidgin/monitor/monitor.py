@@ -1,7 +1,6 @@
 """System monitor that reads from JSONL files and displays errors."""
 
 import asyncio
-from pathlib import Path
 
 from rich.console import Console, Group
 from rich.live import Live
@@ -29,7 +28,7 @@ class Monitor:
 
     def __init__(self, console_instance=None):
         """Initialize monitor with all components.
-        
+
         Args:
             console_instance: Optional Rich console instance
         """
@@ -38,14 +37,14 @@ class Monitor:
         self.refresh_count = 0
         self.no_output_dir = False
         self.console = console_instance or console
-        
+
         # Initialize all components
         self.display_builder = DisplayBuilder(self.console, self.exp_base)
         self.error_tracker = ErrorTracker()
         self.experiment_reader = ExperimentReader(self.exp_base)
         self.file_reader = FileReader()
         self.metrics_calculator = MetricsCalculator()
-        
+
         # Check if experiments directory exists
         if not self.exp_base.exists():
             self.no_output_dir = True
@@ -80,7 +79,7 @@ class Monitor:
 
     def build_display(self) -> Group:
         """Build the display as a group of panels.
-        
+
         Returns:
             Group of Rich panels for display
         """
@@ -103,11 +102,15 @@ class Monitor:
         errors = self.error_tracker.get_recent_errors(minutes=10)
 
         # Build sections
-        errors_panel = self.display_builder.build_errors_panel(errors, self.error_tracker)
+        errors_panel = self.display_builder.build_errors_panel(
+            errors, self.error_tracker
+        )
         experiments_panel = self.display_builder.build_experiments_panel(
             experiments, self.metrics_calculator
         )
-        conversations_panel = self.display_builder.build_conversations_panel(experiments)
+        conversations_panel = self.display_builder.build_conversations_panel(
+            experiments
+        )
 
         # Return a group of panels that will auto-size to their content
         return Group(header, errors_panel, experiments_panel, conversations_panel)
@@ -116,14 +119,14 @@ class Monitor:
 def main():
     """Main entry point for the monitor CLI."""
     import sys
-    
+
     # Print startup message
     print(f"[{NORD_CYAN}]◆ Starting system monitor[/{NORD_CYAN}]...")
     print(f"[{NORD_CYAN}]Press Ctrl+C to exit[/{NORD_CYAN}]")
-    
+
     # Create and run monitor
     monitor = Monitor()
-    
+
     try:
         asyncio.run(monitor.run())
     except KeyboardInterrupt:

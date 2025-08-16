@@ -33,6 +33,12 @@ class ConversationDeserializer(BaseDeserializer):
             agent_b=data["agent_b"],
             experiment_id=data.get("experiment_id"),
             config=data.get("config", {}),
+            agent_a_display_name=data.get("agent_a_display_name"),
+            agent_b_display_name=data.get("agent_b_display_name"),
+            agent_a_model=data.get("agent_a_model"),
+            agent_b_model=data.get("agent_b_model"),
+            max_turns=data.get("max_turns"),
+            initial_prompt=data.get("initial_prompt"),
         )
         event.timestamp = timestamp
         return event
@@ -44,12 +50,12 @@ class ConversationDeserializer(BaseDeserializer):
         """Build ConversationEndEvent from data."""
         event = ConversationEndEvent(
             conversation_id=data["conversation_id"],
-            turns_completed=data.get("turns_completed", data.get("total_turns", 0)),
+            total_turns=data.get("total_turns", 0),
             status=data.get("status", "completed"),
             experiment_id=data.get("experiment_id"),
             reason=data.get("reason"),
             error=data.get("error"),
-            duration_seconds=data.get("duration_seconds", 0.0),
+            duration_ms=data.get("duration_ms", 0),
         )
         event.timestamp = timestamp
         return event
@@ -72,26 +78,26 @@ class ConversationDeserializer(BaseDeserializer):
     ) -> TurnCompleteEvent:
         """Build TurnCompleteEvent from data."""
         from ...core.types import Message
-        
+
         # Build Message objects for the Turn
         agent_a_msg = Message(
             role="assistant",
             content=data.get("agent_a_message", ""),
             agent_id="agent_a",
         )
-        
+
         agent_b_msg = Message(
             role="assistant",
             content=data.get("agent_b_message", ""),
             agent_id="agent_b",
         )
-        
+
         # Create the Turn object with both messages
         turn = Turn(
             agent_a_message=agent_a_msg,
             agent_b_message=agent_b_msg,
         )
-        
+
         # Create the event
         event = TurnCompleteEvent(
             conversation_id=data["conversation_id"],
@@ -107,70 +113,83 @@ class ConversationDeserializer(BaseDeserializer):
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ConversationPausedEvent:
         """Build ConversationPausedEvent from data."""
-        return ConversationPausedEvent(
-            timestamp=timestamp,
+        event = ConversationPausedEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             turn_number=data.get("turn_number", 0),
-            reason=data.get("reason", "user_interrupt"),
+            paused_during=data.get("paused_during", "between_turns"),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_conversation_resumed(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ConversationResumedEvent:
         """Build ConversationResumedEvent from data."""
-        return ConversationResumedEvent(
-            timestamp=timestamp,
+        event = ConversationResumedEvent(
             conversation_id=data["conversation_id"],
-            experiment_id=data.get("experiment_id"),
             turn_number=data.get("turn_number", 0),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_conversation_branched(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ConversationBranchedEvent:
         """Build ConversationBranchedEvent from data."""
-        return ConversationBranchedEvent(
-            timestamp=timestamp,
-            original_conversation_id=data["original_conversation_id"],
-            new_conversation_id=data["new_conversation_id"],
-            branch_point_turn=data["branch_point_turn"],
-            reason=data.get("reason", "manual_branch"),
+        event = ConversationBranchedEvent(
+            conversation_id=data.get(
+                "new_conversation_id", data.get("conversation_id")
+            ),
+            source_conversation_id=data.get(
+                "original_conversation_id", data.get("source_conversation_id")
+            ),
+            branch_point=data.get("branch_point_turn", data.get("branch_point", 0)),
+            parameter_changes=data.get("parameter_changes", {}),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_experiment_complete(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> ExperimentCompleteEvent:
         """Build ExperimentCompleteEvent from data."""
-        return ExperimentCompleteEvent(
-            timestamp=timestamp,
+        event = ExperimentCompleteEvent(
             experiment_id=data["experiment_id"],
             total_conversations=data["total_conversations"],
-            successful_conversations=data["successful_conversations"],
-            failed_conversations=data["failed_conversations"],
-            duration_seconds=data["duration_seconds"],
+            completed_conversations=data.get(
+                "successful_conversations", data.get("completed_conversations", 0)
+            ),
+            failed_conversations=data.get("failed_conversations", 0),
+            status=data.get("status", "completed"),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_post_processing_start(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> PostProcessingStartEvent:
         """Build PostProcessingStartEvent from data."""
-        return PostProcessingStartEvent(
-            timestamp=timestamp,
+        event = PostProcessingStartEvent(
             experiment_id=data["experiment_id"],
+            tasks=data.get("tasks", []),
         )
+        event.timestamp = timestamp
+        return event
 
     @classmethod
     def build_post_processing_complete(
         cls, data: Dict[str, Any], timestamp: datetime
     ) -> PostProcessingCompleteEvent:
         """Build PostProcessingCompleteEvent from data."""
-        return PostProcessingCompleteEvent(
-            timestamp=timestamp,
+        event = PostProcessingCompleteEvent(
             experiment_id=data["experiment_id"],
-            duration_seconds=data.get("duration_seconds", 0),
+            tasks_completed=data.get("tasks_completed", []),
+            tasks_failed=data.get("tasks_failed", []),
+            duration_ms=int(data.get("duration_seconds", 0) * 1000),
         )
+        event.timestamp = timestamp
+        return event

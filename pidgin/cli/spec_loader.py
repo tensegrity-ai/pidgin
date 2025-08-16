@@ -2,9 +2,10 @@
 """YAML spec file loading and validation for experiments."""
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 import yaml
+from rich.console import Console
 
 from ..config.models import get_model_config
 from ..experiments import ExperimentConfig
@@ -12,14 +13,12 @@ from ..ui.display_utils import DisplayUtils
 from .constants import DEFAULT_TURNS
 from .helpers import validate_model_id
 from .name_generator import generate_experiment_name
-from rich.console import Console
 
 
 class SpecLoader:
     """Handle YAML spec file loading and validation."""
 
     def __init__(self):
-        """Initialize the spec loader."""
         self.console = Console()
         self.display = DisplayUtils(self.console)
 
@@ -38,7 +37,7 @@ class SpecLoader:
             Exception: For other loading errors
         """
         try:
-            with open(spec_file, "r") as f:
+            with open(spec_file) as f:
                 spec = yaml.safe_load(f)
             return spec
         except FileNotFoundError:
@@ -127,7 +126,6 @@ class SpecLoader:
         prompt_tag = spec.get("prompt_tag", "[HUMAN]")
         allow_truncation = spec.get("allow_truncation", False)
 
-        # Create config
         return ExperimentConfig(
             name=name,
             agent_a_model=agent_a_id,
@@ -137,7 +135,6 @@ class SpecLoader:
             temperature_a=temp_a,
             temperature_b=temp_b,
             custom_prompt=initial_prompt if initial_prompt != "Hello" else None,
-            dimensions=list(dimensions) if dimensions else None,
             max_parallel=max_parallel,
             convergence_threshold=convergence_threshold,
             convergence_action=convergence_action,
@@ -157,7 +154,6 @@ class SpecLoader:
             spec_file: Path to the spec file
             config: Loaded experiment configuration
         """
-        # Get model display names
         agent_a_config = get_model_config(config.agent_a_model)
         agent_b_config = get_model_config(config.agent_b_model)
         agent_a_name = (

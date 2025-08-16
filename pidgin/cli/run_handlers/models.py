@@ -1,7 +1,7 @@
 """Data models for run command configuration."""
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 
 @dataclass

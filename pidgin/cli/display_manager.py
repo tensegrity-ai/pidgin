@@ -12,17 +12,16 @@ class DisplayManager:
     """Manage display modes and experiment display settings."""
 
     def __init__(self, console: Optional[Console] = None):
-        """Initialize the display manager."""
         self.console = console or Console()
         self.display = DisplayUtils(self.console)
 
     def validate_display_flags(self, quiet: bool, tail: bool) -> bool:
         """Validate that only one display flag is used.
-        
+
         Args:
             quiet: Whether quiet mode is enabled
             tail: Whether tail mode is enabled
-            
+
         Returns:
             True if valid, False if invalid
         """
@@ -38,17 +37,17 @@ class DisplayManager:
         self, quiet: bool, tail: bool, max_parallel: int = 1
     ) -> Tuple[str, bool, bool]:
         """Determine the display mode based on flags and parallel execution.
-        
+
         Args:
             quiet: Whether quiet mode is enabled
             tail: Whether tail mode is enabled
             max_parallel: Maximum parallel conversations
-            
+
         Returns:
             Tuple of (display_mode, updated_quiet, notify)
         """
         notify = False
-        
+
         if quiet:
             display_mode = "quiet"
             # Quiet mode should run in background and notify
@@ -74,12 +73,12 @@ class DisplayManager:
         self, display_mode: str, max_parallel: int, quiet: bool
     ) -> str:
         """Determine the display mode for the experiment configuration.
-        
+
         Args:
             display_mode: The CLI display mode
             max_parallel: Maximum parallel conversations
             quiet: Whether quiet mode is enabled
-            
+
         Returns:
             The experiment display mode
         """
@@ -94,19 +93,19 @@ class DisplayManager:
         else:
             # Non-quiet mode can use any display mode
             experiment_display_mode = display_mode
-            
+
         return experiment_display_mode
 
     def handle_meditation_mode(
         self, meditation: bool, agent_a: Optional[str], agent_b: Optional[str]
     ) -> Tuple[Optional[str], Optional[str]]:
         """Handle meditation mode settings.
-        
+
         Args:
             meditation: Whether meditation mode is enabled
             agent_a: First agent (may be None)
             agent_b: Second agent (may be None)
-            
+
         Returns:
             Tuple of (agent_a, agent_b) with defaults applied if needed
         """
@@ -118,20 +117,20 @@ class DisplayManager:
             self.console.print(
                 f"\n[{NORD_BLUE}]◆ Meditation mode: {agent_a} → silence[/{NORD_BLUE}]"
             )
-        
+
         return agent_a, agent_b
 
     def handle_model_selection_error(
         self, error: Exception, error_type: str = "Exception"
     ) -> None:
         """Handle errors during model selection.
-        
+
         Args:
             error: The exception that occurred
             error_type: Type of error (KeyboardInterrupt, EOFError, Exception)
         """
         self.console.print()  # Add newline
-        
+
         if error_type in ["KeyboardInterrupt", "EOFError"]:
             self.display.warning(
                 "Model selection cancelled",

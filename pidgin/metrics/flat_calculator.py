@@ -11,13 +11,13 @@ from .text_analysis import TextAnalyzer
 class FlatMetricsCalculator:
     """Calculates metrics in a flat structure optimized for DuckDB wide tables."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize calculator with tracking structures."""
         # Cumulative vocabulary tracking
-        self.cumulative_vocab = {"agent_a": set(), "agent_b": set()}
+        self.cumulative_vocab: Dict[str, set] = {"agent_a": set(), "agent_b": set()}
 
         # All words seen by each agent
-        self.all_agent_words = {"agent_a": set(), "agent_b": set()}
+        self.all_agent_words: Dict[str, set] = {"agent_a": set(), "agent_b": set()}
 
         # Token cache to avoid re-tokenizing
         self._token_cache: Dict[str, List[str]] = {}
@@ -295,8 +295,8 @@ class FlatMetricsCalculator:
         )  # Closer to 1 = more convergent
 
         # Sentence pattern similarity
-        sentences_a = self.text_analyzer.split_sentences(message_a)
-        sentences_b = self.text_analyzer.split_sentences(message_b)
+        self.text_analyzer.split_sentences(message_a)
+        self.text_analyzer.split_sentences(message_b)
         # sentence_pattern_similarity = (
         #     self.convergence_calc.calculate_sentence_pattern_similarity(
         #         sentences_a, sentences_b
@@ -315,7 +315,6 @@ class FlatMetricsCalculator:
         )
 
         # Calculate repetition ratio if we have enough messages
-        repetition_ratio = 0.0
         if len(self.all_messages) >= 4:  # At least 2 turns
             # repetition_ratio = self.convergence_calc.calculate_repetition_ratio(
             #     self.all_messages[-10:]  # Use last 5 turns (10 messages)

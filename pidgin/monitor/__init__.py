@@ -10,7 +10,6 @@ from .metrics_calculator import MetricsCalculator
 from .monitor import Monitor
 
 __all__ = [
-    "Monitor",
     "ConversationPanelBuilder",
     "DisplayBuilder",
     "ErrorPanelBuilder",
@@ -18,4 +17,5 @@ __all__ = [
     "ExperimentReader",
     "FileReader",
     "MetricsCalculator",
+    "Monitor",
 ]

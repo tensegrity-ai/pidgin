@@ -7,7 +7,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 from ..core.constants import SystemDefaults
 
@@ -24,6 +23,7 @@ class ProcessLauncher:
         self.base_dir = base_dir
         # Import get_cache_dir for active directory
         from ..io.directories import get_cache_dir
+
         self.active_dir = get_cache_dir() / "active_experiments"
 
     def build_daemon_command(
@@ -42,7 +42,8 @@ class ProcessLauncher:
         """
         # Check if setproctitle is available to make processes identifiable
         try:
-            import setproctitle  # noqa: F401
+            import setproctitle
+
             has_setproctitle = True
         except ImportError:
             has_setproctitle = False
@@ -219,7 +220,7 @@ runpy.run_module('pidgin.experiments.daemon_launcher', run_name='__main__')
         error_msg = "Failed to start experiment daemon"
         if startup_log.exists():
             try:
-                with open(startup_log, "r") as f:
+                with open(startup_log) as f:
                     error_content = f.read().strip()
                     if error_content:
                         error_msg += f"\nStartup error: {error_content}"
@@ -231,7 +232,7 @@ runpy.run_module('pidgin.experiments.daemon_launcher', run_name='__main__')
         if poll_result is not None and poll_result != 0:
             # Process exited with error
             error_msg += f"\nExit code: {process.returncode}"
-            error_msg += f"\nCheck logs in experiment directory"
+            error_msg += "\nCheck logs in experiment directory"
             error_msg += f"\nStartup log at: {startup_log}"
             raise RuntimeError(error_msg)
 

@@ -1,7 +1,6 @@
-import asyncio
 import logging
-import time
-from typing import AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Dict, List, Optional
 
 from openai import AsyncOpenAI
 
@@ -135,8 +134,11 @@ class OpenAIProvider(Provider):
         from .context_utils import apply_context_truncation
 
         truncated_messages = apply_context_truncation(
-            messages, provider="openai", model=self.model, logger_name=__name__,
-            allow_truncation=self.allow_truncation
+            messages,
+            provider="openai",
+            model=self.model,
+            logger_name=__name__,
+            allow_truncation=self.allow_truncation,
         )
 
         # Convert to OpenAI format
@@ -201,7 +203,7 @@ class OpenAIProvider(Provider):
             if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected API error: {friendly_error}")
             else:
-                logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+                logger.error(f"Unexpected API error: {e!s}", exc_info=True)
 
             # Create a clean exception with friendly message
             raise Exception(friendly_error) from None

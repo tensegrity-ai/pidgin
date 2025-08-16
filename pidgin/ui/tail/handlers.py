@@ -5,8 +5,6 @@ from typing import Dict, Optional
 from rich.console import Console
 from rich.text import Text
 
-from .constants import NORD_CYAN, NORD_GRAY, NORD_PURPLE
-from .formatters import TailFormatter
 from ...core.events import (
     APIErrorEvent,
     ContextTruncationEvent,
@@ -25,6 +23,8 @@ from ...core.events import (
     TurnCompleteEvent,
     TurnStartEvent,
 )
+from .constants import NORD_CYAN, NORD_GRAY, NORD_PURPLE
+from .formatters import TailFormatter
 
 
 class EventHandlers:
@@ -32,14 +32,14 @@ class EventHandlers:
 
     def __init__(self, console: Optional[Console]):
         """Initialize handlers.
-        
+
         Args:
             console: Rich console for output (None for daemon mode)
         """
         self.console = console
         self.formatter = TailFormatter()
         self.agent_display_names: Dict[str, str] = {}
-    
+
     def _print(self, *args, **kwargs) -> None:
         """Print to console if available (not in daemon mode)."""
         if self.console is not None:
@@ -54,7 +54,7 @@ class EventHandlers:
             self.agent_display_names["agent_a"] = event.agent_a_display_name
         if event.agent_b_display_name:
             self.agent_display_names["agent_b"] = event.agent_b_display_name
-            
+
         # Format as single line with key info
         content = f"id: {event.conversation_id[:12]}... | "
         content += f"{event.agent_a_model} ↔ {event.agent_b_model} | "
@@ -95,10 +95,8 @@ class EventHandlers:
         """Display conversation end event."""
         # Format reason nicely
         reason_map = {
-            "max_turns_reached": "max_turns",
             "high_convergence": "convergence",
-            "interrupted": "interrupted",
-            "error": "error",
+            # Other reasons display as-is
         }
         reason_display = reason_map.get(event.reason, event.reason)
 
@@ -131,9 +129,7 @@ class EventHandlers:
             content += f" | convergence: {event.convergence_score:.3f}"
         self._print(header, content)
 
-    def display_message_request(
-        self, event: MessageRequestEvent, header: Text
-    ) -> None:
+    def display_message_request(self, event: MessageRequestEvent, header: Text) -> None:
         """Display message request event."""
         self._print(
             header, f"{self.formatter.format_agent_id(event.agent_id)} thinking..."
@@ -191,13 +187,11 @@ class EventHandlers:
         content = f"{self.formatter.format_agent_id(event.agent_id)}: {truncated_chunk}"
         self._print(header, content)
 
-    def display_api_error(
-        self, event: APIErrorEvent, header: Text, color: str
-    ) -> None:
+    def display_api_error(self, event: APIErrorEvent, header: Text, color: str) -> None:
         """Display API error event."""
         error_type = getattr(event, "error_type", "Unknown")
         error_msg = str(event.error_message)
-        
+
         # Truncate error message if too long
         if len(error_msg) > 100:
             error_msg = error_msg[:97] + "..."
@@ -210,8 +204,8 @@ class EventHandlers:
     ) -> None:
         """Display context truncation event."""
         content = f"agent: {self.formatter.format_agent_id(event.agent_id)} | "
-        content += f"removed: {event.messages_removed} messages | "
-        content += f"remaining: {event.messages_remaining}"
+        content += f"dropped: {event.messages_dropped} messages | "
+        content += f"original: {event.original_message_count}"
         self._print(header, content)
 
     def display_system_prompt(self, event: SystemPromptEvent, header: Text) -> None:
@@ -230,12 +224,12 @@ class EventHandlers:
 
     def display_rate_limit(self, event: RateLimitPaceEvent, header: Text) -> None:
         """Display rate limit event."""
-        wait_time = event.wait_time_ms / 1000
+        wait_time = event.wait_time
         content = f"provider: {event.provider} | waiting: {wait_time:.1f}s"
-        
+
         if hasattr(event, "reason") and event.reason:
             content += f" | reason: {event.reason}"
-        
+
         self._print(header, content)
 
     def display_token_usage(self, event: TokenUsageEvent, header: Text) -> None:
@@ -244,17 +238,17 @@ class EventHandlers:
         content += f"tokens: {event.tokens_used:,} | "
         content += f"rate: {event.current_usage_rate:.1f}/min | "
         content += f"limit: {event.tokens_per_minute_limit:,}/min"
-        
+
         if hasattr(event, "cost_cents") and event.cost_cents:
             content += f" | cost: ${event.cost_cents/100:.3f}"
-        
+
         self._print(header, content)
 
     def display_provider_timeout(
         self, event: ProviderTimeoutEvent, header: Text
     ) -> None:
         """Display provider timeout event."""
-        content = f"provider: {event.provider} | timeout: {event.timeout_ms}ms"
+        content = f"provider: {event.provider} | timeout: {event.timeout_seconds:.1f}s"
         if hasattr(event, "attempt") and event.attempt:
             content += f" | attempt: {event.attempt}"
         self._print(header, content)
@@ -263,19 +257,19 @@ class EventHandlers:
         self, event: InterruptRequestEvent, header: Text
     ) -> None:
         """Display interrupt request event."""
-        content = f"source: {event.source} | reason: {event.reason}"
+        content = f"source: {event.interrupt_source} | turn: {event.turn_number}"
         self._print(header, content)
 
     def display_conversation_paused(
         self, event: ConversationPausedEvent, header: Text
     ) -> None:
         """Display conversation paused event."""
-        content = f"reason: {event.reason}"
+        content = f"paused during: {event.paused_during} | turn: {event.turn_number}"
         self._print(header, content)
 
     def display_conversation_resumed(
         self, event: ConversationResumedEvent, header: Text
     ) -> None:
         """Display conversation resumed event."""
-        content = f"after: {event.pause_duration_ms/1000:.1f}s"
+        content = f"turn: {event.turn_number}"
         self._print(header, content)

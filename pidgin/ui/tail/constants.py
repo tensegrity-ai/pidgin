@@ -19,16 +19,16 @@ from ...core.events import (
     TurnStartEvent,
 )
 
-# Nord color palette
+# Nord color palette - duplicate values to avoid circular imports
 NORD_GREEN = "#a3be8c"
 NORD_RED = "#bf616a"
-NORD_BLUE = "#5e81ac"
-NORD_CYAN = "#88c0d0"
+NORD_BLUE = "#88c0d0"
+NORD_CYAN = "#8fbcbb"
 NORD_YELLOW = "#ebcb8b"
 NORD_ORANGE = "#d08770"
 NORD_PURPLE = "#b48ead"
 NORD_GRAY = "#4c566a"
-NORD_LIGHT = "#d8dee9"
+NORD_LIGHT = "#eceff4"
 
 EVENT_COLORS = {
     ConversationStartEvent: NORD_GREEN,

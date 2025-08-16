@@ -6,8 +6,8 @@ from typing import Dict, Optional, Tuple
 
 from ..config.models import get_model_config
 from ..core.types import Agent
-from ..providers.builder import build_provider as get_provider_for_model
 from ..providers.api_key_manager import APIKeyManager
+from ..providers.builder import build_provider as get_provider_for_model
 from .config import ExperimentConfig
 from .manifest import ManifestManager
 from .tracking_event_bus import TrackingEventBus
@@ -17,18 +17,15 @@ class ExperimentSetup:
     """Handle all experiment setup tasks."""
 
     def create_manifest(
-        self,
-        exp_dir: Path,
-        experiment_id: str,
-        config: ExperimentConfig
+        self, exp_dir: Path, experiment_id: str, config: ExperimentConfig
     ) -> ManifestManager:
         """Create experiment manifest.
-        
+
         Args:
             exp_dir: Experiment directory
             experiment_id: Unique experiment ID
             config: Experiment configuration
-            
+
         Returns:
             ManifestManager instance
         """
@@ -43,17 +40,17 @@ class ExperimentSetup:
 
     def validate_api_keys(self, config: ExperimentConfig) -> None:
         """Validate API keys for all required providers.
-        
+
         Args:
             config: Experiment configuration
-            
+
         Raises:
             Exception: If API keys are missing or invalid
         """
         providers = set()
         agent_a_config = get_model_config(config.agent_a_model)
         agent_b_config = get_model_config(config.agent_b_model)
-        
+
         if agent_a_config:
             providers.add(agent_a_config.provider)
         if agent_b_config:
@@ -66,11 +63,11 @@ class ExperimentSetup:
         self, exp_dir: Path, conversation_id: str
     ) -> TrackingEventBus:
         """Create and start tracking event bus for conversation.
-        
+
         Args:
             exp_dir: Experiment directory
             conversation_id: Unique conversation ID
-            
+
         Returns:
             Started TrackingEventBus instance
         """
@@ -84,13 +81,13 @@ class ExperimentSetup:
         self, config: ExperimentConfig
     ) -> Tuple[Dict[str, Agent], Dict]:
         """Create agents and providers from configuration.
-        
+
         Args:
             config: Experiment configuration
-            
+
         Returns:
             Tuple of (agents dict, providers dict)
-            
+
         Raises:
             ValueError: If model configuration is invalid or providers can't be created
         """
@@ -110,7 +107,7 @@ class ExperimentSetup:
         except Exception as e:
             logging.error(f"Failed to create provider_a: {e}", exc_info=True)
             raise
-            
+
         logging.info(f"Creating provider for agent_b: {config.agent_b_model}")
         try:
             provider_b = await get_provider_for_model(
@@ -122,11 +119,11 @@ class ExperimentSetup:
 
         if not provider_a or not provider_b:
             raise ValueError("Failed to create providers")
-        
+
         # Set allow_truncation on providers based on config
         provider_a.allow_truncation = config.allow_truncation
         provider_b.allow_truncation = config.allow_truncation
-        
+
         logging.info("Providers created successfully")
 
         # Create agents with display names from model config
@@ -148,7 +145,7 @@ class ExperimentSetup:
 
         agents = {"agent_a": agent_a, "agent_b": agent_b}
         providers = {"agent_a": provider_a, "agent_b": provider_b}
-        
+
         logging.info("Agents created successfully")
 
         return agents, providers
@@ -157,25 +154,27 @@ class ExperimentSetup:
         self, config: ExperimentConfig, exp_dir: Path, conversation_id: str
     ) -> Tuple:
         """Set up output manager and console for display.
-        
+
         Args:
             config: Experiment configuration
             exp_dir: Experiment directory
             conversation_id: Conversation ID
-            
+
         Returns:
             Tuple of (output_manager, console)
         """
         # Create minimal output manager that returns the experiment directory
-        from ..io.output_manager import OutputManager
         from rich.console import Console
 
+        from ..io.output_manager import OutputManager
+
         output_manager = OutputManager()
+
         # Override the create_conversation_dir to return the experiment directory
-        output_manager.create_conversation_dir = lambda conv_id: (
-            conversation_id,
-            exp_dir,
-        )
+        def override_create_dir(conv_id: Optional[str]) -> tuple[str, Path]:
+            return (conversation_id, exp_dir)
+
+        output_manager.create_conversation_dir = override_create_dir  # type: ignore[assignment]
 
         # Check if we need a console for display modes
         console = None

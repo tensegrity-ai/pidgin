@@ -227,14 +227,14 @@ ALL_SPECIAL_SYMBOLS = ARROWS | MATH_SYMBOLS | BOX_DRAWING | BULLETS
 
 # Regex patterns
 EMOJI_PATTERN = re.compile(
-    "[\U0001F600-\U0001F64F"  # emoticons
-    "\U0001F300-\U0001F5FF"  # symbols & pictographs
-    "\U0001F680-\U0001F6FF"  # transport & map symbols
-    "\U0001F1E0-\U0001F1FF"  # flags
-    "\U00002702-\U000027B0"  # dingbats
-    "\U000024C2-\U0001F251"  # enclosed characters
-    "\U0001F900-\U0001F9FF"  # supplemental symbols and pictographs
-    "\U00002600-\U000026FF"  # miscellaneous symbols
+    "[\U0001f600-\U0001f64f"  # emoticons
+    "\U0001f300-\U0001f5ff"  # symbols & pictographs
+    "\U0001f680-\U0001f6ff"  # transport & map symbols
+    "\U0001f1e0-\U0001f1ff"  # flags
+    "\U00002702-\U000027b0"  # dingbats
+    "\U000024c2-\U0001f251"  # enclosed characters
+    "\U0001f900-\U0001f9ff"  # supplemental symbols and pictographs
+    "\U00002600-\U000026ff"  # miscellaneous symbols
     "]+",
     flags=re.UNICODE,
 )
@@ -267,3 +267,56 @@ ACKNOWLEDGMENT_PATTERNS = [
 
 # Compile acknowledgment patterns
 ACKNOWLEDGMENT_REGEX = re.compile("|".join(ACKNOWLEDGMENT_PATTERNS), re.IGNORECASE)
+
+
+# Convergence profiles and defaults
+class ConvergenceProfiles:
+    BALANCED = "balanced"
+    STRUCTURAL = "structural"
+    SEMANTIC = "semantic"
+    STRICT = "strict"
+    CUSTOM = "custom"
+
+
+class ConvergenceComponents:
+    CONTENT = "content"
+    STRUCTURE = "structure"
+    SENTENCES = "sentences"
+    LENGTH = "length"
+    PUNCTUATION = "punctuation"
+
+
+DEFAULT_CONVERGENCE_WEIGHTS = {
+    ConvergenceProfiles.BALANCED: {
+        ConvergenceComponents.CONTENT: 0.4,
+        ConvergenceComponents.STRUCTURE: 0.15,
+        ConvergenceComponents.SENTENCES: 0.2,
+        ConvergenceComponents.LENGTH: 0.15,
+        ConvergenceComponents.PUNCTUATION: 0.1,
+    },
+    ConvergenceProfiles.STRUCTURAL: {
+        ConvergenceComponents.CONTENT: 0.25,
+        ConvergenceComponents.STRUCTURE: 0.35,
+        ConvergenceComponents.SENTENCES: 0.2,
+        ConvergenceComponents.LENGTH: 0.1,
+        ConvergenceComponents.PUNCTUATION: 0.1,
+    },
+    ConvergenceProfiles.SEMANTIC: {
+        ConvergenceComponents.CONTENT: 0.6,
+        ConvergenceComponents.STRUCTURE: 0.1,
+        ConvergenceComponents.SENTENCES: 0.15,
+        ConvergenceComponents.LENGTH: 0.1,
+        ConvergenceComponents.PUNCTUATION: 0.05,
+    },
+    ConvergenceProfiles.STRICT: {
+        ConvergenceComponents.CONTENT: 0.5,
+        ConvergenceComponents.STRUCTURE: 0.25,
+        ConvergenceComponents.SENTENCES: 0.15,
+        ConvergenceComponents.LENGTH: 0.05,
+        ConvergenceComponents.PUNCTUATION: 0.05,
+    },
+}
+
+DEFAULT_CONVERGENCE_THRESHOLD = 0.8
+DEFAULT_CONVERGENCE_ACTION = "warn"
+DEFAULT_CONVERGENCE_PROFILE = "balanced"

@@ -2,7 +2,8 @@
 
 import asyncio
 import time
-from typing import AsyncGenerator, Callable, Optional, TypeVar
+from collections.abc import AsyncGenerator
+from typing import Callable, Optional, TypeVar
 
 T = TypeVar("T")
 
@@ -78,7 +79,7 @@ async def retry_with_exponential_backoff(
                 friendly_msg = "API temporarily overloaded - waiting"
             else:
                 friendly_msg = "Temporary error - retrying"
-            
+
             yield f"\n[{friendly_msg} ({delay:.1f}s)...]\n"
 
             # Wait before retrying
@@ -94,10 +95,11 @@ async def retry_with_exponential_backoff(
         except Exception as fallback_error:
             # Log fallback failure but raise original error
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Fallback also failed: {fallback_error}")
             raise last_exception
-    
+
     # This should never be reached, but just in case
     if last_exception:
         raise last_exception
@@ -123,7 +125,7 @@ def is_overloaded_error(error: Exception) -> bool:
 def is_retryable_error(error: Exception) -> bool:
     """Check if an error is retryable."""
     error_str = str(error).lower()
-    
+
     # Context limit errors are NOT retryable
     context_patterns = [
         "context_length",
@@ -138,7 +140,7 @@ def is_retryable_error(error: Exception) -> bool:
         "exceeds the maximum",
         "content too long",
     ]
-    
+
     if any(pattern in error_str for pattern in context_patterns):
         return False
 

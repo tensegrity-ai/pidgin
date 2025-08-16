@@ -23,22 +23,23 @@ class ConversationDisplayHandler(BaseDisplayHandler):
     def show_conversation_start(self, event: ConversationStartEvent):
         """Show conversation setup panel."""
         self.console.print()  # Add newline before panel
-        self.max_turns = event.max_turns
+        config = event.config or {}
+        self.max_turns = config.get("max_turns", 0)
 
         # Use display names if available
-        agent_a_display = event.agent_a_display_name or "Agent A"
-        agent_b_display = event.agent_b_display_name or "Agent B"
+        agent_a_display = config.get("agent_a_display_name") or "Agent A"
+        agent_b_display = config.get("agent_b_display_name") or "Agent B"
 
         content = "[bold]Starting Conversation[/bold]\n\n"
-        content += f"◈ {agent_a_display}: {event.agent_a_model}"
-        if event.temperature_a is not None:
-            content += f" (temp: {event.temperature_a})"
+        content += f"◈ {agent_a_display}: {config.get('agent_a_model', 'Unknown')}"
+        if config.get("temperature_a") is not None:
+            content += f" (temp: {config.get('temperature_a')})"
         content += "\n"
-        content += f"◈ {agent_b_display}: {event.agent_b_model}"
-        if event.temperature_b is not None:
-            content += f" (temp: {event.temperature_b})"
+        content += f"◈ {agent_b_display}: {config.get('agent_b_model', 'Unknown')}"
+        if config.get("temperature_b") is not None:
+            content += f" (temp: {config.get('temperature_b')})"
         content += "\n"
-        content += f"◈ Max turns: {event.max_turns}\n"
+        content += f"◈ Max turns: {config.get('max_turns', 0)}\n"
         content += (
             f"◈ [{self.COLORS['nord3']}]Press Ctrl+C to pause"
             f"[/{self.COLORS['nord3']}]\n\n"
@@ -49,10 +50,11 @@ class ConversationDisplayHandler(BaseDisplayHandler):
 
         # Show initial prompt as agents will see it
         content += "[bold]Initial Prompt (as agents see it):[/bold]\n"
+        initial_prompt = config.get("initial_prompt", "No prompt")
         if human_tag:
-            content += f"{human_tag}: {event.initial_prompt}"
+            content += f"{human_tag}: {initial_prompt}"
         else:
-            content += f"{event.initial_prompt}"
+            content += f"{initial_prompt}"
 
         # Calculate appropriate width - allow wider panels for initial prompt display
         width = self.calculate_panel_width(
@@ -120,7 +122,8 @@ class ConversationDisplayHandler(BaseDisplayHandler):
 
     def show_conversation_end(self, event: ConversationEndEvent):
         """Show conversation end panel."""
-        duration = event.duration_ms / 1000  # Convert to seconds
+        # Use duration_ms and convert to seconds
+        duration = event.duration_ms / 1000
 
         content = "[bold]Conversation Complete[/bold]\n\n"
         content += f"◇ Total turns: {event.total_turns}\n"
@@ -159,9 +162,10 @@ class ConversationDisplayHandler(BaseDisplayHandler):
     # Quiet mode methods
     def show_quiet_start(self, event: ConversationStartEvent):
         """Minimal start display."""
-        self.max_turns = event.max_turns
+        config = event.config or {}
+        self.max_turns = config.get("max_turns", 0)
         self.console.print(
-            f"[{self.COLORS['nord3']}]Starting conversation ({event.max_turns} turns)...[/{self.COLORS['nord3']}]"
+            f"[{self.COLORS['nord3']}]Starting conversation ({self.max_turns} turns)...[/{self.COLORS['nord3']}]"
         )
 
     def show_quiet_turn(self, event: TurnCompleteEvent):
@@ -173,6 +177,7 @@ class ConversationDisplayHandler(BaseDisplayHandler):
 
     def show_quiet_end(self, event: ConversationEndEvent):
         """Minimal end display."""
+        duration_str = f"{event.duration_ms/1000:.1f}s"
         self.console.print(
-            f"[{self.COLORS['nord3']}]Done. {event.total_turns} turns in {event.duration_ms/1000:.1f}s[/{self.COLORS['nord3']}]"
+            f"[{self.COLORS['nord3']}]Done. {event.total_turns} turns in {duration_str}[/{self.COLORS['nord3']}]"
         )

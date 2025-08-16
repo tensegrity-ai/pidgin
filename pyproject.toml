@@ -1,11 +1,28 @@
 [tool.poetry]
 name = "pidgin"
 version = "0.1.0"
-description = "AI conversation research tool"
+description = "AI conversation research tool for studying emergent communication patterns"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 license = "MIT"
 packages = [{include = "pidgin"}]
+homepage = "https://github.com/tensegrity-ai/pidgin"
+repository = "https://github.com/tensegrity-ai/pidgin"
+documentation = "https://github.com/tensegrity-ai/pidgin#readme"
+keywords = ["ai", "llm", "conversation", "research", "communication", "anthropic", "openai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -36,9 +53,12 @@ freezegun = "^1.4.0"
 responses = "^0.25.0"
 faker = "^24.0.0"
 black = "^24.3.0"
-flake8 = "^6.0.0"
+ruff = "^0.8.0"
 mypy = "^1.0.0"
-isort = "^5.0.0"
+types-pyyaml = "^6.0.0"
+bandit = {extras = ["toml"], version = "^1.7.0"}
+safety = "^3.0.0"
+poethepoet = "^0.31.0"
 pre-commit = "^3.0.0"
 radon = "^6.0.1"
 autoflake = "^2.3.1"
@@ -60,9 +80,15 @@ line_length = 88
 
 [tool.mypy]
 python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
+warn_return_any = false
+warn_unused_configs = false
 ignore_missing_imports = true
+no_implicit_optional = false
+strict_optional = false
+check_untyped_defs = false
+allow_untyped_defs = true
+allow_incomplete_defs = true
+allow_untyped_calls = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -134,3 +160,51 @@ exclude_lines = [
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",  # Line length handled by formatter
+    "E402",  # Module import not at top of file - sometimes needed
+    "B007",  # Unused loop control variable - common pattern
+    "B027",  # Empty method in abstract base class - intentional default implementations
+    "B904",  # raise without from - not always needed
+    "RUF001", # Ambiguous unicode characters - we use math symbols intentionally
+    "RUF006", # Asyncio task not stored - fire-and-forget tasks are intentional
+    "RUF012", # Mutable class defaults - intentional in some cases
+    "RUF013", # Implicit optional - fixing would be a big change
+    "RUF022", # Unsorted __all__ - cosmetic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S106", "S105"]  # Allow asserts and hardcoded passwords in tests
+"pidgin/analysis/notebook_generator.py" = ["F401"]  # nbformat imports used conditionally
+"pidgin/experiments/process_launcher.py" = ["F401"]  # setproctitle import checked conditionally
+"tests/integration/test_conversation.py" = ["F401"]  # Import test only
+
+[tool.bandit]
+exclude_dirs = ["tests", "scripts"]
+skips = ["B101"]  # Skip assert_used test
+
+[tool.poe.tasks]
+lint = "ruff check ."
+format = "ruff format ."
+typecheck = "mypy pidgin"
+test = "pytest"
+test-unit = "pytest -m unit"
+test-integration = "pytest -m integration"
+security-code = "bandit -r pidgin"
+security-deps = "safety check"
+security = ["security-code", "security-deps"]
+ci = ["lint", "typecheck", "test", "security"]

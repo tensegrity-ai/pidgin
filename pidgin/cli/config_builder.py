@@ -1,12 +1,14 @@
 """Build ExperimentConfig from CLI arguments."""
 
-import random
 from typing import Optional, Tuple
+
+# Create display instance
+from rich.console import Console
 
 from ..config.config import Config
 from ..config.defaults import get_smart_convergence_defaults
-from ..experiments import ExperimentConfig
 from ..config.resolution import resolve_temperatures
+from ..experiments import ExperimentConfig
 from ..ui.display_utils import DisplayUtils
 from .helpers import (
     build_initial_prompt,
@@ -14,8 +16,6 @@ from .helpers import (
 )
 from .name_generator import generate_experiment_name
 
-# Create display instance
-from rich.console import Console
 console = Console()
 display = DisplayUtils(console)
 
@@ -47,7 +47,7 @@ class ConfigBuilder:
         allow_truncation: bool = False,
     ) -> Tuple[ExperimentConfig, str, str]:
         """Build experiment configuration from CLI arguments.
-        
+
         Returns:
             Tuple of (config, agent_a_name, agent_b_name)
         """
@@ -70,7 +70,7 @@ class ConfigBuilder:
         # Add smart convergence defaults for API models
         final_convergence_threshold = convergence_threshold
         final_convergence_action = convergence_action
-        
+
         if convergence_threshold is None:
             default_threshold, default_action = get_smart_convergence_defaults(
                 agent_a_id, agent_b_id
@@ -108,9 +108,9 @@ class ConfigBuilder:
             max_parallel=max_parallel,
             convergence_threshold=final_convergence_threshold,
             convergence_action=final_convergence_action,
-            awareness=awareness,
-            awareness_a=awareness_a,
-            awareness_b=awareness_b,
+            awareness="basic" if awareness else "none",
+            awareness_a="basic" if awareness_a else "none",
+            awareness_b="basic" if awareness_b else "none",
             choose_names=choose_names,
             display_mode=display_mode,
             prompt_tag=prompt_tag,
@@ -128,7 +128,7 @@ class ConfigBuilder:
     ):
         """Display configuration information."""
         from .helpers import format_model_display
-        
+
         config_lines = []
         config_lines.append(f"Name: {config.name}")
         config_lines.append(

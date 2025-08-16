@@ -6,8 +6,8 @@ from .logger import get_logger
 from .output_manager import OutputManager
 
 __all__ = [
+    "EventDeserializer",
+    "JSONLExperimentReader",
     "OutputManager",
     "get_logger",
-    "JSONLExperimentReader",
-    "EventDeserializer",
 ]

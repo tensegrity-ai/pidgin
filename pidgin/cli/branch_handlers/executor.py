@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
@@ -10,7 +9,7 @@ from rich.console import Console
 from ...config.models import get_model_config
 from ...experiments import ExperimentConfig, ExperimentManager
 from ...io.paths import get_experiments_dir
-from ...providers.api_key_manager import APIKeyManager, APIKeyError
+from ...providers.api_key_manager import APIKeyError, APIKeyManager
 from ...ui.display_utils import DisplayUtils
 
 
@@ -87,12 +86,14 @@ class BranchExecutor:
             return exp_id
 
         except (RuntimeError, OSError) as e:
-            self.display.error(f"Failed to start branch: {str(e)}", use_panel=True)
+            self.display.error(f"Failed to start branch: {e!s}", use_panel=True)
             return None
 
     def _show_quiet_mode_info(self, exp_id: str, name: str):
         """Show commands for quiet mode."""
-        self.console.print("\n[#4c566a]Running in background. Check progress:[/#4c566a]")
+        self.console.print(
+            "\n[#4c566a]Running in background. Check progress:[/#4c566a]"
+        )
         cmd_lines = [
             "pidgin monitor              # Monitor all experiments",
             f"pidgin stop {name}    # Stop by name",
@@ -123,14 +124,13 @@ class BranchExecutor:
         manifest_path = exp_dir / "manifest.json"
 
         if manifest_path.exists():
-            with open(manifest_path, "r") as f:
+            with open(manifest_path) as f:
                 manifest = json.load(f)
 
             completed = manifest.get("completed_conversations", 0)
             total = manifest.get("total_conversations", repetitions)
 
             self.display.info(
-                f"Branch complete: {completed}/{total} conversations",
-                context=f"Output: {exp_dir}",
+                f"Branch complete: {completed}/{total} conversations\nOutput: {exp_dir}",
                 use_panel=True,
             )

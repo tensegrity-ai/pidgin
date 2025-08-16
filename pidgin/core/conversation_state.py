@@ -13,12 +13,12 @@ from .types import Agent, Conversation, Message
 
 class ConversationState:
     """Manages conversation state and events."""
-    
+
     def __init__(self, bus, display_filter=None):
         self.bus = bus
         self.display_filter = display_filter
         self._end_event_emitted = False
-        
+
     def create_conversation(
         self,
         agent_a: Agent,
@@ -32,7 +32,7 @@ class ConversationState:
             messages=[],
             initial_prompt=initial_prompt,
         )
-        
+
     async def add_initial_messages(
         self,
         conversation: Conversation,
@@ -44,7 +44,7 @@ class ConversationState:
                 conversation.messages.extend(initial_messages)
             else:
                 conversation.messages.extend(initial_messages)
-                    
+
     async def emit_start_events(
         self,
         conversation: Conversation,
@@ -63,7 +63,17 @@ class ConversationState:
                             prompt=prompt,
                         )
                     )
-                    
+
+        # Extract model info from agents
+        agent_a_model = getattr(conversation.agent_a, "model", None)
+        agent_b_model = getattr(conversation.agent_b, "model", None)
+
+        # Extract display names and other config values
+        agent_a_display_name = getattr(conversation.agent_a, "display_name", None)
+        agent_b_display_name = getattr(conversation.agent_b, "display_name", None)
+        max_turns = config.get("max_turns")
+        initial_prompt = config.get("initial_prompt")
+
         await self.bus.emit(
             ConversationStartEvent(
                 conversation_id=conversation.id,
@@ -71,9 +81,15 @@ class ConversationState:
                 agent_b=conversation.agent_b,
                 experiment_id=experiment_id,
                 config=config,
+                agent_a_model=agent_a_model,
+                agent_b_model=agent_b_model,
+                agent_a_display_name=agent_a_display_name,
+                agent_b_display_name=agent_b_display_name,
+                max_turns=max_turns,
+                initial_prompt=initial_prompt,
             )
         )
-        
+
     async def emit_end_event(
         self,
         conversation: Conversation,
@@ -84,22 +100,22 @@ class ConversationState:
     ):
         if self._end_event_emitted:
             return
-            
+
         self._end_event_emitted = True
-        
+
         if not conversation.messages:
             actual_status = "empty"
         else:
             actual_status = status
-            
+
         await self.bus.emit(
             ConversationEndEvent(
                 conversation_id=conversation.id,
-                turns_completed=conversation.turn_count,
+                total_turns=conversation.turn_count,
                 status=actual_status,
                 experiment_id=experiment_id,
                 reason=reason,
                 error=error,
-                duration_seconds=time.time() - conversation.start_time,
+                duration_ms=int((time.time() - conversation.start_time) * 1000),
             )
         )

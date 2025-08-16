@@ -9,10 +9,10 @@ class SummaryFormatter:
 
     def generate_experiment_summary(self, exp_data: Dict) -> str:
         """Generate experiment summary markdown.
-        
+
         Args:
             exp_data: Experiment data dictionary
-            
+
         Returns:
             Formatted experiment summary markdown
         """

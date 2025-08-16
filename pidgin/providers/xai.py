@@ -1,10 +1,10 @@
 import logging
-from typing import AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
-from .error_utils import ProviderErrorHandler
 from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    AsyncOpenAI = None
+    AsyncOpenAI = None  # type: ignore[assignment,misc]
 
 
 class xAIProvider(Provider):
@@ -74,6 +74,7 @@ class xAIProvider(Provider):
         self._last_usage = None
         # Use the xAI-specific error handler
         from .error_utils import create_xai_error_handler
+
         self.error_handler = create_xai_error_handler()
 
     async def stream_response(
@@ -83,8 +84,11 @@ class xAIProvider(Provider):
         from .context_utils import apply_context_truncation
 
         truncated_messages = apply_context_truncation(
-            messages, provider="xai", model=self.model, logger_name=__name__,
-            allow_truncation=self.allow_truncation
+            messages,
+            provider="xai",
+            model=self.model,
+            logger_name=__name__,
+            allow_truncation=self.allow_truncation,
         )
 
         # Convert to OpenAI format (xAI is OpenAI-compatible)
@@ -151,7 +155,7 @@ class xAIProvider(Provider):
             if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected API error: {friendly_error}")
             else:
-                logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+                logger.error(f"Unexpected API error: {e!s}", exc_info=True)
 
             # Create a clean exception with friendly message
             raise Exception(friendly_error) from None

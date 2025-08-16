@@ -13,42 +13,49 @@ def _load_models() -> Dict[str, ModelConfig]:
     # Import provider models - use lazy imports to avoid circular dependencies
     try:
         from ..providers.anthropic import ANTHROPIC_MODELS
+
         models.update(ANTHROPIC_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.openai import OPENAI_MODELS
+
         models.update(OPENAI_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.google import GOOGLE_MODELS
+
         models.update(GOOGLE_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.xai import XAI_MODELS
+
         models.update(XAI_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.local import LOCAL_MODELS
+
         models.update(LOCAL_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.ollama import OLLAMA_MODELS
+
         models.update(OLLAMA_MODELS)
     except ImportError:
         pass
 
     try:
         from ..providers.silent import SILENT_MODELS
+
         models.update(SILENT_MODELS)
     except ImportError:
         pass
@@ -59,6 +66,7 @@ def _load_models() -> Dict[str, ModelConfig]:
 # Model configurations aggregated from all providers
 _MODELS_CACHE: Optional[Dict[str, ModelConfig]] = None
 
+
 def _get_models() -> Dict[str, ModelConfig]:
     """Get models dictionary, loading on first access."""
     global _MODELS_CACHE
@@ -66,31 +74,33 @@ def _get_models() -> Dict[str, ModelConfig]:
         _MODELS_CACHE = _load_models()
     return _MODELS_CACHE
 
+
 # Create a property-like access for backward compatibility
 class ModelsDict:
     def __getitem__(self, key):
         return _get_models()[key]
-    
+
     def __contains__(self, key):
         return key in _get_models()
-    
+
     def __iter__(self):
         return iter(_get_models())
-    
+
     def __len__(self):
         return len(_get_models())
-    
+
     def items(self):
         return _get_models().items()
-    
+
     def values(self):
         return _get_models().values()
-    
+
     def keys(self):
         return _get_models().keys()
-    
+
     def get(self, key, default=None):
         return _get_models().get(key, default)
+
 
 MODELS = ModelsDict()
 
@@ -98,7 +108,7 @@ MODELS = ModelsDict()
 def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
     """Get model configuration by ID or alias."""
     models = _get_models()
-    
+
     # Direct match
     if model_or_alias in models:
         return models[model_or_alias]

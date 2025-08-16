@@ -45,7 +45,9 @@ class ExecutionHandler:
             output_dir: Output directory (currently unused)
         """
         # Show configuration
-        self.config_builder.show_config_info(config, agent_a_name, agent_b_name, initial_prompt)
+        self.config_builder.show_config_info(
+            config, agent_a_name, agent_b_name, initial_prompt
+        )
 
         # Launch daemon
         try:

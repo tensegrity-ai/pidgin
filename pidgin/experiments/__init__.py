@@ -9,7 +9,7 @@ from .runner import ExperimentRunner
 __all__ = [
     "EventStore",
     "ExperimentConfig",
-    "ExperimentRunner",
-    "ExperimentManager",
     "ExperimentDaemon",
+    "ExperimentManager",
+    "ExperimentRunner",
 ]

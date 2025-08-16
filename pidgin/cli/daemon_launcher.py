@@ -1,40 +1,36 @@
 """Launch and manage experiment daemon."""
 
-import asyncio
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Optional, Set
 
 from rich.console import Console
 
-from ..experiments import ExperimentConfig
 from ..config.models import get_model_config
-from ..experiments import ExperimentManager
+from ..experiments import ExperimentConfig, ExperimentManager
 from ..io.paths import get_experiments_dir
-from ..providers.api_key_manager import APIKeyManager, APIKeyError
+from ..providers.api_key_manager import APIKeyError, APIKeyManager
 from ..ui.display_utils import DisplayUtils
-from .constants import NORD_DARK
-from .notify import send_notification
 
 # Import ORIGINAL_CWD from main module
 from . import ORIGINAL_CWD
+from .constants import NORD_DARK
+from .notify import send_notification
 
 
 class DaemonLauncher:
     """Start and manage experiment daemon."""
 
     def __init__(self, console: Optional[Console] = None):
-        """Initialize the daemon launcher."""
         self.console = console or Console()
         self.display = DisplayUtils(self.console)
 
     def validate_before_start(self, config: ExperimentConfig) -> None:
         """Validate configuration and API keys before starting daemon.
-        
+
         Args:
             config: The experiment configuration
-            
+
         Raises:
             Exception: If validation fails
         """
@@ -44,12 +40,12 @@ class DaemonLauncher:
         jsonl_reader = JSONLExperimentReader(get_experiments_dir())
         experiments = jsonl_reader.list_experiments()
         existing_names = {exp.get("name") for exp in experiments if exp.get("name")}
-        
+
         # Try up to 10 times to find a unique name
         max_retries = 10
         retry_count = 0
         original_name = config.name
-        
+
         while config.name in existing_names:
             retry_count += 1
             if retry_count > max_retries:
@@ -58,19 +54,19 @@ class DaemonLauncher:
                     context=f"Original name: '{original_name}'",
                     use_panel=False,
                 )
-                raise ValueError(f"Could not generate unique experiment name")
-            
+                raise ValueError("Could not generate unique experiment name")
+
             # Generate new name and update config
             new_name = generate_experiment_name()
             config.name = new_name
-            
+
             if retry_count == 1:
                 # First retry, show that we're generating a new name
                 self.display.info(
                     f"Name '{original_name}' already exists, generating new name...",
                     use_panel=False,
                 )
-        
+
         # If we had to generate a new name, show it
         if retry_count > 0:
             self.display.info(
@@ -98,13 +94,13 @@ class DaemonLauncher:
 
     def start_daemon(self, config: ExperimentConfig) -> str:
         """Start experiment daemon and return experiment ID.
-        
+
         Args:
             config: The experiment configuration
-            
+
         Returns:
             The experiment ID
-            
+
         Raises:
             Exception: If daemon fails to start
         """
@@ -118,19 +114,19 @@ class DaemonLauncher:
         try:
             # Always start via manager (creates daemon + PID file)
             exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
-            
+
             # Show start message
             self.console.print(f"\n[#a3be8c]✓ Started: {exp_id}[/#a3be8c]")
-            
+
             return exp_id
-            
+
         except (RuntimeError, OSError) as e:
-            self.display.error(f"Failed to start experiment: {str(e)}", use_panel=True)
+            self.display.error(f"Failed to start experiment: {e!s}", use_panel=True)
             raise
 
     def show_quiet_mode_info(self, exp_id: str, name: str) -> None:
         """Show commands for quiet mode operation.
-        
+
         Args:
             exp_id: The experiment ID
             name: The experiment name
@@ -163,7 +159,7 @@ class DaemonLauncher:
         repetitions: int,
     ) -> None:
         """Run display and handle completion notifications.
-        
+
         Args:
             exp_id: The experiment ID
             name: The experiment name
@@ -173,7 +169,7 @@ class DaemonLauncher:
         """
         # Import the display runners
         from ..experiments.display_runner import run_display
-        
+
         manager = ExperimentManager(base_dir=get_experiments_dir())
 
         try:
@@ -181,7 +177,7 @@ class DaemonLauncher:
             if not exp_dir_name:
                 self.display.error(f"Could not find directory for experiment {exp_id}")
                 return
-            
+
             # Run the display (this will tail JSONL files and show live updates)
             await run_display(exp_dir_name, display_mode)
 
@@ -201,10 +197,10 @@ class DaemonLauncher:
 
     def _get_required_providers(self, config: ExperimentConfig) -> Set[str]:
         """Get set of required providers from config.
-        
+
         Args:
             config: The experiment configuration
-            
+
         Returns:
             Set of provider names
         """
@@ -215,7 +211,7 @@ class DaemonLauncher:
             providers.add(agent_a_config.provider)
         if agent_b_config:
             providers.add(agent_b_config.provider)
-        return providers
+        return providers  # type: ignore[return-value]
 
     def _show_completion_info(
         self,
@@ -226,7 +222,7 @@ class DaemonLauncher:
         repetitions: int,
     ) -> None:
         """Show completion information after display exits.
-        
+
         Args:
             exp_dir_name: The experiment directory name
             exp_id: The experiment ID
@@ -239,7 +235,7 @@ class DaemonLauncher:
 
         if manifest_path.exists():
             try:
-                with open(manifest_path, "r") as f:
+                with open(manifest_path) as f:
                     manifest = json.load(f)
 
                 # Extract statistics from manifest
@@ -252,12 +248,8 @@ class DaemonLauncher:
                 start_time = manifest.get("started_at")
                 end_time = manifest.get("completed_at")
                 if start_time and end_time:
-                    start_dt = datetime.fromisoformat(
-                        start_time.replace("Z", "+00:00")
-                    )
-                    end_dt = datetime.fromisoformat(
-                        end_time.replace("Z", "+00:00")
-                    )
+                    start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
                     duration = (end_dt - start_dt).total_seconds()
                 else:
                     duration = 0
@@ -288,10 +280,7 @@ class DaemonLauncher:
             except (OSError, FileNotFoundError, json.JSONDecodeError):
                 # If can't read manifest, just note that display exited
                 self.display.info(
-                    (
-                        "Display exited. Experiment continues "
-                        "running in background."
-                    ),
+                    ("Display exited. Experiment continues " "running in background."),
                     use_panel=False,
                 )
         else:

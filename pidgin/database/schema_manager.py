@@ -2,7 +2,7 @@
 
 import os
 import threading
-from typing import Optional, Set
+from typing import Set
 
 import duckdb
 
@@ -15,8 +15,7 @@ logger = get_logger("schema_manager")
 class SchemaManager:
     """Schema manager that ensures schema is created only once per session."""
 
-    def __init__(self):
-        """Initialize the schema manager."""
+    def __init__(self) -> None:
         self._lock = threading.Lock()
         self._initialized_databases: Set[str] = set()
 
@@ -68,5 +67,3 @@ class SchemaManager:
         """
         cache_key = os.path.abspath(db_path)
         return cache_key in self._initialized_databases
-
-

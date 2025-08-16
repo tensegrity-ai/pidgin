@@ -2,8 +2,8 @@
 
 from typing import Dict, Optional
 
-from ..core.events import MessageCompleteEvent, TokenUsageEvent
 from ..config.provider_capabilities import get_provider_capabilities
+from ..core.events import MessageCompleteEvent, TokenUsageEvent
 from ..io.logger import get_logger
 from ..providers.token_tracker import GlobalTokenTracker
 from .event_store import EventStore
@@ -43,7 +43,7 @@ class TokenUsageHandler:
 
     def __init__(self, storage: EventStore, token_tracker: GlobalTokenTracker):
         """Initialize handler with storage backend.
-        
+
         Args:
             storage: Event store for persisting token usage
             token_tracker: Token tracker for rate limiting
@@ -86,18 +86,9 @@ class TokenUsageHandler:
             conversation_id=conv_id,
             provider=provider,
             model=model or "unknown",
-            usage={
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens,
-            },
-            rate_limits={
-                "requests_per_minute": self._get_rpm_limit(provider),
-                "tokens_per_minute": event.tokens_per_minute_limit,
-                "current_rpm_usage": 0,  # RPM tracking handled by rate limiter
-                "current_tpm_usage": event.current_usage_rate,
-            },
-            cost=costs,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_cost=costs["total_cost"],
         )
 
         # Token tracker usage is now recorded in event_wrapper.py before emitting
@@ -127,10 +118,12 @@ class TokenUsageHandler:
                 "total_tokens": 0,
             }
 
-        # For now, just track completion tokens from the event
-        # In a full implementation, we'd get prompt tokens from MessageRequestEvent
-        self.conversation_tokens[conv_id]["completion_tokens"] += event.tokens_used
-        self.conversation_tokens[conv_id]["total_tokens"] += event.tokens_used
+        # Track tokens from the event
+        self.conversation_tokens[conv_id]["prompt_tokens"] += event.prompt_tokens
+        self.conversation_tokens[conv_id]["completion_tokens"] += (
+            event.completion_tokens
+        )
+        self.conversation_tokens[conv_id]["total_tokens"] += event.total_tokens
 
     def _calculate_costs(
         self,

@@ -2,7 +2,7 @@
 
 from rich.text import Text
 
-from ...core.events import MessageCompleteEvent, SystemPromptEvent
+from ...core.events import MessageCompleteEvent
 from .base import BaseDisplayHandler
 
 
@@ -76,9 +76,10 @@ class MessageDisplayHandler(BaseDisplayHandler):
         self.console.print(wrapped_text, width=text_width, style="default")
 
         if self.show_timing:
+            tokens_used = getattr(event, "tokens_used", "unknown")
             self.console.print(
                 f"[{self.COLORS['nord3']}]⟐ Duration: {event.duration_ms}ms | "
-                f"Tokens: {event.tokens_used}[/{self.COLORS['nord3']}]"
+                f"Tokens: {tokens_used}[/{self.COLORS['nord3']}]"
             )
 
         self.console.print()  # Add spacing after message

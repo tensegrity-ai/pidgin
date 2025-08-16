@@ -85,7 +85,9 @@ class ExperimentResolver:
             # Try to extract from directory name (format: name_shortid)
             if "_" in identifier:
                 short_id = identifier.rsplit("_", 1)[1]
-                if len(short_id) == 8 and all(c in "0123456789abcdef" for c in short_id):
+                if len(short_id) == 8 and all(
+                    c in "0123456789abcdef" for c in short_id
+                ):
                     return f"experiment_{short_id}"
 
         # Check if it's already a full experiment ID
@@ -115,7 +117,7 @@ class ExperimentResolver:
         for experiment_dir in self.base_dir.iterdir():
             if not experiment_dir.is_dir() or experiment_dir.name in ["active", "logs"]:
                 continue
-            
+
             # Check if directory ends with partial ID
             if "_" in experiment_dir.name:
                 short_id = experiment_dir.name.rsplit("_", 1)[1]

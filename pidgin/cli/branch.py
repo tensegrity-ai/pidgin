@@ -1,6 +1,7 @@
 # pidgin/cli/branch.py
 """Branch command for forking conversations from any point."""
 
+from pathlib import Path
 from typing import Optional
 
 import rich_click as click
@@ -16,7 +17,8 @@ from .branch_handlers import (
     BranchSourceFinder,
     BranchSpecWriter,
 )
-from .error_handler import CLIErrorHandler, FileNotFoundError as CLIFileNotFoundError, ValidationError
+from .error_handler import CLIErrorHandler, ValidationError
+from .error_handler import FileNotFoundError as CLIFileNotFoundError
 from .name_generator import generate_experiment_name
 
 console = Console()
@@ -93,8 +95,9 @@ def branch(
       pidgin branch conv_exp_abc123 --spec branch_spec.yaml
     """
     # 1. Find source conversation
-    finder = BranchSourceFinder(get_experiments_dir())
-    source = finder.find_conversation(conversation_id, turn)
+    finder = BranchSourceFinder()
+    exp_dir = get_experiments_dir()
+    source = finder.find_conversation(exp_dir, conversation_id, turn)
     if not source:
         display.error(
             f"Conversation '{conversation_id}' not found",
@@ -162,7 +165,7 @@ def branch_from_spec(spec_file: str):
     This allows replaying branches with saved configurations.
     """
     try:
-        with open(spec_file, "r") as f:
+        with open(spec_file) as f:
             spec = yaml.safe_load(f)
 
         # Extract branch metadata
@@ -204,12 +207,11 @@ def branch_from_spec(spec_file: str):
     except yaml.YAMLError as e:
         raise ValidationError(
             f"Invalid YAML in spec file: {e}",
-            suggestion="Check YAML syntax with a validator"
+            suggestion="Check YAML syntax with a validator",
         )
     except FileNotFoundError:
         raise CLIFileNotFoundError(
-            spec_path,
-            suggestion="Verify the spec file path is correct"
+            Path(spec_file), suggestion="Verify the spec file path is correct"
         )
     except (PermissionError, OSError) as e:
         display.error(f"Failed to load branch spec: {e}")

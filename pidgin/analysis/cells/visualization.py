@@ -1,14 +1,22 @@
 """Visualization cells for notebooks."""
 
+from typing import TYPE_CHECKING, Any, Dict
+
 from .base import CellBase
+
+if TYPE_CHECKING:
+    try:
+        from nbformat import NotebookNode
+    except ImportError:
+        NotebookNode = Dict[str, Any]
 
 
 class VisualizationCells(CellBase):
     """Creates visualization and turn analysis cells."""
-    
-    def create_turn_visualization_cell(self) -> "nbformat.NotebookNode":
+
+    def create_turn_visualization_cell(self) -> "NotebookNode":
         """Create turn-by-turn visualization code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """

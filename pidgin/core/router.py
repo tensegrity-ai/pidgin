@@ -1,4 +1,5 @@
-from typing import Any, AsyncIterator, Dict, List, Optional, Protocol, Tuple
+from collections.abc import AsyncIterator
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 from .types import Message
 

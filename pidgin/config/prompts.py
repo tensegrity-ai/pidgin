@@ -14,5 +14,5 @@ def build_initial_prompt(custom_prompt: Optional[str] = None) -> str:
     """
     if custom_prompt:
         return custom_prompt
-    
+
     return "I'm looking forward to your conversation."

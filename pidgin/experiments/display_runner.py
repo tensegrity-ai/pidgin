@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
+from typing import Dict, List, Union
 
 from rich.console import Console
 
@@ -10,8 +12,8 @@ from ..core.event_bus import EventBus
 from ..core.types import Agent
 from ..io.event_deserializer import EventDeserializer
 from ..io.paths import get_experiments_dir
-from ..ui.tail import TailDisplay
 from ..ui.chat_display import ChatDisplay
+from ..ui.tail import TailDisplay
 
 console = Console()
 
@@ -25,10 +27,11 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     """
     if display_mode == "none":
         return
-    
+
     # Set process title for display runner
     try:
         import setproctitle
+
         if display_mode == "chat":
             setproctitle.setproctitle("pidgin-chat")
         else:
@@ -44,6 +47,7 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
     # Create event bus and display
     bus = EventBus()
 
+    _display: Union[ChatDisplay, TailDisplay]
     if display_mode == "chat":
         # For chat display, we need to create dummy agents
         # In the future, we could read this from manifest
@@ -57,11 +61,11 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
         _display = TailDisplay(bus, console)
 
     # Track file positions
-    file_positions = {}
+    file_positions: Dict[Path, int] = {}
 
     # Get initial JSONL files
-    jsonl_files = list(exp_dir.glob("*.jsonl"))
-    
+    jsonl_files: List[Path] = list(exp_dir.glob("*.jsonl"))
+
     # Also check for experiment-level events file
     experiment_events_file = exp_dir / f"{experiment_id}_events.jsonl"
     if experiment_events_file.exists() and experiment_events_file not in jsonl_files:
@@ -94,12 +98,12 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
             # Check each JSONL file for new lines
             for jsonl_file in jsonl_files:
                 try:
-                    with open(jsonl_file, "r") as f:
+                    with open(jsonl_file) as f:  # type: ignore[assignment]
                         # Seek to last position
-                        f.seek(file_positions[jsonl_file])
+                        f.seek(file_positions[jsonl_file])  # type: ignore[attr-defined]
 
                         # Read new lines
-                        for line in f:
+                        for line in f:  # type: ignore[attr-defined]
                             line = line.strip()
                             if not line:
                                 continue
@@ -129,7 +133,7 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                                 pass
 
                         # Update position
-                        file_positions[jsonl_file] = f.tell()
+                        file_positions[jsonl_file] = f.tell()  # type: ignore[attr-defined]
 
                 except FileNotFoundError:
                     # File might have been deleted
@@ -141,8 +145,8 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
             # Check if experiment is still running
             if manifest_path.exists():
                 try:
-                    with open(manifest_path, "r") as f:
-                        manifest = json.load(f)
+                    with open(manifest_path) as f:  # type: ignore[assignment]
+                        manifest = json.load(f)  # type: ignore[arg-type]
                         status = manifest.get("status", "")
                         total_conversations = manifest.get("total_conversations", 0)
                         completed_conversations = manifest.get(
@@ -159,24 +163,33 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                         # Check if experiment is in a terminal state
                         # We now wait for COMPLETED status (not POST_PROCESSING)
                         # because runner.py sets status back to COMPLETED after post-processing
-                        terminal_statuses = ["completed", "failed", "interrupted", "cancelled"]
-                        
+                        terminal_statuses = [
+                            "completed",
+                            "failed",
+                            "interrupted",
+                            "cancelled",
+                        ]
+
                         # Only exit if:
                         # 1. Status is terminal (not post_processing)
                         # 2. All conversations are done
                         # 3. We're not in post_processing state
-                        if status in terminal_statuses and all_conversations_done and status != "post_processing":
+                        if (
+                            status in terminal_statuses
+                            and all_conversations_done
+                            and status != "post_processing"
+                        ):
                             # One more pass to catch final events
                             await asyncio.sleep(0.5)
                             continue_reading = False
                             for jsonl_file in jsonl_files:
                                 try:
-                                    with open(jsonl_file, "r") as f:
-                                        f.seek(file_positions[jsonl_file])
-                                        if f.read(1):  # Check if there's more data
+                                    with open(jsonl_file) as f:  # type: ignore[assignment]
+                                        f.seek(file_positions[jsonl_file])  # type: ignore[attr-defined]
+                                        if f.read(1):  # type: ignore[attr-defined]  # Check if there's more data
                                             continue_reading = True
-                                            f.seek(file_positions[jsonl_file])
-                                except (OSError, IOError):
+                                            f.seek(file_positions[jsonl_file])  # type: ignore[attr-defined]
+                                except OSError:
                                     pass
 
                             if not continue_reading:
@@ -184,7 +197,9 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
                                 break
                         elif status == "post_processing":
                             # If we're in post_processing, keep waiting
-                            logging.debug("Experiment is in post-processing, continuing to monitor...")
+                            logging.debug(
+                                "Experiment is in post-processing, continuing to monitor..."
+                            )
                             pass
                 except Exception:
                     pass

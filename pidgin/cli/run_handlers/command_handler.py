@@ -1,7 +1,5 @@
 """Main command handler for run command."""
 
-from typing import Optional
-
 from .execution import ExecutionHandler
 from .models import RunConfig
 from .setup import SetupHandler
@@ -32,17 +30,19 @@ class CommandHandler:
         if config.spec_file:
             spec_result = self.spec_handler.process_spec_file(config.spec_file)
             if spec_result:
-                config, agent_a_name, agent_b_name, spec_output_dir, spec_notify = spec_result
-                
+                config, agent_a_name, agent_b_name, spec_output_dir, spec_notify = (
+                    spec_result
+                )
+
                 # Run the experiment from spec
                 self.execution_handler.run_conversations(
                     config,
                     agent_a_name,
                     agent_b_name,
-                    config.custom_prompt or "Hello",
-                    config.display_mode == "quiet",
-                    config.display_mode == "quiet" or spec_notify,
-                    config.display_mode,
+                    config.conversation.prompt or "Hello",
+                    config.display.quiet,
+                    config.display.quiet or spec_notify,
+                    "quiet" if config.display.quiet else "normal",
                     spec_output_dir or config.execution.output,
                 )
                 return
@@ -96,10 +96,10 @@ class CommandHandler:
             prompt_tag=config.conversation.prompt_tag,
             allow_truncation=config.execution.allow_truncation,
         )
-        
+
         if not config_result:
             return
-        
+
         experiment_config, agent_a_name, agent_b_name, initial_prompt = config_result
 
         # Run conversations

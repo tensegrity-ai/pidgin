@@ -1,7 +1,8 @@
 """Base provider interface for AI model integrations."""
 
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Dict, List, Optional
 
 from ..core.types import Message
 
@@ -20,7 +21,7 @@ class Provider(ABC):
                 async for chunk in self._call_api(messages):
                     yield chunk
     """
-    
+
     def __init__(self):
         """Initialize provider with default settings."""
         self.allow_truncation = False  # Default: no truncation

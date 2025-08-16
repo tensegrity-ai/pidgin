@@ -45,7 +45,7 @@ class EventStore:
         # Create parent directory if it doesn't exist
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db = duckdb.connect(str(db_path))
-        
+
         # Create schema manager instance
         self._schema_manager = None
         self._ensure_schema()
@@ -58,17 +58,17 @@ class EventStore:
         self.metrics = MetricsRepository(self.db)
 
         # Initialize import service
-        self.importer = ImportService(db_path)
+        self.importer = ImportService(str(db_path))
 
         logger.debug(f"Initialized EventStore with database: {db_path}")
 
     def _ensure_schema(self):
         """Ensure database schema exists."""
         from .schema_manager import SchemaManager
-        
+
         if self._schema_manager is None:
             self._schema_manager = SchemaManager()
-        
+
         self._schema_manager.ensure_schema(self.db, str(self.db_path))
 
     def close(self):
@@ -410,7 +410,9 @@ class EventStore:
         cols = [desc[0] for desc in self.db.description]
         return [dict(zip(cols, row)) for row in results]
 
-    def get_conversation_turn_metrics(self, conversation_id: str) -> List[Dict[str, Any]]:
+    def get_conversation_turn_metrics(
+        self, conversation_id: str
+    ) -> List[Dict[str, Any]]:
         """Get turn metrics for a specific conversation.
 
         Args:
@@ -473,11 +475,5 @@ class EventStore:
         ).fetchone()
 
         if result and result[0] is not None:
-            return {
-                'total_tokens': result[0],
-                'total_cost_cents': result[1] or 0
-            }
-        return {
-            'total_tokens': 0,
-            'total_cost_cents': 0
-        }
+            return {"total_tokens": result[0], "total_cost_cents": result[1] or 0}
+        return {"total_tokens": 0, "total_cost_cents": 0}

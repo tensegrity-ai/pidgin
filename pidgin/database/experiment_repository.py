@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from ..constants import ExperimentStatus
+from ..core.constants import ExperimentStatus
 from ..io.logger import get_logger
 from .base_repository import BaseRepository
 

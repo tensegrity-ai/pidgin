@@ -2,7 +2,7 @@
 
 ## Overview
 
-Pidgin uses DuckDB as its analytical database, storing all conversation data, metrics, and events in a single file at `./pidgin_output/experiments/experiments.duckdb`. The database is automatically created on first use and employs an event-sourcing architecture for complete auditability.
+Pidgin uses DuckDB as its analytical database, storing all conversation data, metrics, and events in a single file at `./pidgin_output/experiments.duckdb`. The database is automatically created on first use and employs an event-sourcing architecture for complete auditability.
 
 ## Why DuckDB?
 
@@ -385,9 +385,9 @@ GROUP BY provider, model;
 
 ## Database Location & Access
 
-- **Default location**: `./pidgin_output/experiments/experiments.duckdb`
+- **Default location**: `./pidgin_output/experiments.duckdb`
 - **Auto-creation**: Database and tables created automatically on first use
-- **Direct access**: `duckdb ./pidgin_output/experiments/experiments.duckdb`
+- **Direct access**: `duckdb ./pidgin_output/experiments.duckdb`
 - **Python access**: Use DuckDB Python API directly or through the repository classes in `pidgin.database`
 
 ## Architecture Notes

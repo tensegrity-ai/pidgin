@@ -53,6 +53,10 @@ class SystemDeserializer(BaseDeserializer):
             tokens_used=data.get("tokens_used", data.get("total_tokens", 0)),
             tokens_per_minute_limit=data.get("tokens_per_minute_limit", 0),
             current_usage_rate=data.get("current_usage_rate", 0.0),
+            agent_id=data.get("agent_id"),
+            model=data.get("model"),
+            prompt_tokens=data.get("prompt_tokens"),
+            completion_tokens=data.get("completion_tokens"),
         )
         event.timestamp = timestamp
         return event
@@ -68,8 +72,12 @@ class SystemDeserializer(BaseDeserializer):
             provider=data.get("provider", "unknown"),
             model=data.get("model", "unknown"),
             turn_number=data["turn_number"],
-            original_message_count=data.get("original_message_count", data.get("messages_before", 0)),
-            truncated_message_count=data.get("truncated_message_count", data.get("messages_after", 0)),
+            original_message_count=data.get(
+                "original_message_count", data.get("messages_before", 0)
+            ),
+            truncated_message_count=data.get(
+                "truncated_message_count", data.get("messages_after", 0)
+            ),
             messages_dropped=data.get("messages_dropped", 0),
         )
         event.timestamp = timestamp

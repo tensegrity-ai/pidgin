@@ -103,12 +103,10 @@ class CustomAwareness:
 
     @property
     def name(self) -> str:
-        """Get the name of this custom awareness."""
         return self.config.get("name", "custom")
 
     @property
     def base(self) -> Optional[str]:
-        """Get the base awareness level to inherit from."""
         return self.config.get("base")
 
     def get_initial_prompts(

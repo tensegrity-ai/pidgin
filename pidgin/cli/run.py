@@ -1,6 +1,6 @@
 """Unified run command for conversations and experiments."""
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import rich_click as click
 from rich.console import Console
@@ -141,7 +141,7 @@ def run(
     """Run AI conversations between two agents.
 
     [bold]EXAMPLES:[/bold]
-    
+
       pidgin run experiment.yaml        # From YAML spec
       pidgin run -a claude -b gpt        # Basic conversation
       pidgin run -a claude -b gpt --tail # Event stream
@@ -179,6 +179,6 @@ def run(
         prompt_tag=prompt_tag,
         allow_truncation=allow_truncation,
     )
-    
+
     handler = CommandHandler(console)
     handler.handle_command(config)

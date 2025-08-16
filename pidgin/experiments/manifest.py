@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-from ..constants import ConversationStatus, ExperimentStatus
+from ..core.constants import ConversationStatus, ExperimentStatus
 
 
 class ManifestManager:
@@ -64,7 +64,7 @@ class ManifestManager:
                 "status": ConversationStatus.CREATED,
                 "jsonl": jsonl_filename,
                 "last_line": 0,
-                "turns_completed": 0,
+                "total_turns": 0,
                 "last_updated": datetime.now(timezone.utc).isoformat(),
                 "token_usage": {
                     "agent_a": {
@@ -95,7 +95,7 @@ class ManifestManager:
         conversation_id: str,
         status: str = None,
         last_line: int = None,
-        turns_completed: int = None,
+        total_turns: int = None,
         error: str = None,
     ) -> None:
         """Update conversation status and progress.
@@ -104,7 +104,7 @@ class ManifestManager:
             conversation_id: Conversation to update
             status: New status (running, completed, failed)
             last_line: Last line number written to JSONL
-            turns_completed: Number of turns completed
+            total_turns: Number of turns completed
             error: Error message if failed
         """
         with self._lock:
@@ -115,8 +115,8 @@ class ManifestManager:
                 conversation["status"] = status
             if last_line is not None:
                 conversation["last_line"] = last_line
-            if turns_completed is not None:
-                conversation["turns_completed"] = turns_completed
+            if total_turns is not None:
+                conversation["total_turns"] = total_turns
             if error:
                 conversation["error"] = error
 
@@ -137,7 +137,7 @@ class ManifestManager:
         model: str = None,
     ) -> None:
         """Update token usage for a conversation.
-        
+
         Args:
             conversation_id: Conversation ID
             agent_id: Either "agent_a" or "agent_b"
@@ -147,34 +147,35 @@ class ManifestManager:
         """
         with self._lock:
             manifest = self._read()
-            
+
             if conversation_id not in manifest["conversations"]:
                 return
-                
+
             conv = manifest["conversations"][conversation_id]
-            
+
             # Update agent's token usage
             agent_usage = conv["token_usage"][agent_id]
             agent_usage["prompt_tokens"] += prompt_tokens
             agent_usage["completion_tokens"] += completion_tokens
             agent_usage["total_tokens"] += prompt_tokens + completion_tokens
-            
+
             # Set model if provided and not already set
             if model and not agent_usage["model"]:
                 agent_usage["model"] = model
-            
+
             # Update total
             conv["token_usage"]["total"] = (
-                conv["token_usage"]["agent_a"]["total_tokens"] +
-                conv["token_usage"]["agent_b"]["total_tokens"]
+                conv["token_usage"]["agent_a"]["total_tokens"]
+                + conv["token_usage"]["agent_b"]["total_tokens"]
             )
-            
+
             self._write_atomic(manifest)
 
-    def update_conversation_status(self, conversation_id: str, status: str, 
-                                  completed_count: int, failed_count: int) -> None:
+    def update_conversation_status(
+        self, conversation_id: str, status: str, completed_count: int, failed_count: int
+    ) -> None:
         """Update the status of a conversation.
-        
+
         Args:
             conversation_id: ID of the conversation
             status: New status (completed, failed, etc)
@@ -182,23 +183,30 @@ class ManifestManager:
             failed_count: Number of failed conversations
         """
         manifest = self._read()
-        
+
         # Update conversation status
         if conversation_id in manifest.get("conversations", {}):
             manifest["conversations"][conversation_id]["status"] = status
-            manifest["conversations"][conversation_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
-        
+            manifest["conversations"][conversation_id]["last_updated"] = datetime.now(
+                timezone.utc
+            ).isoformat()
+
         # Update experiment counts
         manifest["completed_conversations"] = completed_count
         manifest["failed_conversations"] = failed_count
-        
+
         # Update running count
-        running_count = len([c for c in manifest.get("conversations", {}).values() 
-                           if c.get("status") == "running"])
+        running_count = len(
+            [
+                c
+                for c in manifest.get("conversations", {}).values()
+                if c.get("status") == "running"
+            ]
+        )
         manifest["running_conversations"] = running_count
-        
+
         self._write_atomic(manifest)
-    
+
     def update_experiment_status(self, status: str, error: str = None) -> None:
         """Update experiment status.
 
@@ -238,7 +246,7 @@ class ManifestManager:
             return {}
 
         try:
-            with open(self.manifest_path, "r") as f:
+            with open(self.manifest_path) as f:
                 return json.load(f)
         except Exception:
             return {}

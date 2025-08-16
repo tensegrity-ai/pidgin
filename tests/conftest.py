@@ -1,8 +1,8 @@
 """Minimal test fixtures - just what we actually need."""
 
 import os
+
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
@@ -19,8 +19,5 @@ def test_output_dir(tmp_path):
 def local_providers():
     """Standard test providers."""
     from pidgin.providers.test_model import LocalTestModel
-    
-    return {
-        "agent_a": LocalTestModel(),
-        "agent_b": LocalTestModel()
-    }
+
+    return {"agent_a": LocalTestModel(), "agent_b": LocalTestModel()}

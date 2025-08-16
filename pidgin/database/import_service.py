@@ -29,7 +29,7 @@ class ImportResult:
 
 class ImportService:
     """Service for importing JSONL experiment data into DuckDB conversation_turns table.
-    
+
     This service orchestrates the import process, delegating specific tasks to:
     - ConversationImporter: Handles conversation and message data
     - MetricsImporter: Handles metrics and turn data
@@ -79,7 +79,7 @@ class ImportService:
                     error="No manifest.json found",
                 )
 
-            with open(manifest_path, "r") as f:
+            with open(manifest_path) as f:
                 manifest = json.load(f)
 
             experiment_id = manifest.get("experiment_id", exp_dir.name)
@@ -150,7 +150,7 @@ class ImportService:
         Returns:
             List of ImportResults for each experiment
         """
-        results = []
+        results: List[ImportResult] = []
 
         if not experiments_dir.exists():
             logger.warning(f"Experiments directory {experiments_dir} does not exist")

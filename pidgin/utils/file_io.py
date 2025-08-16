@@ -17,7 +17,7 @@ def safe_json_load(file_path: Path, default: Optional[Any] = None) -> Any:
         Loaded JSON data or default value
     """
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return default if default is not None else {}

@@ -6,8 +6,8 @@ from ..io.logger import get_logger
 from .formatters import (
     HeaderFormatter,
     MetricsFormatter,
-    TranscriptMessageFormatter,
     SummaryFormatter,
+    TranscriptMessageFormatter,
 )
 
 logger = get_logger("transcript_formatter")
@@ -15,7 +15,7 @@ logger = get_logger("transcript_formatter")
 
 class TranscriptFormatter:
     """Handles all markdown formatting for transcripts.
-    
+
     This class delegates to specialized formatters for different
     sections of the transcript, keeping the main class small and focused.
     """

@@ -1,6 +1,6 @@
-# Development Guidelines for Pidgin
+# Development Guidelines
 
-These guidelines ensure consistent, grounded development of the Pidgin research tool.
+These guidelines ensure consistent, grounded development of the Pidgin research tool. They capture the project's philosophy, architectural decisions, and coding standards.
 
 ## Core Philosophy
 

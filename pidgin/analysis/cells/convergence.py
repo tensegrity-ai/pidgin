@@ -1,14 +1,22 @@
 """Convergence analysis cells for notebooks."""
 
+from typing import TYPE_CHECKING, Any, Dict
+
 from .base import CellBase
+
+if TYPE_CHECKING:
+    try:
+        from nbformat import NotebookNode
+    except ImportError:
+        NotebookNode = Dict[str, Any]
 
 
 class ConvergenceCells(CellBase):
     """Creates convergence analysis cells."""
-    
-    def create_convergence_analysis_cell(self) -> "nbformat.NotebookNode":
+
+    def create_convergence_analysis_cell(self) -> "NotebookNode":
         """Create convergence analysis visualization code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """
@@ -68,9 +76,9 @@ if 'turn_metrics' in locals() and 'convergence_score' in turn_metrics.columns:
 
         return self._make_code_cell(code)
 
-    def create_advanced_metrics_markdown_cell(self) -> "nbformat.NotebookNode":
+    def create_advanced_metrics_markdown_cell(self) -> "NotebookNode":
         """Create advanced metrics explanation markdown cell.
-        
+
         Returns:
             Jupyter notebook markdown cell
         """
@@ -85,9 +93,9 @@ The following analysis explores deeper patterns in the conversation dynamics:
 
         return self._make_markdown_cell(content)
 
-    def create_advanced_metrics_code_cell(self) -> "nbformat.NotebookNode":
+    def create_advanced_metrics_code_cell(self) -> "NotebookNode":
         """Create advanced metrics analysis code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """

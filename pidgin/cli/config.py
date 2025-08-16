@@ -1,7 +1,5 @@
 """Create and manage Pidgin configuration."""
 
-from pathlib import Path
-
 import rich_click as click
 from rich.console import Console
 
@@ -15,35 +13,32 @@ display = DisplayUtils(console)
 
 @click.command()
 @click.option(
-    "--force",
-    "-f",
-    is_flag=True,
-    help="Overwrite existing configuration file"
+    "--force", "-f", is_flag=True, help="Overwrite existing configuration file"
 )
 def config(force: bool):
     """Create a configuration file with example settings.
-    
+
     Creates ~/.config/pidgin/pidgin.yaml with default settings
     and examples for customization.
     """
     config_path = get_config_dir() / "pidgin.yaml"
-    
+
     if config_path.exists() and not force:
         display.warning(
             f"Config file already exists at: {config_path}", use_panel=False
         )
         display.info("Use --force to overwrite", use_panel=False)
         return
-    
+
     config_instance = Config()
-    
+
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     config_instance._write_example_config(config_path)
-    
+
     display.success("◆ Created configuration file")
     display.info(f"Location: {config_path}", use_panel=False)
-    
+
     profiles_info = [
         "Available convergence profiles:",
         "  • balanced   - Default, balanced weights",

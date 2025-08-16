@@ -53,16 +53,16 @@ rc.STYLE_HELPTEXT = "#d8dee9"  # Nord4 light gray
 rc.STYLE_OPTION_HELP = "#d8dee9"  # Nord4 light gray for option descriptions
 
 # Now import as click
-import rich_click as click  # noqa: E402
+import rich_click as click
 
-from ..ui.display_utils import DisplayUtils  # noqa: E402
-from .branch import branch  # noqa: E402
-from .config import config  # noqa: E402
-from .constants import BANNER  # noqa: E402
-from .models import models  # noqa: E402
-from .monitor import monitor  # noqa: E402
-from .run import run  # noqa: E402
-from .stop import stop  # noqa: E402
+from ..ui.display_utils import DisplayUtils
+from .branch import branch
+from .config import config
+from .constants import BANNER
+from .models import models
+from .monitor import monitor
+from .run import run
+from .stop import stop
 
 console = Console()
 display = DisplayUtils(console)
@@ -70,64 +70,84 @@ display = DisplayUtils(console)
 
 class CustomGroup(click.Group):
     """Custom Click group with enhanced help formatting."""
-    
+
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         """Override help formatting to add panels."""
         # Print the basic description
-        console.print("\n[bold #8fbcbb]Usage:[/bold #8fbcbb] pidgin [OPTIONS] COMMAND [ARGS]...\n")
-        console.print("[#d8dee9]AI conversation research tool for studying emergent communication patterns.[/#d8dee9]")
-        console.print("[#d8dee9]Pidgin enables controlled experiments between AI agents to discover how they[/#d8dee9]")
-        console.print("[#d8dee9]develop communication patterns, convergence behaviors, and linguistic adaptations.[/#d8dee9]\n")
-        
+        console.print(
+            "\n[bold #8fbcbb]Usage:[/bold #8fbcbb] pidgin [OPTIONS] COMMAND [ARGS]...\n"
+        )
+        console.print(
+            "[#d8dee9]AI conversation research tool for studying emergent communication patterns.[/#d8dee9]"
+        )
+        console.print(
+            "[#d8dee9]Pidgin enables controlled experiments between AI agents to discover how they[/#d8dee9]"
+        )
+        console.print(
+            "[#d8dee9]develop communication patterns, convergence behaviors, and linguistic adaptations.[/#d8dee9]\n"
+        )
+
         # Calculate max panel width
         terminal_width = console.width
         max_panel_width = min(100, terminal_width - 4)  # Cap at 100 chars, leave margin
-        
+
         # Quick Start section
         quick_start = Text("pidgin run -a claude -b gpt", style="cyan")
-        console.print(Panel(
-            quick_start,
-            title="[bold #a3be8c]Quick Start[/bold #a3be8c]",
-            border_style="#4c566a",
-            padding=(0, 2),
-            width=max_panel_width
-        ))
-        
+        console.print(
+            Panel(
+                quick_start,
+                title="[bold #a3be8c]Quick Start[/bold #a3be8c]",
+                border_style="#4c566a",
+                padding=(0, 2),
+                width=max_panel_width,
+            )
+        )
+
         # Examples panel
         examples_content = """[cyan]From YAML spec:[/cyan]         pidgin run experiment.yaml
 [cyan]Single conversation:[/cyan]    pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
 [cyan]Multiple conversations:[/cyan] pidgin run -a claude -b gpt -r 20 --name "test"
 [cyan]With custom prompt:[/cyan]     pidgin run -a claude -b gpt -p "Explore philosophy together"
 [cyan]Monitor experiments:[/cyan]    pidgin monitor"""
-        
+
         # Configuration panel
         config_content = """• Configuration files: ~/.config/pidgin/
 • Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.
 • Output directory: ./pidgin/
 • Database: ./pidgin/experiments.duckdb"""
-        
+
         # Display panels with consistent width
-        console.print("\n", Panel(
-            examples_content,
-            title="[bold #88c0d0]Examples[/bold #88c0d0]",
-            border_style="#4c566a",
-            padding=(1, 2),
-            width=max_panel_width
-        ))
-        
-        console.print("\n", Panel(
-            config_content,
-            title="[bold #8fbcbb]Configuration[/bold #8fbcbb]",
-            border_style="#4c566a",
-            padding=(1, 2),
-            width=max_panel_width
-        ))
-        
+        console.print(
+            "\n",
+            Panel(
+                examples_content,
+                title="[bold #88c0d0]Examples[/bold #88c0d0]",
+                border_style="#4c566a",
+                padding=(1, 2),
+                width=max_panel_width,
+            ),
+        )
+
+        console.print(
+            "\n",
+            Panel(
+                config_content,
+                title="[bold #8fbcbb]Configuration[/bold #8fbcbb]",
+                border_style="#4c566a",
+                padding=(1, 2),
+                width=max_panel_width,
+            ),
+        )
+
         # Options section
         console.print("\n[bold #5e81ac]Options:[/bold #5e81ac]")
-        console.print("  [#a3be8c]--version[/#a3be8c]         Show the version and exit.")
-        console.print("  [#a3be8c]-h, --help[/#a3be8c]        Show this message and exit.")
-        
+        console.print(
+            "  [#a3be8c]--version[/#a3be8c]         Show the version and exit."
+        )
+        console.print(
+            "  [#a3be8c]-h, --help[/#a3be8c]        Show this message and exit."
+        )
+
         # Commands section with panel
         commands_text = """[bold #5e81ac]run[/bold #5e81ac]         Run AI conversations between two agents.
 [bold #5e81ac]branch[/bold #5e81ac]      Branch a conversation from any point with parameter changes.
@@ -135,23 +155,25 @@ class CustomGroup(click.Group):
 [bold #5e81ac]stop[/bold #5e81ac]        Stop a running experiment gracefully.
 [bold #5e81ac]models[/bold #5e81ac]      List all available AI models.
 [bold #5e81ac]config[/bold #5e81ac]      Create configuration file with example settings."""
-        
-        console.print("\n", Panel(
-            commands_text,
-            title="[bold #5e81ac]Commands[/bold #5e81ac]",
-            border_style="#4c566a",
-            padding=(1, 2),
-            width=max_panel_width
-        ))
-        
+
+        console.print(
+            "\n",
+            Panel(
+                commands_text,
+                title="[bold #5e81ac]Commands[/bold #5e81ac]",
+                border_style="#4c566a",
+                padding=(1, 2),
+                width=max_panel_width,
+            ),
+        )
+
         # Footer hint
-        console.print("\n[dim]Use 'pidgin COMMAND --help' for more information about a command.[/dim]\n")
+        console.print(
+            "\n[dim]Use 'pidgin COMMAND --help' for more information about a command.[/dim]\n"
+        )
 
 
-@click.group(
-    cls=CustomGroup,
-    context_settings={"help_option_names": ["-h", "--help"]}
-)
+@click.group(cls=CustomGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
 def cli() -> None:
     """AI conversation research tool for studying emergent communication patterns.
@@ -159,16 +181,16 @@ def cli() -> None:
     Pidgin enables controlled experiments between AI agents to discover how they
     develop communication patterns, convergence behaviors, and linguistic
     adaptations.
-    
+
     QUICK START: pidgin run -a claude -b gpt
-    
+
     EXAMPLES:
     From YAML spec:          pidgin run experiment.yaml
     Single conversation:     pidgin run -a opus -b gpt-4.1 -t 50 -p "Discuss philosophy"
     Multiple conversations:  pidgin run -a claude -b gpt -r 20 --name "test"
     Using dimensions:        pidgin run -a claude -b gpt -d peers:philosophy:analytical
     Monitor experiments:     pidgin monitor
-    
+
     CONFIGURATION:
     • Configuration files: ~/.config/pidgin/
     • Environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY
@@ -186,7 +208,6 @@ cli.add_command(branch)
 
 
 def main() -> None:
-    """Main entry point."""
     # Check if help is being requested
     import sys
 

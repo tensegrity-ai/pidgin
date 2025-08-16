@@ -12,17 +12,17 @@ logger = get_logger("state_builder")
 
 class StateBuilder:
     """Builds experiment state efficiently using manifest files.
-    
+
     This class implements a caching mechanism to avoid repeated parsing of manifest
     files. It uses file modification times (mtime) to detect changes and invalidate
     the cache when necessary. The state builder coordinates between the manifest
     parser and conversation parser to build complete experiment states.
-    
+
     The caching strategy significantly improves performance when monitoring multiple
     experiments, as manifest files only need to be re-parsed when they change.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.cache: Dict[Path, Tuple[float, ExperimentState]] = {}
         self.manifest_parser = ManifestParser()
         self.conversation_parser = ConversationParser()
@@ -62,7 +62,7 @@ class StateBuilder:
             exp_dir=exp_dir,
             get_conversation_timestamps=self.conversation_parser.get_conversation_timestamps,
             get_last_convergence=self.conversation_parser.get_last_convergence,
-            get_truncation_info=self.conversation_parser.get_truncation_info
+            get_truncation_info=self.conversation_parser.get_truncation_info,
         )
 
         if state:
@@ -103,20 +103,20 @@ class StateBuilder:
         """Clear the state cache."""
         self.cache.clear()
         logger.debug("State cache cleared")
-    
+
     def get_conversation_state(
         self, exp_dir: Path, conv_id: str
     ) -> Optional[ConversationState]:
         """Get state for a specific conversation.
-        
+
         This method tries to get conversation state from:
         1. The experiment's manifest (if cached)
         2. Direct JSONL parsing if not in manifest
-        
+
         Args:
             exp_dir: Experiment directory
             conv_id: Conversation ID
-            
+
         Returns:
             ConversationState or None if not found
         """
@@ -124,6 +124,6 @@ class StateBuilder:
         exp_state = self.get_experiment_state(exp_dir)
         if exp_state and conv_id in exp_state.conversations:
             return exp_state.conversations[conv_id]
-        
+
         # If not found, try to build directly from JSONL
         return self.conversation_parser.get_conversation_state(exp_dir, conv_id)

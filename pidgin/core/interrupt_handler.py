@@ -30,9 +30,6 @@ class InterruptHandler:
         self.current_turn = 0
         self._original_sigint_handler = None
 
-        # Nord colors (matching conductor)
-        self.NORD_YELLOW = "#ebcb8b"
-
     def setup_interrupt_handler(self):
         """Set up Ctrl+C as interrupt trigger."""
 

@@ -17,7 +17,7 @@ from ..cli.constants import (
     NORD_RED,
     NORD_YELLOW,
 )
-from ..constants import ConversationStatus
+from ..core.constants import ConversationStatus
 from ..io.logger import get_logger
 
 logger = get_logger("conversation_panel_builder")
@@ -28,7 +28,7 @@ class ConversationPanelBuilder:
 
     def __init__(self, panel_width_getter):
         """Initialize conversation panel builder.
-        
+
         Args:
             panel_width_getter: Function to get panel width
         """
@@ -42,7 +42,7 @@ class ConversationPanelBuilder:
         if not all_convs:
             # Try to show last few completed conversations
             all_convs = self._get_recent_completed(experiments)
-            
+
             if not all_convs:
                 return Panel(
                     f"[{NORD_DARK}]No conversations found[/{NORD_DARK}]",
@@ -51,7 +51,7 @@ class ConversationPanelBuilder:
                 )
 
         table = self._build_conversation_table(all_convs)
-        
+
         # Determine title based on what we're showing
         has_active_exp = any(
             c[0].status in ["running", "created"] for c in all_convs[:10]
@@ -130,22 +130,22 @@ class ConversationPanelBuilder:
         """Add a single conversation row to the table."""
         # Status
         status_str, status_color = self._get_status_display(conv.status)
-        
+
         # Turn progress
         turn_str, turn_color = self._get_turn_display(conv)
-        
+
         # Models
         models_str = f"{conv.agent_a_model[:8]} ↔ {conv.agent_b_model[:8]}"
-        
+
         # Convergence
         conv_str = self._get_convergence_display(conv.last_convergence)
-        
+
         # Truncation
         trunc_str = self._get_truncation_display(conv)
-        
+
         # Duration
         duration_str = self._format_duration(conv.started_at, conv.completed_at)
-        
+
         # Tokens
         tokens_str = self._get_conversation_tokens(exp, conv)
 
@@ -218,7 +218,7 @@ class ConversationPanelBuilder:
         """Format duration between two timestamps."""
         if not started_at:
             return "-"
-            
+
         # Ensure started_at is timezone-aware
         started = started_at
         if started.tzinfo is None:
@@ -253,9 +253,11 @@ class ConversationPanelBuilder:
         manifest_path = exp.directory / "manifest.json"
         if manifest_path.exists():
             try:
-                with open(manifest_path, "r") as f:
+                with open(manifest_path) as f:
                     manifest = json.load(f)
-                    conv_data = manifest.get("conversations", {}).get(conv.conversation_id, {})
+                    conv_data = manifest.get("conversations", {}).get(
+                        conv.conversation_id, {}
+                    )
                     if "token_usage" in conv_data:
                         total_tokens = conv_data["token_usage"].get("total", 0)
                         if total_tokens > 0:

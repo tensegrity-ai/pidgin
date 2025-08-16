@@ -8,11 +8,11 @@ class HeaderFormatter:
 
     def format_header(self, conv_data: Dict, token_data: Dict) -> str:
         """Format transcript header.
-        
+
         Args:
             conv_data: Conversation data dictionary
             token_data: Token usage data dictionary
-            
+
         Returns:
             Formatted header markdown
         """

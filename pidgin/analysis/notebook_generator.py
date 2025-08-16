@@ -1,7 +1,6 @@
 """Generate Jupyter notebooks for experiment analysis."""
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -14,8 +13,8 @@ except ImportError:
     NBFORMAT_AVAILABLE = False
     nbformat = None
 
-from ..io.logger import get_logger
 from ..database.event_store import EventStore
+from ..io.logger import get_logger
 from .notebook_cells import NotebookCells
 
 logger = get_logger("notebook_generator")
@@ -24,7 +23,12 @@ logger = get_logger("notebook_generator")
 class NotebookGenerator:
     """Generates Jupyter notebooks for experiment analysis."""
 
-    def __init__(self, experiment_dir: Path, event_store: EventStore, cells: Optional[NotebookCells] = None):
+    def __init__(
+        self,
+        experiment_dir: Path,
+        event_store: EventStore,
+        cells: Optional[NotebookCells] = None,
+    ):
         """Initialize with experiment directory and EventStore.
 
         Args:
@@ -50,12 +54,11 @@ class NotebookGenerator:
             return False
 
         try:
-            # Load manifest
             if not self.manifest_path.exists():
                 logger.warning(f"No manifest.json found in {self.experiment_dir}")
                 return False
 
-            with open(self.manifest_path, "r") as f:
+            with open(self.manifest_path) as f:
                 manifest = json.load(f)
 
             # Create notebook
@@ -90,30 +93,32 @@ class NotebookGenerator:
         if not experiment_id:
             logger.error("No experiment_id in manifest")
             return None
-            
+
         # Get experiment data from EventStore
         experiment_data = self.event_store.get_experiment(experiment_id)
         if not experiment_data:
             logger.error(f"Experiment {experiment_id} not found in database")
             return None
-            
+
         # Get conversations data
         conversations = self.event_store.get_experiment_conversations(experiment_id)
-        
+
         # Get metrics for all conversations
         all_metrics = []
         for conv in conversations:
-            metrics = self.event_store.get_conversation_turn_metrics(conv["conversation_id"])
+            metrics = self.event_store.get_conversation_turn_metrics(
+                conv["conversation_id"]
+            )
             all_metrics.extend(metrics)
-            
+
         # Prepare data dictionary
         data = {
             "manifest": manifest,
             "experiment": experiment_data,
             "conversations": conversations,
-            "metrics": all_metrics
+            "metrics": all_metrics,
         }
-        
+
         cells = []
 
         # Title and overview

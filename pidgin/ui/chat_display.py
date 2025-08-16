@@ -1,6 +1,6 @@
 """Chat display for watching conversations with minimal metadata."""
 
-from typing import Dict
+from typing import Dict, Union
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -49,6 +49,7 @@ class ChatDisplay:
         self.max_turns = 0
         self.truncation_occurred = False
         self.conversation_count = 0
+        self._last_convergence: float = 0.0
 
         # Subscribe to relevant events
         bus.subscribe(ConversationStartEvent, self.handle_start)
@@ -80,7 +81,7 @@ class ChatDisplay:
             self.agents["agent_a"].display_name = event.agent_a_display_name
         if event.agent_b_display_name and "agent_b" in self.agents:
             self.agents["agent_b"].display_name = event.agent_b_display_name
-            
+
         # Build header
         agent_a_name = event.agent_a_display_name or "Agent A"
         agent_b_name = event.agent_b_display_name or "Agent B"
@@ -158,6 +159,7 @@ class ChatDisplay:
         name_text.append(agent_name, style=color + " bold")
 
         # Render content
+        content_display: Union[Markdown, Text]
         if any(marker in content for marker in ["```", "**", "*", "#", "-", "1."]):
             try:
                 content_display = Markdown(content, code_theme="nord")

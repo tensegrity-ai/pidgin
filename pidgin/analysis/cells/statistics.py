@@ -1,14 +1,22 @@
 """Basic statistics cells for notebooks."""
 
+from typing import TYPE_CHECKING, Any, Dict
+
 from .base import CellBase
+
+if TYPE_CHECKING:
+    try:
+        from nbformat import NotebookNode
+    except ImportError:
+        NotebookNode = Dict[str, Any]
 
 
 class StatisticsCells(CellBase):
     """Creates basic statistics analysis cells."""
-    
-    def create_statistics_cell(self) -> "nbformat.NotebookNode":
+
+    def create_statistics_cell(self) -> "NotebookNode":
         """Create basic statistics code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """
@@ -33,9 +41,9 @@ if 'turn_metrics' in locals():
 
         return self._make_code_cell(code)
 
-    def create_length_analysis_cell(self) -> "nbformat.NotebookNode":
+    def create_length_analysis_cell(self) -> "NotebookNode":
         """Create message length analysis code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """

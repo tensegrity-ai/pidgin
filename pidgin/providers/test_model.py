@@ -1,7 +1,8 @@
 """Test model for offline development and testing."""
 
 import hashlib
-from typing import AsyncGenerator, List, Optional
+from collections.abc import AsyncGenerator
+from typing import List, Optional
 
 from ..core.types import Message
 from .base import Provider
@@ -122,7 +123,8 @@ class LocalTestModel(Provider):
     def _get_question_response(self, prompt: str) -> str:
         """Get response to a question."""
         # Hash prompt for deterministic selection
-        hash_val = int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
+        # MD5 is fine here - not used for security, just deterministic selection
+        hash_val = int(hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16)  # nosec B324
         questions = self.responses["questions"]
         base = questions[hash_val % len(questions)]
 

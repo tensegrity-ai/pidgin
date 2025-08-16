@@ -51,7 +51,6 @@ class DisplayFilter:
         self.agents = agents or {}
         self.prompt_tag = prompt_tag
 
-        # Initialize handlers with shared state
         self.conversation_handler = ConversationDisplayHandler(
             console=console,
             mode=mode,

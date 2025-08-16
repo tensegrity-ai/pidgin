@@ -93,7 +93,7 @@ class ExperimentStatus:
         dir_name = self.resolver.get_experiment_directory(resolved_id)
         if not dir_name:
             return [f"Could not find experiment directory for: {experiment_id}"]
-        
+
         log_file = self.base_dir / dir_name / "experiment.log"
 
         if not log_file.exists():
@@ -101,7 +101,7 @@ class ExperimentStatus:
 
         try:
             # Use tail-like behavior
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 # Read all lines for small files
                 all_lines = f.readlines()
                 if len(all_lines) <= lines:
@@ -129,7 +129,7 @@ class ExperimentStatus:
         if not dir_name:
             logging.error(f"Could not find experiment directory for: {experiment_id}")
             return
-        
+
         log_file = self.base_dir / dir_name / "experiment.log"
 
         if not log_file.exists():

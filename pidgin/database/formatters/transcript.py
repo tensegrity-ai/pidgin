@@ -8,11 +8,11 @@ class TranscriptMessageFormatter:
 
     def format_token_usage(self, messages: List[Dict], token_data: Dict) -> str:
         """Format token usage breakdown.
-        
+
         Args:
             messages: List of message dictionaries
             token_data: Token usage data dictionary
-            
+
         Returns:
             Formatted token usage markdown
         """
@@ -87,11 +87,11 @@ class TranscriptMessageFormatter:
 
     def format_transcript(self, messages: List[Dict], conv_data: Dict) -> str:
         """Format conversation transcript.
-        
+
         Args:
             messages: List of message dictionaries
             conv_data: Conversation data dictionary
-            
+
         Returns:
             Formatted transcript markdown
         """

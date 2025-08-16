@@ -33,10 +33,9 @@ class StreamingRateLimiter:
     provide enough spacing between requests.
     """
 
-
     def __init__(self, config: Config):
         """Initialize the rate limiter.
-        
+
         Args:
             config: Application configuration
         """
@@ -60,7 +59,7 @@ class StreamingRateLimiter:
     def _load_limits(self) -> Dict[str, Dict[str, int]]:
         """Load rate limits from provider capabilities."""
         limits = {}
-        
+
         # Load from provider capabilities
         for provider in ["anthropic", "openai", "google", "xai", "local"]:
             capabilities = get_provider_capabilities(provider)
@@ -222,7 +221,7 @@ class StreamingRateLimiter:
 
         with self.lock:
             # Update the most recent request with actual data
-            if provider in self.request_history and self.request_history[provider]:
+            if self.request_history.get(provider):
                 last_request = self.request_history[provider][-1]
                 last_request.tokens = actual_tokens
                 last_request.duration = duration

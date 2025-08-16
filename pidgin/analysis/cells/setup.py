@@ -1,13 +1,20 @@
 """Setup and data loading cells for notebooks."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
 from .base import CellBase
+
+if TYPE_CHECKING:
+    try:
+        from nbformat import NotebookNode
+    except ImportError:
+        NotebookNode = Dict[str, Any]
 
 
 class SetupCells(CellBase):
     """Creates setup, title, and data loading cells."""
-    
+
     def format_timestamp(self, timestamp: str) -> str:
         """Format ISO timestamp to readable format."""
         if not timestamp:
@@ -15,15 +22,15 @@ class SetupCells(CellBase):
         try:
             dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
-        except:
+        except (ValueError, AttributeError):
             return timestamp
-    
-    def create_title_cell(self, data: Dict[str, Any]) -> "nbformat.NotebookNode":
+
+    def create_title_cell(self, data: Dict[str, Any]) -> "NotebookNode":
         """Create title and overview markdown cell.
-        
+
         Args:
             data: Data dictionary containing manifest and other experiment data
-            
+
         Returns:
             Jupyter notebook markdown cell
         """
@@ -32,7 +39,7 @@ class SetupCells(CellBase):
             manifest = data["manifest"]
         else:
             manifest = data
-            
+
         exp_name = manifest.get("name", "Unknown Experiment")
         exp_id = manifest.get("experiment_id", "unknown")
         created_at = manifest.get("created_at", "")
@@ -53,9 +60,9 @@ This notebook provides automated analysis of the experiment results."""
 
         return self._make_markdown_cell(content)
 
-    def create_setup_cell(self) -> "nbformat.NotebookNode":
+    def create_setup_cell(self) -> "NotebookNode":
         """Create setup and imports code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """
@@ -88,20 +95,24 @@ print(f"Analyzing experiment in: {exp_dir.resolve()}")"""
         turn_metrics_data: Optional[List[Dict]] = None,
         messages_data: Optional[List[Dict]] = None,
         conversations_data: Optional[List[Dict]] = None,
-    ) -> "nbformat.NotebookNode":
+    ) -> "NotebookNode":
         """Create data loading code cell.
-        
+
         Args:
             manifest_or_data: Either manifest dict (old style) or data dict with manifest key (new style)
             turn_metrics_data: Turn metrics from database (old style, optional)
             messages_data: Messages from database (old style, optional)
             conversations_data: Conversations from database (old style, optional)
-            
+
         Returns:
             Jupyter notebook code cell
         """
         # Handle both old style (separate args) and new style (data dict)
-        if turn_metrics_data is not None or messages_data is not None or conversations_data is not None:
+        if (
+            turn_metrics_data is not None
+            or messages_data is not None
+            or conversations_data is not None
+        ):
             # Old style - first arg is manifest, other args are data
             manifest = manifest_or_data
             turn_metrics_data = turn_metrics_data or []
@@ -119,10 +130,10 @@ print(f"Analyzing experiment in: {exp_dir.resolve()}")"""
             turn_metrics_data = []
             messages_data = []
             conversations_data = []
-            
+
         exp_id = manifest.get("experiment_id", "unknown")
 
-        code = f'''# Load experiment data from EventStore
+        code = f"""# Load experiment data from EventStore
 experiment_id = "{exp_id}"
 
 # Data loaded from EventStore at notebook generation time
@@ -143,15 +154,15 @@ if not turn_metrics.empty:
 if not messages.empty:
     print("Messages columns:", list(messages.columns))
 if not conversations.empty:
-    print("Conversations columns:", list(conversations.columns))'''
+    print("Conversations columns:", list(conversations.columns))"""
 
         return self._make_code_cell(code)
 
-    def create_export_cell(self) -> "nbformat.NotebookNode":
+    def create_export_cell(self) -> "NotebookNode":
         """Create data export code cell.
-        
+
         Returns:
-            Jupyter notebook code cell  
+            Jupyter notebook code cell
         """
         code = """# Export processed data for further analysis
 output_dir = Path("analysis_output")

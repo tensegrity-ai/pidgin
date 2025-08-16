@@ -5,7 +5,6 @@ class PidginError(Exception):
     """Base exception for all Pidgin errors."""
 
 
-
 class RateLimitError(PidginError):
     """Raised when rate limits are exceeded."""
 
@@ -19,7 +18,6 @@ class RateLimitError(PidginError):
 
 class ProviderError(PidginError):
     """Base exception for provider-related errors."""
-
 
 
 class ProviderTimeoutError(ProviderError):
@@ -39,20 +37,16 @@ class DatabaseError(PidginError):
     """Base exception for database-related errors."""
 
 
-
 class DatabaseConnectionError(DatabaseError):
     """Raised when database connection fails."""
-
 
 
 class DatabaseLockError(DatabaseError):
     """Raised when database is locked by another process."""
 
 
-
 class ExperimentError(PidginError):
     """Base exception for experiment-related errors."""
-
 
 
 class ExperimentAlreadyExistsError(ExperimentError):

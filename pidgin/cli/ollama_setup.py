@@ -63,7 +63,7 @@ async def ensure_ollama_models_ready(
     display = DisplayUtils(console)
     # Check if we need Ollama
     using_ollama = False
-    models_to_check = set()
+    models_to_check: set[str] = set()
 
     for model in [model_a, model_b]:
         if model.startswith("local:") and model != "local:test":

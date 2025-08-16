@@ -1,14 +1,22 @@
 """Vocabulary analysis cells for notebooks."""
 
+from typing import TYPE_CHECKING, Any, Dict
+
 from .base import CellBase
+
+if TYPE_CHECKING:
+    try:
+        from nbformat import NotebookNode
+    except ImportError:
+        NotebookNode = Dict[str, Any]
 
 
 class VocabularyCells(CellBase):
     """Creates vocabulary analysis cells."""
-    
-    def create_vocabulary_analysis_cell(self) -> "nbformat.NotebookNode":
+
+    def create_vocabulary_analysis_cell(self) -> "NotebookNode":
         """Create vocabulary overlap analysis code cell.
-        
+
         Returns:
             Jupyter notebook code cell
         """

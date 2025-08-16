@@ -27,7 +27,7 @@ from .metrics import (
 )
 
 # UI exports
-from .ui import DisplayFilter, TailDisplay, ChatDisplay
+from .ui import ChatDisplay, DisplayFilter, TailDisplay
 
 __all__ = [
     # Version

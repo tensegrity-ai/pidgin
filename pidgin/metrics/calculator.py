@@ -11,13 +11,13 @@ from .text_analysis import TextAnalyzer
 class MetricsCalculator:
     """Calculates comprehensive metrics for conversation turns with caching."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize calculator with tracking structures for efficient computation."""
         # Cumulative vocabulary tracking (incrementally updated)
-        self.cumulative_vocab = {"agent_a": set(), "agent_b": set()}
+        self.cumulative_vocab: Dict[str, set] = {"agent_a": set(), "agent_b": set()}
 
         # All words seen by each agent (for repetition calculation)
-        self.all_agent_words = {"agent_a": set(), "agent_b": set()}
+        self.all_agent_words: Dict[str, set] = {"agent_a": set(), "agent_b": set()}
 
         # Token cache to avoid re-tokenizing
         self._token_cache: Dict[str, List[str]] = {}

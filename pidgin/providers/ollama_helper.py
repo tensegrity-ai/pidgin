@@ -54,10 +54,8 @@ async def start_ollama_server(console) -> bool:
         # Start in background silently
         if platform.system() == "Windows":
             # CREATE_NEW_CONSOLE is Windows-specific
-            creation_flags = getattr(subprocess, 'CREATE_NEW_CONSOLE', 0x00000010)
-            subprocess.Popen(
-                ["ollama", "serve"], creationflags=creation_flags
-            )
+            creation_flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
+            subprocess.Popen(["ollama", "serve"], creationflags=creation_flags)
         else:
             subprocess.Popen(
                 ["ollama", "serve"],
@@ -120,11 +118,24 @@ async def auto_install_ollama(console) -> bool:
         elif system == "Linux":
             display.dim("Downloading and installing Ollama...")
 
-            # Use the Linux install script
-            install_cmd = "curl -fsSL https://ollama.ai/install.sh | sh"
-
+            # Download and run the install script in two steps for security
+            # First download the script
+            download_result = subprocess.run(
+                ["curl", "-fsSL", "https://ollama.ai/install.sh"],
+                capture_output=True,
+                text=True,
+            )
+            
+            if download_result.returncode != 0:
+                display.error("Failed to download Ollama installer")
+                return False
+            
+            # Then run it through sh
             result = subprocess.run(
-                install_cmd, shell=True, capture_output=False, text=True
+                ["sh"],
+                input=download_result.stdout,
+                text=True,
+                capture_output=False,
             )
 
             if result.returncode == 0:

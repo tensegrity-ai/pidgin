@@ -10,7 +10,7 @@ from .types import Agent
 class NameCoordinator:
     """Handles agent naming, name extraction, and display name assignment."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize name coordinator."""
         self.choose_names_mode = False
         self.agent_chosen_names: Dict[str, str] = {}

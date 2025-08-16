@@ -5,7 +5,7 @@ import shlex
 import subprocess
 import sys
 
-from ..constants import ExperimentStatus
+from ..core.constants import ExperimentStatus
 
 
 def send_notification(title: str, message: str):

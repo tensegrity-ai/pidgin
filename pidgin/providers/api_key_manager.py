@@ -3,7 +3,7 @@
 import os
 from typing import List
 
-from ..constants import EnvVars, ProviderNames
+from ..core.constants import EnvVars, ProviderNames
 
 
 class APIKeyError(Exception):

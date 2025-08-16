@@ -46,3 +46,11 @@ temp/
 # Experiment output directories
 pidgin_output/
 pidgin_dev_output/
+
+# Internal planning and development files
+TODO.md
+START_HERE.md
+PLANS/
+CI_SETUP.md
+RELEASE_CHECKLIST.md
+scripts/

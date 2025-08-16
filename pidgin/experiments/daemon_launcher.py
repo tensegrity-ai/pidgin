@@ -78,6 +78,7 @@ def main():
 
     # Create daemon with absolute path based on working directory
     from ..io.directories import get_cache_dir
+
     active_dir = get_cache_dir() / "active_experiments"
 
     # Ensure directories exist before daemonizing
@@ -91,18 +92,19 @@ def main():
 
     # Set up logging first - put log file in experiment directory
     from ..io.paths import get_experiments_dir
+
     experiments_dir = get_experiments_dir()
     exp_dir = experiments_dir / args.experiment_dir
     log_file = exp_dir / "experiment.log"
     exp_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Configure logging to write to file
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler(log_file, mode='a'),
-            logging.StreamHandler(sys.stderr)  # Also log to stderr for startup
+            logging.FileHandler(log_file, mode="a"),
+            logging.StreamHandler(sys.stderr),  # Also log to stderr for startup
         ],
         force=True,  # Override any existing config
     )
@@ -125,13 +127,15 @@ def main():
     for handler in root_logger.handlers[:]:
         if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stderr:
             root_logger.removeHandler(handler)
-    
+
     try:
         logging.info(f"Starting experiment {args.experiment_id}")
         logging.info(f"Config: {config.name} - {config.repetitions} repetitions")
         logging.info(f"GOOGLE_API_KEY present: {'GOOGLE_API_KEY' in os.environ}")
         logging.info(f"XAI_API_KEY present: {'XAI_API_KEY' in os.environ}")
-        logging.info(f"PIDGIN_ORIGINAL_CWD: {os.getenv('PIDGIN_ORIGINAL_CWD', 'Not set')}")
+        logging.info(
+            f"PIDGIN_ORIGINAL_CWD: {os.getenv('PIDGIN_ORIGINAL_CWD', 'Not set')}"
+        )
 
         # Run experiment
         try:

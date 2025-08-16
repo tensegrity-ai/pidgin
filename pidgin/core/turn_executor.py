@@ -43,10 +43,11 @@ class TurnExecutor:
 
         # Custom awareness for turn-based prompt injection
         self.custom_awareness = {"agent_a": None, "agent_b": None}
-        
+
         # Subscribe to context limit events
         if bus:
             from .events import ContextLimitEvent
+
             bus.subscribe(ContextLimitEvent, self.handle_context_limit)
 
     def set_convergence_overrides(self, threshold=None, action=None):
@@ -228,10 +229,10 @@ class TurnExecutor:
                         agent_display_name=f"Turn {turn_number} injection for Agent B",
                     )
                 )
-    
+
     async def handle_context_limit(self, event):
         """Handle context limit event by setting the flag.
-        
+
         Args:
             event: ContextLimitEvent
         """

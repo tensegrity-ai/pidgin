@@ -35,7 +35,7 @@ class ExperimentReadmeGenerator:
                 logger.warning(f"No manifest.json found in {self.experiment_dir}")
                 return False
 
-            with open(self.manifest_path, "r") as f:
+            with open(self.manifest_path) as f:
                 manifest = json.load(f)
 
             # Generate README content
@@ -163,7 +163,9 @@ class ExperimentReadmeGenerator:
                 status_icon = (
                     "✓"
                     if status == "completed"
-                    else "⚠️" if status == "failed" else "⏳"
+                    else "⚠️"
+                    if status == "failed"
+                    else "⏳"
                 )
                 line = f"{i}. `{conv_id}` - {turns} turns {status_icon}"
 

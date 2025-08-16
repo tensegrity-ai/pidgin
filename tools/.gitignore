@@ -1,0 +1,14 @@
+# Generated files
+*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+*.bak
+
+# Keep the builder script
+!*_builder.py

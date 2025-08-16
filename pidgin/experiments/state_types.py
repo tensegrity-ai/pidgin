@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from ..constants import ConversationStatus, ExperimentStatus
+from ..core.constants import ConversationStatus, ExperimentStatus
 
 
 @dataclass

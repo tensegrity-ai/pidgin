@@ -99,6 +99,15 @@ class ConversationStartEvent(Event):
     agent_b: Any
     experiment_id: Optional[str] = None
     config: Dict[str, Any] = field(default_factory=dict)
+    # Display attributes for UI
+    agent_a_display_name: Optional[str] = None
+    agent_b_display_name: Optional[str] = None
+    agent_a_model: Optional[str] = None
+    agent_b_model: Optional[str] = None
+    max_turns: Optional[int] = None
+    initial_prompt: Optional[str] = None
+    temperature_a: Optional[float] = None
+    temperature_b: Optional[float] = None
 
 
 @dataclass
@@ -106,12 +115,12 @@ class ConversationEndEvent(Event):
     """Conversation has ended."""
 
     conversation_id: str
-    turns_completed: int
+    total_turns: int  # Renamed from turns_completed
     status: str  # "completed", "failed", "interrupted", "empty"
     experiment_id: Optional[str] = None
     reason: Optional[str] = None
     error: Optional[str] = None
-    duration_seconds: float = 0.0
+    duration_ms: int = 0  # Renamed from duration_seconds and changed to ms
 
 
 @dataclass
@@ -134,6 +143,7 @@ class APIErrorEvent(Event):
     agent_id: str
     provider: str
     context: Optional[str] = None
+    error_code: Optional[str] = None
     retryable: bool = False
     retry_count: int = 0
 
@@ -146,6 +156,7 @@ class ProviderTimeoutEvent(Event):
     error_type: str
     error_message: str
     agent_id: str
+    provider: str
     timeout_seconds: float
     context: Optional[str] = None
 
@@ -195,6 +206,11 @@ class TokenUsageEvent(Event):
     tokens_used: int
     tokens_per_minute_limit: int
     current_usage_rate: float
+    # Optional fields for tracking detailed token usage
+    agent_id: Optional[str] = None
+    model: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
 
 
 @dataclass
@@ -249,7 +265,9 @@ class PostProcessingStartEvent(Event):
     """Emitted when post-experiment processing begins."""
 
     experiment_id: str
-    tasks: List[str]  # List of tasks to perform (e.g., ["readme", "notebook", "database", "transcripts"])
+    tasks: List[
+        str
+    ]  # List of tasks to perform (e.g., ["readme", "notebook", "database", "transcripts"])
 
 
 @dataclass

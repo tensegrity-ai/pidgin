@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from ..constants import ConversationStatus
+from ..core.constants import ConversationStatus
 from ..io.logger import get_logger
 from .base_repository import BaseRepository
 

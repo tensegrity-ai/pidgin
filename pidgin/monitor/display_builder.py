@@ -15,7 +15,7 @@ from ..cli.constants import (
     NORD_LIGHT,
     NORD_YELLOW,
 )
-from ..constants import ConversationStatus
+from ..core.constants import ConversationStatus
 from ..io.logger import get_logger
 from .conversation_panel_builder import ConversationPanelBuilder
 from .error_panel_builder import ErrorPanelBuilder
@@ -28,7 +28,7 @@ class DisplayBuilder:
 
     def __init__(self, console, exp_base):
         """Initialize display builder.
-        
+
         Args:
             console: Rich console instance
             exp_base: Base experiments directory
@@ -36,7 +36,7 @@ class DisplayBuilder:
         self.console = console
         self.exp_base = exp_base
         self.refresh_count = 0
-        
+
         # Initialize sub-builders
         self.error_panel_builder = ErrorPanelBuilder(self.get_panel_width)
         self.conversation_panel_builder = ConversationPanelBuilder(self.get_panel_width)
@@ -75,7 +75,9 @@ class DisplayBuilder:
             width=self.get_panel_width(),
         )
 
-    def build_experiments_panel(self, experiments: List[Any], metrics_calculator) -> Panel:
+    def build_experiments_panel(
+        self, experiments: List[Any], metrics_calculator
+    ) -> Panel:
         """Build experiments overview panel."""
         # Filter to only show running or recently started experiments
         active_experiments = [
@@ -127,7 +129,9 @@ class DisplayBuilder:
 
             # Get tokens and cost from metrics calculator
             total_tokens = metrics_calculator.estimate_tokens_for_experiment(exp)
-            cost_estimate = metrics_calculator.estimate_cost_for_experiment(exp, total_tokens)
+            cost_estimate = metrics_calculator.estimate_cost_for_experiment(
+                exp, total_tokens
+            )
 
             if total_tokens > 1_000_000:
                 tokens_str = f"{total_tokens / 1_000_000:.1f}M"

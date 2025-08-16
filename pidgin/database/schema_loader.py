@@ -26,7 +26,7 @@ class SchemaLoader:
         if not schema_path.exists():
             raise FileNotFoundError(f"Schema file not found: {schema_path}")
 
-        with open(schema_path, "r") as f:
+        with open(schema_path) as f:
             return f.read()
 
     def get_all_schemas(self) -> List[str]:

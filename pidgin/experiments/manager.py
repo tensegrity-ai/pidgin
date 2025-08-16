@@ -11,7 +11,7 @@ from .experiment_status import ExperimentStatus
 
 class ExperimentManager:
     """Manages experiment daemons and provides status.
-    
+
     This is the main interface for experiment management, delegating
     specific responsibilities to specialized components:
     - ExperimentResolver: ID resolution and discovery
@@ -36,9 +36,11 @@ class ExperimentManager:
         self.base_dir = base_dir
         # Import get_cache_dir for active directory
         from ..io.directories import get_cache_dir
+
         self.active_dir = get_cache_dir() / "active_experiments"
         # Store the database path but don't keep a connection open
         from ..io.paths import get_database_path
+
         self.db_path = get_database_path()
 
         # Initialize specialized components

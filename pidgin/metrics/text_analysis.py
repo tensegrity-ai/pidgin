@@ -37,12 +37,10 @@ class TextAnalyzer:
 
     @staticmethod
     def count_questions(text: str) -> int:
-        """Count question marks."""
         return len(re.findall(QUESTION_PATTERN, text))
 
     @staticmethod
     def count_exclamations(text: str) -> int:
-        """Count exclamation marks."""
         return len(re.findall(EXCLAMATION_PATTERN, text))
 
     @staticmethod

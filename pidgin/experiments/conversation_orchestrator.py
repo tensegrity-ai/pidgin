@@ -1,6 +1,5 @@
 """Orchestrate conversation execution."""
 
-import logging
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -17,9 +16,11 @@ from .tracking_event_bus import TrackingEventBus
 class ConversationOrchestrator:
     """Orchestrate conversation execution."""
 
-    def __init__(self, app_context: AppContext, daemon: Optional[ExperimentDaemon] = None):
+    def __init__(
+        self, app_context: AppContext, daemon: Optional[ExperimentDaemon] = None
+    ):
         """Initialize conversation orchestrator.
-        
+
         Args:
             app_context: Application context with dependencies
             daemon: Optional daemon instance for stop detection
@@ -29,7 +30,7 @@ class ConversationOrchestrator:
 
     def register_conversation(self, exp_dir: Path, conversation_id: str) -> None:
         """Register a new conversation in the manifest.
-        
+
         Args:
             exp_dir: Experiment directory
             conversation_id: Unique conversation ID
@@ -50,7 +51,7 @@ class ConversationOrchestrator:
         experiment_id: Optional[str] = None,
     ) -> None:
         """Create conductor and run the conversation.
-        
+
         Args:
             config: Experiment configuration
             agents: Dictionary of agents
@@ -61,9 +62,7 @@ class ConversationOrchestrator:
             conversation_id: Unique conversation ID
         """
         # Build initial prompt
-        initial_prompt = build_initial_prompt(
-            custom_prompt=config.custom_prompt
-        )
+        initial_prompt = build_initial_prompt(custom_prompt=config.custom_prompt)
 
         # Create conductor with the isolated event bus
         conductor = Conductor(
@@ -77,7 +76,7 @@ class ConversationOrchestrator:
             bus=event_bus,
         )
 
-        conductor.display_mode = config.display_mode
+        # Display mode is handled by the setup, not needed here
 
         await conductor.run_conversation(
             agent_a=agents["agent_a"],
@@ -110,7 +109,7 @@ class ConversationOrchestrator:
         experiment_id: Optional[str] = None,
     ) -> None:
         """Handle conversation branching if configured.
-        
+
         Args:
             config: Experiment configuration
             agents: Dictionary of agents
@@ -127,16 +126,17 @@ class ConversationOrchestrator:
             # Emit branch event
             await event_bus.emit(
                 ConversationBranchedEvent(
-                    parent_conversation_id=branch_from,
-                    branch_conversation_id=conversation_id,
+                    source_conversation_id=branch_from,
+                    conversation_id=conversation_id,
                     branch_point=branch_at,
+                    parameter_changes={},  # Add required field
+                    experiment_id=experiment_id,
                 )
             )
 
             # Build initial prompt for branching
             initial_prompt = build_initial_prompt(
                 custom_prompt=config.custom_prompt,
-                dimensions=config.dimensions,
             )
 
             # Create conductor for branched conversation
@@ -151,7 +151,7 @@ class ConversationOrchestrator:
                 bus=event_bus,
             )
 
-            conductor.display_mode = config.display_mode
+            # Display mode is handled by the setup, not needed here
 
             await conductor.run_conversation(
                 agent_a=agents["agent_a"],

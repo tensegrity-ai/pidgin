@@ -1,7 +1,8 @@
 # pidgin/providers/silent.py
 """Silent provider for meditation mode."""
 
-from typing import AsyncGenerator, List, Optional
+from collections.abc import AsyncGenerator
+from typing import List, Optional
 
 # Import model config classes from central location
 from ..config.model_types import ModelConfig

@@ -5,12 +5,13 @@ from typing import Dict, List, Optional
 
 class ContextLimitError(Exception):
     """Raised when a context window limit is reached."""
+
     pass
 
 
 class ErrorClassifier:
     """Classify different types of errors."""
-    
+
     def is_context_limit_error(self, error: Exception) -> bool:
         """Check if this is a context window limit error."""
         error_str = str(error).lower()
@@ -158,18 +159,18 @@ class ProviderErrorHandler:
             phrase in error_str or phrase in error_type
             for phrase in self.suppress_traceback_errors
         )
-    
+
     def is_context_limit_error(self, error: Exception) -> bool:
         """Check if this is a context window limit error.
-        
+
         Args:
             error: The exception to check
-            
+
         Returns:
             True if this is a context limit error
         """
         error_str = str(error).lower()
-        
+
         # Common patterns for context limit errors
         context_patterns = [
             "context_length",
@@ -184,7 +185,7 @@ class ProviderErrorHandler:
             "exceeds the maximum",
             "content too long",
         ]
-        
+
         return any(pattern in error_str for pattern in context_patterns)
 
 

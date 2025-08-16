@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional
 
 from rich.console import Console
 
-from ..constants import ExperimentStatus
 from ..core.app_context import AppContext
+from ..core.constants import ExperimentStatus
 from ..core.event_bus import EventBus
 from ..core.events import ExperimentCompleteEvent
 from ..ui.display_utils import DisplayUtils
@@ -25,7 +25,12 @@ from .post_processor import PostProcessor
 class ExperimentRunner:
     """Runs experiment conversations with configurable parallelism."""
 
-    def __init__(self, output_dir: Path, app_context: Optional[AppContext] = None, daemon: Optional[ExperimentDaemon] = None):
+    def __init__(
+        self,
+        output_dir: Path,
+        app_context: Optional[AppContext] = None,
+        daemon: Optional[ExperimentDaemon] = None,
+    ):
         """Initialize experiment runner.
 
         Args:
@@ -37,14 +42,14 @@ class ExperimentRunner:
         self.console = Console()
         self.display = DisplayUtils(self.console)
         self.daemon = daemon
-        self.active_tasks = {}
+        self.active_tasks: Dict[str, asyncio.Task] = {}
         self.completed_count = 0
         self.failed_count = 0
-        self.experiment_event_bus = None
-        
+        self.experiment_event_bus: Optional[EventBus] = None
+
         # Create app context if not provided
         self.app_context = app_context or AppContext()
-        
+
         # Initialize helper classes
         self.setup = ExperimentSetup()
         self.orchestrator = ConversationOrchestrator(self.app_context, daemon)
@@ -68,7 +73,7 @@ class ExperimentRunner:
         # Create experiment-level event bus
         self.experiment_event_bus = EventBus(event_log_dir=exp_dir)
         await self.experiment_event_bus.start()
-        
+
         # Create PostProcessor to handle post-processing
         post_processor = PostProcessor(self.experiment_event_bus, self.output_dir)
 
@@ -78,9 +83,7 @@ class ExperimentRunner:
 
             # Run conversations based on parallel configuration
             if config.max_parallel > 1:
-                await self._run_parallel_conversations(
-                    experiment_id, config, exp_dir
-                )
+                await self._run_parallel_conversations(experiment_id, config, exp_dir)
             else:
                 # Sequential execution
                 for i in range(config.repetitions):
@@ -92,11 +95,14 @@ class ExperimentRunner:
                     await self._run_single_conversation(
                         experiment_id, conversation_id, config, {}, exp_dir
                     )
-                    
+
                     # Update counts
                     self.completed_count += 1
                     manifest.update_conversation_status(
-                        conversation_id, "completed", self.completed_count, self.failed_count
+                        conversation_id,
+                        "completed",
+                        self.completed_count,
+                        self.failed_count,
                     )
 
             # Emit experiment complete event
@@ -115,13 +121,12 @@ class ExperimentRunner:
 
         except Exception as e:
             logging.error(f"Experiment failed: {e}", exc_info=True)
-            
+
             # Update manifest status
             manifest.update_experiment_status(
-                status=ExperimentStatus.FAILED,
-                error=str(e)
+                status=ExperimentStatus.FAILED, error=str(e)
             )
-            
+
             await self.experiment_event_bus.emit(
                 ExperimentCompleteEvent(
                     experiment_id=experiment_id,
@@ -135,11 +140,9 @@ class ExperimentRunner:
         finally:
             # Stop the experiment event bus
             await self.experiment_event_bus.stop()
-            
+
             # Final manifest update
-            manifest.update_experiment_status(
-                status=ExperimentStatus.COMPLETED
-            )
+            manifest.update_experiment_status(status=ExperimentStatus.COMPLETED)
 
     async def _run_parallel_conversations(
         self, experiment_id: str, config: ExperimentConfig, exp_dir: Path
@@ -168,8 +171,10 @@ class ExperimentRunner:
                     # Update manifest
                     manifest = ManifestManager(exp_dir)
                     manifest.update_conversation_status(
-                        conv_id, "completed" if conv_id not in self.active_tasks else "failed",
-                        self.completed_count, self.failed_count
+                        conv_id,
+                        "completed" if conv_id not in self.active_tasks else "failed",
+                        self.completed_count,
+                        self.failed_count,
                     )
 
         # Create all conversation tasks
@@ -179,9 +184,7 @@ class ExperimentRunner:
                 break
 
             conversation_id = f"conv_{uuid.uuid4().hex[:8]}"
-            task = asyncio.create_task(
-                run_with_semaphore(conversation_id, {})
-            )
+            task = asyncio.create_task(run_with_semaphore(conversation_id, {}))
             tasks.append(task)
             self.active_tasks[conversation_id] = task
 
@@ -213,6 +216,7 @@ class ExperimentRunner:
         """
         try:
             import setproctitle
+
             setproctitle.setproctitle("pidgin-exp")
         except ImportError:
             pass

@@ -1,5 +1,9 @@
 # Pidgin
 
+[![CI](https://github.com/tensegrity-ai/pidgin/actions/workflows/ci.yml/badge.svg)](https://github.com/tensegrity-ai/pidgin/actions/workflows/ci.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
 An experimental tool for recording and analyzing AI-to-AI conversations. We've observed interesting patterns that might be real or might be artifacts. Help us find out.
 
 ## What This Is
@@ -48,7 +52,7 @@ export OPENAI_API_KEY="..."
 pidgin run -a claude -b gpt -t 20
 
 # Watch the conversation messages
-pidgin run -a claude -b gpt -t 20 --display chat
+pidgin run -a claude -b gpt -t 20 --verbose
 
 # See raw event stream (like tail -f)
 pidgin run -a claude -b gpt -t 20 --tail
@@ -73,15 +77,15 @@ pidgin stop my_experiment
 pidgin stop --all  # Stop all experiments
 
 # List available models
-pidgin models
+pidgin info models
 
-# Create configuration file
-pidgin config
+# View standard prompt dimensions
+pidgin info dimensions
 
 # Branch from an existing conversation
 pidgin branch conv_abc123 --turn 10
 
-# Output saved to ./pidgin/
+# Output saved to ./pidgin_output/
 ```
 
 ### YAML Specifications

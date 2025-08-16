@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..constants import ConversationStatus
+from ..core.constants import ConversationStatus
 from ..core.events import (
     ConversationEndEvent,
     ConversationStartEvent,
@@ -85,7 +85,8 @@ class EventReplay:
         )
 
         # Read and process events
-        for line_num, event in EventDeserializer.read_jsonl_events(jsonl_path):
+        deserializer = EventDeserializer()
+        for line_num, event in deserializer.read_jsonl_events(jsonl_path):
             # Store raw event with line number
             state.events.append((line_num, event))
 
@@ -201,7 +202,7 @@ class EventReplay:
     ) -> None:
         """Process MessageCompleteEvent to track token usage."""
         # Store token count for this agent
-        state.token_counts[event.agent_id] = event.tokens_used
+        state.token_counts[event.agent_id] = event.total_tokens
 
     def _handle_system_prompt(
         self, state: ConversationState, event: SystemPromptEvent

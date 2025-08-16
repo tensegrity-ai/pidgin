@@ -13,10 +13,10 @@ from rich.console import Console
 from ..analysis.convergence import ConvergenceCalculator
 from ..config.config import Config
 from ..config.system_prompts import get_system_prompts
-from ..providers.token_tracker import GlobalTokenTracker
 from ..io.logger import get_logger
 from ..io.output_manager import OutputManager
-from ..ui.display_utils import DisplayUtils, dim
+from ..providers.token_tracker import GlobalTokenTracker
+from ..ui.display_utils import DisplayUtils
 from .conversation_lifecycle import ConversationLifecycle
 from .event_bus import EventBus
 from .events import MessageCompleteEvent
@@ -105,8 +105,8 @@ class Conductor:
         self.lifecycle.set_providers(self.base_providers)
 
         # State
-        self.current_conv_dir = None
-        self.start_time = None
+        self.current_conv_dir: Optional[Path] = None
+        self.start_time: Optional[float] = None
 
         # Transcript manager (optional)
         self.transcript_manager = transcript_manager
@@ -148,7 +148,6 @@ class Conductor:
         Returns:
             The completed conversation
         """
-        # Setup phase
         conv_id, conv_dir = await self._setup_conversation(
             agent_a,
             agent_b,
@@ -160,7 +159,6 @@ class Conductor:
             prompt_tag,
         )
 
-        # Initialize conversation
         conversation = await self._initialize_conversation(
             conv_id,
             conv_dir,
@@ -185,7 +183,13 @@ class Conductor:
 
         # Finalize conversation
         await self._finalize_conversation(
-            conversation, conv_id, conv_dir, final_turn, max_turns, end_reason, experiment_id
+            conversation,
+            conv_id,
+            conv_dir,
+            final_turn,
+            max_turns,
+            end_reason,
+            experiment_id,
         )
 
         return conversation
@@ -244,12 +248,11 @@ class Conductor:
         self.bus.subscribe(
             MessageCompleteEvent, self.message_handler.handle_message_complete
         )
-        
+
         # Subscribe to context limit events
         from .events import ContextLimitEvent
-        self.bus.subscribe(
-            ContextLimitEvent, self.message_handler.handle_context_limit
-        )
+
+        self.bus.subscribe(ContextLimitEvent, self.message_handler.handle_context_limit)
 
     async def _initialize_conversation(
         self,
@@ -282,23 +285,25 @@ class Conductor:
         if not branch_messages:
             # Create initial messages from system prompts and initial prompt
             initial_messages = []
-            
+
             if system_prompts.get("agent_a"):
                 from .types import Message
-                initial_messages.append(Message(
-                    role="system",
-                    content=system_prompts["agent_a"],
-                    agent_id="system"
-                ))
-            
+
+                initial_messages.append(
+                    Message(
+                        role="system",
+                        content=system_prompts["agent_a"],
+                        agent_id="system",
+                    )
+                )
+
             if initial_prompt:
                 from .types import Message
-                initial_messages.append(Message(
-                    role="user",
-                    content=initial_prompt,
-                    agent_id="human"
-                ))
-            
+
+                initial_messages.append(
+                    Message(role="user", content=initial_prompt, agent_id="human")
+                )
+
             if initial_messages:
                 await self.lifecycle.add_initial_messages(
                     conversation, initial_messages
@@ -311,7 +316,7 @@ class Conductor:
 
         self.start_time = time.time()
         self.turn_executor.start_time = self.start_time
-        
+
         config = {
             "initial_prompt": initial_prompt,
             "max_turns": max_turns,
@@ -322,7 +327,7 @@ class Conductor:
             "choose_names": choose_names,
             "prompt_tag": prompt_tag,
         }
-        
+
         await self.lifecycle.emit_start_events(
             conversation,
             system_prompts,
@@ -368,6 +373,10 @@ class Conductor:
                     break
                 final_turn = turn_num
 
+            # If we completed all turns without interruption, set reason
+            if end_reason is None and final_turn == max_turns - 1:
+                end_reason = "max_turns_reached"
+
         finally:
             # Always restore original handler
             self.interrupt_handler.restore_interrupt_handler()
@@ -391,14 +400,13 @@ class Conductor:
             status = "failed"
         else:
             status = "completed"
-            
+
         await self.lifecycle.emit_end_event_with_reason(
             conversation, status, end_reason, None, experiment_id
         )
 
         # Note: We no longer load single chats to a database
         # JSONL files are the single source of truth
-
 
     def check_interrupt(self) -> bool:
         """Check if interrupt was requested during message.

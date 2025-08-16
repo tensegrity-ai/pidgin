@@ -264,4 +264,3 @@ class GlobalTokenTracker:
             "in_backoff": provider_key in self.backoff_until,
             "backoff_until": self.backoff_until.get(provider_key, 0),
         }
-

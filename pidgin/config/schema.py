@@ -1,10 +1,10 @@
 """Pydantic schema for configuration validation."""
 
-from typing import Dict, Literal, Optional
+from typing import Dict, Literal, Optional, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from ..constants import (
+from ..metrics.constants import (
     DEFAULT_CONVERGENCE_ACTION,
     DEFAULT_CONVERGENCE_PROFILE,
     DEFAULT_CONVERGENCE_THRESHOLD,
@@ -48,7 +48,7 @@ class ConversationConfig(BaseModel):
         description="Threshold for high convergence detection",
     )
     convergence_action: Literal["stop", "warn"] = Field(
-        default=DEFAULT_CONVERGENCE_ACTION,
+        default=cast(Literal["stop", "warn"], DEFAULT_CONVERGENCE_ACTION),
         description="Action to take on high convergence",
     )
     convergence_profile: str = Field(
@@ -60,7 +60,7 @@ class ConversationConfig(BaseModel):
     @classmethod
     def validate_profile(cls, v: str) -> str:
         """Validate convergence profile name."""
-        valid_profiles = list(ConvergenceProfiles.__dict__.values()) + ["custom"]
+        valid_profiles = [*list(ConvergenceProfiles.__dict__.values()), "custom"]
         if v not in valid_profiles:
             raise ValueError(
                 f"Invalid convergence profile '{v}'. "
@@ -83,7 +83,7 @@ class ConvergenceConfig(BaseModel):
     @classmethod
     def validate_profile(cls, v: str) -> str:
         """Validate convergence profile name."""
-        valid_profiles = list(ConvergenceProfiles.__dict__.values()) + ["custom"]
+        valid_profiles = [*list(ConvergenceProfiles.__dict__.values()), "custom"]
         if v not in valid_profiles:
             raise ValueError(
                 f"Invalid convergence profile '{v}'. "

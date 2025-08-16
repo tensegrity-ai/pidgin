@@ -1,0 +1,36 @@
+# Jekyll configuration for GitHub Pages
+theme: jekyll-theme-cayman
+title: Pidgin
+description: AI conversation research tool for studying emergent communication patterns
+show_downloads: true
+google_analytics:
+
+# Navigation
+navigation:
+  - title: Home
+    url: /
+  - title: Installation
+    url: /installation
+  - title: Quickstart
+    url: /quickstart
+  - title: CLI Reference
+    url: /cli-usage
+  - title: API Documentation
+    url: /api/
+
+# Build settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Exclude files from processing
+exclude:
+  - Makefile
+  - "*.rst"
+  - requirements.txt
+
+# GitHub repository info (for "View on GitHub" button)
+github:
+  repository_url: https://github.com/tensegrity-ai/pidgin
+  repository_name: tensegrity-ai/pidgin

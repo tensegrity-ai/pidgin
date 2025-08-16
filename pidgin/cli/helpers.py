@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
 from ..config.models import get_model_config
+
 # Removed import - build_initial_prompt is defined locally
 from ..providers.builder import build_provider
 from ..ui.display_utils import DisplayUtils
@@ -45,7 +46,7 @@ def build_initial_prompt(custom_prompt: Optional[str] = None) -> str:
     """
     if custom_prompt:
         return custom_prompt
-    
+
     return "I'm looking forward to your conversation."
 
 
@@ -138,11 +139,12 @@ def find_conversations(path: Optional[str] = None, pattern: str = "*") -> List[P
 
 def format_file_size(size_bytes: int) -> str:
     """Format file size in human-readable format."""
+    size_float: float = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f}{unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f}TB"
+        if size_float < 1024.0:
+            return f"{size_float:.1f}{unit}"
+        size_float /= 1024.0
+    return f"{size_float:.1f}TB"
 
 
 def load_conversation_metadata(conv_dir: Path) -> Dict[str, Any]:

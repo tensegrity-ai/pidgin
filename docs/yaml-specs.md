@@ -31,17 +31,16 @@ prompt: "Hello, let's discuss AI safety"
 | `temperature_a` | No | float | model default | Temperature for agent A |
 | `temperature_b` | No | float | model default | Temperature for agent B |
 | `convergence_threshold` | No | float | 0.85 | Convergence detection threshold |
-| `convergence_action` | No | string | "stop" | Action on convergence: stop, warn, continue |
+| `convergence_action` | No | string | "stop" | Action on convergence: notify, pause, stop |
+| `convergence_profile` | No | string | "balanced" | Convergence weights: balanced, structural, semantic, strict |
 | `awareness` | No | string | "basic" | Awareness level: none, basic, firm, research |
 | `awareness_a` | No | string | - | Override awareness for agent A |
 | `awareness_b` | No | string | - | Override awareness for agent B |
 | `max_parallel` | No | int | 1 | Number of parallel conversations |
 | `choose_names` | No | bool | false | Let agents choose their own names |
-| `display_mode` | No | string | "chat" | Display mode: none, quiet, tail, chat |
 | `prompt_tag` | No | string | "[HUMAN]" | Tag to prefix initial prompt |
-| `notify` | No | bool | false | Send notification when complete |
+| `allow_truncation` | No | bool | false | Allow messages to be truncated to fit context windows |
 | `output` | No | string | - | Custom output directory |
-| `dimensions` | No | string | - | Dimensional prompt specification |
 
 ## Complete Example
 
@@ -57,10 +56,11 @@ temperature_a: 0.7
 temperature_b: 0.9
 convergence_threshold: 0.85
 convergence_action: stop
+convergence_profile: balanced
 awareness: basic
 max_parallel: 5
 prompt_tag: "[RESEARCHER]"
-display_mode: chat
+allow_truncation: false
 ```
 
 ## Tips

@@ -22,23 +22,34 @@ Run a conversation between two AI agents.
 pidgin run [OPTIONS]
 ```
 
-#### Required Options
-- `-a, --agent-a MODEL` - Model for agent A
-- `-b, --agent-b MODEL` - Model for agent B  
-- `-t, --turns INTEGER` - Number of turns
+#### Model Selection (Required unless using YAML spec)
+- `-a, --agent-a MODEL` - First agent model
+- `-b, --agent-b MODEL` - Second agent model
 
 #### Optional Options
 - `-p, --prompt TEXT` - Initial prompt for the conversation
-- `--awareness-a TEXT` - Agent A's awareness level
-- `--awareness-b TEXT` - Agent B's awareness level
-- `--temperature-a FLOAT` - Override agent A temperature
-- `--temperature-b FLOAT` - Override agent B temperature
-- `--display MODE` - Display mode: `progress`, `chat`, `tail`, `monitor`
-- `--name TEXT` - Custom experiment name
-- `--output PATH` - Output directory
-- `--no-conversation` - Skip initial "Hello" exchange
-- `--checkpoint-every INT` - Save checkpoint every N turns
-- `--allow-truncation` - Allow messages to be truncated to fit context windows (default: disabled)
+- `-t, --turns INTEGER` - Maximum number of turns (default: 20)
+- `-r, --repetitions INTEGER` - Number of conversations to run (default: 1)
+- `--temperature FLOAT` - Temperature for both agents (0.0-2.0)
+- `--temp-a FLOAT` - Temperature for agent A only
+- `--temp-b FLOAT` - Temperature for agent B only
+- `-w, --awareness TEXT` - Awareness level (none/basic/firm/research) or custom YAML
+- `--awareness-a TEXT` - Override awareness for agent A
+- `--awareness-b TEXT` - Override awareness for agent B
+- `-n, --name TEXT` - Name for the experiment (auto-generated if not provided)
+- `-o, --output PATH` - Custom output directory
+- `--convergence-threshold FLOAT` - Stop when convergence exceeds this (0.0-1.0)
+- `--convergence-action TEXT` - Action when threshold reached (notify/pause/stop)
+- `--convergence-profile TEXT` - Convergence weight profile (balanced/structural/semantic/strict)
+- `--choose-names` - Let agents choose their own names
+- `--show-system-prompts` - Display system prompts at start
+- `--meditation` - Meditation mode: one agent faces silence
+- `-q, --quiet` - Run in background with notification when complete
+- `--tail` - Show formatted event stream during conversation
+- `--notify` - Send notification when complete
+- `--max-parallel INTEGER` - Max parallel conversations (default: 1, sequential)
+- `--prompt-tag TEXT` - Tag to prefix initial prompt (default: "[HUMAN]", use "" to disable)
+- `--allow-truncation` - Allow messages to be truncated to fit context windows
 
 #### Examples
 
@@ -50,16 +61,21 @@ pidgin run -a claude-3-haiku -b gpt-4o-mini -t 10
 pidgin run -a claude -b gpt -t 20 \
   -p "What patterns emerge in nature?"
 
-# Chat output with custom temperatures
-pidgin run -a claude -b gpt -t 30 \
-  --display chat \
-  --temperature-a 0.9 \
-  --temperature-b 0.5
+# Watch conversation messages (verbose mode)
+pidgin run -a claude -b gpt -t 30 --verbose
 
-# Custom awareness prompts
+# With custom temperatures
+pidgin run -a claude -b gpt -t 30 \
+  --temp-a 0.9 \
+  --temp-b 0.5
+
+# Custom awareness levels
 pidgin run -a claude -b gpt -t 15 \
-  --awareness-a "You are exploring mathematics" \
-  --awareness-b "You are a curious student"
+  --awareness-a basic \
+  --awareness-b research
+
+# Run multiple conversations
+pidgin run -a claude -b gpt -r 10 --name my_experiment
 
 # Long conversation with message truncation enabled
 pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100 \
@@ -67,71 +83,49 @@ pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100 \
   -p "Let's explore the nature of reality"
 ```
 
-### `pidgin experiment`
-
-Run batch experiments from YAML specifications.
+### Running from YAML Specifications
 
 ```bash
-pidgin experiment [SUBCOMMAND]
-```
-
-#### Subcommands
-
-##### `run`
-```bash
-pidgin experiment run SPEC_FILE [OPTIONS]
-```
-
-Options:
-- `--parallel INT` - Number of parallel conversations
-- `--name TEXT` - Experiment name
-- `--daemon` - Run as background daemon
-
-##### `status`
-```bash
-pidgin experiment status [NAME]
-```
-
-##### `stop`
-```bash
-pidgin experiment stop NAME
+pidgin run experiment.yaml
 ```
 
 #### Example YAML Specification
 
 ```yaml
 name: consciousness-study
-parallel: 2
-conversations:
-  - agent_a: claude-3-sonnet
-    agent_b: gpt-4
-    turns: 50
-    initial_prompt: "What is consciousness?"
-    temperature_a: 0.7
-    temperature_b: 0.7
-  
-  - agent_a: claude-3-opus
-    agent_b: gpt-4-turbo
-    turns: 50
-    initial_prompt: "What is consciousness?"
-    temperature_a: 0.9
-    temperature_b: 0.9
+agent_a: claude-3-opus
+agent_b: gpt-4
+max_turns: 50
+repetitions: 10
+temperature_a: 0.7
+temperature_b: 0.9
+convergence_threshold: 0.85
+prompt: "What is consciousness?"
 ```
 
 ### `pidgin branch`
 
-Create a new conversation branch from an existing turn.
+Branch a conversation from any point with parameter changes.
 
 ```bash
-pidgin branch SOURCE_PATH TURN_NUMBER [OPTIONS]
+pidgin branch CONVERSATION_ID [OPTIONS]
 ```
 
 #### Options
-- `--model-a MODEL` - New model for agent A
-- `--model-b MODEL` - New model for agent B
-- `--turns INTEGER` - Additional turns to run
-- `--prompt TEXT` - Override next message
-- `--display MODE` - Display mode
+- `-t, --turn INTEGER` - Turn number to branch from (default: last turn)
+- `-a, --agent-a MODEL` - Override agent A model
+- `-b, --agent-b MODEL` - Override agent B model
+- `--temperature FLOAT` - Override temperature for both agents
+- `--temp-a FLOAT` - Override temperature for agent A
+- `--temp-b FLOAT` - Override temperature for agent B
+- `-w, --awareness TEXT` - Override awareness level or YAML file
+- `--awareness-a TEXT` - Override awareness for agent A
+- `--awareness-b TEXT` - Override awareness for agent B
+- `--max-turns INTEGER` - Override maximum turns
+- `-n, --name TEXT` - Name for the branched experiment
+- `-r, --repetitions INTEGER` - Number of branches to create (default: 1)
+- `-q, --quiet` - Run in background
+- `-s, --spec PATH` - Save branch configuration as YAML spec
 
 #### Examples
 
@@ -150,22 +144,19 @@ pidgin branch experiment_abc123 25 \
 
 ### `pidgin monitor`
 
-System-wide monitoring dashboard.
+System health monitor reading from JSONL files.
 
 ```bash
-pidgin monitor [OPTIONS]
+pidgin monitor
 ```
 
-#### Options
-- `--interval SECONDS` - Refresh interval (default: 2)
-- `--history MINUTES` - History window (default: 60)
+Shows a live overview of:
+- Active experiments and their progress
+- System load (concurrent conversations)
+- Convergence warnings
+- Completion estimates
 
-#### Display Shows
-- Active experiments
-- Token usage rates
-- Cost tracking
-- System resources
-- Recent errors
+This reads directly from JSONL files to avoid database locks. Press Ctrl+C to exit.
 
 ### `pidgin stop`
 

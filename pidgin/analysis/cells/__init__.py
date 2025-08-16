@@ -1,17 +1,17 @@
 """Notebook cell creators for different analysis types."""
 
 from .base import CellBase
+from .convergence import ConvergenceCells
 from .setup import SetupCells
 from .statistics import StatisticsCells
-from .convergence import ConvergenceCells
-from .vocabulary import VocabularyCells
 from .visualization import VisualizationCells
+from .vocabulary import VocabularyCells
 
 __all__ = [
-    'CellBase',
-    'SetupCells', 
-    'StatisticsCells',
-    'ConvergenceCells',
-    'VocabularyCells',
-    'VisualizationCells'
+    "CellBase",
+    "ConvergenceCells",
+    "SetupCells",
+    "StatisticsCells",
+    "VisualizationCells",
+    "VocabularyCells",
 ]

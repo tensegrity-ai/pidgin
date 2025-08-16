@@ -3,10 +3,12 @@
 import os
 from pathlib import Path
 
-from ..constants.files import DEFAULT_OUTPUT_DIR
 from .logger import get_logger
 
 logger = get_logger("paths")
+
+# Default output directory name
+DEFAULT_OUTPUT_DIR = "pidgin_output"
 
 
 def get_output_dir() -> Path:
@@ -34,7 +36,9 @@ def get_output_dir() -> Path:
 
     # Check if we're running from the pidgin source directory during development
     # If there's a pidgin/ subdirectory with __init__.py, we're in the dev directory
-    if (base_path / "pidgin" / "__init__.py").exists() and (base_path / "pyproject.toml").exists():
+    if (base_path / "pidgin" / "__init__.py").exists() and (
+        base_path / "pyproject.toml"
+    ).exists():
         # We're in the development directory, use a different output name
         output_dir = base_path / "pidgin_dev_output"
     else:
@@ -76,5 +80,3 @@ def get_database_path() -> Path:
         Path to pidgin/experiments.duckdb
     """
     return get_output_dir() / "experiments.duckdb"
-
-

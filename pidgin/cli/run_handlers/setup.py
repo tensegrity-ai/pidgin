@@ -74,7 +74,9 @@ class SetupHandler:
         """
         if not agent_a:
             try:
-                agent_a = self.model_selector.select_model("Select first agent (Agent A)")
+                agent_a = self.model_selector.select_model(
+                    "Select first agent (Agent A)"
+                )
                 if not agent_a:
                     return None
             except (KeyboardInterrupt, EOFError) as e:
@@ -86,7 +88,9 @@ class SetupHandler:
 
         if not agent_b:
             try:
-                agent_b = self.model_selector.select_model("Select second agent (Agent B)")
+                agent_b = self.model_selector.select_model(
+                    "Select second agent (Agent B)"
+                )
                 if not agent_b:
                     return None
             except (KeyboardInterrupt, EOFError) as e:
@@ -128,8 +132,10 @@ class SetupHandler:
             Tuple of (config, agent_a_name, agent_b_name, initial_prompt) or None if error
         """
         # Determine experiment display mode
-        experiment_display_mode = self.display_manager.determine_experiment_display_mode(
-            display_mode, max_parallel, quiet
+        experiment_display_mode = (
+            self.display_manager.determine_experiment_display_mode(
+                display_mode, max_parallel, quiet
+            )
         )
 
         try:
@@ -139,12 +145,12 @@ class SetupHandler:
                 display_mode=experiment_display_mode,
                 **kwargs,
             )
-            
+
             # Extract initial prompt
             initial_prompt = config.custom_prompt or "Hello"
-            
+
             return config, agent_a_name, agent_b_name, initial_prompt
-            
+
         except ValueError as e:
             self.display.error(str(e), use_panel=False)
             return None

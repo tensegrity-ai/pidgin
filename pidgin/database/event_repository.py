@@ -159,11 +159,17 @@ class EventRepository(BaseRepository):
 
         if start_time:
             conditions.append("timestamp >= ?")
-            params.append(start_time.isoformat() if hasattr(start_time, 'isoformat') else start_time)
+            params.append(
+                start_time.isoformat()
+                if hasattr(start_time, "isoformat")
+                else start_time
+            )
 
         if end_time:
             conditions.append("timestamp <= ?")
-            params.append(end_time.isoformat() if hasattr(end_time, 'isoformat') else end_time)
+            params.append(
+                end_time.isoformat() if hasattr(end_time, "isoformat") else end_time
+            )
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 

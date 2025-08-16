@@ -176,7 +176,7 @@ class LinguisticAnalyzer:
             return result
 
         # Count bigrams
-        bigram_counter = Counter()
+        bigram_counter: Counter[tuple[str, str]] = Counter()
         for i in range(len(words) - 1):
             bigram = (words[i].lower(), words[i + 1].lower())
             bigram_counter[bigram] += 1
@@ -188,7 +188,7 @@ class LinguisticAnalyzer:
 
         # Count trigrams if enough words
         if len(words) >= 3:
-            trigram_counter = Counter()
+            trigram_counter: Counter[tuple[str, str, str]] = Counter()
             for i in range(len(words) - 2):
                 trigram = (words[i].lower(), words[i + 1].lower(), words[i + 2].lower())
                 trigram_counter[trigram] += 1

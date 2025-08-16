@@ -2,12 +2,12 @@
 
 from .header import HeaderFormatter
 from .metrics import MetricsFormatter
-from .transcript import TranscriptMessageFormatter
 from .summary import SummaryFormatter
+from .transcript import TranscriptMessageFormatter
 
 __all__ = [
     "HeaderFormatter",
-    "MetricsFormatter", 
-    "TranscriptMessageFormatter",
+    "MetricsFormatter",
     "SummaryFormatter",
+    "TranscriptMessageFormatter",
 ]

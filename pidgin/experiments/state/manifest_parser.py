@@ -13,38 +13,38 @@ logger = get_logger("manifest_parser")
 
 class ManifestParser:
     """Parse experiment manifests into state objects."""
-    
+
     def parse_manifest(
-        self, 
+        self,
         manifest_path: Path,
         exp_dir: Path,
         get_conversation_timestamps=None,
         get_last_convergence=None,
-        get_truncation_info=None
+        get_truncation_info=None,
     ) -> Optional[ExperimentState]:
         """Build experiment state from manifest.json.
-        
+
         Args:
             manifest_path: Path to manifest.json
             exp_dir: Experiment directory path
             get_conversation_timestamps: Callback to get timestamps from JSONL
             get_last_convergence: Callback to get convergence score
             get_truncation_info: Callback to get truncation info
-            
+
         Returns:
             ExperimentState or None if invalid
         """
         try:
-            with open(manifest_path, "r") as f:
+            with open(manifest_path) as f:
                 manifest = json.load(f)
         except Exception as e:
             logger.error(f"Failed to read manifest {manifest_path}: {e}")
             return None
-        
+
         # Extract experiment info
         exp_id = manifest.get("experiment_id", exp_dir.name)
         config = manifest.get("config", {})
-        
+
         # Create experiment state
         state = ExperimentState(
             experiment_id=exp_id,
@@ -55,7 +55,7 @@ class ManifestParser:
             failed_conversations=manifest.get("failed_conversations", 0),
             directory=exp_dir,
         )
-        
+
         # Parse timestamps
         if created_at := manifest.get("created_at"):
             state.created_at = self.parse_timestamp(created_at)
@@ -63,7 +63,7 @@ class ManifestParser:
             state.started_at = self.parse_timestamp(started_at)
         if completed_at := manifest.get("completed_at"):
             state.completed_at = self.parse_timestamp(completed_at)
-        
+
         # Build conversation states
         for conv_id, conv_info in manifest.get("conversations", {}).items():
             conv_state = self._build_conversation_state(
@@ -74,12 +74,12 @@ class ManifestParser:
                 exp_dir=exp_dir,
                 get_conversation_timestamps=get_conversation_timestamps,
                 get_last_convergence=get_last_convergence,
-                get_truncation_info=get_truncation_info
+                get_truncation_info=get_truncation_info,
             )
             state.conversations[conv_id] = conv_state
-        
+
         return state
-    
+
     def _build_conversation_state(
         self,
         conv_id: str,
@@ -89,10 +89,10 @@ class ManifestParser:
         exp_dir: Path,
         get_conversation_timestamps=None,
         get_last_convergence=None,
-        get_truncation_info=None
+        get_truncation_info=None,
     ) -> ConversationState:
         """Build a single conversation state.
-        
+
         Args:
             conv_id: Conversation ID
             conv_info: Conversation info from manifest
@@ -102,7 +102,7 @@ class ManifestParser:
             get_conversation_timestamps: Optional callback
             get_last_convergence: Optional callback
             get_truncation_info: Optional callback
-            
+
         Returns:
             ConversationState object
         """
@@ -110,21 +110,21 @@ class ManifestParser:
             conversation_id=conv_id,
             experiment_id=exp_id,
             status=conv_info.get("status", "unknown"),
-            current_turn=conv_info.get("turns_completed", 0),
+            current_turn=conv_info.get("total_turns", 0),
             max_turns=config.get("max_turns", 20),
         )
-        
+
         # Set model info from config
         conv_state.agent_a_model = config.get("agent_a_model", "unknown")
         conv_state.agent_b_model = config.get("agent_b_model", "unknown")
-        
+
         # Parse timestamps
         if updated := conv_info.get("last_updated"):
             # Use last_updated as a proxy for both started and completed
             conv_state.started_at = self.parse_timestamp(updated)
             if conv_state.status == "completed":
                 conv_state.completed_at = self.parse_timestamp(updated)
-        
+
         # Try to get more accurate timestamps from JSONL if callback provided
         if get_conversation_timestamps:
             jsonl_timestamps = get_conversation_timestamps(exp_dir, conv_id)
@@ -133,33 +133,33 @@ class ManifestParser:
                     conv_state.started_at = jsonl_timestamps["started_at"]
                 if jsonl_timestamps.get("completed_at"):
                     conv_state.completed_at = jsonl_timestamps["completed_at"]
-        
+
         # Get convergence from JSONL files if callback provided
         if get_last_convergence:
             conv_state.last_convergence = get_last_convergence(exp_dir, conv_id)
-        
+
         # Get truncation info from JSONL files if callback provided
         if get_truncation_info:
             truncation_info = get_truncation_info(exp_dir, conv_id)
             if truncation_info:
                 conv_state.truncation_count = truncation_info.get("count", 0)
                 conv_state.last_truncation_turn = truncation_info.get("last_turn")
-        
+
         return conv_state
-    
+
     def parse_timestamp(self, timestamp_str: str) -> datetime:
         """Parse ISO format timestamp.
-        
+
         Args:
             timestamp_str: Timestamp string
-            
+
         Returns:
             datetime object (always timezone-aware)
         """
         # Handle both with and without timezone
         if timestamp_str.endswith("Z"):
             timestamp_str = timestamp_str[:-1] + "+00:00"
-        
+
         try:
             dt = datetime.fromisoformat(timestamp_str)
             # Ensure timezone awareness

@@ -10,12 +10,12 @@ class MetricsFormatter:
         self, conv_data: Dict, token_data: Dict, num_turns: int
     ) -> str:
         """Format summary metrics table.
-        
+
         Args:
             conv_data: Conversation data dictionary
             token_data: Token usage data dictionary
             num_turns: Number of turns in conversation
-            
+
         Returns:
             Formatted summary metrics markdown
         """
@@ -41,10 +41,10 @@ class MetricsFormatter:
 
     def format_convergence_progression(self, turn_metrics: List[Dict]) -> str:
         """Format convergence progression table.
-        
+
         Args:
             turn_metrics: List of turn metric dictionaries
-            
+
         Returns:
             Formatted convergence progression markdown
         """
@@ -95,10 +95,10 @@ class MetricsFormatter:
 
     def format_message_length_evolution(self, turn_metrics: List[Dict]) -> str:
         """Format message length evolution table.
-        
+
         Args:
             turn_metrics: List of turn metric dictionaries
-            
+
         Returns:
             Formatted message length evolution markdown
         """
@@ -146,10 +146,10 @@ class MetricsFormatter:
 
     def format_vocabulary_metrics(self, turn_metrics: List[Dict]) -> str:
         """Format vocabulary metrics table.
-        
+
         Args:
             turn_metrics: List of turn metric dictionaries
-            
+
         Returns:
             Formatted vocabulary metrics markdown
         """
@@ -197,10 +197,10 @@ class MetricsFormatter:
 
     def format_response_times(self, turn_metrics: List[Dict]) -> str:
         """Format response times table.
-        
+
         Args:
             turn_metrics: List of turn metric dictionaries
-            
+
         Returns:
             Formatted response times markdown
         """

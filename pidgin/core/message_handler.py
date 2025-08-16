@@ -17,7 +17,7 @@ from .types import Agent, Message
 class MessageHandler:
     """Handles agent message requests, responses, and timeouts."""
 
-    def __init__(self, bus, rate_limiter, name_coordinator, console=None):
+    def __init__(self, bus, rate_limiter, name_coordinator, console=None) -> None:
         """Initialize message handler.
 
         Args:
@@ -33,7 +33,7 @@ class MessageHandler:
         self.pending_messages: Dict[str, asyncio.Future] = {}
         self.display_filter = None
 
-    def set_display_filter(self, display_filter):
+    def set_display_filter(self, display_filter) -> None:
         """Set display filter for pacing indicators."""
         self.display_filter = display_filter
 
@@ -124,7 +124,7 @@ class MessageHandler:
         request_start = time.time()
 
         # Create future for this agent's response
-        future = asyncio.Future()
+        future: asyncio.Future[Message] = asyncio.Future()
         self.pending_messages[agent.id] = future
 
         # Request message
@@ -152,6 +152,7 @@ class MessageHandler:
         except Exception as e:
             # Check if this is a context limit error
             from ..providers.error_utils import ContextLimitError
+
             if isinstance(e, ContextLimitError):
                 # Return None to signal the conversation should end
                 return None
@@ -271,6 +272,9 @@ class MessageHandler:
     ) -> Optional[Message]:
         """Handle message timeout."""
         # Emit timeout event
+        # Extract provider from model string (e.g., "anthropic:claude-3-opus" -> "anthropic")
+        provider = agent.model.split(":")[0] if ":" in agent.model else agent.model
+
         await self.bus.emit(
             ProviderTimeoutEvent(
                 conversation_id=conversation_id,
@@ -278,6 +282,7 @@ class MessageHandler:
                 error_message=f"{agent.display_name} did not respond within {timeout} seconds",
                 context=f"Turn {turn_number}",
                 agent_id=agent.id,
+                provider=provider,
                 timeout_seconds=timeout,
             )
         )
@@ -296,7 +301,7 @@ class MessageHandler:
             future = self.pending_messages.pop(event.agent_id)
             if not future.done():
                 future.set_result(event.message)
-    
+
     async def handle_context_limit(self, event):
         """Handle context limit event by failing the pending message.
 
@@ -309,6 +314,7 @@ class MessageHandler:
             if not future.done():
                 # Create a specific exception for context limits
                 from ..providers.error_utils import ContextLimitError
+
                 future.set_exception(ContextLimitError(event.error_message))
 
     def _estimate_payload_tokens(
@@ -336,7 +342,7 @@ class MessageHandler:
         # Add base system prompt overhead from provider capabilities
         from ..config.models import get_model_config
         from ..config.provider_capabilities import get_provider_capabilities
-        
+
         model_config = get_model_config(model)
         if model_config:
             capabilities = get_provider_capabilities(model_config.provider)

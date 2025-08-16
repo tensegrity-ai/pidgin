@@ -1,12 +1,12 @@
 import asyncio
 import logging
-from typing import AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
 from .error_utils import create_google_error_handler
-from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class GoogleProvider(Provider):
                 f"GoogleProvider model_name is not a string: {type(self.model_name)}"
             )
             self.model_name = str(model)
-        self._last_usage = None
+        self._last_usage: Optional[Dict[str, int]] = None
         self.error_handler = create_google_error_handler()
 
     async def stream_response(
@@ -130,7 +130,7 @@ class GoogleProvider(Provider):
             provider="google",
             model=self.model.model_name if hasattr(self.model, "model_name") else None,
             logger_name=__name__,
-            allow_truncation=self.allow_truncation
+            allow_truncation=self.allow_truncation,
         )
 
         # Convert to Google format
@@ -148,7 +148,7 @@ class GoogleProvider(Provider):
             google_messages.append({"role": role, "parts": [m.content]})
 
         # Initialize usage tracking
-        self._last_usage = None
+        # (already initialized in __init__)
 
         # Retry logic for rate limits and transient errors
         max_retries = 3
@@ -157,7 +157,7 @@ class GoogleProvider(Provider):
         for attempt in range(max_retries):
             try:
                 # Create chat session
-                chat = self.model.start_chat(history=google_messages[:-1])
+                chat = self.model.start_chat(history=google_messages[:-1])  # type: ignore[arg-type]
 
                 # Build generation config if temperature is specified
                 generation_config = {}
@@ -168,7 +168,7 @@ class GoogleProvider(Provider):
                 response = chat.send_message(
                     google_messages[-1]["parts"][0],
                     stream=True,
-                    generation_config=generation_config if generation_config else None,
+                    generation_config=generation_config if generation_config else None,  # type: ignore[arg-type]
                 )
 
                 last_chunk = None
@@ -248,7 +248,7 @@ class GoogleProvider(Provider):
                             logger.info(f"Expected API error: {friendly_error}")
                         else:
                             logger.error(
-                                f"API error after retries: {str(e)}", exc_info=True
+                                f"API error after retries: {e!s}", exc_info=True
                             )
                         raise Exception(friendly_error) from None
 
@@ -274,7 +274,7 @@ class GoogleProvider(Provider):
                             logger.info(f"Expected API error: {friendly_error}")
                         else:
                             logger.error(
-                                f"API error after retries: {str(e)}", exc_info=True
+                                f"API error after retries: {e!s}", exc_info=True
                             )
                         raise Exception(friendly_error) from None
                 else:
@@ -283,7 +283,7 @@ class GoogleProvider(Provider):
                     if self.error_handler.should_suppress_traceback(e):
                         logger.info(f"Expected API error: {friendly_error}")
                     else:
-                        logger.error(f"Unexpected API error: {str(e)}", exc_info=True)
+                        logger.error(f"Unexpected API error: {e!s}", exc_info=True)
                     raise Exception(friendly_error) from None
 
     def get_last_usage(self) -> Optional[Dict[str, int]]:

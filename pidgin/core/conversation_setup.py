@@ -15,7 +15,7 @@ class ConversationSetup:
 
     def __init__(self, console=None, token_tracker=None):
         """Initialize setup handler.
-        
+
         Args:
             console: Optional console for output
             token_tracker: Optional token tracker for rate limiting
@@ -23,10 +23,10 @@ class ConversationSetup:
         self.console = console
         self.token_tracker = token_tracker
         self.base_providers = {}
-        
+
     def set_providers(self, base_providers):
         self.base_providers = base_providers
-        
+
     async def initialize_event_system(
         self,
         conv_dir: Path,
@@ -38,7 +38,7 @@ class ConversationSetup:
         prompt_tag: Optional[str] = None,
     ):
         """Initialize EventBus and display components.
-        
+
         Returns:
             Tuple of (bus, display_filter, chat_display, tail_display, wrapped_providers)
         """
@@ -49,26 +49,29 @@ class ConversationSetup:
         else:
             bus = existing_bus
             owns_bus = False
-            
+
         display_filter = None
         chat_display = None
         tail_display = None
-        
+
         if display_mode == "tail":
             tail_display = TailDisplay(bus, self.console)
         elif display_mode == "chat":
             from ..ui.chat_display import ChatDisplay
+
             chat_display = ChatDisplay(bus, self.console, agents)
         else:
             if self.console is not None and display_mode != "none":
                 display_filter = DisplayFilter(
-                    bus=bus,
                     console=self.console,
-                    quiet=(display_mode == "quiet"),
+                    mode="quiet" if display_mode == "quiet" else "normal",
                     show_timing=show_timing,
                     prompt_tag=prompt_tag,
                 )
-                
+                # Subscribe to bus after creation
+                if hasattr(display_filter, "subscribe"):
+                    display_filter.subscribe(bus)
+
         wrapped_providers = {}
         for agent_id, provider in self.base_providers.items():
             wrapped_providers[agent_id] = EventAwareProvider(
@@ -77,5 +80,12 @@ class ConversationSetup:
                 bus=bus,
                 token_tracker=self.token_tracker,
             )
-            
-        return bus, display_filter, chat_display, tail_display, wrapped_providers, owns_bus
+
+        return (
+            bus,
+            display_filter,
+            chat_display,
+            tail_display,
+            wrapped_providers,
+            owns_bus,
+        )

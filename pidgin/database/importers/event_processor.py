@@ -1,7 +1,7 @@
 """Process JSONL event files for import."""
 
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 from ...core.events import (
     ConversationStartEvent,
@@ -50,14 +50,16 @@ class EventProcessor:
             Tuple of (turns_processed, conversations_created)
         """
         # Group events by conversation and turn
-        conversations = {}
+        conversations: Dict[str, Dict[str, Any]] = {}
 
         # Read all events from the file
         for line_num, event in self.event_deserializer.read_jsonl_events(jsonl_file):
             if not event:
                 continue
 
-            conversation_id = event.conversation_id
+            conversation_id = getattr(event, "conversation_id", None)
+            if not conversation_id:
+                continue  # Skip events without conversation_id
 
             # Initialize conversation if not seen
             if conversation_id not in conversations:

@@ -1,7 +1,7 @@
 # pidgin/metrics/cost_estimator.py
 """Simple cost estimation for AI conversations."""
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ..config.models import get_model_config
 from ..core.types import Message
@@ -12,10 +12,10 @@ class CostEstimator:
 
     # Same as context manager
     CHARS_PER_TOKEN = 3.5
-    
+
     def get_model_pricing(self, model_id: str) -> Tuple[float, float]:
         """Get pricing for a model from its configuration.
-        
+
         Returns:
             Tuple of (input_cost_per_million, output_cost_per_million)
         """
@@ -24,9 +24,9 @@ class CostEstimator:
         if config and config.input_cost_per_million is not None:
             return (
                 config.input_cost_per_million or 0.0,
-                config.output_cost_per_million or 0.0
+                config.output_cost_per_million or 0.0,
             )
-        
+
         # Fallback for unknown models or models without pricing
         # Conservative estimate
         return (2.00, 8.00)
@@ -46,7 +46,7 @@ class CostEstimator:
 
     def estimate_conversation_cost(
         self, messages: List[Message], model_a: str, model_b: str
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Any]:
         """Estimate total cost for a conversation."""
         cost_a_input = 0.0
         cost_a_output = 0.0

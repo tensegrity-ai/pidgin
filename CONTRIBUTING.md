@@ -115,6 +115,8 @@ Remember Pidgin's core philosophy:
 - **Measure**, don't speculate
 - Keep it lightweight and fast
 
+For detailed development guidelines, architecture decisions, and design philosophy, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## Questions?
 
 Open an issue for:

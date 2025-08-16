@@ -92,7 +92,7 @@ class EventAwareProvider:
                         agent_messages, temperature=event.temperature
                     ):
                         chunks.append(chunk)
-                
+
                 await asyncio.wait_for(_get_response(), timeout=timeout_seconds)
             except asyncio.TimeoutError:
                 logger.error(

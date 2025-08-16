@@ -25,6 +25,15 @@ class BaseRepository:
     for all repository implementations.
     """
 
+    # Whitelist of valid table names to prevent SQL injection
+    VALID_TABLES = {
+        "conversations",
+        "conversation_turns",
+        "experiments",
+        "metrics",
+        "token_usage",
+    }
+
     def __init__(self, db: duckdb.DuckDBPyConnection, enable_profiling: bool = False):
         """Initialize with DuckDB connection.
 
@@ -134,7 +143,11 @@ class BaseRepository:
 
         where_parts = [f"{col} = ?" for col in conditions.keys()]
         where_clause = " AND ".join(where_parts)
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause}"
+        # Validate table name against whitelist
+        if table not in self.VALID_TABLES:
+            raise ValueError(f"Invalid table name: {table}")
+        
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause}"  # nosec B608
 
         result = self.fetchone(query, list(conditions.values()))
         return result[0] > 0 if result else False
@@ -157,6 +170,10 @@ class BaseRepository:
             where_clause = ""
             params = []
 
-        query = f"SELECT COUNT(*) FROM {table}{where_clause}"
+        # Validate table name against whitelist
+        if table not in self.VALID_TABLES:
+            raise ValueError(f"Invalid table name: {table}")
+        
+        query = f"SELECT COUNT(*) FROM {table}{where_clause}"  # nosec B608
         result = self.fetchone(query, params)
         return result[0] if result else 0

@@ -3,7 +3,8 @@
 import json
 import logging
 import socket
-from typing import AsyncGenerator, List, Optional
+from collections.abc import AsyncGenerator
+from typing import List, Optional
 
 import aiohttp
 
@@ -95,7 +96,7 @@ class OllamaProvider(Provider):
             provider="local",  # Use "local" provider for Ollama models
             model=self.model_name,
             logger_name=__name__,
-            allow_truncation=self.allow_truncation
+            allow_truncation=self.allow_truncation,
         )
 
         # Convert messages to Ollama format
@@ -159,5 +160,5 @@ class OllamaProvider(Provider):
             if self.error_handler.should_suppress_traceback(e):
                 logger.info(f"Expected error: {friendly_msg}")
             else:
-                logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+                logger.error(f"Unexpected error: {e!s}", exc_info=True)
             yield f"Error: {friendly_msg}"

@@ -49,7 +49,7 @@ class ProviderContextManager:
         allow_truncation: bool = False,
     ) -> List[Message]:
         """Keep messages under context limit - that's it.
-        
+
         Args:
             messages: List of messages to process
             provider: Provider name
@@ -69,18 +69,24 @@ class ProviderContextManager:
             if config and config.context_window:
                 # Use full context window, no conservative reduction
                 limit = config.context_window
-                logger.debug(f"Using model-specific context limit for {model}: {limit:,} tokens")
-        
+                logger.debug(
+                    f"Using model-specific context limit for {model}: {limit:,} tokens"
+                )
+
         # Fall back to local model limits
         if limit is None and model:
             limit = self.MODEL_LIMITS.get(model)
             if limit:
-                logger.debug(f"Using local model context limit for {model}: {limit:,} tokens")
-        
+                logger.debug(
+                    f"Using local model context limit for {model}: {limit:,} tokens"
+                )
+
         # Final fallback to provider limits (as ultimate safety net)
         if limit is None:
             limit = self.CONTEXT_LIMITS.get(provider, 8000)
-            logger.debug(f"Using provider default context limit for {provider}: {limit:,} tokens")
+            logger.debug(
+                f"Using provider default context limit for {provider}: {limit:,} tokens"
+            )
 
         # Quick estimate of total size
         total_chars = sum(
