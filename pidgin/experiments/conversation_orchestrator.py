@@ -36,7 +36,7 @@ class ConversationOrchestrator:
             conversation_id: Unique conversation ID
         """
         manifest = ManifestManager(exp_dir)
-        jsonl_filename = f"{conversation_id}.jsonl"
+        jsonl_filename = f"events_{conversation_id}.jsonl"
         manifest.add_conversation(conversation_id, jsonl_filename)
 
     async def create_and_run_conductor(
