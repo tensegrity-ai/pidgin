@@ -7,64 +7,36 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-env:
-  POETRY_VERSION: "1.8.0"
-  POETRY_VIRTUALENVS_IN_PROJECT: true
-  POETRY_NO_INTERACTION: 1
-
 jobs:
   lint-and-type-check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
     - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Load cached Poetry installation
-      id: cached-poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-    
-    - name: Install Poetry
-      if: steps.cached-poetry.outputs.cache-hit != 'true'
-      uses: snok/install-poetry@v1
-      with:
-        version: ${{ env.POETRY_VERSION }}
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      run: uv python install 3.11
     
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install project
-      run: poetry install --no-interaction
+      run: uv sync --frozen
     
     - name: Run ruff linting
       run: |
-        poetry run ruff check . --output-format=github
+        uv run ruff check . --output-format=github
         echo "✓ All linting checks passed"
     
     - name: Check ruff formatting
       run: |
-        poetry run ruff format --check .
+        uv run ruff format --check .
         echo "✓ Code formatting verified"
     
     - name: Run mypy type checking
       run: |
-        poetry run mypy pidgin
+        uv run mypy pidgin
         echo "✓ All type checks passed"
 
   test:
@@ -77,42 +49,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Load cached Poetry installation
-      id: cached-poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-    
-    - name: Install Poetry
-      if: steps.cached-poetry.outputs.cache-hit != 'true'
-      uses: snok/install-poetry@v1
-      with:
-        version: ${{ env.POETRY_VERSION }}
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      run: uv python install ${{ matrix.python-version }}
     
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install project
-      run: poetry install --no-interaction
+      run: uv sync --frozen
     
     - name: Run tests with coverage
-      run: poetry run pytest --cov=pidgin --cov-report=xml --cov-report=term
+      run: uv run pytest --cov=pidgin --cov-report=xml --cov-report=term
     
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11'
@@ -130,51 +79,28 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+    
     - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Load cached Poetry installation
-      id: cached-poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-    
-    - name: Install Poetry
-      if: steps.cached-poetry.outputs.cache-hit != 'true'
-      uses: snok/install-poetry@v1
-      with:
-        version: ${{ env.POETRY_VERSION }}
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      run: uv python install 3.11
     
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install project
-      run: poetry install --no-interaction
+      run: uv sync --frozen
     
     - name: Run bandit security check
-      run: poetry run bandit -r pidgin -f json -o bandit-report.json || true
+      run: uv run bandit -r pidgin -f json -o bandit-report.json || true
     
     - name: Display bandit results
       if: always()
       run: |
         if [ -f bandit-report.json ]; then
-          poetry run python -m json.tool bandit-report.json
+          uv run python -m json.tool bandit-report.json
         fi
     
     - name: Check dependencies for vulnerabilities
       continue-on-error: true
       run: |
-        poetry run pip list --format=freeze | poetry run safety check --stdin || echo "Safety check completed with warnings"
+        uv run safety check || echo "Safety check completed with warnings"
