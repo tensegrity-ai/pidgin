@@ -47,13 +47,11 @@ class ConfigError(CLIError):
 
 
 class ValidationError(CLIError):
-
     def __init__(self, message: str, suggestion: Optional[str] = None):
         super().__init__(message, ErrorType.VALIDATION, suggestion, exit_code=3)
 
 
 class FileNotFoundError(CLIError):
-
     def __init__(self, path: Path, suggestion: Optional[str] = None):
         message = f"File not found: {path}"
         super().__init__(message, ErrorType.FILE_NOT_FOUND, suggestion, exit_code=4)

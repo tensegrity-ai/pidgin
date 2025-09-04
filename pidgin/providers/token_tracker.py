@@ -109,8 +109,7 @@ class GlobalTokenTracker:
             self.consecutive_errors[provider_key] = 0
 
         logger.debug(
-            f"Recorded {tokens} tokens for {provider_key}/{model} "
-            f"at {timestamp:.2f}"
+            f"Recorded {tokens} tokens for {provider_key}/{model} at {timestamp:.2f}"
         )
 
     def get_current_rate(self, provider: str) -> float:

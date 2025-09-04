@@ -21,7 +21,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 
 ```bash
 # Install
-pip install -e .
+uv tool install pidgin-ai
 
 # Run a conversation
 pidgin run -a claude -b gpt-4 -t 20

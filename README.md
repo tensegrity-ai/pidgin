@@ -41,8 +41,10 @@ Pidgin records conversations between AI models to study how they communicate. We
 ## Quick Start
 
 ```bash
-# Install
-pip install -e .
+# Install the CLI tool (choose one)
+uv tool install pidgin-ai      # Recommended - fast, isolated
+pipx install pidgin-ai          # Alternative - isolated  
+pip install pidgin-ai           # Traditional - global
 
 # Set API keys
 export ANTHROPIC_API_KEY="..."
@@ -289,6 +291,21 @@ Pidgin is a comprehensive research tool with:
 - `pidgin/metrics/` - Unified metrics calculation system
 - `pidgin/experiments/` - Batch experiment runner with background process support
 - `pidgin/ui/` - Display components and filters
+
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/tensegrity-ai/pidgin.git
+cd pidgin
+
+# Install with Poetry (recommended)
+poetry install
+poetry shell
+
+# Or install in editable mode
+uv pip install -e .
+```
 
 ## Contributing
 

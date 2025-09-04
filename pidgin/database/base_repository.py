@@ -146,7 +146,7 @@ class BaseRepository:
         # Validate table name against whitelist
         if table not in self.VALID_TABLES:
             raise ValueError(f"Invalid table name: {table}")
-        
+
         query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause}"  # nosec B608
 
         result = self.fetchone(query, list(conditions.values()))
@@ -173,7 +173,7 @@ class BaseRepository:
         # Validate table name against whitelist
         if table not in self.VALID_TABLES:
             raise ValueError(f"Invalid table name: {table}")
-        
+
         query = f"SELECT COUNT(*) FROM {table}{where_clause}"  # nosec B608
         result = self.fetchone(query, params)
         return result[0] if result else 0

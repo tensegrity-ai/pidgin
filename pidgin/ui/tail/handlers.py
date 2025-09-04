@@ -155,7 +155,7 @@ class EventHandlers:
         # Build metadata
         metadata = []
         if hasattr(event, "duration_ms") and event.duration_ms is not None:
-            metadata.append(f"{event.duration_ms/1000:.1f}s")
+            metadata.append(f"{event.duration_ms / 1000:.1f}s")
         if hasattr(event, "tokens_used") and event.tokens_used:
             metadata.append(f"{event.tokens_used}tok")
 
@@ -240,7 +240,7 @@ class EventHandlers:
         content += f"limit: {event.tokens_per_minute_limit:,}/min"
 
         if hasattr(event, "cost_cents") and event.cost_cents:
-            content += f" | cost: ${event.cost_cents/100:.3f}"
+            content += f" | cost: ${event.cost_cents / 100:.3f}"
 
         self._print(header, content)
 

@@ -177,7 +177,7 @@ class ConversationDisplayHandler(BaseDisplayHandler):
 
     def show_quiet_end(self, event: ConversationEndEvent):
         """Minimal end display."""
-        duration_str = f"{event.duration_ms/1000:.1f}s"
+        duration_str = f"{event.duration_ms / 1000:.1f}s"
         self.console.print(
             f"[{self.COLORS['nord3']}]Done. {event.total_turns} turns in {duration_str}[/{self.COLORS['nord3']}]"
         )

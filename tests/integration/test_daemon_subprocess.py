@@ -109,8 +109,12 @@ def test_daemon_subprocess_launch_and_cleanup():
         files = list(exp_dir.glob("*"))
         file_names = [f.name for f in files]
 
-        # At minimum, these files should exist
-        assert "events.jsonl" in file_names or "experiment.log" in file_names
+        # At minimum, per-conversation events files or experiment log should exist
+        has_events = any(
+            name.startswith("events_") and name.endswith(".jsonl")
+            for name in file_names
+        )
+        assert has_events or "experiment.log" in file_names
         # Manifest is created during post-processing, might not be there immediately
         # But events or logs should always be there
 

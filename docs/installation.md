@@ -14,19 +14,15 @@ Pidgin requires Python 3.9 or later and can be installed using pip, Poetry, or f
 
 ## Quick Install
 
-### Using pip (Recommended)
-
 ```bash
-pip install pidgin-ai
+# Install as isolated CLI tool (choose one)
+uv tool install pidgin-ai      # Recommended - fast
+pipx install pidgin-ai          # Alternative
+
+# Or install in current environment
+uv pip install pidgin-ai        # Fast
+pip install pidgin-ai           # Traditional
 ```
-
-### Using pipx (For CLI usage)
-
-```bash
-pipx install pidgin-ai
-```
-
-This installs Pidgin in an isolated environment, perfect for CLI usage.
 
 ## Development Installation
 

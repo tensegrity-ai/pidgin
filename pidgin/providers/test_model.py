@@ -124,7 +124,9 @@ class LocalTestModel(Provider):
         """Get response to a question."""
         # Hash prompt for deterministic selection
         # MD5 is fine here - not used for security, just deterministic selection
-        hash_val = int(hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16)  # nosec B324
+        hash_val = int(
+            hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16
+        )  # nosec B324
         questions = self.responses["questions"]
         base = questions[hash_val % len(questions)]
 

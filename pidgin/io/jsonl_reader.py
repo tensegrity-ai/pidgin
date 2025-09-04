@@ -45,9 +45,9 @@ class JSONLExperimentReader:
             if not exp_dir.is_dir() or not exp_dir.name.startswith("exp_"):
                 continue
 
-            # Look for JSONL files directly in experiment directory
-            # (they're not in an "events" subdirectory)
-            jsonl_files = list(exp_dir.glob("*_events.jsonl"))
+            # Look for per-conversation JSONL files in experiment directory
+            # Single, canonical pattern: events_<conversation_id>.jsonl
+            jsonl_files = list(exp_dir.glob("events_*.jsonl"))
             if not jsonl_files:
                 continue
 
@@ -75,8 +75,8 @@ class JSONLExperimentReader:
         if not exp_dir.exists():
             return None
 
-        # JSONL files are directly in experiment directory
-        jsonl_files = list(exp_dir.glob("*_events.jsonl"))
+        # JSONL files are directly in experiment directory, canonical pattern
+        jsonl_files = list(exp_dir.glob("events_*.jsonl"))
         if not jsonl_files:
             return None
 
@@ -109,8 +109,10 @@ class JSONLExperimentReader:
         }
 
         # Process each JSONL file
-        for jsonl_file in exp_dir.glob("*_events.jsonl"):
-            conv_id = jsonl_file.stem.replace("_events", "")
+        for jsonl_file in exp_dir.glob("events_*.jsonl"):
+            # Extract conversation id from naming convention: events_<conv_id>.jsonl
+            stem = jsonl_file.stem
+            conv_id = stem[len("events_") :]
             conv_info = self._parse_conversation_events(jsonl_file)
 
             if conv_info:
@@ -183,6 +185,7 @@ class JSONLExperimentReader:
 
                     try:
                         event = json.loads(line)
+                        # Canonical format uses event_type at top-level
                         event_type = event.get("event_type")
 
                         if event_type == "ConversationStartEvent":
@@ -220,10 +223,8 @@ class JSONLExperimentReader:
                                 )
 
                         elif event_type == "ExperimentCreated":
-                            # Get experiment name from event data
-                            data = event.get("data", {})
-                            if "name" in data:
-                                conv_info["experiment_name"] = data["name"]
+                            if "name" in event:
+                                conv_info["experiment_name"] = event["name"]
 
                     except json.JSONDecodeError:
                         logger.warning(f"Invalid JSON in {jsonl_file}: {line}")

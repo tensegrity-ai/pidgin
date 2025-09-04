@@ -145,8 +145,7 @@ class DaemonLauncher:
     def show_interactive_mode_info(self) -> None:
         """Show info for interactive mode."""
         self.console.print(
-            f"[{NORD_DARK}]Ctrl+C to exit display • "
-            f"experiment continues[/{NORD_DARK}]"
+            f"[{NORD_DARK}]Ctrl+C to exit display • experiment continues[/{NORD_DARK}]"
         )
         self.console.print()
 
@@ -280,7 +279,7 @@ class DaemonLauncher:
             except (OSError, FileNotFoundError, json.JSONDecodeError):
                 # If can't read manifest, just note that display exited
                 self.display.info(
-                    ("Display exited. Experiment continues " "running in background."),
+                    ("Display exited. Experiment continues running in background."),
                     use_panel=False,
                 )
         else:

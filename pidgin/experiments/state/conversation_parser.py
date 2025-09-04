@@ -29,12 +29,8 @@ class ConversationParser:
         Returns:
             Dict with started_at and completed_at timestamps
         """
-        # Try different possible locations
-        possible_files = [
-            exp_dir / f"conversation_{conv_id[:8]}" / "events.jsonl",
-            exp_dir / f"{conv_id[:8]}_events.jsonl",
-            exp_dir / "events.jsonl",  # Single file for all conversations
-        ]
+        # Canonical location
+        possible_files = [exp_dir / f"events_{conv_id}.jsonl"]
 
         for events_file in possible_files:
             if events_file.exists():
@@ -61,13 +57,14 @@ class ConversationParser:
                 for line in f:
                     try:
                         event = json.loads(line)
-                        event_data = event.get("data", {})
+                        # Support both current (event_type + top-level fields)
+                        # and legacy (type + nested data) formats
+                        event_type = event.get("event_type") or event.get("type", "")
+                        data = event if "event_type" in event else event.get("data", {})
 
                         # Check if this event is for our conversation
-                        if event_data.get("conversation_id") != conv_id:
+                        if data.get("conversation_id") != conv_id:
                             continue
-
-                        event_type = event.get("type", "")
 
                         if event_type == "ConversationStartEvent":
                             if timestamp_str := event.get("timestamp"):
@@ -106,12 +103,8 @@ class ConversationParser:
         Returns:
             Last convergence score or None
         """
-        # Try different possible locations
-        possible_files = [
-            exp_dir / f"conversation_{conv_id[:8]}" / "events.jsonl",
-            exp_dir / f"{conv_id[:8]}_events.jsonl",
-            exp_dir / "events.jsonl",
-        ]
+        # Canonical location only
+        possible_files = [exp_dir / f"events_{conv_id}.jsonl"]
 
         last_convergence = None
 
@@ -124,15 +117,16 @@ class ConversationParser:
                     for line in f:
                         try:
                             event = json.loads(line)
-                            event_data = event.get("data", {})
+                            event_type = event.get("event_type")
+                            data = event
 
                             # Check if this is a TurnCompleteEvent for our conversation
                             if (
-                                event.get("type") == "TurnCompleteEvent"
-                                and event_data.get("conversation_id") == conv_id
+                                event_type == "TurnCompleteEvent"
+                                and data.get("conversation_id") == conv_id
                             ):
                                 # Get convergence score if present
-                                if score := event_data.get("convergence_score"):
+                                if score := data.get("convergence_score"):
                                     last_convergence = score
 
                         except json.JSONDecodeError:
@@ -157,12 +151,8 @@ class ConversationParser:
         Returns:
             Dict with truncation count and last turn
         """
-        # Try different possible locations
-        possible_files = [
-            exp_dir / f"conversation_{conv_id[:8]}" / "events.jsonl",
-            exp_dir / f"{conv_id[:8]}_events.jsonl",
-            exp_dir / "events.jsonl",
-        ]
+        # Canonical location only
+        possible_files = [exp_dir / f"events_{conv_id}.jsonl"]
 
         truncation_count = 0
         last_truncation_turn = None
@@ -176,15 +166,16 @@ class ConversationParser:
                     for line in f:
                         try:
                             event = json.loads(line)
-                            event_data = event.get("data", {})
+                            event_type = event.get("event_type")
+                            data = event
 
                             # Check if this is a ContextTruncationEvent for our conversation
                             if (
-                                event.get("type") == "ContextTruncationEvent"
-                                and event_data.get("conversation_id") == conv_id
+                                event_type == "ContextTruncationEvent"
+                                and data.get("conversation_id") == conv_id
                             ):
                                 truncation_count += 1
-                                last_truncation_turn = event_data.get("turn_number")
+                                last_truncation_turn = data.get("turn_number")
 
                         except json.JSONDecodeError:
                             continue
@@ -216,12 +207,8 @@ class ConversationParser:
         Returns:
             ConversationState or None
         """
-        # Try to find events for this conversation
-        possible_files = [
-            exp_dir / f"conversation_{conv_id[:8]}" / "events.jsonl",
-            exp_dir / f"{conv_id[:8]}_events.jsonl",
-            exp_dir / "events.jsonl",
-        ]
+        # Try to find events for this conversation (canonical location)
+        possible_files = [exp_dir / f"events_{conv_id}.jsonl"]
 
         for events_file in possible_files:
             if not events_file.exists():
@@ -254,20 +241,18 @@ class ConversationParser:
                 for line in f:
                     try:
                         event = json.loads(line)
-                        event_data = event.get("data", {})
+                        data = event
 
-                        if event_data.get("conversation_id") != conv_id:
+                        if data.get("conversation_id") != conv_id:
                             continue
 
-                        event_type = event.get("type", "")
+                        event_type = event.get("event_type", "")
 
                         # Initialize state on first event for this conversation
                         if state is None:
                             state = ConversationState(
                                 conversation_id=conv_id,
-                                experiment_id=event_data.get(
-                                    "experiment_id", "unknown"
-                                ),
+                                experiment_id=data.get("experiment_id", "unknown"),
                                 status="running",
                                 current_turn=0,
                                 max_turns=20,  # Default
@@ -275,13 +260,9 @@ class ConversationParser:
 
                         # Process different event types
                         if event_type == "ConversationStartEvent":
-                            state.agent_a_model = event_data.get(
-                                "agent_a_model", "unknown"
-                            )
-                            state.agent_b_model = event_data.get(
-                                "agent_b_model", "unknown"
-                            )
-                            state.max_turns = event_data.get("max_turns", 20)
+                            state.agent_a_model = data.get("agent_a_model", "unknown")
+                            state.agent_b_model = data.get("agent_b_model", "unknown")
+                            state.max_turns = data.get("max_turns", 20)
                             if timestamp := event.get("timestamp"):
                                 from .manifest_parser import ManifestParser
 
@@ -291,7 +272,7 @@ class ConversationParser:
                         elif event_type == "TurnCompleteEvent":
                             turn_count += 1
                             state.current_turn = turn_count
-                            if score := event_data.get("convergence_score"):
+                            if score := data.get("convergence_score"):
                                 state.last_convergence = score
 
                         elif event_type == "ConversationEndEvent":

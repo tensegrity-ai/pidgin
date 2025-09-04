@@ -217,9 +217,9 @@ def test_full_conversation_deserialization():
 
         # Verify all events were deserialized successfully
         assert len(errors) == 0, f"Deserialization errors: {errors}"
-        assert len(deserialized_events) == len(
-            events
-        ), f"Expected {len(events)} events, got {len(deserialized_events)}"
+        assert len(deserialized_events) == len(events), (
+            f"Expected {len(events)} events, got {len(deserialized_events)}"
+        )
 
         # Verify event types
         assert isinstance(deserialized_events[0], ConversationStartEvent)

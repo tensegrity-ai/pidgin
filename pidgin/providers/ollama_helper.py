@@ -125,11 +125,11 @@ async def auto_install_ollama(console) -> bool:
                 capture_output=True,
                 text=True,
             )
-            
+
             if download_result.returncode != 0:
                 display.error("Failed to download Ollama installer")
                 return False
-            
+
             # Then run it through sh
             result = subprocess.run(
                 ["sh"],

@@ -37,7 +37,7 @@ class MetricsRepository(BaseRepository):
 
             query = f"""
                 UPDATE turn_metrics
-                SET {', '.join(set_clauses)}
+                SET {", ".join(set_clauses)}
                 WHERE conversation_id = ? AND turn_number = ?
             """
             params.extend([conversation_id, turn_number])

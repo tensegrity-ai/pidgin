@@ -63,7 +63,7 @@ class xAIProvider(Provider):
         super().__init__()
         if not OPENAI_AVAILABLE:
             raise ImportError(
-                "OpenAI client not available. Install with: " "pip install openai"
+                "OpenAI client not available. Install with: pip install openai"
             )
 
         api_key = APIKeyManager.get_api_key("xai")

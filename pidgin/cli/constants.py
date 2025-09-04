@@ -76,5 +76,6 @@ DEFAULT_PARALLEL = 3
 
 # File patterns
 TRANSCRIPT_PATTERN = "transcript.md"
-EVENTS_PATTERN = "events.jsonl"
+# Canonical events file pattern (per-conversation)
+EVENTS_PATTERN = "events_*.jsonl"
 STATE_PATTERN = "state.json"

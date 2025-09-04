@@ -97,7 +97,7 @@ class TokenUsageHandler:
         logger.debug(
             f"Logged token usage for {conv_id}: {total_tokens} tokens "
             f"(prompt: {prompt_tokens}, completion: {completion_tokens}) "
-            f"Cost: ${costs['total_cost']/100:.4f}"
+            f"Cost: ${costs['total_cost'] / 100:.4f}"
         )
 
     def _get_rpm_limit(self, provider: str) -> int:
