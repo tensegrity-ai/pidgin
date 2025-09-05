@@ -107,6 +107,8 @@ class Agent(BaseModel):
         )
     """
 
+    model_config = {"protected_namespaces": ()}
+
     id: str
     model: str
     display_name: Optional[str] = None

@@ -29,6 +29,94 @@ class ErrorClassifier:
             "content too long",
         ]
         return any(pattern in error_str for pattern in context_patterns)
+    
+    def classify_error_type(self, exception: Exception) -> str:
+        """Classify the error type based on the exception and error message.
+        
+        Args:
+            exception: The exception that was raised
+            
+        Returns:
+            A descriptive error type string
+        """
+        error_str = str(exception)
+        error_lower = error_str.lower()
+        exception_type = type(exception).__name__.lower()
+        
+        # Rate limit errors
+        if "rate" in error_lower and "limit" in error_lower:
+            return "rate_limit"
+        if "429" in error_str:
+            return "rate_limit"
+        if "too many requests" in error_lower:
+            return "rate_limit"
+        if "quota" in error_lower and "exceeded" in error_lower:
+            return "quota_exceeded"
+            
+        # Authentication errors
+        if "auth" in error_lower or "unauthorized" in error_lower:
+            return "authentication"
+        if "401" in error_str:
+            return "authentication"
+        if "api key" in error_lower or "api_key" in error_lower:
+            return "invalid_api_key"
+        if "permission" in error_lower:
+            return "permission_denied"
+            
+        # Timeout errors
+        if "timeout" in error_lower or "timed out" in error_lower:
+            return "timeout"
+        if "deadline" in error_lower:
+            return "timeout"
+        if exception_type == "timeouterror":
+            return "timeout"
+            
+        # Overload/availability errors
+        if "overload" in error_lower:
+            return "overloaded"
+        if "503" in error_str or "service unavailable" in error_lower:
+            return "service_unavailable"
+        if "500" in error_str or "internal server" in error_lower:
+            return "server_error"
+            
+        # Connection errors
+        if "connection" in error_lower:
+            return "connection_error"
+        if "network" in error_lower:
+            return "network_error"
+        if "ssl" in error_lower:
+            return "ssl_error"
+            
+        # Model/resource errors
+        if "model" in error_lower and "not found" in error_lower:
+            return "model_not_found"
+        if "404" in error_str:
+            return "not_found"
+            
+        # Billing/payment errors
+        if "billing" in error_lower or "payment" in error_lower:
+            return "billing_error"
+        if "credit" in error_lower or "balance" in error_lower:
+            return "insufficient_credits"
+            
+        # Context length (already handled separately but included for completeness)
+        if "context" in error_lower and ("length" in error_lower or "window" in error_lower):
+            return "context_limit"
+        if "token" in error_lower and "limit" in error_lower:
+            return "token_limit"
+            
+        # Invalid request errors
+        if "invalid" in error_lower:
+            return "invalid_request"
+        if "400" in error_str or "bad request" in error_lower:
+            return "bad_request"
+            
+        # Default to the exception type if we can't classify it
+        if exception_type and exception_type != "exception":
+            return exception_type
+            
+        # Final fallback
+        return "api_error"
 
 
 class ProviderErrorHandler:

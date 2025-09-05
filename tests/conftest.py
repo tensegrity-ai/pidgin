@@ -1,6 +1,11 @@
 """Minimal test fixtures - just what we actually need."""
 
 import os
+import warnings
+
+# Suppress urllib3 OpenSSL warning BEFORE importing pytest/urllib3
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL")
 
 import pytest
 

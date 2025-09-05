@@ -106,6 +106,7 @@ addopts = ""
 filterwarnings = [
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
     "ignore::RuntimeWarning:coverage.parser",
+    "ignore:urllib3 v2 only supports OpenSSL.*:urllib3.exceptions.NotOpenSSLWarning",
 ]
 markers = [
     "unit: Unit tests that run in isolation",

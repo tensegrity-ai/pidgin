@@ -229,6 +229,9 @@ class EventAwareProvider:
             # Extract provider name from model
             provider_name = self.provider.__class__.__name__.replace("Provider", "")
 
+            # Classify the error type based on the error message and exception type
+            error_type = error_classifier.classify_error_type(e)
+
             # Emit appropriate error event
             if is_context_error:
                 # Emit a special context limit error event
@@ -247,7 +250,7 @@ class EventAwareProvider:
                 await self.bus.emit(
                     APIErrorEvent(
                         conversation_id=event.conversation_id,
-                        error_type="api_error",
+                        error_type=error_type,
                         error_message=error_str,
                         context=f"During message generation for turn {event.turn_number}",
                         agent_id=self.agent_id,
