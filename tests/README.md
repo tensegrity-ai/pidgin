@@ -1,6 +1,6 @@
 # Minimal Test Suite
 
-This is a deliberately minimal test suite. We have ~10 tests that verify the core system works.
+This is a deliberately minimal test suite that verifies the core system works.
 
 ## Philosophy
 
@@ -12,39 +12,51 @@ This is a deliberately minimal test suite. We have ~10 tests that verify the cor
 
 ## The Tests
 
+### Integration Tests
 1. **test_conversation.py** - Core system works end-to-end
-2. **test_error_handling.py** - Doesn't crash on errors  
-3. **test_cli.py** - CLI doesn't explode
-4. **test_database.py** - Can import and analyze data
-5. **test_metrics.py** - Metrics are sane
-6. **test_post_processing.py** - Post-processing pipeline works ✨
+2. **test_full_experiment.py** - Complete experiment pipeline including parallel execution
+3. **test_error_handling.py** - Graceful error handling
+4. **test_database.py** - JSONL → DuckDB import flow
+5. **test_metrics.py** - Metric calculations are sane
+6. **test_post_processing.py** - Analysis pipeline works
+7. **test_event_deserialization.py** - Event system integrity
+8. **test_type_safety.py** - Type system validation
+9. **test_daemon_subprocess.py** - Process management
+
+### CLI Tests
+- **test_cli.py** - CLI commands work correctly
 
 ## Running Tests
 
 ```bash
 # Run all tests
-poetry run pytest tests/
+uv run pytest tests/
 
 # Run during development
-poetry run pytest tests/ -x  # Stop on first failure
+uv run pytest tests/ -x  # Stop on first failure
 
 # Run specific test
-poetry run pytest tests/integration/test_conversation.py
+uv run pytest tests/integration/test_conversation.py
+
+# Run with coverage
+uv run pytest --cov=pidgin
+
+# Run in parallel
+uv run pytest -n auto
 ```
 
 ## Current Status
 
 ```bash
-poetry run pytest tests/ -v
-# ====== 11 passed in 1.98s ======
+uv run pytest tests/ -q
+# ====== 33 passed in ~8s ======
 ```
 
-- ✅ **ALL 11 TESTS PASSING**
-- ✅ CLI tests (4/4)
-- ✅ Integration tests (3/3)
-- ✅ Metrics tests (2/2)
-- ✅ Database test (1/1)
-- ✅ Post-processing test (1/1)
+- ✅ **ALL TESTS PASSING**
+- ✅ Integration tests (32)
+- ✅ CLI tests (1)
+- ✅ Parallel execution test
+- ✅ Error classification
 
 ## When to Add Tests
 

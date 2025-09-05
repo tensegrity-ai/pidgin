@@ -10,37 +10,39 @@ Be respectful and constructive. We're all here to advance the understanding of A
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/yourusername/pidgin.git`
-3. Install Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
-4. Install dependencies: `poetry install`
+3. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+4. Install dependencies: `uv sync`
 5. Create a branch: `git checkout -b feature/your-feature-name`
 
 ## Development Workflow
 
 ```bash
 # Install dependencies
-poetry install
+uv sync
 
 # Run development version
-poetry run pidgin run -a local:test -b local:test
+uv run pidgin run -a local:test -b local:test
 
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Format code
-poetry run black pidgin tests
-poetry run isort pidgin tests
+uv run ruff format pidgin tests
+
+# Check code style
+uv run ruff check pidgin tests
 
 # Type checking
-poetry run mypy pidgin
+uv run mypy pidgin
 
-# Linting
-poetry run flake8 pidgin tests
+# Build package
+uv build
 
-# Build and install globally
-poetry build && pipx install dist/*.whl
+# Install globally with pipx
+pipx install dist/*.whl
 
 # Clean experiment data
-rm -rf pidgin_output/
+rm -rf ~/pidgin_output/
 ```
 
 ## Making Changes

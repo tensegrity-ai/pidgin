@@ -299,12 +299,15 @@ Pidgin is a comprehensive research tool with:
 git clone https://github.com/tensegrity-ai/pidgin.git
 cd pidgin
 
-# Install with Poetry (recommended)
-poetry install
-poetry shell
+# Install with uv (recommended - fast!)
+uv sync
 
-# Or install in editable mode
-uv pip install -e .
+# Run pidgin
+uv run pidgin --help
+
+# Or install globally with pipx
+uv build
+pipx install dist/*.whl
 ```
 
 ## Contributing

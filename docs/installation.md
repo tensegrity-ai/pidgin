@@ -1,6 +1,6 @@
 # Installation Guide
 
-Pidgin requires Python 3.9 or later and can be installed using pip, Poetry, or from source.
+Pidgin requires Python 3.9 or later and can be installed using pip, pipx, uv, or from source.
 
 ## Prerequisites
 
@@ -26,18 +26,22 @@ pip install pidgin-ai           # Traditional
 
 ## Development Installation
 
-### Using Poetry (Recommended for Development)
+### Using uv (Recommended for Development)
 
 ```bash
 # Clone the repository
 git clone https://github.com/tensegrity-ai/pidgin.git
 cd pidgin
 
-# Install with Poetry
-poetry install
+# Install with uv (extremely fast!)
+uv sync
 
-# Activate the virtual environment
-poetry shell
+# Run pidgin
+uv run pidgin --help
+
+# Or build and install globally
+uv build
+pipx install dist/*.whl
 ```
 
 ### Using pip with Editable Install
@@ -47,11 +51,12 @@ poetry shell
 git clone https://github.com/tensegrity-ai/pidgin.git
 cd pidgin
 
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
 # Install in editable mode
 pip install -e .
-
-# Or with development dependencies
-pip install -e ".[dev]"
 ```
 
 ## Setting Up API Keys
