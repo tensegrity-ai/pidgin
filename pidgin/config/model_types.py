@@ -29,3 +29,7 @@ class ModelConfig:
     cache_write_cost_per_million: Optional[float] = None
     # Track when pricing was last updated
     pricing_updated: Optional[str] = None  # ISO date string
+    # Whether this model is curated (recommended for default view)
+    curated: bool = False
+    # Whether this model is stable (production-ready, not experimental/preview)
+    stable: bool = False
