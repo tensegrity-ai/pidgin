@@ -45,6 +45,9 @@ console = Console()
 @click.option(
     "--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for agent B only"
 )
+@click.option("--think", is_flag=True, help="Enable reasoning mode for both agents")
+@click.option("--think-a", is_flag=True, help="Enable reasoning mode for agent A only")
+@click.option("--think-b", is_flag=True, help="Enable reasoning mode for agent B only")
 @click.option("--output", "-o", help="Custom output directory")
 @click.option(
     "--convergence-threshold",
@@ -120,6 +123,9 @@ def run(
     temperature: Optional[float],
     temp_a: Optional[float],
     temp_b: Optional[float],
+    think: bool,
+    think_a: bool,
+    think_b: bool,
     output: Optional[str],
     convergence_threshold: Optional[float],
     convergence_action: Optional[str],

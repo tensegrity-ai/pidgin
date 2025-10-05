@@ -34,6 +34,9 @@ class Config:
             "convergence_action": DEFAULT_CONVERGENCE_ACTION,
             "convergence_profile": DEFAULT_CONVERGENCE_PROFILE,  # Now defaults
         },
+        "ollama": {
+            "auto_start": False,  # Require explicit consent or config
+        },
         "convergence": {
             "profile": DEFAULT_CONVERGENCE_PROFILE,
             # Custom weights (used when profile is "custom")
@@ -191,6 +194,9 @@ context_management:
 defaults:
   max_turns: 20
   manual_mode: false
+
+ollama:
+  auto_start: false  # Set to true to auto-start server without prompting
 
 experiments:
   unattended:

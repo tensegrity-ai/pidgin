@@ -1,0 +1,311 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pidgin Model Configuration Schema v2.0",
+  "description": "Complete schema for model definitions with explicit capabilities, limits, and parameters",
+  "type": "object",
+  "required": ["schema_version", "last_updated", "models"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "2.0.0",
+      "description": "Schema version - must be 2.0.0"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this file was last updated"
+    },
+    "generator": {
+      "type": "string",
+      "description": "Tool/script that generated this file"
+    },
+    "models": {
+      "type": "object",
+      "description": "Map of model_id to model configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/ModelConfig"
+      }
+    }
+  },
+  "definitions": {
+    "ModelConfig": {
+      "type": "object",
+      "required": ["provider", "display_name", "aliases", "api", "capabilities", "limits", "parameters", "metadata"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "google", "xai", "ollama", "local", "silent"],
+          "description": "The provider that serves this model"
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable name for display"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Short aliases for CLI usage"
+        },
+        "api": {
+          "$ref": "#/definitions/ApiConfig"
+        },
+        "capabilities": {
+          "$ref": "#/definitions/Capabilities"
+        },
+        "limits": {
+          "$ref": "#/definitions/Limits"
+        },
+        "parameters": {
+          "$ref": "#/definitions/Parameters"
+        },
+        "cost": {
+          "oneOf": [
+            {"$ref": "#/definitions/Cost"},
+            {"type": "null"}
+          ],
+          "description": "Pricing information, null for free/local models"
+        },
+        "metadata": {
+          "$ref": "#/definitions/Metadata"
+        },
+        "rate_limits": {
+          "oneOf": [
+            {"$ref": "#/definitions/RateLimits"},
+            {"type": "null"}
+          ],
+          "description": "API rate limits, null for local models"
+        }
+      }
+    },
+    "ApiConfig": {
+      "type": "object",
+      "required": ["model_id"],
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "description": "The exact identifier to send to the API"
+        },
+        "ollama_model": {
+          "type": "string",
+          "description": "Ollama-specific model name (e.g., 'mistral:7b')"
+        },
+        "api_version": {
+          "type": "string",
+          "description": "API version string (provider-specific)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Capabilities": {
+      "type": "object",
+      "required": ["streaming", "vision", "tool_calling", "system_messages", "extended_thinking", "json_mode", "prompt_caching"],
+      "properties": {
+        "streaming": {
+          "type": "boolean",
+          "description": "Supports streaming responses"
+        },
+        "vision": {
+          "type": "boolean",
+          "description": "Supports image inputs (multimodal)"
+        },
+        "tool_calling": {
+          "type": "boolean",
+          "description": "Supports function/tool calling"
+        },
+        "system_messages": {
+          "type": "boolean",
+          "description": "Supports system messages"
+        },
+        "extended_thinking": {
+          "type": "boolean",
+          "description": "Supports extended thinking/reasoning mode"
+        },
+        "json_mode": {
+          "type": "boolean",
+          "description": "Supports JSON output mode"
+        },
+        "prompt_caching": {
+          "type": "boolean",
+          "description": "Supports prompt caching"
+        }
+      }
+    },
+    "Limits": {
+      "type": "object",
+      "required": ["max_context_tokens", "max_output_tokens", "max_thinking_tokens"],
+      "properties": {
+        "max_context_tokens": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "null"}
+          ],
+          "description": "Maximum context window size in tokens, null = unlimited"
+        },
+        "max_output_tokens": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "null"}
+          ],
+          "description": "Maximum output tokens per request, null = unlimited"
+        },
+        "max_thinking_tokens": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "null"}
+          ],
+          "description": "Maximum thinking tokens (for reasoning models), null = N/A or unlimited"
+        }
+      }
+    },
+    "Parameters": {
+      "type": "object",
+      "required": ["temperature", "top_p", "top_k"],
+      "properties": {
+        "temperature": {
+          "$ref": "#/definitions/ParameterConfig"
+        },
+        "top_p": {
+          "$ref": "#/definitions/ParameterConfig"
+        },
+        "top_k": {
+          "$ref": "#/definitions/ParameterConfig"
+        }
+      }
+    },
+    "ParameterConfig": {
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": {
+          "type": "boolean",
+          "description": "Whether this parameter is supported"
+        },
+        "range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Valid range [min, max], required if supported=true"
+        },
+        "default": {
+          "oneOf": [
+            {"type": "number"},
+            {"type": "null"}
+          ],
+          "description": "Default value for this parameter, null = no default"
+        }
+      },
+      "if": {
+        "properties": {"supported": {"const": true}}
+      },
+      "then": {
+        "required": ["range"]
+      }
+    },
+    "Cost": {
+      "type": "object",
+      "required": ["input_per_1m_tokens", "output_per_1m_tokens", "currency", "last_updated"],
+      "properties": {
+        "input_per_1m_tokens": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost per 1 million input tokens"
+        },
+        "output_per_1m_tokens": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost per 1 million output tokens"
+        },
+        "cache_read_per_1m_tokens": {
+          "oneOf": [
+            {"type": "number", "minimum": 0},
+            {"type": "null"}
+          ],
+          "description": "Cost per 1 million cached read tokens (Anthropic)"
+        },
+        "cache_write_per_1m_tokens": {
+          "oneOf": [
+            {"type": "number", "minimum": 0},
+            {"type": "null"}
+          ],
+          "description": "Cost per 1 million cache write tokens (Anthropic)"
+        },
+        "currency": {
+          "type": "string",
+          "const": "USD",
+          "description": "Currency code"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date",
+          "description": "Date when pricing was last verified (YYYY-MM-DD)"
+        }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "required": ["status", "curated", "stable"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["available", "preview", "deprecated"],
+          "description": "Current availability status"
+        },
+        "release_date": {
+          "oneOf": [
+            {"type": "string", "format": "date"},
+            {"type": "null"}
+          ],
+          "description": "Release date (YYYY-MM-DD)"
+        },
+        "deprecation_date": {
+          "oneOf": [
+            {"type": "string", "format": "date"},
+            {"type": "null"}
+          ],
+          "description": "Deprecation date if status=deprecated (YYYY-MM-DD)"
+        },
+        "curated": {
+          "type": "boolean",
+          "description": "Whether to show in default curated list"
+        },
+        "stable": {
+          "type": "boolean",
+          "description": "Whether this is a stable production release"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the model"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes (RAM requirements, warnings, etc.)"
+        },
+        "size": {
+          "type": "string",
+          "description": "Model size on disk (for local models)"
+        }
+      }
+    },
+    "RateLimits": {
+      "type": "object",
+      "required": ["requests_per_minute", "tokens_per_minute"],
+      "properties": {
+        "requests_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum requests per minute"
+        },
+        "tokens_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum tokens per minute"
+        }
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 import rich_click as click
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from ..config.models import MODELS
@@ -11,14 +12,6 @@ from .constants import MODEL_GLYPHS, PROVIDER_COLORS
 
 console = Console()
 display = DisplayUtils(console)
-
-
-def _get_table_width() -> int:
-    """Calculate table width based on terminal size."""
-    terminal_width = console.size.width
-    # Leave some margin for borders and scrollbars
-    # Minimum width of 80, maximum of 150 for readability
-    return max(80, min(terminal_width - 4, 150))
 
 
 def _get_ollama_models():
@@ -96,43 +89,39 @@ def models(all):
         key=lambda p: provider_order.index(p) if p in provider_order else 99,
     )
 
-    # Calculate column widths based on terminal size
-    table_width = _get_table_width()
+    # Display title
+    console.print()
+    console.print("[bold cyan]Available Models[/bold cyan]")
+    console.print()
 
-    # Distribute widths proportionally
-    # Total parts: 8% + 18% + 15% + 28% + 8% + 13% = 90% (10% for padding)
-    provider_width = max(8, int(table_width * 0.08))
-    model_id_width = max(15, int(table_width * 0.18))
-    aliases_width = max(12, int(table_width * 0.15))
-    display_name_width = max(20, int(table_width * 0.28))
-    context_width = max(6, int(table_width * 0.08))
-    cost_width = max(11, int(table_width * 0.13))
-
-    table = Table(show_header=True, header_style="bold cyan", title="Available Models", width=table_width)
-    table.add_column("Provider", style="dim", width=provider_width)
-    table.add_column("Model ID", style="green", width=model_id_width)
-    table.add_column("Aliases", style="yellow", width=aliases_width)
-    table.add_column("Display Name", width=display_name_width)
-    table.add_column("Context", justify="right", width=context_width)
-    table.add_column("Cost", justify="right", width=cost_width)
-
+    # Display each provider's models in separate panels
     for provider in sorted_providers:
-        models = sorted(providers[provider], key=lambda x: x[0])
+        models_list = sorted(providers[provider], key=lambda x: x[0])
 
-        for i, (model_id, config) in enumerate(models):
-            # Provider column (only show for first model of each provider)
-            provider_display = ""
-            if i == 0:
-                glyph = MODEL_GLYPHS.get(provider, "●")
-                color = PROVIDER_COLORS.get(provider, "white")
-                provider_display = f"[{color}]{glyph}[/{color}] {provider.title()}"
+        # Provider header with glyph and color
+        glyph = MODEL_GLYPHS.get(provider, "●")
+        color = PROVIDER_COLORS.get(provider, "white")
+
+        # Create compact table for this provider
+        table = Table(box=None, padding=(0, 2), show_header=False)
+        table.add_column("Model", style=color)
+        table.add_column("Aliases", style="dim")
+        table.add_column("Context", justify="right", style="dim")
+        table.add_column("Cost", justify="right", style="dim")
+
+        for model_id, config in models_list:
+            # Strip provider prefix from model_id for cleaner display
+            if ":" in model_id and model_id.startswith(f"{provider}:"):
+                display_model_id = model_id[len(provider)+1:]
+            else:
+                display_model_id = model_id
 
             # Format aliases (show first 2-3 aliases)
-            aliases = ", ".join(config.aliases[:3]) if config.aliases else ""
+            aliases = ", ".join(config.aliases[:3]) if config.aliases else "—"
             if len(config.aliases) > 3:
                 aliases += f" +{len(config.aliases) - 3}"
 
-            # Format context window in a more compact way
+            # Format context window
             if config.context_window:
                 if config.context_window >= 1_000_000:
                     context = f"{config.context_window // 1_000_000}M"
@@ -148,7 +137,6 @@ def models(all):
                 if config.input_cost_per_million == 0 and config.output_cost_per_million == 0:
                     cost = "free"
                 else:
-                    # Show in format: $3/$15 or $0.15/$1
                     in_cost = config.input_cost_per_million
                     out_cost = config.output_cost_per_million
                     # Use minimal decimal places
@@ -164,27 +152,28 @@ def models(all):
             else:
                 cost = "—"
 
-            # Strip provider prefix from model_id for cleaner display
-            # Only remove the initial provider prefix, preserve other colons
-            if ":" in model_id and model_id.startswith(f"{provider}:"):
-                display_model_id = model_id[len(provider)+1:]
-            else:
-                display_model_id = model_id
+            table.add_row(display_model_id, aliases, context, cost)
 
-            table.add_row(provider_display, display_model_id, aliases, config.display_name, context, cost)
-
-    console.print(table)
+        # Wrap table in a panel with provider name as title
+        panel = Panel(
+            table,
+            title=f"[{color}]{glyph}[/{color}] [{color}]{provider.title()}[/{color}]",
+            title_align="left",
+            border_style=color,
+            padding=(0, 1),
+            expand=False
+        )
+        console.print(panel)
+    # Show usage instructions
+    console.print("[dim]Use model ID or alias with -a/-b flags[/dim]")
+    console.print("[dim]Example: [/dim][cyan]pidgin run -a sonnet-4 -b gpt-4o[/cyan]")
     console.print()
-    console.print("[dim]Use model ID (green) or aliases (yellow) with -a/-b flags[/dim]")
-    console.print("[dim]Example: pidgin run -a claude -b gpt[/dim]")
 
     # Show filtering status with better messaging
     if all:
-        console.print()
         console.print("[dim]Showing all stable production models.[/dim]")
     else:
-        console.print()
-        console.print("[dim]Showing essential models only. Use --all to see all stable releases.[/dim]")
+        console.print("[dim]Showing essential models. Use [/dim][cyan]--all[/cyan][dim] for all stable releases.[/dim]")
 
     # Check if Ollama is available and show helpful message
     if not ollama_models:
@@ -193,7 +182,7 @@ def models(all):
             response = httpx.get("http://localhost:11434/api/tags", timeout=0.5)
             if response.status_code != 200:
                 console.print()
-                console.print("[dim]◆ For local models: Install Ollama from https://ollama.ai[/dim]")
+                console.print("[dim]For local models, install Ollama: [/dim][cyan]https://ollama.ai[/cyan]")
         except Exception:
             console.print()
-            console.print("[dim]◆ For local models: Start Ollama with 'ollama serve' or install from https://ollama.ai[/dim]")
+            console.print("[dim]For local models, start Ollama or install: [/dim][cyan]https://ollama.ai[/cyan]")

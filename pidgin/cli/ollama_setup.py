@@ -85,7 +85,7 @@ async def ensure_ollama_models_ready(
 
     # Ensure server is running
     if not check_ollama_running():
-        started = await start_ollama_server(console)
+        started = await start_ollama_server(console, prompt_if_needed=True)
         if not started:
             console.print()  # Add newline
             display.error(

@@ -1,0 +1,262 @@
+# Model overrides for Pidgin-specific configurations
+# This file contains metadata that can't be auto-discovered from APIs
+
+# Provider-level defaults (already in script, but can be overridden here)
+provider_defaults:
+  anthropic:
+    capabilities:
+      prompt_caching: true  # Most Anthropic models support this
+
+  openai:
+    capabilities:
+      extended_thinking: false  # Only o1/o3 models have this
+
+# Local/Ollama models not available via APIs
+local_models:
+  - key: "local:test"
+    provider: "local"
+    display_name: "Local Test"
+    aliases: ["test"]
+    api:
+      model_id: "local:test"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: false
+      system_messages: true
+      extended_thinking: false
+      json_mode: false
+      prompt_caching: false
+    limits:
+      max_context_tokens: 100000
+      max_output_tokens: null
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: false, default: null}
+      top_p: {supported: false, default: null}
+      top_k: {supported: false, default: null}
+    cost: null
+    metadata:
+      status: "available"
+      release_date: "2024-01-01"
+      deprecation_date: null
+      curated: false
+      stable: true
+      description: "Test model for development"
+      notes: "Test model for development"
+      size: ""
+    rate_limits: null
+
+  - key: "local:qwen"
+    provider: "ollama"
+    display_name: "Qwen 0.5B"
+    aliases: ["qwen"]
+    api:
+      model_id: "local:qwen"
+      ollama_model: "qwen2.5:0.5b"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: false
+      system_messages: true
+      extended_thinking: false
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 32768
+      max_output_tokens: null
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.8}
+      top_p: {supported: true, range: [0.0, 1.0], default: 0.9}
+      top_k: {supported: true, range: [1, 100], default: 40}
+    cost: null
+    metadata:
+      status: "available"
+      release_date: "2024-11-01"
+      deprecation_date: null
+      curated: true
+      stable: true
+      description: "Smallest practical Ollama model"
+      notes: "Smallest practical Ollama model, very fast"
+      size: "500MB"
+    rate_limits: null
+
+  - key: "local:phi"
+    provider: "ollama"
+    display_name: "Phi-3"
+    aliases: ["phi"]
+    api:
+      model_id: "local:phi"
+      ollama_model: "phi3:3.8b"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: false
+      system_messages: true
+      extended_thinking: false
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 128000
+      max_output_tokens: null
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.8}
+      top_p: {supported: true, range: [0.0, 1.0], default: 0.9}
+      top_k: {supported: true, range: [1, 100], default: 40}
+    cost: null
+    metadata:
+      status: "available"
+      release_date: "2024-06-01"
+      deprecation_date: null
+      curated: true
+      stable: true
+      description: "Balanced size/performance for local use"
+      notes: "Balanced size/performance for local use"
+      size: "2.8GB"
+    rate_limits: null
+
+  - key: "local:mistral"
+    provider: "ollama"
+    display_name: "Mistral 7B"
+    aliases: ["mistral"]
+    api:
+      model_id: "local:mistral"
+      ollama_model: "mistral:7b"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: false
+      system_messages: true
+      extended_thinking: false
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 32768
+      max_output_tokens: null
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.7}
+      top_p: {supported: true, range: [0.0, 1.0], default: 0.9}
+      top_k: {supported: true, range: [1, 100], default: 40}
+    cost: null
+    metadata:
+      status: "available"
+      release_date: "2023-09-01"
+      deprecation_date: null
+      curated: true
+      stable: true
+      description: "Popular open model"
+      notes: "Popular open model, needs 8GB+ RAM"
+      size: "4.1GB"
+    rate_limits: null
+
+  - key: "silent:none"
+    provider: "silent"
+    display_name: "Silent"
+    aliases: []
+    api:
+      model_id: "silent:none"
+    capabilities:
+      streaming: false
+      vision: false
+      tool_calling: false
+      system_messages: false
+      extended_thinking: false
+      json_mode: false
+      prompt_caching: false
+    limits:
+      max_context_tokens: 100000
+      max_output_tokens: null
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: false, default: null}
+      top_p: {supported: false, default: null}
+      top_k: {supported: false, default: null}
+    cost: null
+    metadata:
+      status: "available"
+      release_date: "2024-01-01"
+      deprecation_date: null
+      curated: false
+      stable: true
+      description: "Silent model that returns empty responses"
+      notes: "Silent model that returns empty responses"
+      size: ""
+    rate_limits: null
+
+# Model-specific overrides (merged with API data)
+model_overrides:
+  # Anthropic models
+  "claude-sonnet-4.5":
+    aliases: ["sonnet"]
+    capabilities:
+      vision: true
+      extended_thinking: true
+      prompt_caching: true
+    metadata:
+      curated: true
+      description: "Claude's most capable model"
+
+  "claude-opus-4.1":
+    aliases: ["opus"]
+    capabilities:
+      vision: true
+      prompt_caching: true
+    metadata:
+      curated: true
+
+  "claude-3-opus":
+    aliases: ["opus3"]
+    capabilities:
+      vision: true
+      prompt_caching: true
+    metadata:
+      curated: true
+
+  # OpenAI models
+  "gpt-4o":
+    aliases: ["4o"]
+    capabilities:
+      vision: true
+    metadata:
+      curated: true
+
+  "gpt-4o-mini":
+    aliases: ["4o-mini"]
+    capabilities:
+      vision: true
+    metadata:
+      curated: true
+
+  "o1":
+    aliases: ["o1"]
+    capabilities:
+      extended_thinking: true
+      tool_calling: false  # o1 doesn't support tools
+    metadata:
+      curated: true
+
+  "o1-mini":
+    aliases: ["o1-mini"]
+    capabilities:
+      extended_thinking: true
+      tool_calling: false
+    metadata:
+      curated: true
+
+  # Google models
+  "gemini-2.5-pro":
+    aliases: ["gemini-2.5-pro"]
+    capabilities:
+      vision: true
+    metadata:
+      curated: true
+
+  "gemini-2.5-flash-preview-09-2025":
+    aliases: ["flash-2.5"]
+    capabilities:
+      vision: true
+    metadata:
+      curated: true

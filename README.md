@@ -79,10 +79,10 @@ pidgin stop my_experiment
 pidgin stop --all  # Stop all experiments
 
 # List available models
-pidgin info models
+pidgin models
 
-# View standard prompt dimensions
-pidgin info dimensions
+# View models with all details
+pidgin models --all
 
 # Branch from an existing conversation
 pidgin branch conv_abc123 --turn 10
@@ -218,8 +218,8 @@ pidgin run -a claude -b gpt -r 100 -t 50 --name language_study
 # Check progress
 pidgin monitor language_study
 
-# List all experiments
-pidgin list
+# Monitor running experiments
+pidgin monitor
 
 # Stop an experiment
 pidgin stop language_study

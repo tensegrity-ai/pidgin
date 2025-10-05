@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pidgin Model Configuration Schema",
+  "description": "Schema for model definitions and aliases in Pidgin",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "models", "aliases"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of this schema"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this file was generated"
+    },
+    "generator_version": {
+      "type": "string",
+      "description": "Version of the script that generated this file"
+    },
+    "models": {
+      "type": "object",
+      "description": "Map of model_id to model configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/ModelConfig"
+      }
+    },
+    "aliases": {
+      "type": "object",
+      "description": "Map of alias to model_id for quick lookups",
+      "additionalProperties": {
+        "type": "string",
+        "description": "The model_id this alias resolves to"
+      }
+    }
+  },
+  "definitions": {
+    "ModelConfig": {
+      "type": "object",
+      "required": ["provider", "display_name", "context_window"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "google", "xai", "local", "silent", "ollama"],
+          "description": "The provider that serves this model"
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable name for display"
+        },
+        "context_window": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum context window size in tokens"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date",
+          "description": "Date when model was released (YYYY-MM-DD)"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this model is deprecated"
+        },
+        "deprecation_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Date when model will be or was deprecated"
+        },
+        "curated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to include in curated model list"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the model"
+        },
+        "pricing": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Cost per million input tokens in USD"
+            },
+            "output": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Cost per million output tokens in USD"
+            },
+            "cache_read": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "description": "Cost per million cached read tokens in USD (Anthropic)"
+            },
+            "cache_write": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "description": "Cost per million cache write tokens in USD (Anthropic)"
+            }
+          }
+        },
+        "supports_caching": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this model supports prompt caching"
+        },
+        "supports_vision": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this model supports image inputs"
+        },
+        "supports_tools": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this model supports tool/function calling"
+        },
+        "pricing_updated": {
+          "type": "string",
+          "format": "date",
+          "description": "Date when pricing was last verified"
+        },
+        "api_id": {
+          "type": "string",
+          "description": "The exact API identifier if different from model_id"
+        },
+        "openrouter_id": {
+          "type": "string",
+          "description": "OpenRouter identifier for pricing reference"
+        }
+      }
+    }
+  }
+}

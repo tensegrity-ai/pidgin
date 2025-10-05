@@ -200,6 +200,15 @@ class ProviderContextConfig(BaseModel):
     )
 
 
+class OllamaConfig(BaseModel):
+    """Schema for Ollama configuration."""
+
+    auto_start: bool = Field(
+        default=False,
+        description="Automatically start Ollama server without prompting"
+    )
+
+
 class ProvidersConfig(BaseModel):
     """Schema for providers configuration."""
 
@@ -221,5 +230,6 @@ class PidginConfig(BaseModel):
     defaults: DefaultsConfig = Field(default_factory=DefaultsConfig)
     experiments: ExperimentsConfig = Field(default_factory=ExperimentsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
 
     model_config = {"extra": "allow"}  # Allow extra fields for backward compatibility

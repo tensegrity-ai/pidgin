@@ -1,70 +1,26 @@
 """Model configuration and metadata for Pidgin."""
 
+import logging
 from typing import Dict, List, Optional
 
+from .model_loader import load_models as _load_from_json, get_model_config as _get_json_config
 from .model_types import ModelConfig
 
-
-# Import model configurations from providers
-def _load_models() -> Dict[str, ModelConfig]:
-    """Load model configurations from all providers."""
-    models = {}
-
-    # Import provider models - use lazy imports to avoid circular dependencies
-    try:
-        from ..providers.anthropic import ANTHROPIC_MODELS
-
-        models.update(ANTHROPIC_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.openai import OPENAI_MODELS
-
-        models.update(OPENAI_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.google import GOOGLE_MODELS
-
-        models.update(GOOGLE_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.xai import XAI_MODELS
-
-        models.update(XAI_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.local import LOCAL_MODELS
-
-        models.update(LOCAL_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.ollama import OLLAMA_MODELS
-
-        models.update(OLLAMA_MODELS)
-    except ImportError:
-        pass
-
-    try:
-        from ..providers.silent import SILENT_MODELS
-
-        models.update(SILENT_MODELS)
-    except ImportError:
-        pass
-
-    return models
+logger = logging.getLogger(__name__)
 
 
 # Model configurations aggregated from all providers
 _MODELS_CACHE: Optional[Dict[str, ModelConfig]] = None
+
+
+def _load_models() -> Dict[str, ModelConfig]:
+    """Load model configurations."""
+    models = _load_from_json()
+    if models:
+        logger.debug(f"Loaded {len(models)} models")
+    else:
+        logger.warning("No models found")
+    return models
 
 
 def _get_models() -> Dict[str, ModelConfig]:

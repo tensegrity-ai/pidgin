@@ -1,13 +1,30 @@
 """Ollama installation and management helper."""
 
 import asyncio
+import os
 import platform
 import socket
 import subprocess
 
 import click
 
+from ..config.config import Config
 from ..ui.display_utils import DisplayUtils
+
+
+def should_auto_start_ollama() -> bool:
+    """Check if Ollama should auto-start based on config or environment."""
+    # Check environment variable first
+    if os.environ.get("PIDGIN_OLLAMA_AUTO_START", "").lower() in ["true", "1", "yes"]:
+        return True
+
+    # Check config file
+    try:
+        config = Config()
+        return config.get("ollama.auto_start", False)
+    except Exception:
+        # If config loading fails, default to False
+        return False
 
 
 def check_ollama_installed() -> bool:
@@ -45,10 +62,17 @@ def get_install_instructions() -> str:
         return "Visit https://ollama.ai"
 
 
-async def start_ollama_server(console) -> bool:
+async def start_ollama_server(console, prompt_if_needed: bool = True) -> bool:
     """Start Ollama server automatically in background."""
     if check_ollama_running():
         return True
+
+    # Check if we should auto-start
+    if not should_auto_start_ollama() and prompt_if_needed:
+        display = DisplayUtils(console)
+        display.info("Ollama server is not running", use_panel=False)
+        if not click.confirm("Start Ollama server?", default=True):
+            return False
 
     try:
         # Start in background silently
@@ -85,7 +109,7 @@ async def auto_install_ollama(console) -> bool:
     try:
         if system == "Darwin":  # macOS
             # Check if Homebrew is installed
-            brew_check = subprocess.run("which brew", shell=True, capture_output=True)
+            brew_check = subprocess.run(["which", "brew"], capture_output=True)
             if brew_check.returncode != 0:
                 display = DisplayUtils(console)
                 display.warning("Homebrew not found", use_panel=False)
@@ -99,8 +123,7 @@ async def auto_install_ollama(console) -> bool:
 
             # Install with Homebrew (quietly)
             result = subprocess.run(
-                "brew install --quiet ollama",
-                shell=True,
+                ["brew", "install", "--quiet", "ollama"],
                 capture_output=True,  # Capture output to keep it clean
                 text=True,
             )
@@ -116,6 +139,16 @@ async def auto_install_ollama(console) -> bool:
                 return False
 
         elif system == "Linux":
+            display.warning("WARNING: This will download and execute a remote script", use_panel=False)
+            display.dim("   Script URL: https://ollama.ai/install.sh")
+            display.dim("   This installs Ollama to /usr/local/bin/ollama")
+            console.print()
+            
+            if not click.confirm("Continue with remote script execution?", default=False):
+                display.dim("Installation cancelled. Manual install:")
+                display.info("  curl -fsSL https://ollama.ai/install.sh | sh", use_panel=False)
+                return False
+
             display.dim("Downloading and installing Ollama...")
 
             # Download and run the install script in two steps for security
@@ -196,10 +229,10 @@ async def ensure_ollama_ready(console) -> bool:
             display.dim("Using test model instead")
             return False
 
-    # Step 2: Check if running, start automatically if not
+    # Step 2: Check if running, start if needed
     if not check_ollama_running():
-        # Automatically start the server without asking
-        success = await start_ollama_server(console)
+        # Start the server (will check auto-start config)
+        success = await start_ollama_server(console, prompt_if_needed=True)
         if not success:
             display = DisplayUtils(console)
             console.print()  # Add spacing
