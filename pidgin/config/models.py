@@ -3,7 +3,7 @@
 import logging
 from typing import Dict, List, Optional
 
-from .model_loader import load_models as _load_from_json, get_model_config as _get_json_config
+from .model_loader import load_models as _load_from_json
 from .model_types import ModelConfig
 
 logger = logging.getLogger(__name__)

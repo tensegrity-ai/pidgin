@@ -5,8 +5,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..config.models import MODELS
 from ..config.model_types import ModelConfig
+from ..config.models import MODELS
 from ..ui.display_utils import DisplayUtils
 from .constants import MODEL_GLYPHS, PROVIDER_COLORS
 
@@ -36,7 +36,7 @@ def _get_ollama_models():
                     aliases=[name],
                     provider="local",
                     context_window=32768,  # Default context window for most Ollama models
-                    notes=f"Local Ollama model"
+                    notes="Local Ollama model"
                 )
                 ollama_models.append((model_id, config))
     except Exception:
