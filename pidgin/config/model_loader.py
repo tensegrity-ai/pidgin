@@ -25,7 +25,7 @@ class ModelLoader:
 
     def load_models(self) -> Dict[str, ModelConfig]:
         """Load models from JSON, with user override support.
-        
+
         Returns:
             Dictionary mapping model_id to ModelConfig objects
         """
@@ -35,7 +35,7 @@ class ModelLoader:
 
     def get_aliases(self) -> Dict[str, str]:
         """Get alias to model_id mappings.
-        
+
         Returns:
             Dictionary mapping alias to model_id
         """
@@ -45,27 +45,27 @@ class ModelLoader:
 
     def resolve_alias(self, name: str) -> Optional[str]:
         """Resolve an alias to a model ID (case-insensitive).
-        
+
         Args:
             name: Alias or model ID to resolve
-            
+
         Returns:
             Resolved model_id or None if not found
         """
         if self._aliases_cache is None:
             self._load_data()
-        
+
         # Case-insensitive alias lookup
         name_lower = name.lower()
         for alias, model_id in self._aliases_cache.items():
             if alias.lower() == name_lower:
                 return model_id
-        
+
         # Check if it's a direct model ID (case-insensitive)
         for model_id in self._models_cache.keys():
             if model_id.lower() == name_lower:
                 return model_id
-        
+
         return None
 
     def _load_data(self) -> None:
@@ -73,9 +73,9 @@ class ModelLoader:
         # Determine which file to load
         user_models_path = get_data_dir() / "models.json"
         package_models_path = Path(__file__).parent.parent / "data" / "models.json"
-        
+
         json_path = None
-        
+
         # Try user override first (full replacement)
         if user_models_path.exists():
             try:
@@ -83,9 +83,11 @@ class ModelLoader:
                 data = self._load_json_file(user_models_path)
                 logger.info(f"Loaded user model data from {user_models_path}")
             except Exception as e:
-                logger.warning(f"Failed to load user models from {user_models_path}: {e}")
+                logger.warning(
+                    f"Failed to load user models from {user_models_path}: {e}"
+                )
                 json_path = None
-        
+
         # Fall back to package data
         if json_path is None and package_models_path.exists():
             try:
@@ -93,17 +95,19 @@ class ModelLoader:
                 data = self._load_json_file(package_models_path)
                 logger.debug(f"Loaded package model data from {package_models_path}")
             except Exception as e:
-                logger.error(f"Failed to load package models from {package_models_path}: {e}")
+                logger.error(
+                    f"Failed to load package models from {package_models_path}: {e}"
+                )
                 # Fall back to empty data rather than crashing
                 data = self._get_fallback_data()
         elif json_path is None:
             # No JSON files found, use fallback
             logger.warning("No models.json found, using minimal fallback data")
             data = self._get_fallback_data()
-        
+
         # Validate and potentially migrate schema
         data = self._validate_and_migrate(data)
-        
+
         # Convert to ModelConfig objects
         self._models_cache = self._convert_to_model_configs(data)
 
@@ -117,41 +121,41 @@ class ModelLoader:
 
     def _load_json_file(self, path: Path) -> Dict[str, Any]:
         """Load and parse a JSON file.
-        
+
         Args:
             path: Path to the JSON file
-            
+
         Returns:
             Parsed JSON data
-            
+
         Raises:
             Exception: If file cannot be read or parsed
         """
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             return json.load(f)
 
     def _validate_and_migrate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate schema version and migrate if needed.
-        
+
         Args:
             data: Raw JSON data
-            
+
         Returns:
             Validated/migrated data
-            
+
         Raises:
             ValueError: If schema version is unsupported
         """
         schema_version = data.get("schema_version", "0.0.0")
-        
+
         if schema_version in SUPPORTED_SCHEMA_VERSIONS:
             return data
-        
+
         # Check if we can migrate from an older version
         if self._can_migrate(schema_version):
             logger.info(f"Migrating schema from {schema_version}")
             return self._migrate_schema(data, schema_version)
-        
+
         raise ValueError(
             f"Unsupported schema version: {schema_version}. "
             f"Supported versions: {SUPPORTED_SCHEMA_VERSIONS}"
@@ -159,10 +163,10 @@ class ModelLoader:
 
     def _can_migrate(self, version: str) -> bool:
         """Check if we can migrate from a given schema version.
-        
+
         Args:
             version: Schema version to check
-            
+
         Returns:
             True if migration is possible
         """
@@ -170,13 +174,15 @@ class ModelLoader:
         # For now, we don't support any migrations
         return False
 
-    def _migrate_schema(self, data: Dict[str, Any], from_version: str) -> Dict[str, Any]:
+    def _migrate_schema(
+        self, data: Dict[str, Any], from_version: str
+    ) -> Dict[str, Any]:
         """Migrate data from an older schema version.
-        
+
         Args:
             data: Data to migrate
             from_version: Current schema version
-            
+
         Returns:
             Migrated data
         """
@@ -185,23 +191,25 @@ class ModelLoader:
 
     def _convert_to_model_configs(self, data: Dict[str, Any]) -> Dict[str, ModelConfig]:
         """Convert JSON data to ModelConfig objects.
-        
+
         Args:
             data: Validated JSON data
-            
+
         Returns:
             Dictionary of model_id to ModelConfig
         """
         models = {}
         models_data = data.get("models", {})
-        
+
         for model_id, config in models_data.items():
             try:
                 # Map JSON fields to ModelConfig fields
                 model_config = ModelConfig(
                     model_id=model_id,
                     display_name=config.get("display_name", model_id),
-                    aliases=config.get("aliases", []),  # Read aliases directly from model config
+                    aliases=config.get(
+                        "aliases", []
+                    ),  # Read aliases directly from model config
                     provider=config["provider"],
                     context_window=config.get("context_window", 4096),
                     created_at=config.get("created_at"),
@@ -210,24 +218,28 @@ class ModelLoader:
                     input_cost_per_million=config.get("pricing", {}).get("input"),
                     output_cost_per_million=config.get("pricing", {}).get("output"),
                     supports_caching=config.get("supports_caching", False),
-                    cache_read_cost_per_million=config.get("pricing", {}).get("cache_read"),
-                    cache_write_cost_per_million=config.get("pricing", {}).get("cache_write"),
+                    cache_read_cost_per_million=config.get("pricing", {}).get(
+                        "cache_read"
+                    ),
+                    cache_write_cost_per_million=config.get("pricing", {}).get(
+                        "cache_write"
+                    ),
                     pricing_updated=config.get("pricing_updated"),
                     curated=config.get("curated", False),
                     stable=config.get("stable", False),
                 )
-                
+
                 models[model_id] = model_config
             except KeyError as e:
                 logger.warning(f"Skipping model {model_id}: missing required field {e}")
             except Exception as e:
                 logger.warning(f"Skipping model {model_id}: {e}")
-        
+
         return models
 
     def _get_fallback_data(self) -> Dict[str, Any]:
         """Get minimal fallback data when no JSON files are available.
-        
+
         Returns:
             Minimal valid data structure
         """
@@ -240,20 +252,20 @@ class ModelLoader:
                     "provider": "local",
                     "display_name": "Local Test",
                     "context_window": 100000,
-                    "notes": "Test model for development"
+                    "notes": "Test model for development",
                 },
                 "silent:none": {
                     "provider": "silent",
                     "display_name": "Silent",
                     "context_window": 100000,
-                    "notes": "Silent model that returns empty responses"
-                }
+                    "notes": "Silent model that returns empty responses",
+                },
             },
             "aliases": {
                 "test": "local:test",
                 "silent": "silent:none",
-                "none": "silent:none"
-            }
+                "none": "silent:none",
+            },
         }
 
 
@@ -264,7 +276,7 @@ _loader = ModelLoader()
 # Public API functions for backward compatibility
 def load_models() -> Dict[str, ModelConfig]:
     """Load all model configurations.
-    
+
     Returns:
         Dictionary mapping model_id to ModelConfig
     """
@@ -273,7 +285,7 @@ def load_models() -> Dict[str, ModelConfig]:
 
 def get_aliases() -> Dict[str, str]:
     """Get all alias to model_id mappings.
-    
+
     Returns:
         Dictionary mapping alias to model_id
     """
@@ -282,10 +294,10 @@ def get_aliases() -> Dict[str, str]:
 
 def resolve_alias(name: str) -> Optional[str]:
     """Resolve an alias or model name to its model_id.
-    
+
     Args:
         name: Alias or model ID to resolve
-        
+
     Returns:
         Resolved model_id or None if not found
     """
@@ -294,10 +306,10 @@ def resolve_alias(name: str) -> Optional[str]:
 
 def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
     """Get model configuration by ID or alias.
-    
+
     Args:
         model_or_alias: Model ID or alias
-        
+
     Returns:
         ModelConfig or None if not found
     """

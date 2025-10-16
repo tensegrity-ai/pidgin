@@ -19,6 +19,7 @@ def _get_ollama_models():
     ollama_models = []
     try:
         import httpx
+
         response = httpx.get("http://localhost:11434/api/tags", timeout=2.0)
         if response.status_code == 200:
             data = response.json()
@@ -32,11 +33,13 @@ def _get_ollama_models():
                 model_id = f"local:{name}"
                 config = ModelConfig(
                     model_id=model_id,
-                    display_name=f"{name.title()} ({size_gb}GB)" if size_gb else name.title(),
+                    display_name=f"{name.title()} ({size_gb}GB)"
+                    if size_gb
+                    else name.title(),
                     aliases=[name],
                     provider="local",
                     context_window=32768,  # Default context window for most Ollama models
-                    notes="Local Ollama model"
+                    notes="Local Ollama model",
                 )
                 ollama_models.append((model_id, config))
     except Exception:
@@ -46,7 +49,9 @@ def _get_ollama_models():
 
 
 @click.command()
-@click.option('--all', is_flag=True, help='Show all stable production models (curated + stable)')
+@click.option(
+    "--all", is_flag=True, help="Show all stable production models (curated + stable)"
+)
 def models(all):
     """List available AI models.
 
@@ -112,7 +117,7 @@ def models(all):
         for model_id, config in models_list:
             # Strip provider prefix from model_id for cleaner display
             if ":" in model_id and model_id.startswith(f"{provider}:"):
-                display_model_id = model_id[len(provider)+1:]
+                display_model_id = model_id[len(provider) + 1 :]
             else:
                 display_model_id = model_id
 
@@ -133,21 +138,35 @@ def models(all):
                 context = "?"
 
             # Format cost (input/output per million tokens)
-            if config.input_cost_per_million is not None and config.output_cost_per_million is not None:
-                if config.input_cost_per_million == 0 and config.output_cost_per_million == 0:
+            if (
+                config.input_cost_per_million is not None
+                and config.output_cost_per_million is not None
+            ):
+                if (
+                    config.input_cost_per_million == 0
+                    and config.output_cost_per_million == 0
+                ):
                     cost = "free"
                 else:
                     in_cost = config.input_cost_per_million
                     out_cost = config.output_cost_per_million
                     # Use minimal decimal places
                     if in_cost >= 1:
-                        in_str = f"{in_cost:.0f}" if in_cost == int(in_cost) else f"{in_cost:.1f}"
+                        in_str = (
+                            f"{in_cost:.0f}"
+                            if in_cost == int(in_cost)
+                            else f"{in_cost:.1f}"
+                        )
                     else:
-                        in_str = f"{in_cost:.2f}".rstrip('0').rstrip('.')
+                        in_str = f"{in_cost:.2f}".rstrip("0").rstrip(".")
                     if out_cost >= 1:
-                        out_str = f"{out_cost:.0f}" if out_cost == int(out_cost) else f"{out_cost:.1f}"
+                        out_str = (
+                            f"{out_cost:.0f}"
+                            if out_cost == int(out_cost)
+                            else f"{out_cost:.1f}"
+                        )
                     else:
-                        out_str = f"{out_cost:.2f}".rstrip('0').rstrip('.')
+                        out_str = f"{out_cost:.2f}".rstrip("0").rstrip(".")
                     cost = f"${in_str}/${out_str}"
             else:
                 cost = "—"
@@ -161,7 +180,7 @@ def models(all):
             title_align="left",
             border_style=color,
             padding=(0, 1),
-            expand=False
+            expand=False,
         )
         console.print(panel)
     # Show usage instructions
@@ -173,16 +192,23 @@ def models(all):
     if all:
         console.print("[dim]Showing all stable production models.[/dim]")
     else:
-        console.print("[dim]Showing essential models. Use [/dim][cyan]--all[/cyan][dim] for all stable releases.[/dim]")
+        console.print(
+            "[dim]Showing essential models. Use [/dim][cyan]--all[/cyan][dim] for all stable releases.[/dim]"
+        )
 
     # Check if Ollama is available and show helpful message
     if not ollama_models:
         try:
             import httpx
+
             response = httpx.get("http://localhost:11434/api/tags", timeout=0.5)
             if response.status_code != 200:
                 console.print()
-                console.print("[dim]For local models, install Ollama: [/dim][cyan]https://ollama.ai[/cyan]")
+                console.print(
+                    "[dim]For local models, install Ollama: [/dim][cyan]https://ollama.ai[/cyan]"
+                )
         except Exception:
             console.print()
-            console.print("[dim]For local models, start Ollama or install: [/dim][cyan]https://ollama.ai[/cyan]")
+            console.print(
+                "[dim]For local models, start Ollama or install: [/dim][cyan]https://ollama.ai[/cyan]"
+            )

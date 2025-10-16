@@ -139,14 +139,21 @@ async def auto_install_ollama(console) -> bool:
                 return False
 
         elif system == "Linux":
-            display.warning("WARNING: This will download and execute a remote script", use_panel=False)
+            display.warning(
+                "WARNING: This will download and execute a remote script",
+                use_panel=False,
+            )
             display.dim("   Script URL: https://ollama.ai/install.sh")
             display.dim("   This installs Ollama to /usr/local/bin/ollama")
             console.print()
-            
-            if not click.confirm("Continue with remote script execution?", default=False):
+
+            if not click.confirm(
+                "Continue with remote script execution?", default=False
+            ):
                 display.dim("Installation cancelled. Manual install:")
-                display.info("  curl -fsSL https://ollama.ai/install.sh | sh", use_panel=False)
+                display.info(
+                    "  curl -fsSL https://ollama.ai/install.sh | sh", use_panel=False
+                )
                 return False
 
             display.dim("Downloading and installing Ollama...")

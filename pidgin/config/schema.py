@@ -204,8 +204,7 @@ class OllamaConfig(BaseModel):
     """Schema for Ollama configuration."""
 
     auto_start: bool = Field(
-        default=False,
-        description="Automatically start Ollama server without prompting"
+        default=False, description="Automatically start Ollama server without prompting"
     )
 
 

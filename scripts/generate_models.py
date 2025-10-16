@@ -42,7 +42,9 @@ except ImportError:
 SCHEMA_VERSION = "2.0.0"
 
 
-def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 30) -> Optional[dict]:
+def http_get(
+    url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 30
+) -> Optional[dict]:
     req = Request(url)
     if headers:
         for k, v in headers.items():
@@ -51,7 +53,11 @@ def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 
         with urlopen(req, timeout=timeout) as resp:
             data = resp.read()
             ct = resp.headers.get("Content-Type", "")
-            if "application/json" in ct or data.strip().startswith(b"{") or data.strip().startswith(b"["):
+            if (
+                "application/json" in ct
+                or data.strip().startswith(b"{")
+                or data.strip().startswith(b"[")
+            ):
                 return json.loads(data)
             # Non-JSON; return None
             return None
@@ -311,6 +317,7 @@ def derive_capabilities_from_openrouter(raw: dict, defaults: dict) -> dict:
 def build_cost_from_openrouter(pricing: dict) -> Optional[dict]:
     if not isinstance(pricing, dict):
         return None
+
     # Pricing can come as strings per 1M tokens (e.g., { prompt: "3.00", completion: "10.00" })
     # or nested. Normalize and parse floats. Assume USD.
     def parse_amount(val: Any) -> Optional[float]:
@@ -324,8 +331,16 @@ def build_cost_from_openrouter(pricing: dict) -> Optional[dict]:
         except Exception:
             return None
 
-    prompt = pricing.get("prompt") or pricing.get("input") or pricing.get("input_per_1m_tokens")
-    completion = pricing.get("completion") or pricing.get("output") or pricing.get("output_per_1m_tokens")
+    prompt = (
+        pricing.get("prompt")
+        or pricing.get("input")
+        or pricing.get("input_per_1m_tokens")
+    )
+    completion = (
+        pricing.get("completion")
+        or pricing.get("output")
+        or pricing.get("output_per_1m_tokens")
+    )
     cache_read = pricing.get("cache_read") or pricing.get("cache_read_per_1m_tokens")
     cache_write = pricing.get("cache_write") or pricing.get("cache_write_per_1m_tokens")
 
@@ -359,17 +374,29 @@ def model_metadata_defaults() -> dict:
     }
 
 
-def build_model_entry(provider: str, model_id: str, display_name: Optional[str] = None,
-                      or_raw: Optional[dict] = None, or_cost: Optional[dict] = None,
-                      context_len: Optional[int] = None, max_output: Optional[int] = None,
-                      custom_key: Optional[str] = None) -> Tuple[str, dict]:
+def build_model_entry(
+    provider: str,
+    model_id: str,
+    display_name: Optional[str] = None,
+    or_raw: Optional[dict] = None,
+    or_cost: Optional[dict] = None,
+    context_len: Optional[int] = None,
+    max_output: Optional[int] = None,
+    custom_key: Optional[str] = None,
+) -> Tuple[str, dict]:
     provider_norm = normalize_provider_name(provider) or provider
     display = display_name or model_id
-    caps = derive_capabilities_from_openrouter(or_raw or {}, default_capabilities()) if or_raw else default_capabilities()
+    caps = (
+        derive_capabilities_from_openrouter(or_raw or {}, default_capabilities())
+        if or_raw
+        else default_capabilities()
+    )
     params = build_parameters_support(provider_norm)
 
     limits = {
-        "max_context_tokens": int(context_len) if isinstance(context_len, int) else None,
+        "max_context_tokens": int(context_len)
+        if isinstance(context_len, int)
+        else None,
         "max_output_tokens": int(max_output) if isinstance(max_output, int) else None,
         "max_thinking_tokens": None,
     }
@@ -407,8 +434,11 @@ def build_model_entry(provider: str, model_id: str, display_name: Optional[str] 
     return key, entry
 
 
-def merge_models(openrouter_models: List[dict], provider_lists: Dict[str, List[str]],
-                 overrides: Dict[str, Any]) -> Dict[str, dict]:
+def merge_models(
+    openrouter_models: List[dict],
+    provider_lists: Dict[str, List[str]],
+    overrides: Dict[str, Any],
+) -> Dict[str, dict]:
     models: Dict[str, dict] = {}
 
     # First, add local models from overrides
@@ -435,8 +465,15 @@ def merge_models(openrouter_models: List[dict], provider_lists: Dict[str, List[s
         cost = build_cost_from_openrouter(m.get("pricing") or {})
         context_len = m.get("context_length")
         max_output = m.get("max_output_tokens")
-        key, entry = build_model_entry(provider, mid, m.get("display_name") or m.get("name"),
-                                       m.get("raw") or m, cost, context_len, max_output)
+        key, entry = build_model_entry(
+            provider,
+            mid,
+            m.get("display_name") or m.get("name"),
+            m.get("raw") or m,
+            cost,
+            context_len,
+            max_output,
+        )
         models[key] = entry
 
     # Third, from provider APIs: add anything not present
@@ -478,13 +515,31 @@ def merge_models(openrouter_models: List[dict], provider_lists: Dict[str, List[s
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate models.json per models_schema_v2.json")
-    parser.add_argument("-o", "--output", default="models.json", help="Output file path (default: models.json)")
-    parser.add_argument("--overrides", default="model_overrides.yaml",
-                        help="Path to YAML overrides file (default: model_overrides.yaml)")
-    parser.add_argument("--include-providers", nargs="*", default=["openai", "anthropic", "google", "xai"],
-                        help="Providers to include from their APIs (default: openai anthropic google xai)")
-    parser.add_argument("--validate", action="store_true", help="Validate output against local models_schema_v2.json if jsonschema is available")
+    parser = argparse.ArgumentParser(
+        description="Generate models.json per models_schema_v2.json"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="models.json",
+        help="Output file path (default: models.json)",
+    )
+    parser.add_argument(
+        "--overrides",
+        default="model_overrides.yaml",
+        help="Path to YAML overrides file (default: model_overrides.yaml)",
+    )
+    parser.add_argument(
+        "--include-providers",
+        nargs="*",
+        default=["openai", "anthropic", "google", "xai"],
+        help="Providers to include from their APIs (default: openai anthropic google xai)",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate output against local models_schema_v2.json if jsonschema is available",
+    )
     args = parser.parse_args()
 
     # Load overrides
@@ -544,7 +599,9 @@ def main() -> int:
             print("jsonschema not installed; skipping validation", file=sys.stderr)
         else:
             # Load local schema file if present
-            schema_path = os.path.join(os.path.dirname(__file__), "models_schema_v2.json")
+            schema_path = os.path.join(
+                os.path.dirname(__file__), "models_schema_v2.json"
+            )
             if os.path.exists(schema_path):
                 with open(schema_path, "r", encoding="utf-8") as sf:
                     schema = json.load(sf)
@@ -556,7 +613,10 @@ def main() -> int:
                 else:
                     print("Validation passed", file=sys.stderr)
             else:
-                print("Schema file models_schema_v2.json not found; skipping validation", file=sys.stderr)
+                print(
+                    "Schema file models_schema_v2.json not found; skipping validation",
+                    file=sys.stderr,
+                )
 
     return 0
 

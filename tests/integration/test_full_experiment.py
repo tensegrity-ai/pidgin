@@ -166,7 +166,7 @@ async def test_parallel_experiment_execution():
 
         exp_dir = output_dir / "parallel_test"
         manifest_file = exp_dir / "manifest.json"
-        
+
         assert manifest_file.exists(), "Manifest not created"
 
         with open(manifest_file) as f:
@@ -178,24 +178,27 @@ async def test_parallel_experiment_execution():
 
         # Check that each conversation has its own JSONL file
         jsonl_files = list(exp_dir.glob("events_*.jsonl"))
-        assert len(jsonl_files) == 4, f"Expected 4 JSONL files, found {len(jsonl_files)}"
+        assert len(jsonl_files) == 4, (
+            f"Expected 4 JSONL files, found {len(jsonl_files)}"
+        )
 
         # Verify no event interleaving by checking each JSONL file
         for jsonl_file in jsonl_files:
             with open(jsonl_file) as f:
                 lines = f.readlines()
                 assert len(lines) > 0, f"Empty JSONL file: {jsonl_file}"
-                
+
                 # Parse first line to get conversation ID
                 first_event = json.loads(lines[0])
                 expected_conv_id = first_event.get("conversation_id")
-                
+
                 # All events should have the same conversation ID
                 for line in lines:
                     event = json.loads(line)
                     if "conversation_id" in event:
-                        assert event["conversation_id"] == expected_conv_id, \
+                        assert event["conversation_id"] == expected_conv_id, (
                             f"Event interleaving detected in {jsonl_file}"
+                        )
 
         # Verify StateBuilder can read the parallel experiment
         state_builder = StateBuilder()
