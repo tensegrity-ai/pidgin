@@ -4,22 +4,8 @@ import asyncio
 from collections.abc import AsyncGenerator
 from typing import List, Optional
 
-# Import model config classes from central location
-from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .base import Provider
-
-# Local model definitions
-LOCAL_MODELS = {
-    "local:test": ModelConfig(
-        model_id="local:test",
-        display_name="Test",
-        aliases=["test", "local-test"],
-        provider="local",
-        context_window=8192,
-        notes="Deterministic test model for offline development",
-    ),
-}
 
 
 class LocalProvider(Provider):

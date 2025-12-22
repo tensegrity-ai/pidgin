@@ -9,46 +9,6 @@ from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
 
-# Import model config classes from central location
-from ..config.model_types import ModelConfig
-
-# xAI model definitions
-XAI_MODELS = {
-    "grok-3": ModelConfig(
-        model_id="grok-3",
-        display_name="Grok 3",
-        aliases=["grok"],
-        provider="xai",
-        context_window=131072,
-        notes="Latest Grok model with impressive HLE scores",
-        input_cost_per_million=3.00,
-        output_cost_per_million=15.00,
-        pricing_updated="2025-08-04",
-    ),
-    "grok-beta": ModelConfig(
-        model_id="grok-beta",
-        display_name="Grok Beta",
-        aliases=["grok-beta", "xai"],
-        provider="xai",
-        context_window=131072,
-        notes="xAI's flagship model",
-        input_cost_per_million=5.00,
-        output_cost_per_million=15.00,
-        pricing_updated="2025-08-04",
-    ),
-    "grok-2-1212": ModelConfig(
-        model_id="grok-2-1212",
-        display_name="Grok 2 1212",
-        aliases=["grok-2"],
-        provider="xai",
-        context_window=131072,
-        notes="Latest Grok model",
-        input_cost_per_million=2.00,
-        output_cost_per_million=10.00,
-        pricing_updated="2025-08-04",
-    ),
-}
-
 try:
     from openai import AsyncOpenAI
 

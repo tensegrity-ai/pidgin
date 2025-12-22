@@ -14,37 +14,6 @@ from .error_utils import ProviderErrorHandler
 
 logger = logging.getLogger(__name__)
 
-# Import model config classes from central location
-from ..config.model_types import ModelConfig
-
-# Ollama model definitions
-OLLAMA_MODELS = {
-    "local:qwen": ModelConfig(
-        model_id="local:qwen",
-        display_name="Qwen",
-        aliases=["qwen", "qwen-tiny"],
-        provider="local",
-        context_window=32768,
-        notes="Qwen 0.5B via Ollama - requires Ollama running",
-    ),
-    "local:phi": ModelConfig(
-        model_id="local:phi",
-        display_name="Phi",
-        aliases=["phi", "phi3"],
-        provider="local",
-        context_window=4096,
-        notes="Phi-3 via Ollama",
-    ),
-    "local:mistral": ModelConfig(
-        model_id="local:mistral",
-        display_name="Mistral",
-        aliases=["mistral", "mistral7b"],
-        provider="local",
-        context_window=32768,
-        notes="Mistral 7B via Ollama - requires 8GB+ RAM",
-    ),
-}
-
 
 class OllamaProvider(Provider):
     """Provider that uses Ollama for local inference."""

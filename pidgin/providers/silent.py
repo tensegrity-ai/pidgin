@@ -4,22 +4,8 @@
 from collections.abc import AsyncGenerator
 from typing import List, Optional
 
-# Import model config classes from central location
-from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .base import Provider
-
-# Silent model definitions
-SILENT_MODELS = {
-    "silent": ModelConfig(
-        model_id="silent",
-        display_name="Silence",
-        aliases=["void", "quiet", "meditation"],
-        provider="silent",
-        context_window=999999,  # Infinite patience
-        notes="A special model that returns only silence for meditation mode",
-    ),
-}
 
 
 class SilentProvider(Provider):

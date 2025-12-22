@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 
 from anthropic import AsyncAnthropic
 
-from ..config.model_types import ModelConfig
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
 from .base import Provider
@@ -12,116 +11,6 @@ from .error_utils import create_anthropic_error_handler
 from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
-
-# Anthropic model definitions from API response
-ANTHROPIC_MODELS = {
-    "claude-opus-4-20250514": ModelConfig(
-        model_id="claude-opus-4-20250514",
-        display_name="Claude Opus 4",
-        aliases=["opus", "opus4", "claude-opus"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2025-05-22T00:00:00Z",
-        input_cost_per_million=15.00,
-        output_cost_per_million=75.00,
-        supports_caching=True,
-        cache_read_cost_per_million=1.50,
-        cache_write_cost_per_million=18.75,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-sonnet-4-20250514": ModelConfig(
-        model_id="claude-sonnet-4-20250514",
-        display_name="Claude Sonnet 4",
-        aliases=["sonnet", "sonnet4", "claude-sonnet", "claude"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2025-05-22T00:00:00Z",
-        input_cost_per_million=3.00,
-        output_cost_per_million=15.00,
-        supports_caching=True,
-        cache_read_cost_per_million=0.30,
-        cache_write_cost_per_million=3.75,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-3-7-sonnet-20250219": ModelConfig(
-        model_id="claude-3-7-sonnet-20250219",
-        display_name="Claude Sonnet 3.7",
-        aliases=["sonnet3.7", "claude-3.7"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2025-02-24T00:00:00Z",
-    ),
-    "claude-3-5-sonnet-20241022": ModelConfig(
-        model_id="claude-3-5-sonnet-20241022",
-        display_name="Claude Sonnet 3.5 (New)",
-        aliases=["sonnet3.5", "claude-3.5"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2024-10-22T00:00:00Z",
-        input_cost_per_million=3.00,
-        output_cost_per_million=15.00,
-        supports_caching=True,
-        cache_read_cost_per_million=0.30,
-        cache_write_cost_per_million=3.75,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-3-5-haiku-20241022": ModelConfig(
-        model_id="claude-3-5-haiku-20241022",
-        display_name="Claude Haiku 3.5",
-        aliases=["haiku", "haiku3.5", "claude-haiku"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2024-10-22T00:00:00Z",
-        input_cost_per_million=0.80,
-        output_cost_per_million=4.00,
-        supports_caching=True,
-        cache_read_cost_per_million=0.08,
-        cache_write_cost_per_million=1.00,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-3-5-sonnet-20240620": ModelConfig(
-        model_id="claude-3-5-sonnet-20240620",
-        display_name="Claude Sonnet 3.5 (Old)",
-        aliases=["sonnet3.5-old"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2024-06-20T00:00:00Z",
-        input_cost_per_million=3.00,
-        output_cost_per_million=15.00,
-        supports_caching=True,
-        cache_read_cost_per_million=0.30,
-        cache_write_cost_per_million=3.75,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-3-haiku-20240307": ModelConfig(
-        model_id="claude-3-haiku-20240307",
-        display_name="Claude Haiku 3",
-        aliases=["haiku3", "claude-3-haiku"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2024-03-07T00:00:00Z",
-        input_cost_per_million=0.25,
-        output_cost_per_million=1.25,
-        supports_caching=True,
-        cache_read_cost_per_million=0.03,
-        cache_write_cost_per_million=0.30,
-        pricing_updated="2025-08-04",
-    ),
-    "claude-3-opus-20240229": ModelConfig(
-        model_id="claude-3-opus-20240229",
-        display_name="Claude Opus 3",
-        aliases=["opus3", "claude-3-opus"],
-        provider="anthropic",
-        context_window=200000,
-        created_at="2024-02-29T00:00:00Z",
-        input_cost_per_million=15.00,
-        output_cost_per_million=75.00,
-        supports_caching=True,
-        cache_read_cost_per_million=1.50,
-        cache_write_cost_per_million=18.75,
-        pricing_updated="2025-08-04",
-    ),
-}
 
 
 class AnthropicProvider(Provider):
