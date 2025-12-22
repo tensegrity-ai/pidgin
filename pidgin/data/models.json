@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2025-12-22T14:31:41.075029",
+  "generated_at": "2025-12-22T14:52:57.727604",
   "models": {
     "claude-3-haiku": {
       "provider": "anthropic",
@@ -341,7 +341,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "claude-opus-4": {
@@ -512,7 +512,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "claude-sonnet-4": {
@@ -626,7 +626,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "codex-mini": {
@@ -786,7 +786,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gemini-2.5-flash-image": {
@@ -900,7 +900,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gemma-2-27b-it": {
@@ -2017,7 +2017,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gpt-4o-mini": {
@@ -2067,7 +2067,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gpt-5": {
@@ -2357,7 +2357,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gpt-5-nano": {
@@ -2743,7 +2743,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "gpt-5.2-chat": {
@@ -3269,7 +3269,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "grok-4-fast": {
@@ -3741,7 +3741,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "o3-mini": {
@@ -3937,7 +3937,7 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "curated": false
+        "curated": true
       }
     },
     "o4-mini-high": {
