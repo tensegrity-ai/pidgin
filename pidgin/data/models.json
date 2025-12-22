@@ -1,11 +1,3581 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2025-12-22T00:00:00Z",
+  "generated_at": "2025-12-22T14:31:41.075029",
   "models": {
+    "claude-3-haiku": {
+      "provider": "anthropic",
+      "display_name": "Claude 3 Haiku",
+      "aliases": [
+        "haiku3"
+      ],
+      "api": {
+        "model_id": "claude-3-haiku"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.25,
+        "output_per_1m_tokens": 1.25,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-3-opus": {
+      "provider": "anthropic",
+      "display_name": "Claude 3 Opus",
+      "aliases": [
+        "opus3"
+      ],
+      "api": {
+        "model_id": "claude-3-opus"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 15.0,
+        "output_per_1m_tokens": 75.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-3.5-haiku": {
+      "provider": "anthropic",
+      "display_name": "Claude 3.5 Haiku",
+      "aliases": [
+        "haiku35"
+      ],
+      "api": {
+        "model_id": "claude-3.5-haiku"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.7999999999999999,
+        "output_per_1m_tokens": 4.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-3.5-sonnet": {
+      "provider": "anthropic",
+      "display_name": "Claude 3.5 Sonnet",
+      "aliases": [
+        "sonnet35"
+      ],
+      "api": {
+        "model_id": "claude-3.5-sonnet"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 6.0,
+        "output_per_1m_tokens": 30.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-3.7-sonnet": {
+      "provider": "anthropic",
+      "display_name": "Claude 3.7 Sonnet",
+      "aliases": [
+        "sonnet37"
+      ],
+      "api": {
+        "model_id": "claude-3.7-sonnet"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 15.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-haiku-4.5": {
+      "provider": "anthropic",
+      "display_name": "Claude Haiku 4.5",
+      "aliases": [
+        "haiku"
+      ],
+      "api": {
+        "model_id": "claude-haiku-4.5"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.0,
+        "output_per_1m_tokens": 5.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-opus-4": {
+      "provider": "anthropic",
+      "display_name": "Claude Opus 4",
+      "aliases": [
+        "opus4"
+      ],
+      "api": {
+        "model_id": "claude-opus-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 15.0,
+        "output_per_1m_tokens": 75.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-opus-4.1": {
+      "provider": "anthropic",
+      "display_name": "Claude Opus 4.1",
+      "aliases": [
+        "opus41"
+      ],
+      "api": {
+        "model_id": "claude-opus-4.1"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 15.0,
+        "output_per_1m_tokens": 75.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-opus-4.5": {
+      "provider": "anthropic",
+      "display_name": "Claude Opus 4.5",
+      "aliases": [
+        "opus"
+      ],
+      "api": {
+        "model_id": "claude-opus-4.5"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 5.0,
+        "output_per_1m_tokens": 25.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-sonnet-4": {
+      "provider": "anthropic",
+      "display_name": "Claude Sonnet 4",
+      "aliases": [
+        "sonnet4"
+      ],
+      "api": {
+        "model_id": "claude-sonnet-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 15.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "claude-sonnet-4.5": {
+      "provider": "anthropic",
+      "display_name": "Claude Sonnet 4.5",
+      "aliases": [
+        "sonnet"
+      ],
+      "api": {
+        "model_id": "claude-sonnet-4.5"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": true
+      },
+      "limits": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            0,
+            500
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 15.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "codex-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: Codex Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "codex-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.5,
+        "output_per_1m_tokens": 6.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemini-2.0-flash-001": {
+      "provider": "google",
+      "display_name": "Gemini 2.0 Flash",
+      "aliases": [
+        "flash2"
+      ],
+      "api": {
+        "model_id": "gemini-2.0-flash-001"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1048576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.09999999999999999,
+        "output_per_1m_tokens": 0.39999999999999997,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemini-2.5-flash": {
+      "provider": "google",
+      "display_name": "Gemini 2.5 Flash",
+      "aliases": [],
+      "api": {
+        "model_id": "gemini-2.5-flash"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1048576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.3,
+        "output_per_1m_tokens": 2.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemini-2.5-flash-image": {
+      "provider": "google",
+      "display_name": "Gemini 2.5 Flash Image (Nano Banana)",
+      "aliases": [
+        "flash"
+      ],
+      "api": {
+        "model_id": "gemini-2.5-flash-image"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.3,
+        "output_per_1m_tokens": 2.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemini-2.5-pro": {
+      "provider": "google",
+      "display_name": "Gemini 2.5 Pro",
+      "aliases": [
+        "gemini"
+      ],
+      "api": {
+        "model_id": "gemini-2.5-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1048576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-2-27b-it": {
+      "provider": "google",
+      "display_name": "Gemma 2 27B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-2-27b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8192,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.65,
+        "output_per_1m_tokens": 0.65,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-2-9b-it": {
+      "provider": "google",
+      "display_name": "Gemma 2 9B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-2-9b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8192,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.03,
+        "output_per_1m_tokens": 0.09,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-12b-it": {
+      "provider": "google",
+      "display_name": "Gemma 3 12B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-12b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.03,
+        "output_per_1m_tokens": 0.09999999999999999,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-12b-it:free": {
+      "provider": "google",
+      "display_name": "Gemma 3 12B (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-12b-it:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-27b-it": {
+      "provider": "google",
+      "display_name": "Gemma 3 27B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-27b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 96000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.04,
+        "output_per_1m_tokens": 0.15,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-27b-it:free": {
+      "provider": "google",
+      "display_name": "Gemma 3 27B (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-27b-it:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-4b-it": {
+      "provider": "google",
+      "display_name": "Gemma 3 4B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-4b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 96000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.01703012,
+        "output_per_1m_tokens": 0.0681536,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3-4b-it:free": {
+      "provider": "google",
+      "display_name": "Gemma 3 4B (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3-4b-it:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3n-e2b-it:free": {
+      "provider": "google",
+      "display_name": "Gemma 3n 2B (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3n-e2b-it:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8192,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3n-e4b-it": {
+      "provider": "google",
+      "display_name": "Gemma 3n 4B",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3n-e4b-it"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.02,
+        "output_per_1m_tokens": 0.04,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gemma-3n-e4b-it:free": {
+      "provider": "google",
+      "display_name": "Gemma 3n 4B (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gemma-3n-e4b-it:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8192,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            40
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-3.5-turbo": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-3.5 Turbo",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-3.5-turbo"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 16385,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.5,
+        "output_per_1m_tokens": 1.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-3.5-turbo-0613": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-3.5 Turbo (older v0613)",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-3.5-turbo-0613"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 4095,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.0,
+        "output_per_1m_tokens": 2.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-3.5-turbo-16k": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-3.5 Turbo 16k",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-3.5-turbo-16k"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 16385,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 4.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-3.5-turbo-instruct": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-3.5 Turbo Instruct",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-3.5-turbo-instruct"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 4095,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.5,
+        "output_per_1m_tokens": 2.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8191,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 30.0,
+        "output_per_1m_tokens": 60.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4-0314": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4 (older v0314)",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-4-0314"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 8191,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 30.0,
+        "output_per_1m_tokens": 60.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4-turbo": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4 Turbo",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-4-turbo"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 10.0,
+        "output_per_1m_tokens": 30.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4.1": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4.1",
+      "aliases": [
+        "gpt41"
+      ],
+      "api": {
+        "model_id": "gpt-4.1"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1047576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2.0,
+        "output_per_1m_tokens": 8.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4.1-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4.1 Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-4.1-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1047576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.39999999999999997,
+        "output_per_1m_tokens": 1.5999999999999999,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4.1-nano": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4.1 Nano",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-4.1-nano"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1047576,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.09999999999999999,
+        "output_per_1m_tokens": 0.39999999999999997,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4o": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4o",
+      "aliases": [
+        "4o"
+      ],
+      "api": {
+        "model_id": "gpt-4o"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2.5,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-4o-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-4o-mini",
+      "aliases": [
+        "4o-mini"
+      ],
+      "api": {
+        "model_id": "gpt-4o-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.15,
+        "output_per_1m_tokens": 0.6,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5",
+      "aliases": [
+        "gpt5"
+      ],
+      "api": {
+        "model_id": "gpt-5"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-chat": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Chat",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-chat"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-codex": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Codex",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-codex"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-image": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Image",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-image"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 10.0,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-image-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Image Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-image-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2.5,
+        "output_per_1m_tokens": 2.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.25,
+        "output_per_1m_tokens": 2.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-nano": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Nano",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-nano"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.049999999999999996,
+        "output_per_1m_tokens": 0.39999999999999997,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5 Pro",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 15.0,
+        "output_per_1m_tokens": 120.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.1": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.1",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.1"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.1-chat": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.1 Chat",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.1-chat"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.1-codex": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.1-Codex",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.1-codex"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.1-codex-max": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.1-Codex-Max",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.1-codex-max"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.25,
+        "output_per_1m_tokens": 10.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.1-codex-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.1-Codex-Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.1-codex-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.25,
+        "output_per_1m_tokens": 2.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.2": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.2",
+      "aliases": [
+        "gpt"
+      ],
+      "api": {
+        "model_id": "gpt-5.2"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.75,
+        "output_per_1m_tokens": 14.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.2-chat": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.2 Chat",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.2-chat"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.75,
+        "output_per_1m_tokens": 14.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-5.2-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.2 Pro",
+      "aliases": [
+        "gpt-pro"
+      ],
+      "api": {
+        "model_id": "gpt-5.2-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 21.0,
+        "output_per_1m_tokens": 168.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-120b": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-120b",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-120b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.039,
+        "output_per_1m_tokens": 0.19,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-120b:exacto": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-120b (exacto)",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-120b:exacto"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.039,
+        "output_per_1m_tokens": 0.19,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-120b:free": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-120b (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-120b:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-20b": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-20b",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-20b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.03,
+        "output_per_1m_tokens": 0.14,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-20b:free": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-20b (free)",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-20b:free"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "gpt-oss-safeguard-20b": {
+      "provider": "openai",
+      "display_name": "OpenAI: gpt-oss-safeguard-20b",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-oss-safeguard-20b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.075,
+        "output_per_1m_tokens": 0.3,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-3": {
+      "provider": "xai",
+      "display_name": "xAI: Grok 3",
+      "aliases": [
+        "grok3"
+      ],
+      "api": {
+        "model_id": "grok-3"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 15.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-3-mini": {
+      "provider": "xai",
+      "display_name": "xAI: Grok 3 Mini",
+      "aliases": [],
+      "api": {
+        "model_id": "grok-3-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.3,
+        "output_per_1m_tokens": 0.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-4": {
+      "provider": "xai",
+      "display_name": "xAI: Grok 4",
+      "aliases": [
+        "grok"
+      ],
+      "api": {
+        "model_id": "grok-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 256000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3.0,
+        "output_per_1m_tokens": 15.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-4-fast": {
+      "provider": "xai",
+      "display_name": "xAI: Grok 4 Fast",
+      "aliases": [],
+      "api": {
+        "model_id": "grok-4-fast"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 2000000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.19999999999999998,
+        "output_per_1m_tokens": 0.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-4.1-fast": {
+      "provider": "xai",
+      "display_name": "xAI: Grok 4.1 Fast",
+      "aliases": [],
+      "api": {
+        "model_id": "grok-4.1-fast"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 2000000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.19999999999999998,
+        "output_per_1m_tokens": 0.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "grok-code-fast-1": {
+      "provider": "xai",
+      "display_name": "xAI: Grok Code Fast 1",
+      "aliases": [],
+      "api": {
+        "model_id": "grok-code-fast-1"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 256000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.19999999999999998,
+        "output_per_1m_tokens": 1.5,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "local:gpt-oss-120b": {
+      "provider": "ollama",
+      "display_name": "GPT-OSS 120B",
+      "aliases": [],
+      "api": {
+        "model_id": "local:gpt-oss-120b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "\u26a0\ufe0f Experimental GPT-OSS model, needs 128GB+ RAM"
+      }
+    },
+    "local:gpt-oss-26b": {
+      "provider": "ollama",
+      "display_name": "GPT-OSS 26B",
+      "aliases": [],
+      "api": {
+        "model_id": "local:gpt-oss-26b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "Experimental GPT-OSS model, needs 32GB+ RAM"
+      }
+    },
+    "local:gpt-oss-9b": {
+      "provider": "ollama",
+      "display_name": "GPT-OSS 9B",
+      "aliases": [],
+      "api": {
+        "model_id": "local:gpt-oss-9b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 131072
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "Experimental GPT-OSS model, needs 16GB+ RAM"
+      }
+    },
+    "local:mistral": {
+      "provider": "ollama",
+      "display_name": "Mistral 7B",
+      "aliases": [],
+      "api": {
+        "model_id": "local:mistral"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "Popular open model, needs 8GB+ RAM"
+      }
+    },
+    "local:phi": {
+      "provider": "ollama",
+      "display_name": "Phi-3",
+      "aliases": [],
+      "api": {
+        "model_id": "local:phi"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "Balanced size/performance for local use"
+      }
+    },
+    "local:qwen": {
+      "provider": "ollama",
+      "display_name": "Qwen 0.5B",
+      "aliases": [],
+      "api": {
+        "model_id": "local:qwen"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false,
+        "notes": "Smallest practical Ollama model, very fast"
+      }
+    },
     "local:test": {
       "provider": "local",
       "display_name": "Local Test",
-      "aliases": ["test"],
+      "aliases": [],
       "api": {
         "model_id": "local:test"
       },
@@ -24,18 +3594,409 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "notes": "Deterministic test model for offline development"
+        "curated": false,
+        "notes": "Test model for development"
+      }
+    },
+    "o1": {
+      "provider": "openai",
+      "display_name": "OpenAI: o1",
+      "aliases": [],
+      "api": {
+        "model_id": "o1"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 15.0,
+        "output_per_1m_tokens": 60.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o1-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: o1-pro",
+      "aliases": [],
+      "api": {
+        "model_id": "o1-pro"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 150.0,
+        "output_per_1m_tokens": 600.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o3": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3",
+      "aliases": [
+        "o3"
+      ],
+      "api": {
+        "model_id": "o3"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2.0,
+        "output_per_1m_tokens": 8.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o3-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3 Mini",
+      "aliases": [
+        "o3-mini"
+      ],
+      "api": {
+        "model_id": "o3-mini"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1,
+        "output_per_1m_tokens": 4.4,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o3-mini-high": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3 Mini High",
+      "aliases": [],
+      "api": {
+        "model_id": "o3-mini-high"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1,
+        "output_per_1m_tokens": 4.4,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o3-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3 Pro",
+      "aliases": [],
+      "api": {
+        "model_id": "o3-pro"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 20.0,
+        "output_per_1m_tokens": 80.0,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o4-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: o4 Mini",
+      "aliases": [
+        "o4-mini"
+      ],
+      "api": {
+        "model_id": "o4-mini"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1,
+        "output_per_1m_tokens": 4.4,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
+      }
+    },
+    "o4-mini-high": {
+      "provider": "openai",
+      "display_name": "OpenAI: o4 Mini High",
+      "aliases": [],
+      "api": {
+        "model_id": "o4-mini-high"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1,
+        "output_per_1m_tokens": 4.4,
+        "currency": "USD"
+      },
+      "metadata": {
+        "status": "available",
+        "stable": true,
+        "curated": false
       }
     },
     "silent:none": {
       "provider": "silent",
       "display_name": "Silent",
-      "aliases": ["silent", "none", "void", "quiet", "meditation"],
+      "aliases": [],
       "api": {
         "model_id": "silent:none"
       },
       "capabilities": {
-        "streaming": false,
+        "streaming": true,
         "vision": false,
         "tool_calling": false,
         "system_messages": true,
@@ -49,7 +4010,8 @@
       "metadata": {
         "status": "available",
         "stable": true,
-        "notes": "Returns empty responses for meditation mode"
+        "curated": false,
+        "notes": "Silent model that returns empty responses"
       }
     }
   }
