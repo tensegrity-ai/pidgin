@@ -27,14 +27,16 @@ async def build_provider(model_id: str, temperature: Optional[float] = None):
         raise ValueError(f"Unknown model: {model_id}")
 
     # Create appropriate provider (without temperature)
+    # Use api.model_id which is the actual API model identifier
+    api_model_id = model_config.api.model_id
     if model_config.provider == "openai":
-        return OpenAIProvider(model=model_config.model_id)
+        return OpenAIProvider(model=api_model_id)
     elif model_config.provider == "anthropic":
-        return AnthropicProvider(model=model_config.model_id)
+        return AnthropicProvider(model=api_model_id)
     elif model_config.provider == "google":
-        return GoogleProvider(model=model_config.model_id)
+        return GoogleProvider(model=api_model_id)
     elif model_config.provider == "xai":
-        return xAIProvider(model=model_config.model_id)
+        return xAIProvider(model=api_model_id)
     elif model_config.provider == "local":
         if model_config.model_id == "local:test":
             return LocalProvider(model_name="test")
