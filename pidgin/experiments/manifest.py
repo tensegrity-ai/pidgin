@@ -171,6 +171,36 @@ class ManifestManager:
 
             self._write_atomic(manifest)
 
+    def update_thinking_tokens(
+        self,
+        conversation_id: str,
+        agent_id: str,
+        thinking_tokens: int,
+    ) -> None:
+        """Update thinking token usage for a conversation.
+
+        Args:
+            conversation_id: Conversation ID
+            agent_id: Either "agent_a" or "agent_b"
+            thinking_tokens: Number of thinking tokens used
+        """
+        with self._lock:
+            manifest = self._read()
+
+            if conversation_id not in manifest["conversations"]:
+                return
+
+            conv = manifest["conversations"][conversation_id]
+
+            # Ensure thinking_tokens field exists
+            if "thinking_tokens" not in conv["token_usage"][agent_id]:
+                conv["token_usage"][agent_id]["thinking_tokens"] = 0
+
+            # Update agent's thinking token usage
+            conv["token_usage"][agent_id]["thinking_tokens"] += thinking_tokens
+
+            self._write_atomic(manifest)
+
     def update_conversation_status(
         self, conversation_id: str, status: str, completed_count: int, failed_count: int
     ) -> None:

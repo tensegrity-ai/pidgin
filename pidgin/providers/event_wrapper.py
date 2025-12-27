@@ -9,11 +9,12 @@ from ..core.events import (
     APIErrorEvent,
     MessageCompleteEvent,
     MessageRequestEvent,
+    ThinkingCompleteEvent,
     TokenUsageEvent,
 )
 from ..core.router import DirectRouter  # For message transformation
 from ..core.types import Message
-from .base import Provider
+from .base import Provider, ResponseChunk
 from .token_tracker import GlobalTokenTracker
 from .token_utils import estimate_messages_tokens, estimate_tokens
 
@@ -79,7 +80,10 @@ class EventAwareProvider:
             )
 
             # Stream response and buffer chunks (no longer emitting chunk events)
-            chunks = []
+            thinking_chunks = []
+            response_chunks = []
+            thinking_start = None
+
             # Add timeout to prevent hanging
             import asyncio
 
@@ -88,10 +92,24 @@ class EventAwareProvider:
             try:
                 # asyncio.timeout is Python 3.11+, use wait_for for compatibility
                 async def _get_response():
+                    nonlocal thinking_start
                     async for chunk in self.provider.stream_response(
-                        agent_messages, temperature=event.temperature
+                        agent_messages,
+                        temperature=event.temperature,
+                        thinking_enabled=event.thinking_enabled,
+                        thinking_budget=event.thinking_budget,
                     ):
-                        chunks.append(chunk)
+                        # Handle ResponseChunk objects
+                        if isinstance(chunk, ResponseChunk):
+                            if chunk.chunk_type == "thinking":
+                                if not thinking_chunks:
+                                    thinking_start = time.time()
+                                thinking_chunks.append(chunk.content)
+                            else:
+                                response_chunks.append(chunk.content)
+                        else:
+                            # Backwards compatibility: treat raw strings as response
+                            response_chunks.append(chunk)
 
                 await asyncio.wait_for(_get_response(), timeout=timeout_seconds)
             except asyncio.TimeoutError:
@@ -102,8 +120,35 @@ class EventAwareProvider:
                     f"Provider response timed out after {timeout_seconds} seconds"
                 )
 
+            # Emit thinking complete event if we have thinking content
+            if thinking_chunks:
+                thinking_content = "".join(thinking_chunks)
+                thinking_duration_ms = (
+                    int((time.time() - thinking_start) * 1000)
+                    if thinking_start
+                    else None
+                )
+
+                # Estimate thinking tokens (actual count may come from API usage data)
+                thinking_tokens = estimate_tokens(
+                    thinking_content,
+                    getattr(self.provider, "model_name", None)
+                    or getattr(self.provider, "model", None),
+                )
+
+                await self.bus.emit(
+                    ThinkingCompleteEvent(
+                        conversation_id=event.conversation_id,
+                        turn_number=event.turn_number,
+                        agent_id=self.agent_id,
+                        thinking_content=thinking_content,
+                        thinking_tokens=thinking_tokens,
+                        duration_ms=thinking_duration_ms,
+                    )
+                )
+
             # Build complete message
-            content = "".join(chunks)
+            content = "".join(response_chunks)
             message = Message(
                 role="assistant",
                 content=content,

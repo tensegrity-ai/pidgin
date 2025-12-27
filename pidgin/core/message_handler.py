@@ -175,6 +175,8 @@ class MessageHandler:
                 turn_number=turn_number,
                 conversation_history=conversation_history.copy(),
                 temperature=agent.temperature,
+                thinking_enabled=agent.thinking_enabled,
+                thinking_budget=agent.thinking_budget,
             )
         )
 

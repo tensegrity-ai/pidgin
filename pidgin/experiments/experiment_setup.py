@@ -126,6 +126,11 @@ class ExperimentSetup:
 
         logging.info("Providers created successfully")
 
+        # Resolve thinking settings (think is global, think_a/think_b are overrides)
+        # If think_a is explicitly set (True or False), use it; otherwise fall back to think
+        thinking_a = config.think_a if config.think_a else config.think
+        thinking_b = config.think_b if config.think_b else config.think
+
         # Create agents with display names from model config
         agent_a = Agent(
             id="agent_a",
@@ -133,6 +138,8 @@ class ExperimentSetup:
             model_display_name=model_a_config.display_name,
             temperature=config.temperature_a,
             display_name=model_a_config.display_name,  # Use the model's display name
+            thinking_enabled=thinking_a if thinking_a else None,
+            thinking_budget=config.think_budget if thinking_a else None,
         )
 
         agent_b = Agent(
@@ -141,6 +148,8 @@ class ExperimentSetup:
             model_display_name=model_b_config.display_name,
             temperature=config.temperature_b,
             display_name=model_b_config.display_name,  # Use the model's display name
+            thinking_enabled=thinking_b if thinking_b else None,
+            thinking_budget=config.think_budget if thinking_b else None,
         )
 
         agents = {"agent_a": agent_a, "agent_b": agent_b}

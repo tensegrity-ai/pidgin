@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider
+from .base import Provider, ResponseChunk
 from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,13 @@ class xAIProvider(Provider):
         self.error_handler = create_xai_error_handler()
 
     async def stream_response(
-        self, messages: List[Message], temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]:
+        self,
+        messages: List[Message],
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]:
+        # Note: thinking_enabled and thinking_budget are not supported by xAI
         # Apply context truncation
         from .context_utils import apply_context_truncation
 
@@ -82,7 +87,7 @@ class xAIProvider(Provider):
                     and len(chunk.choices) > 0
                     and chunk.choices[0].delta.content
                 ):
-                    yield chunk.choices[0].delta.content
+                    yield ResponseChunk(chunk.choices[0].delta.content, "response")
 
                 # Check for usage data in the final chunk
                 if hasattr(chunk, "usage") and chunk.usage:
@@ -100,13 +105,13 @@ class xAIProvider(Provider):
 
         # Use retry wrapper with exponential backoff
         try:
-            async for chunk in retry_with_exponential_backoff(
+            async for response_chunk in retry_with_exponential_backoff(
                 _make_api_call,
                 max_retries=3,
                 base_delay=1.0,
                 retry_on=(Exception,),  # Retry on all exceptions
             ):
-                yield chunk
+                yield response_chunk
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)

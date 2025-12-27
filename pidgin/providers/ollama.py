@@ -9,7 +9,7 @@ from typing import List, Optional
 import aiohttp
 
 from ..core.types import Message
-from .base import Provider
+from .base import Provider, ResponseChunk
 from .error_utils import ProviderErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,14 @@ class OllamaProvider(Provider):
             raise RuntimeError(f"Cannot connect to Ollama: {e}")
 
     async def stream_response(
-        self, messages: List[Message], temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]:
+        self,
+        messages: List[Message],
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response from Ollama model."""
+        # Note: thinking_enabled and thinking_budget are not supported by Ollama
 
         # Apply context truncation
         from .context_utils import apply_context_truncation
@@ -99,12 +104,12 @@ class OllamaProvider(Provider):
                         # Model not found error
                         error = Exception("model_not_found")
                         friendly_msg = self.error_handler.get_friendly_error(error)
-                        yield f"Error: {friendly_msg}"
+                        yield ResponseChunk(f"Error: {friendly_msg}", "response")
                         return
 
                     elif response.status != 200:
                         error_text = await response.text()
-                        yield f"Error: Ollama returned status {response.status}: {error_text}"
+                        yield ResponseChunk(f"Error: Ollama returned status {response.status}: {error_text}", "response")
                         return
 
                     async for line in response.content:
@@ -112,7 +117,7 @@ class OllamaProvider(Provider):
                             try:
                                 chunk = json.loads(line)
                                 if "message" in chunk and "content" in chunk["message"]:
-                                    yield chunk["message"]["content"]
+                                    yield ResponseChunk(chunk["message"]["content"], "response")
                             except (json.JSONDecodeError, ValueError, TypeError):
                                 # Skip malformed JSON lines
                                 pass
@@ -122,7 +127,7 @@ class OllamaProvider(Provider):
             friendly_msg = self.error_handler.get_friendly_error(error)
             if self.error_handler.should_suppress_traceback(error):
                 logger.info(f"Expected error: {friendly_msg}")
-            yield f"Error: {friendly_msg}"
+            yield ResponseChunk(f"Error: {friendly_msg}", "response")
         except Exception as e:
             # Other errors
             friendly_msg = self.error_handler.get_friendly_error(e)
@@ -130,4 +135,4 @@ class OllamaProvider(Provider):
                 logger.info(f"Expected error: {friendly_msg}")
             else:
                 logger.error(f"Unexpected error: {e!s}", exc_info=True)
-            yield f"Error: {friendly_msg}"
+            yield ResponseChunk(f"Error: {friendly_msg}", "response")

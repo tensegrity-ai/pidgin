@@ -25,6 +25,12 @@ class ExperimentConfig:
     temperature_a: Optional[float] = None  # Override for model A
     temperature_b: Optional[float] = None  # Override for model B
 
+    # Extended thinking settings (matching CLI)
+    think: bool = False  # Enable thinking for both agents
+    think_a: bool = False  # Override for agent A
+    think_b: bool = False  # Override for agent B
+    think_budget: Optional[int] = None  # Max thinking tokens (default: 10000)
+
     # Awareness levels (matching CLI)
     awareness: str = "basic"  # Default for both agents
     awareness_a: Optional[str] = None  # Override for agent A

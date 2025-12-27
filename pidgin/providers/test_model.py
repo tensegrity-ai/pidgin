@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from typing import List, Optional
 
 from ..core.types import Message
-from .base import Provider
+from .base import Provider, ResponseChunk
 
 
 class LocalTestModel(Provider):
@@ -49,13 +49,19 @@ class LocalTestModel(Provider):
         }
 
     async def stream_response(
-        self, messages: List[Message], temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]:
+        self,
+        messages: List[Message],
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response chunks from the model.
 
         Args:
             messages: Conversation history
             temperature: Temperature setting (ignored for deterministic model)
+            thinking_enabled: Thinking mode (ignored for test model)
+            thinking_budget: Thinking budget (ignored for test model)
 
         Yields:
             Response chunks
@@ -64,7 +70,7 @@ class LocalTestModel(Provider):
         response = await self.generate(messages, temperature)
 
         # Yield the response as a single chunk (simulating streaming)
-        yield response
+        yield ResponseChunk(response, "response")
 
     async def generate(
         self, messages: List[Message], temperature: Optional[float] = None

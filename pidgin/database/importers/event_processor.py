@@ -6,6 +6,7 @@ from typing import Any, Dict, Tuple
 from ...core.events import (
     ConversationStartEvent,
     MessageCompleteEvent,
+    ThinkingCompleteEvent,
     TurnCompleteEvent,
 )
 from ...io.event_deserializer import EventDeserializer
@@ -67,6 +68,7 @@ class EventProcessor:
                     "turns": {},
                     "config": {},
                     "messages": {},
+                    "thinking": {},  # Track thinking traces
                 }
 
             conv = conversations[conversation_id]
@@ -98,6 +100,16 @@ class EventProcessor:
                     "completion_tokens": event.completion_tokens,
                     "total_tokens": event.total_tokens,
                     "duration_ms": event.duration_ms,
+                }
+
+            elif isinstance(event, ThinkingCompleteEvent):
+                # Store thinking trace keyed by (turn_number, agent_id)
+                key = (event.turn_number, event.agent_id)
+                conv["thinking"][key] = {
+                    "thinking_content": event.thinking_content,
+                    "thinking_tokens": event.thinking_tokens,
+                    "duration_ms": event.duration_ms,
+                    "timestamp": getattr(event, "timestamp", None),
                 }
 
         # Calculate metrics for each conversation
@@ -147,6 +159,14 @@ class EventProcessor:
                 self.metrics_importer.insert_turn_metrics(
                     conversation_id, turn_num, turn_data, flat_metrics
                 )
+
+                # Insert thinking traces for this turn if any
+                thinking_data = conv_data.get("thinking", {})
+                for (t_num, agent_id), thinking in thinking_data.items():
+                    if t_num == turn_num:
+                        self.conversation_importer.insert_thinking_trace(
+                            conversation_id, turn_num, agent_id, thinking
+                        )
 
                 turns_processed += 1
 

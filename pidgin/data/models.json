@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2025-12-22T16:12:39.835542",
+  "generated_at": "2025-12-23T09:33:42.330397",
   "models": {
     "claude-3-haiku": {
       "provider": "anthropic",
@@ -130,7 +130,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -187,7 +187,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -244,7 +244,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -301,7 +301,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -358,7 +358,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -415,7 +415,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": true,
         "prompt_caching": true
       },
@@ -472,7 +472,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": true,
         "prompt_caching": true
       },
@@ -529,7 +529,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": false,
         "prompt_caching": true
       },
@@ -586,7 +586,7 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": true,
         "prompt_caching": true
       },

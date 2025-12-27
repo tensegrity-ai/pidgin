@@ -43,6 +43,7 @@ class SchemaLoader:
             "turn_metrics",
             "conversation_turns",  # Wide-table schema
             "messages",
+            "thinking_traces",  # Extended thinking/reasoning traces
             "token_usage",
             "context_truncations",
             # Views are optional and created separately
@@ -70,6 +71,7 @@ class SchemaLoader:
         DROP VIEW IF EXISTS experiment_dashboard CASCADE;
         DROP TABLE IF EXISTS context_truncations CASCADE;
         DROP TABLE IF EXISTS token_usage CASCADE;
+        DROP TABLE IF EXISTS thinking_traces CASCADE;
         DROP TABLE IF EXISTS messages CASCADE;
         DROP TABLE IF EXISTS turn_metrics CASCADE;
         DROP TABLE IF EXISTS conversation_turns CASCADE;

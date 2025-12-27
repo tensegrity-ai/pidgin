@@ -16,6 +16,10 @@ class AgentConfig:
     awareness: str = "basic"
     awareness_a: Optional[str] = None
     awareness_b: Optional[str] = None
+    think: bool = False
+    think_a: bool = False
+    think_b: bool = False
+    think_budget: Optional[int] = None
 
 
 @dataclass
@@ -90,6 +94,10 @@ class RunConfig:
                 awareness=kwargs.get("awareness", "basic"),
                 awareness_a=kwargs.get("awareness_a"),
                 awareness_b=kwargs.get("awareness_b"),
+                think=kwargs.get("think", False),
+                think_a=kwargs.get("think_a", False),
+                think_b=kwargs.get("think_b", False),
+                think_budget=kwargs.get("think_budget"),
             ),
             conversation=ConversationConfig(
                 prompt=kwargs.get("prompt"),

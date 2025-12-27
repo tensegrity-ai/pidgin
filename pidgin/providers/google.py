@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider
+from .base import Provider, ResponseChunk
 from .error_utils import create_google_error_handler
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,13 @@ class GoogleProvider(Provider):
         self.error_handler = create_google_error_handler()
 
     async def stream_response(
-        self, messages: List[Message], temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]:
+        self,
+        messages: List[Message],
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]:
+        # Note: thinking_enabled and thinking_budget are not yet supported by Google
         # Apply context truncation
         from .context_utils import apply_context_truncation
 
@@ -96,7 +101,7 @@ class GoogleProvider(Provider):
                 last_chunk = None
                 for chunk in response:
                     if chunk.text:
-                        yield chunk.text
+                        yield ResponseChunk(chunk.text, "response")
                     last_chunk = chunk
 
                 # Try to extract usage data from the last chunk

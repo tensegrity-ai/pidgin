@@ -45,6 +45,10 @@ class ConfigBuilder:
         display_mode: str = "chat",
         prompt_tag: Optional[str] = None,
         allow_truncation: bool = False,
+        think: bool = False,
+        think_a: bool = False,
+        think_b: bool = False,
+        think_budget: Optional[int] = None,
     ) -> Tuple[ExperimentConfig, str, str]:
         """Build experiment configuration from CLI arguments.
 
@@ -104,6 +108,10 @@ class ConfigBuilder:
             max_turns=max_turns,
             temperature_a=resolved_temp_a,
             temperature_b=resolved_temp_b,
+            think=think,
+            think_a=think_a,
+            think_b=think_b,
+            think_budget=think_budget,
             custom_prompt=initial_prompt if initial_prompt != "Hello" else None,
             max_parallel=max_parallel,
             convergence_threshold=final_convergence_threshold,

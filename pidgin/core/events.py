@@ -54,6 +54,8 @@ class MessageRequestEvent(Event):
     conversation_history: List[Message]
     temperature: Optional[float] = None
     allow_truncation: bool = False
+    thinking_enabled: Optional[bool] = None
+    thinking_budget: Optional[int] = None
 
 
 @dataclass
@@ -88,6 +90,22 @@ class MessageCompleteEvent(Event):
     completion_tokens: int
     total_tokens: int
     duration_ms: int
+
+
+@dataclass
+class ThinkingCompleteEvent(Event):
+    """Emitted when a model completes its thinking/reasoning phase.
+
+    This captures extended thinking traces from models like Claude 3.5+
+    that expose their reasoning process via the API.
+    """
+
+    conversation_id: str
+    turn_number: int
+    agent_id: str
+    thinking_content: str
+    thinking_tokens: Optional[int] = None
+    duration_ms: Optional[int] = None
 
 
 @dataclass

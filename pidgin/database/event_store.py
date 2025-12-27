@@ -19,6 +19,7 @@ from .experiment_repository import ExperimentRepository
 from .import_service import ImportResult, ImportService
 from .message_repository import MessageRepository
 from .metrics_repository import MetricsRepository
+from .thinking_repository import ThinkingRepository
 
 logger = get_logger("event_store")
 
@@ -56,6 +57,7 @@ class EventStore:
         self.conversations = ConversationRepository(self.db)
         self.messages = MessageRepository(self.db)
         self.metrics = MetricsRepository(self.db)
+        self.thinking = ThinkingRepository(self.db)
 
         # Initialize import service
         self.importer = ImportService(str(db_path))
@@ -190,6 +192,46 @@ class EventStore:
         """Get all messages for a turn."""
         return self.messages.get_turn_messages(conversation_id, turn_number)
 
+    # Thinking Operations (delegate to ThinkingRepository)
+    def save_thinking_trace(
+        self,
+        conversation_id: str,
+        turn_number: int,
+        agent_id: str,
+        thinking_content: str,
+        thinking_tokens: Optional[int] = None,
+        duration_ms: Optional[int] = None,
+        timestamp: Optional[datetime] = None,
+    ):
+        """Save a thinking trace."""
+        self.thinking.save_thinking_trace(
+            conversation_id,
+            turn_number,
+            agent_id,
+            thinking_content,
+            thinking_tokens,
+            duration_ms,
+            timestamp,
+        )
+
+    def get_thinking_for_turn(
+        self, conversation_id: str, turn_number: int, agent_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get thinking trace for a specific turn and agent."""
+        return self.thinking.get_thinking_for_turn(
+            conversation_id, turn_number, agent_id
+        )
+
+    def get_thinking_for_conversation(
+        self, conversation_id: str
+    ) -> List[Dict[str, Any]]:
+        """Get all thinking traces for a conversation."""
+        return self.thinking.get_thinking_for_conversation(conversation_id)
+
+    def get_total_thinking_tokens(self, conversation_id: str) -> int:
+        """Get total thinking token count for a conversation."""
+        return self.thinking.get_total_thinking_tokens(conversation_id)
+
     # Metrics Operations (delegate to MetricsRepository)
     def log_turn_metrics(
         self, conversation_id: str, turn_number: int, metrics: Dict[str, Any]
@@ -256,11 +298,12 @@ class EventStore:
 
             conversation_ids = [row[0] for row in result]
 
-            # Delete all conversations (which cascades to messages, metrics, events)
+            # Delete all conversations (which cascades to messages, metrics, events, thinking)
             for conv_id in conversation_ids:
                 # Note: We call the internal delete methods directly to stay in transaction
                 self.metrics.delete_metrics_for_conversation(conv_id)
                 self.messages.delete_messages_for_conversation(conv_id)
+                self.thinking.delete_thinking_for_conversation(conv_id)
                 self.events.delete_events_for_conversation(conv_id)
                 self.conversations.delete_conversation(conv_id)
 
@@ -301,6 +344,7 @@ class EventStore:
             # Delete in reverse dependency order
             self.metrics.delete_metrics_for_conversation(conversation_id)
             self.messages.delete_messages_for_conversation(conversation_id)
+            self.thinking.delete_thinking_for_conversation(conversation_id)
             self.events.delete_events_for_conversation(conversation_id)
             self.conversations.delete_conversation(conversation_id)
 

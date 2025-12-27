@@ -31,6 +31,7 @@ class BaseRepository:
         "conversation_turns",
         "experiments",
         "metrics",
+        "thinking_traces",
         "token_usage",
     }
 

@@ -114,6 +114,8 @@ class Agent(BaseModel):
     display_name: Optional[str] = None
     model_display_name: Optional[str] = None  # Store the model display name from config
     temperature: Optional[float] = None  # Temperature setting for this agent
+    thinking_enabled: Optional[bool] = None  # Enable extended thinking for this agent
+    thinking_budget: Optional[int] = None  # Max thinking tokens for this agent
 
 
 class Conversation(BaseModel):

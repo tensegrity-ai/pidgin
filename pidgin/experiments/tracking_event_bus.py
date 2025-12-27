@@ -10,6 +10,7 @@ from ..core.events import (
     ConversationStartEvent,
     ErrorEvent,
     Event,
+    ThinkingCompleteEvent,
     TokenUsageEvent,
     TurnCompleteEvent,
 )
@@ -100,6 +101,15 @@ class TrackingEventBus(EventBus):
                 event.prompt_tokens,
                 event.completion_tokens,
                 event.model,
+            )
+
+        elif isinstance(event, ThinkingCompleteEvent):
+            # Track thinking token usage separately
+            agent_id = "agent_a" if event.agent_id == "agent_a" else "agent_b"
+            self.manifest.update_thinking_tokens(
+                self.conversation_id,
+                agent_id,
+                event.thinking_tokens or 0,
             )
 
         elif isinstance(event, ErrorEvent):

@@ -45,9 +45,15 @@ console = Console()
 @click.option(
     "--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for agent B only"
 )
-@click.option("--think", is_flag=True, help="Enable reasoning mode for both agents")
-@click.option("--think-a", is_flag=True, help="Enable reasoning mode for agent A only")
-@click.option("--think-b", is_flag=True, help="Enable reasoning mode for agent B only")
+@click.option("--think", is_flag=True, help="Enable extended thinking for both agents")
+@click.option("--think-a", is_flag=True, help="Enable extended thinking for agent A only")
+@click.option("--think-b", is_flag=True, help="Enable extended thinking for agent B only")
+@click.option(
+    "--think-budget",
+    type=click.IntRange(1000, 100000),
+    default=None,
+    help="Max thinking tokens (default: 10000)",
+)
 @click.option("--output", "-o", help="Custom output directory")
 @click.option(
     "--convergence-threshold",
@@ -126,6 +132,7 @@ def run(
     think: bool,
     think_a: bool,
     think_b: bool,
+    think_budget: Optional[int],
     output: Optional[str],
     convergence_threshold: Optional[float],
     convergence_action: Optional[str],
@@ -167,6 +174,10 @@ def run(
         temperature=temperature,
         temp_a=temp_a,
         temp_b=temp_b,
+        think=think,
+        think_a=think_a,
+        think_b=think_b,
+        think_budget=think_budget,
         output=output,
         convergence_threshold=convergence_threshold,
         convergence_action=convergence_action,

@@ -6,7 +6,7 @@ from anthropic import AsyncAnthropic
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider
+from .base import Provider, ResponseChunk
 from .error_utils import create_anthropic_error_handler
 from .retry_utils import retry_with_exponential_backoff
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnthropicProvider(Provider):
-    """Anthropic API provider with friendly error handling."""
+    """Anthropic API provider with friendly error handling and extended thinking support."""
 
     def __init__(self, model: str):
         super().__init__()
@@ -24,8 +24,12 @@ class AnthropicProvider(Provider):
         self.error_handler = create_anthropic_error_handler()
 
     async def stream_response(
-        self, messages: List[Message], temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]:
+        self,
+        messages: List[Message],
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]:
         # Apply context truncation
         from .context_utils import (
             apply_context_truncation,
@@ -49,16 +53,26 @@ class AnthropicProvider(Provider):
         api_params = {
             "model": self.model,
             "messages": conversation_messages,
-            "max_tokens": 1000,
+            "max_tokens": 16000 if thinking_enabled else 1000,
         }
 
         # Add temperature if specified (Anthropic caps at 1.0)
-        if temperature is not None:
+        # Note: temperature must be 1.0 when extended thinking is enabled
+        if thinking_enabled:
+            api_params["temperature"] = 1.0
+        elif temperature is not None:
             api_params["temperature"] = min(temperature, 1.0)
 
         # Add system parameter if we have system messages
         if system_messages:
             api_params["system"] = "\n\n".join(system_messages)
+
+        # Enable extended thinking for supported models
+        if thinking_enabled:
+            api_params["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": thinking_budget or 10000,
+            }
 
         # Validate we have at least one conversation message
         if not conversation_messages:
@@ -67,22 +81,51 @@ class AnthropicProvider(Provider):
                 "Only system messages were provided."
             )
 
+        # Track whether we're processing thinking content
+        thinking_mode = thinking_enabled
+
         # Define inner function for retry wrapper
         async def _make_api_call():
-            # Use async streaming
+            nonlocal thinking_mode
+            # Use async streaming with events for thinking support
             async with self.client.messages.stream(**api_params) as stream:
-                async for text in stream.text_stream:
-                    yield text
+                current_block_type = None
+
+                async for event in stream:
+                    # Handle content block start to detect thinking vs text blocks
+                    if event.type == "content_block_start":
+                        block = event.content_block
+                        if hasattr(block, "type"):
+                            current_block_type = block.type
+
+                    # Handle content deltas
+                    elif event.type == "content_block_delta":
+                        delta = event.delta
+                        if hasattr(delta, "thinking"):
+                            # Thinking content
+                            yield ResponseChunk(delta.thinking, "thinking")
+                        elif hasattr(delta, "text"):
+                            # Regular text content
+                            yield ResponseChunk(delta.text, "response")
+
                 # Capture usage data after stream completes
                 final_message = await stream.get_final_message()
                 if hasattr(final_message, "usage"):
+                    usage = final_message.usage
                     self._last_usage = {
-                        "input_tokens": getattr(final_message.usage, "input_tokens", 0),
-                        "output_tokens": getattr(
-                            final_message.usage, "output_tokens", 0
-                        ),
-                        "total_tokens": 0,  # Will be calculated
+                        "input_tokens": getattr(usage, "input_tokens", 0),
+                        "output_tokens": getattr(usage, "output_tokens", 0),
+                        "total_tokens": 0,
                     }
+                    # Include cache tokens if present
+                    if hasattr(usage, "cache_creation_input_tokens"):
+                        self._last_usage["cache_creation_input_tokens"] = getattr(
+                            usage, "cache_creation_input_tokens", 0
+                        )
+                    if hasattr(usage, "cache_read_input_tokens"):
+                        self._last_usage["cache_read_input_tokens"] = getattr(
+                            usage, "cache_read_input_tokens", 0
+                        )
                     self._last_usage["total_tokens"] = (
                         self._last_usage["input_tokens"]
                         + self._last_usage["output_tokens"]

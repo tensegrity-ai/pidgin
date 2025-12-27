@@ -173,3 +173,32 @@ class ConversationImporter:
                 messages.get("agent_b", {}).get("total_tokens", 0),
             ],
         )
+
+    def insert_thinking_trace(
+        self, conversation_id: str, turn_number: int, agent_id: str, thinking: Dict
+    ) -> None:
+        """Insert thinking trace into thinking_traces table.
+
+        Args:
+            conversation_id: Conversation ID
+            turn_number: Turn number
+            agent_id: Agent ID (agent_a or agent_b)
+            thinking: Thinking trace data
+        """
+        self.db.execute(
+            """
+            INSERT INTO thinking_traces (
+                conversation_id, turn_number, agent_id,
+                thinking_content, thinking_tokens, duration_ms, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+            [
+                conversation_id,
+                turn_number,
+                agent_id,
+                thinking.get("thinking_content", ""),
+                thinking.get("thinking_tokens"),
+                thinking.get("duration_ms"),
+                thinking.get("timestamp"),
+            ],
+        )
