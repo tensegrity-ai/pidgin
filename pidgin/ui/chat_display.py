@@ -150,8 +150,9 @@ class ChatDisplay:
             expand=False,
         )
 
+        # Center system prompts (they're setup info, not conversation)
         self.console.print()
-        self.print_bubble(panel, event.agent_id)
+        self.console.print(Align.center(panel))
 
     def handle_start(self, event: ConversationStartEvent) -> None:
         """Display conversation start header.
