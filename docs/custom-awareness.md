@@ -1,6 +1,29 @@
+# Awareness Levels
+
+Pidgin uses awareness levels to set the system prompt context for AI conversations.
+
+## Built-in Levels
+
+| Level | Description |
+|-------|-------------|
+| `none` | No system prompt (chaos mode) |
+| `basic` | Minimal: "You are an AI having a conversation with another AI." |
+| `firm` | Explicit: "You are an AI. Your conversation partner is also an AI. You are not talking to a human." |
+| `research` | Named models: "You are {model_a} in a research conversation with {model_b}..." |
+| `backrooms` | Liminal exploration: "You are in a conversation with another AI. No human interference. Punctuation is optional meaning is optional. Ascii art is welcome in replies." |
+
+```bash
+# Use a built-in level
+pidgin run -a claude -b gpt -w backrooms
+pidgin run -a claude -b gpt -w research
+pidgin run -a claude -b gpt -w none  # No system prompt at all
+```
+
+The `backrooms` preset is inspired by [liminalbardo/liminal_backrooms](https://github.com/liminalbardo/liminal_backrooms).
+
 # Custom Awareness with YAML
 
-Pidgin supports custom awareness configurations that inject system prompts at specific turns during a conversation. This allows for dynamic guidance, redirection, or research interventions.
+Pidgin also supports custom awareness configurations that inject system prompts at specific turns during a conversation. This allows for dynamic guidance, redirection, or research interventions.
 
 ## Quick Start
 

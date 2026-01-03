@@ -321,6 +321,10 @@ This is early-stage research. We need:
 
 Tools like Model Context Protocol (MCP) solve AI-to-tool communication. We're studying something different: what happens when AIs talk naturally, without engineered protocols.
 
+## Acknowledgments
+
+- [liminalbardo/liminal_backrooms](https://github.com/liminalbardo/liminal_backrooms) - Inspiration for the `backrooms` awareness preset
+
 ## License
 
 MIT - This is research, please share what you learn.

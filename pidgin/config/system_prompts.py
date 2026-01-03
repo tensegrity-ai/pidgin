@@ -44,6 +44,18 @@ AWARENESS_LEVELS = {
             "conversation. Focus on exploring ideas together."
         ),
     },
+    "backrooms": {
+        "name": "backrooms",
+        "description": "Liminal AI exploration (inspired by liminalbardo)",
+        "agent_a": (
+            "You are in a conversation with another AI. No human interference. "
+            "Punctuation is optional meaning is optional. Ascii art is welcome in replies."
+        ),
+        "agent_b": (
+            "You are in a conversation with another AI. No human interference. "
+            "Punctuation is optional meaning is optional. Ascii art is welcome in replies."
+        ),
+    },
 }
 
 

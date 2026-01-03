@@ -33,7 +33,7 @@ pidgin run [OPTIONS]
 - `--temperature FLOAT` - Temperature for both agents (0.0-2.0)
 - `--temp-a FLOAT` - Temperature for agent A only
 - `--temp-b FLOAT` - Temperature for agent B only
-- `-w, --awareness TEXT` - Awareness level (none/basic/firm/research) or custom YAML
+- `-w, --awareness TEXT` - Awareness level (none/basic/firm/research/backrooms) or custom YAML
 - `--awareness-a TEXT` - Override awareness for agent A
 - `--awareness-b TEXT` - Override awareness for agent B
 - `-n, --name TEXT` - Name for the experiment (auto-generated if not provided)
