@@ -3,22 +3,24 @@
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar, Union
+
+from .base import ResponseChunk
 
 T = TypeVar("T")
 
 
 async def retry_with_exponential_backoff(
-    func: Callable[..., AsyncGenerator[str, None]],
+    func: Callable[..., AsyncGenerator[ResponseChunk, None]],
     *args,
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
     jitter: bool = True,
     retry_on: Optional[tuple[type[Exception], ...]] = None,
-    fallback_func: Optional[Callable[..., AsyncGenerator[str, None]]] = None,
+    fallback_func: Optional[Callable[..., AsyncGenerator[ResponseChunk, None]]] = None,
     **kwargs,
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[Union[ResponseChunk, str], None]:
     """
     Retry an async generator function with exponential backoff.
 

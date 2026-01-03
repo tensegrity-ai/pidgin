@@ -96,7 +96,9 @@ class OpenAIProvider(Provider):
                 base_delay=1.0,
                 retry_on=(Exception,),  # Retry on all exceptions
             ):
-                yield response_chunk
+                # Filter out status message strings, only yield ResponseChunk
+                if isinstance(response_chunk, ResponseChunk):
+                    yield response_chunk
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)

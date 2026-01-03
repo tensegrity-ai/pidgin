@@ -172,9 +172,7 @@ class DisplayBuilder:
         """Build panel showing recent errors."""
         return self.error_panel_builder.build_errors_panel(errors, error_tracker)
 
-    def build_summary_panel(
-        self, experiments: List[Any], metrics_calculator
-    ) -> Panel:
+    def build_summary_panel(self, experiments: List[Any], metrics_calculator) -> Panel:
         """Build summary panel with aggregate statistics across all experiments."""
         total_conversations = 0
         completed_conversations = 0
@@ -185,8 +183,7 @@ class DisplayBuilder:
             # Count conversations
             total_conversations += len(exp.conversations)
             completed_conversations += sum(
-                1 for c in exp.conversations.values()
-                if str(c.status) == "completed"
+                1 for c in exp.conversations.values() if str(c.status) == "completed"
             )
 
             # Aggregate tokens and cost
@@ -206,7 +203,7 @@ class DisplayBuilder:
 
         # Build summary text
         if total_conversations > 0:
-            pct = (completed_conversations / total_conversations * 100)
+            pct = completed_conversations / total_conversations * 100
             summary = (
                 f"[{NORD_LIGHT}]Conversations:[/{NORD_LIGHT}] "
                 f"[{NORD_GREEN}]{completed_conversations}[/{NORD_GREEN}]"

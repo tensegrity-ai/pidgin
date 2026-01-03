@@ -122,9 +122,7 @@ class ModelLoader:
         with open(path, "r") as f:
             return json.load(f)
 
-    def _convert_to_model_configs(
-        self, data: Dict[str, Any]
-    ) -> Dict[str, ModelConfig]:
+    def _convert_to_model_configs(self, data: Dict[str, Any]) -> Dict[str, ModelConfig]:
         """Convert JSON data to ModelConfig objects."""
         models = {}
         models_data = data.get("models", {})

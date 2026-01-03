@@ -1,14 +1,12 @@
 """Functional tests for thinking mode implementation."""
 
 import json
-import tempfile
-from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from pidgin.core.events import MessageRequestEvent, ThinkingCompleteEvent
-from pidgin.core.types import Agent, Message
+from pidgin.core.types import Agent
 from pidgin.experiments.config import ExperimentConfig
 from pidgin.providers.base import ResponseChunk
 
@@ -137,7 +135,10 @@ class TestThinkingDatabaseSchema:
 
     def test_thinking_schema_exists(self):
         """Verify thinking_traces.sql schema file exists."""
-        schema_path = Path(__file__).parent.parent.parent / "pidgin/database/schemas/thinking_traces.sql"
+        schema_path = (
+            Path(__file__).parent.parent.parent
+            / "pidgin/database/schemas/thinking_traces.sql"
+        )
         assert schema_path.exists(), f"Schema file not found at {schema_path}"
 
         # Verify schema content

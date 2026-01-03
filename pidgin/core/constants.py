@@ -1,15 +1,6 @@
 """Core constants for the Pidgin application."""
 
 
-# Nord color scheme for console output
-class Colors:
-    GREEN = "#a3be8c"
-    RED = "#bf616a"
-    YELLOW = "#ebcb8b"
-    BLUE = "#5e81ac"
-    DIM = "#4c566a"
-
-
 class ConversationStatus:
     CREATED = "created"
     RUNNING = "running"

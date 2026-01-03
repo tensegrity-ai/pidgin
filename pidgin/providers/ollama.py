@@ -109,7 +109,10 @@ class OllamaProvider(Provider):
 
                     elif response.status != 200:
                         error_text = await response.text()
-                        yield ResponseChunk(f"Error: Ollama returned status {response.status}: {error_text}", "response")
+                        yield ResponseChunk(
+                            f"Error: Ollama returned status {response.status}: {error_text}",
+                            "response",
+                        )
                         return
 
                     async for line in response.content:
@@ -117,7 +120,9 @@ class OllamaProvider(Provider):
                             try:
                                 chunk = json.loads(line)
                                 if "message" in chunk and "content" in chunk["message"]:
-                                    yield ResponseChunk(chunk["message"]["content"], "response")
+                                    yield ResponseChunk(
+                                        chunk["message"]["content"], "response"
+                                    )
                             except (json.JSONDecodeError, ValueError, TypeError):
                                 # Skip malformed JSON lines
                                 pass

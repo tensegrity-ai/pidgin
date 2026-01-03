@@ -46,8 +46,12 @@ console = Console()
     "--temp-b", type=click.FloatRange(0.0, 2.0), help="Temperature for agent B only"
 )
 @click.option("--think", is_flag=True, help="Enable extended thinking for both agents")
-@click.option("--think-a", is_flag=True, help="Enable extended thinking for agent A only")
-@click.option("--think-b", is_flag=True, help="Enable extended thinking for agent B only")
+@click.option(
+    "--think-a", is_flag=True, help="Enable extended thinking for agent A only"
+)
+@click.option(
+    "--think-b", is_flag=True, help="Enable extended thinking for agent B only"
+)
 @click.option(
     "--think-budget",
     type=click.IntRange(1000, 100000),

@@ -25,7 +25,10 @@ class LocalProvider(Provider):
         """Stream response from test model."""
         # Note: thinking_enabled and thinking_budget are not supported by local
         if self.model_name != "test":
-            yield ResponseChunk(f"Error: LocalProvider only supports 'test' model. Got: {self.model_name}", "response")
+            yield ResponseChunk(
+                f"Error: LocalProvider only supports 'test' model. Got: {self.model_name}",
+                "response",
+            )
             return
 
         from .test_model import LocalTestModel

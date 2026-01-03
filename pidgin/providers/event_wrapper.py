@@ -80,8 +80,8 @@ class EventAwareProvider:
             )
 
             # Stream response and buffer chunks (no longer emitting chunk events)
-            thinking_chunks = []
-            response_chunks = []
+            thinking_chunks: list[str] = []
+            response_chunks: list[str] = []
             thinking_start = None
 
             # Add timeout to prevent hanging

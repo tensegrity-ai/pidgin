@@ -1,6 +1,6 @@
 import logging
 from collections.abc import AsyncGenerator
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from anthropic import AsyncAnthropic
 
@@ -50,7 +50,7 @@ class AnthropicProvider(Provider):
         )
 
         # Build API call parameters
-        api_params = {
+        api_params: Dict[str, Any] = {
             "model": self.model,
             "messages": conversation_messages,
             "max_tokens": 16000 if thinking_enabled else 1000,
@@ -89,17 +89,9 @@ class AnthropicProvider(Provider):
             nonlocal thinking_mode
             # Use async streaming with events for thinking support
             async with self.client.messages.stream(**api_params) as stream:
-                current_block_type = None
-
                 async for event in stream:
-                    # Handle content block start to detect thinking vs text blocks
-                    if event.type == "content_block_start":
-                        block = event.content_block
-                        if hasattr(block, "type"):
-                            current_block_type = block.type
-
                     # Handle content deltas
-                    elif event.type == "content_block_delta":
+                    if event.type == "content_block_delta":
                         delta = event.delta
                         if hasattr(delta, "thinking"):
                             # Thinking content
@@ -142,7 +134,9 @@ class AnthropicProvider(Provider):
                 base_delay=1.0,
                 retry_on=(Exception,),  # Retry on all exceptions for now
             ):
-                yield chunk
+                # Filter out status message strings, only yield ResponseChunk
+                if isinstance(chunk, ResponseChunk):
+                    yield chunk
         except Exception as e:
             # Get friendly error message
             friendly_error = self.error_handler.get_friendly_error(e)

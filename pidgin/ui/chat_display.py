@@ -53,7 +53,9 @@ class ChatDisplay:
         self.truncation_occurred = False
         self.conversation_count = 0
         self._last_convergence: float = 0.0
-        self._shown_prompts: set = set()  # Track (agent_id, prompt_hash) to avoid duplicates
+        self._shown_prompts: set = (
+            set()
+        )  # Track (agent_id, prompt_hash) to avoid duplicates
 
         # Subscribe to relevant events
         bus.subscribe(SystemPromptEvent, self.handle_system_prompt)
