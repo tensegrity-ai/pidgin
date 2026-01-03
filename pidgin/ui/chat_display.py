@@ -189,32 +189,35 @@ class ChatDisplay:
         header.append(f"{agent_b_name} ", style=self.COLORS["agent_b"] + " bold")
         header.append("●", style=self.COLORS["agent_b"])
 
-        # Show initial prompt as agents see it (with human tag)
-        from ..config import Config
-
-        config = Config()
-        human_tag = config.get("defaults.human_tag", "[HUMAN]")
-
-        # Format prompt as agents see it
-        if human_tag:
-            prompt_content = f"{human_tag}: {event.initial_prompt}"
-        else:
-            prompt_content = event.initial_prompt
-
-        prompt_panel = Panel(
-            prompt_content,
-            title="[bold]Initial Prompt[/bold]",
-            title_align="left",
-            border_style=self.COLORS["header"],
-            padding=(1, 2),
-            width=self.calculate_bubble_width(),
-            expand=False,
-        )
-
         self.console.print()
         self.console.print(header, justify="center")
-        self.console.print()
-        self.console.print(Align.center(prompt_panel))
+
+        # Only show initial prompt panel if there's a prompt
+        if event.initial_prompt:
+            from ..config import Config
+
+            config = Config()
+            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+
+            # Format prompt as agents see it
+            if human_tag:
+                prompt_content = f"{human_tag}: {event.initial_prompt}"
+            else:
+                prompt_content = event.initial_prompt
+
+            prompt_panel = Panel(
+                prompt_content,
+                title="[bold]Initial Prompt[/bold]",
+                title_align="left",
+                border_style=self.COLORS["header"],
+                padding=(1, 2),
+                width=self.calculate_bubble_width(),
+                expand=False,
+            )
+
+            self.console.print()
+            self.console.print(Align.center(prompt_panel))
+
         self.console.print()
 
     def handle_message(self, event: MessageCompleteEvent) -> None:

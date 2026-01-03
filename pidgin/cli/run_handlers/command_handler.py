@@ -39,7 +39,7 @@ class CommandHandler:
                     config,
                     agent_a_name,
                     agent_b_name,
-                    config.conversation.prompt or "Hello",
+                    config.conversation.prompt or "",
                     config.display.quiet,
                     config.display.quiet or spec_notify,
                     "quiet" if config.display.quiet else "normal",

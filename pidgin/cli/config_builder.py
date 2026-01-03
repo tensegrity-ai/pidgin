@@ -32,7 +32,7 @@ class ConfigBuilder:
         temperature: Optional[float] = None,
         temp_a: Optional[float] = None,
         temp_b: Optional[float] = None,
-        prompt: str = "Hello",
+        prompt: Optional[str] = None,
         name: Optional[str] = None,
         max_parallel: int = 1,
         convergence_threshold: Optional[float] = None,
@@ -112,7 +112,7 @@ class ConfigBuilder:
             think_a=think_a,
             think_b=think_b,
             think_budget=think_budget,
-            custom_prompt=initial_prompt if initial_prompt != "Hello" else None,
+            custom_prompt=initial_prompt,
             max_parallel=max_parallel,
             convergence_threshold=final_convergence_threshold,
             convergence_action=final_convergence_action,
@@ -149,7 +149,7 @@ class ConfigBuilder:
         if config.max_parallel > 1:
             config_lines.append(f"Parallel execution: {config.max_parallel}")
 
-        if initial_prompt != "Hello":
+        if initial_prompt:
             if len(initial_prompt) > 50:
                 config_lines.append(f"Initial prompt: {initial_prompt[:50]}...")
             else:

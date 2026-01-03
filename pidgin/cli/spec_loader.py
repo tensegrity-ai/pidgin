@@ -101,7 +101,7 @@ class SpecLoader:
         temp_b = spec.get("temperature_b", spec.get("temperature"))
 
         # Prompt handling
-        initial_prompt = spec.get("custom_prompt", spec.get("prompt", "Hello"))
+        initial_prompt = spec.get("custom_prompt", spec.get("prompt"))
         dimensions = spec.get("dimensions", spec.get("dimension"))
 
         # Ensure dimensions is a list if it's a string
@@ -134,7 +134,7 @@ class SpecLoader:
             max_turns=max_turns,
             temperature_a=temp_a,
             temperature_b=temp_b,
-            custom_prompt=initial_prompt if initial_prompt != "Hello" else None,
+            custom_prompt=initial_prompt,
             max_parallel=max_parallel,
             convergence_threshold=convergence_threshold,
             convergence_action=convergence_action,

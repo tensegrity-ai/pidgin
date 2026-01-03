@@ -147,7 +147,7 @@ class SetupHandler:
             )
 
             # Extract initial prompt
-            initial_prompt = config.custom_prompt or "Hello"
+            initial_prompt = config.custom_prompt or ""
 
             return config, agent_a_name, agent_b_name, initial_prompt
 
