@@ -66,23 +66,23 @@ class ChatDisplay:
     def calculate_bubble_width(self) -> int:
         """Calculate responsive bubble width based on terminal size.
 
-        Keeps bubbles narrow for readability (50-60 chars optimal).
+        Bubbles are 70% of terminal width so they overlap horizontally.
         """
         terminal_width = self.console.size.width
-        if terminal_width >= 120:
-            return 60  # Fixed comfortable reading width
+        if terminal_width >= 100:
+            return int(terminal_width * 0.70)
         elif terminal_width >= 80:
-            return min(int(terminal_width * 0.55), 60)
+            return int(terminal_width * 0.75)
         else:
-            return max(int(terminal_width * 0.85), 40)
+            return max(int(terminal_width * 0.90), 40)
 
     def calculate_margin(self) -> int:
         """Calculate margin for bubble positioning."""
         terminal_width = self.console.size.width
-        if terminal_width >= 120:
-            return int(terminal_width * 0.08)  # 8% margin
+        if terminal_width >= 100:
+            return int(terminal_width * 0.03)  # 3% margin - small
         elif terminal_width >= 80:
-            return int(terminal_width * 0.05)  # 5% margin
+            return int(terminal_width * 0.02)  # 2% margin
         else:
             return 0  # No margin on narrow terminals
 
