@@ -17,6 +17,7 @@ from ..core.events import (
     ConversationStartEvent,
     MessageCompleteEvent,
     SystemPromptEvent,
+    ThinkingCompleteEvent,
     TurnCompleteEvent,
 )
 from ..core.types import Agent
@@ -60,6 +61,7 @@ class ChatDisplay:
         # Subscribe to relevant events
         bus.subscribe(SystemPromptEvent, self.handle_system_prompt)
         bus.subscribe(ConversationStartEvent, self.handle_start)
+        bus.subscribe(ThinkingCompleteEvent, self.handle_thinking)
         bus.subscribe(MessageCompleteEvent, self.handle_message)
         bus.subscribe(TurnCompleteEvent, self.handle_turn_complete)
         bus.subscribe(ConversationEndEvent, self.handle_end)
@@ -232,6 +234,53 @@ class ChatDisplay:
         self.console.print()
         self.console.print(Align.center(prompt_panel))
         self.console.print()
+
+    def handle_thinking(self, event: ThinkingCompleteEvent) -> None:
+        """Display thinking/reasoning trace.
+
+        Args:
+            event: Thinking complete event
+        """
+        # Get agent info
+        agent_name = "Unknown"
+        color = self.COLORS["dim"]
+
+        if event.agent_id in self.agents:
+            agent = self.agents[event.agent_id]
+            agent_name = agent.display_name or agent.model
+
+            if event.agent_id == "agent_a":
+                color = self.COLORS["agent_a"]
+            elif event.agent_id == "agent_b":
+                color = self.COLORS["agent_b"]
+
+        # Format thinking content - show first/last parts if very long
+        content = event.thinking_content
+        max_chars = 2000
+        if len(content) > max_chars:
+            half = max_chars // 2
+            content = f"{content[:half]}\n\n[...{len(content) - max_chars} chars omitted...]\n\n{content[-half:]}"
+
+        # Create styled header
+        header_text = Text()
+        header_text.append(f"{agent_name} ", style=color)
+        header_text.append("thinking", style=f"{color} dim italic")
+        if event.thinking_tokens:
+            header_text.append(f" ({event.thinking_tokens} tokens)", style="dim")
+
+        # Render as dimmed italic panel
+        thinking_panel = Panel(
+            Text(content, style="dim italic"),
+            title=header_text,
+            title_align="left",
+            border_style=f"{color} dim",
+            padding=(1, 2),
+            width=self.calculate_bubble_width(),
+            expand=False,
+        )
+
+        self.console.print()
+        self.print_bubble(thinking_panel, event.agent_id)
 
     def handle_message(self, event: MessageCompleteEvent) -> None:
         """Display a message.
