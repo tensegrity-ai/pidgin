@@ -93,12 +93,16 @@ class AnthropicProvider(Provider):
                     # Handle content deltas
                     if event.type == "content_block_delta":
                         delta = event.delta
-                        if hasattr(delta, "thinking"):
-                            # Thinking content
-                            yield ResponseChunk(delta.thinking, "thinking")
-                        elif hasattr(delta, "text"):
-                            # Regular text content
-                            yield ResponseChunk(delta.text, "response")
+                        # Check for thinking_delta type (Claude 4 extended thinking)
+                        delta_type = getattr(delta, "type", None)
+                        if delta_type == "thinking_delta" or hasattr(delta, "thinking"):
+                            thinking_text = getattr(delta, "thinking", "")
+                            if thinking_text:
+                                yield ResponseChunk(thinking_text, "thinking")
+                        elif delta_type == "text_delta" or hasattr(delta, "text"):
+                            text = getattr(delta, "text", "")
+                            if text:
+                                yield ResponseChunk(text, "response")
 
                 # Capture usage data after stream completes
                 final_message = await stream.get_final_message()
