@@ -102,6 +102,9 @@ class Monitor:
         errors = self.error_tracker.get_recent_errors(minutes=10)
 
         # Build sections
+        summary_panel = self.display_builder.build_summary_panel(
+            experiments, self.metrics_calculator
+        )
         errors_panel = self.display_builder.build_errors_panel(
             errors, self.error_tracker
         )
@@ -113,7 +116,9 @@ class Monitor:
         )
 
         # Return a group of panels that will auto-size to their content
-        return Group(header, errors_panel, experiments_panel, conversations_panel)
+        return Group(
+            header, summary_panel, errors_panel, experiments_panel, conversations_panel
+        )
 
 
 def main():

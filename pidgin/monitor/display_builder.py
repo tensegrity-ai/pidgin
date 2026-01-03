@@ -171,3 +171,58 @@ class DisplayBuilder:
     def build_errors_panel(self, errors: List[dict], error_tracker) -> Panel:
         """Build panel showing recent errors."""
         return self.error_panel_builder.build_errors_panel(errors, error_tracker)
+
+    def build_summary_panel(
+        self, experiments: List[Any], metrics_calculator
+    ) -> Panel:
+        """Build summary panel with aggregate statistics across all experiments."""
+        total_conversations = 0
+        completed_conversations = 0
+        total_tokens = 0
+        total_cost = 0.0
+
+        for exp in experiments:
+            # Count conversations
+            total_conversations += len(exp.conversations)
+            completed_conversations += sum(
+                1 for c in exp.conversations.values()
+                if str(c.status) == "completed"
+            )
+
+            # Aggregate tokens and cost
+            exp_tokens = metrics_calculator.estimate_tokens_for_experiment(exp)
+            total_tokens += exp_tokens
+            total_cost += metrics_calculator.estimate_cost_for_experiment(
+                exp, exp_tokens
+            )
+
+        # Format tokens
+        if total_tokens > 1_000_000:
+            tokens_str = f"{total_tokens / 1_000_000:.1f}M"
+        elif total_tokens > 1000:
+            tokens_str = f"{total_tokens / 1000:.0f}K"
+        else:
+            tokens_str = str(total_tokens) if total_tokens > 0 else "0"
+
+        # Build summary text
+        if total_conversations > 0:
+            pct = (completed_conversations / total_conversations * 100)
+            summary = (
+                f"[{NORD_LIGHT}]Conversations:[/{NORD_LIGHT}] "
+                f"[{NORD_GREEN}]{completed_conversations}[/{NORD_GREEN}]"
+                f"[{NORD_DARK}]/{total_conversations}[/{NORD_DARK}] "
+                f"[{NORD_DARK}]({pct:.0f}%)[/{NORD_DARK}]"
+                f"  [{NORD_DARK}]│[/{NORD_DARK}]  "
+                f"[{NORD_LIGHT}]Tokens:[/{NORD_LIGHT}] [{NORD_CYAN}]{tokens_str}[/{NORD_CYAN}]"
+                f"  [{NORD_DARK}]│[/{NORD_DARK}]  "
+                f"[{NORD_LIGHT}]Cost:[/{NORD_LIGHT}] [{NORD_YELLOW}]${total_cost:.2f}[/{NORD_YELLOW}]"
+            )
+        else:
+            summary = f"[{NORD_DARK}]No experiments yet[/{NORD_DARK}]"
+
+        return Panel(
+            summary,
+            title="Summary",
+            border_style=NORD_DARK,
+            width=self.get_panel_width(),
+        )
