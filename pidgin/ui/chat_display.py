@@ -77,7 +77,7 @@ class ChatDisplay:
             return max(int(terminal_width * 0.85), 40)
 
     def calculate_margin(self) -> int:
-        """Calculate left margin for Agent A bubbles."""
+        """Calculate margin for bubble positioning."""
         terminal_width = self.console.size.width
         if terminal_width >= 120:
             return int(terminal_width * 0.08)  # 8% margin
@@ -85,6 +85,24 @@ class ChatDisplay:
             return int(terminal_width * 0.05)  # 5% margin
         else:
             return 0  # No margin on narrow terminals
+
+    def print_bubble(self, panel: Panel, agent_id: str) -> None:
+        """Print a bubble with appropriate alignment and margins.
+
+        Agent A: left-aligned with left margin
+        Agent B: right-aligned with right margin
+        """
+        margin = self.calculate_margin()
+        if agent_id == "agent_b":
+            if margin > 0:
+                self.console.print(Padding(Align.right(panel), (0, margin, 0, 0)))
+            else:
+                self.console.print(Align.right(panel))
+        else:
+            if margin > 0:
+                self.console.print(Padding(panel, (0, 0, 0, margin)))
+            else:
+                self.console.print(panel)
 
     def handle_system_prompt(self, event: SystemPromptEvent) -> None:
         """Display system prompt for an agent.
@@ -132,16 +150,8 @@ class ChatDisplay:
             expand=False,
         )
 
-        # Align based on agent: A left with margin, B right
         self.console.print()
-        if event.agent_id == "agent_b":
-            self.console.print(Align.right(panel))
-        else:
-            margin = self.calculate_margin()
-            if margin > 0:
-                self.console.print(Padding(panel, (0, 0, 0, margin)))
-            else:
-                self.console.print(panel)
+        self.print_bubble(panel, event.agent_id)
 
     def handle_start(self, event: ConversationStartEvent) -> None:
         """Display conversation start header.
@@ -266,17 +276,8 @@ class ChatDisplay:
             expand=False,
         )
 
-        # Align based on agent: A left with margin, B right
         self.console.print()
-        if event.agent_id == "agent_b":
-            self.console.print(Align.right(message_panel))
-        else:
-            # Add left margin for Agent A
-            margin = self.calculate_margin()
-            if margin > 0:
-                self.console.print(Padding(message_panel, (0, 0, 0, margin)))
-            else:
-                self.console.print(message_panel)
+        self.print_bubble(message_panel, event.agent_id)
 
     def handle_turn_complete(self, event: TurnCompleteEvent) -> None:
         """Display turn separator.
