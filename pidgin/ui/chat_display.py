@@ -14,6 +14,7 @@ from ..core.events import (
     ConversationEndEvent,
     ConversationStartEvent,
     MessageCompleteEvent,
+    SystemPromptEvent,
     TurnCompleteEvent,
 )
 from ..core.types import Agent
@@ -50,13 +51,64 @@ class ChatDisplay:
         self.truncation_occurred = False
         self.conversation_count = 0
         self._last_convergence: float = 0.0
+        self._shown_prompts: set = set()  # Track (agent_id, prompt_hash) to avoid duplicates
 
         # Subscribe to relevant events
+        bus.subscribe(SystemPromptEvent, self.handle_system_prompt)
         bus.subscribe(ConversationStartEvent, self.handle_start)
         bus.subscribe(MessageCompleteEvent, self.handle_message)
         bus.subscribe(TurnCompleteEvent, self.handle_turn_complete)
         bus.subscribe(ConversationEndEvent, self.handle_end)
         bus.subscribe(ContextTruncationEvent, self.handle_truncation)
+
+    def handle_system_prompt(self, event: SystemPromptEvent) -> None:
+        """Display system prompt for an agent.
+
+        Args:
+            event: System prompt event
+        """
+        # Skip if we've shown this exact prompt for this agent
+        key = (event.agent_id, hash(event.prompt))
+        if key in self._shown_prompts:
+            return
+        self._shown_prompts.add(key)
+
+        # Get agent info
+        agent_name = event.agent_display_name
+        if not agent_name and event.agent_id in self.agents:
+            agent_name = self.agents[event.agent_id].display_name
+        if not agent_name:
+            agent_name = event.agent_id.replace("_", " ").title()
+
+        # Set color and symbol based on agent
+        if event.agent_id == "agent_a":
+            color = self.COLORS["agent_a"]
+            symbol = "◆"
+        elif event.agent_id == "agent_b":
+            color = self.COLORS["agent_b"]
+            symbol = "●"
+        else:
+            color = self.COLORS["dim"]
+            symbol = "○"
+
+        # Build header
+        header = Text()
+        header.append(f"{symbol} ", style=color)
+        header.append(f"System Context - {agent_name}", style=color + " bold")
+
+        # Create panel
+        panel = Panel(
+            event.prompt,
+            title=header,
+            title_align="left",
+            border_style=color,
+            padding=(1, 2),
+            width=80,
+            expand=False,
+        )
+
+        self.console.print()
+        self.console.print(panel)
 
     def handle_start(self, event: ConversationStartEvent) -> None:
         """Display conversation start header.
