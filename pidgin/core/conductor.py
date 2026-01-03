@@ -284,11 +284,11 @@ class Conductor:
         )
         if not branch_messages:
             # Create initial messages from system prompts and initial prompt
+            from .types import Message
+
             initial_messages = []
 
             if system_prompts.get("agent_a"):
-                from .types import Message
-
                 initial_messages.append(
                     Message(
                         role="system",
@@ -297,12 +297,12 @@ class Conductor:
                     )
                 )
 
-            if initial_prompt:
-                from .types import Message
-
-                initial_messages.append(
-                    Message(role="user", content=initial_prompt, agent_id="human")
-                )
+            # Add initial prompt or cold start message
+            # APIs require at least one user message, so cold starts get a minimal starter
+            prompt_content = initial_prompt if initial_prompt else "[Begin]"
+            initial_messages.append(
+                Message(role="user", content=prompt_content, agent_id="human")
+            )
 
             if initial_messages:
                 await self.lifecycle.add_initial_messages(

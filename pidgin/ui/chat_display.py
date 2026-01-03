@@ -67,40 +67,52 @@ class ChatDisplay:
         """Calculate responsive bubble width based on terminal size.
 
         Bubbles are 70% of terminal width so they overlap horizontally.
+        Capped at 70 chars to maintain readability on wide terminals.
         """
         terminal_width = self.console.size.width
         if terminal_width >= 100:
-            return int(terminal_width * 0.70)
+            return min(int(terminal_width * 0.70), 70)
         elif terminal_width >= 80:
             return int(terminal_width * 0.75)
         else:
             return max(int(terminal_width * 0.90), 40)
 
-    def calculate_margin(self) -> int:
-        """Calculate margin for bubble positioning."""
+    def calculate_margins(self) -> tuple[int, int]:
+        """Calculate left and right margins for bubble positioning.
+
+        Returns:
+            Tuple of (left_margin, right_margin) for Agent A and B respectively.
+            On wide terminals, includes centering offset to keep content in a
+            virtual 100-char stage.
+        """
         terminal_width = self.console.size.width
-        if terminal_width >= 100:
-            return int(terminal_width * 0.03)  # 3% margin - small
+        if terminal_width > 100:
+            # Center a virtual 100-char stage
+            center_offset = (terminal_width - 100) // 2
+            return (center_offset + 3, center_offset + 3)
+        elif terminal_width >= 100:
+            return (3, 3)
         elif terminal_width >= 80:
-            return int(terminal_width * 0.02)  # 2% margin
+            margin = int(terminal_width * 0.02)
+            return (margin, margin)
         else:
-            return 0  # No margin on narrow terminals
+            return (0, 0)
 
     def print_bubble(self, panel: Panel, agent_id: str) -> None:
         """Print a bubble with appropriate alignment and margins.
 
-        Agent A: left-aligned with left margin
-        Agent B: right-aligned with right margin
+        Agent A: left-aligned within centered stage
+        Agent B: right-aligned within centered stage
         """
-        margin = self.calculate_margin()
+        left_margin, right_margin = self.calculate_margins()
         if agent_id == "agent_b":
-            if margin > 0:
-                self.console.print(Padding(Align.right(panel), (0, margin, 0, 0)))
+            if right_margin > 0:
+                self.console.print(Padding(Align.right(panel), (0, right_margin, 0, 0)))
             else:
                 self.console.print(Align.right(panel))
         else:
-            if margin > 0:
-                self.console.print(Padding(panel, (0, 0, 0, margin)))
+            if left_margin > 0:
+                self.console.print(Padding(panel, (0, 0, 0, left_margin)))
             else:
                 self.console.print(panel)
 
@@ -192,32 +204,31 @@ class ChatDisplay:
         self.console.print()
         self.console.print(header, justify="center")
 
-        # Only show initial prompt panel if there's a prompt
-        if event.initial_prompt:
-            from ..config import Config
+        # Show initial prompt (or [Begin] for cold starts)
+        from ..config import Config
 
-            config = Config()
-            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+        config = Config()
+        human_tag = config.get("defaults.human_tag", "")
+        initial_text = event.initial_prompt if event.initial_prompt else "[Begin]"
 
-            # Format prompt as agents see it
-            if human_tag:
-                prompt_content = f"{human_tag}: {event.initial_prompt}"
-            else:
-                prompt_content = event.initial_prompt
+        # Format prompt as agents see it
+        if human_tag:
+            prompt_content = f"{human_tag}: {initial_text}"
+        else:
+            prompt_content = initial_text
 
-            prompt_panel = Panel(
-                prompt_content,
-                title="[bold]Initial Prompt[/bold]",
-                title_align="left",
-                border_style=self.COLORS["header"],
-                padding=(1, 2),
-                width=self.calculate_bubble_width(),
-                expand=False,
-            )
+        prompt_panel = Panel(
+            prompt_content,
+            title="[bold]Initial Prompt[/bold]",
+            title_align="left",
+            border_style=self.COLORS["header"],
+            padding=(1, 2),
+            width=self.calculate_bubble_width(),
+            expand=False,
+        )
 
-            self.console.print()
-            self.console.print(Align.center(prompt_panel))
-
+        self.console.print()
+        self.console.print(Align.center(prompt_panel))
         self.console.print()
 
     def handle_message(self, event: MessageCompleteEvent) -> None:

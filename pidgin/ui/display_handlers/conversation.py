@@ -46,7 +46,7 @@ class ConversationDisplayHandler(BaseDisplayHandler):
         )
 
         # Get human tag - use instance value or default
-        human_tag = self.prompt_tag if self.prompt_tag is not None else "[HUMAN]"
+        human_tag = self.prompt_tag if self.prompt_tag is not None else ""
 
         # Show initial prompt as agents will see it
         content += "[bold]Initial Prompt (as agents see it):[/bold]\n"

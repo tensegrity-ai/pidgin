@@ -68,7 +68,7 @@ class EventHandlers:
             from ...config import Config
 
             config = Config()
-            human_tag = config.get("defaults.human_tag", "[HUMAN]")
+            human_tag = config.get("defaults.human_tag", "")
 
             # Format prompt as agents see it
             if human_tag:
