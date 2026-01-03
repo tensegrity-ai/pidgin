@@ -35,19 +35,16 @@ async def get_provider_for_model(model_id: str, temperature: Optional[float] = N
     return await build_provider(model_id, temperature)
 
 
-def build_initial_prompt(custom_prompt: Optional[str] = None) -> str:
+def build_initial_prompt(custom_prompt: Optional[str] = None) -> Optional[str]:
     """Build the initial prompt for a conversation.
 
     Args:
         custom_prompt: Custom prompt text
 
     Returns:
-        The initial prompt string
+        The initial prompt string, or None for cold start
     """
-    if custom_prompt:
-        return custom_prompt
-
-    return "I'm looking forward to your conversation."
+    return custom_prompt
 
 
 def validate_model_id(model_id: str) -> Tuple[str, str]:
