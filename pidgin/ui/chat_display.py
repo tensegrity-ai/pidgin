@@ -2,8 +2,10 @@
 
 from typing import Dict, Union
 
+from rich.align import Align
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.padding import Padding
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.text import Text
@@ -61,6 +63,29 @@ class ChatDisplay:
         bus.subscribe(ConversationEndEvent, self.handle_end)
         bus.subscribe(ContextTruncationEvent, self.handle_truncation)
 
+    def calculate_bubble_width(self) -> int:
+        """Calculate responsive bubble width based on terminal size.
+
+        Keeps bubbles narrow for readability (50-60 chars optimal).
+        """
+        terminal_width = self.console.size.width
+        if terminal_width >= 120:
+            return 60  # Fixed comfortable reading width
+        elif terminal_width >= 80:
+            return min(int(terminal_width * 0.55), 60)
+        else:
+            return max(int(terminal_width * 0.85), 40)
+
+    def calculate_margin(self) -> int:
+        """Calculate left margin for Agent A bubbles."""
+        terminal_width = self.console.size.width
+        if terminal_width >= 120:
+            return int(terminal_width * 0.08)  # 8% margin
+        elif terminal_width >= 80:
+            return int(terminal_width * 0.05)  # 5% margin
+        else:
+            return 0  # No margin on narrow terminals
+
     def handle_system_prompt(self, event: SystemPromptEvent) -> None:
         """Display system prompt for an agent.
 
@@ -96,19 +121,27 @@ class ChatDisplay:
         header.append(f"{symbol} ", style=color)
         header.append(f"System Context - {agent_name}", style=color + " bold")
 
-        # Create panel
+        # Create panel with responsive width
         panel = Panel(
             event.prompt,
             title=header,
             title_align="left",
             border_style=color,
             padding=(1, 2),
-            width=80,
+            width=self.calculate_bubble_width(),
             expand=False,
         )
 
+        # Align based on agent: A left with margin, B right
         self.console.print()
-        self.console.print(panel)
+        if event.agent_id == "agent_b":
+            self.console.print(Align.right(panel))
+        else:
+            margin = self.calculate_margin()
+            if margin > 0:
+                self.console.print(Padding(panel, (0, 0, 0, margin)))
+            else:
+                self.console.print(panel)
 
     def handle_start(self, event: ConversationStartEvent) -> None:
         """Display conversation start header.
@@ -134,15 +167,16 @@ class ChatDisplay:
         if event.agent_b_display_name and "agent_b" in self.agents:
             self.agents["agent_b"].display_name = event.agent_b_display_name
 
-        # Build header
+        # Build header with agent symbols on both sides
         agent_a_name = event.agent_a_display_name or "Agent A"
         agent_b_name = event.agent_b_display_name or "Agent B"
 
         header = Text()
-        header.append("◆ ", style=self.COLORS["header"])
+        header.append("◆ ", style=self.COLORS["agent_a"])
         header.append(f"{agent_a_name} ", style=self.COLORS["agent_a"] + " bold")
         header.append("↔ ", style=self.COLORS["dim"])
-        header.append(f"{agent_b_name}", style=self.COLORS["agent_b"] + " bold")
+        header.append(f"{agent_b_name} ", style=self.COLORS["agent_b"] + " bold")
+        header.append("●", style=self.COLORS["agent_b"])
 
         # Show initial prompt as agents see it (with human tag)
         from ..config import Config
@@ -162,14 +196,14 @@ class ChatDisplay:
             title_align="left",
             border_style=self.COLORS["header"],
             padding=(1, 2),
-            width=120,  # Allow wider display for longer prompts
+            width=self.calculate_bubble_width(),
             expand=False,
         )
 
         self.console.print()
         self.console.print(header, justify="center")
         self.console.print()
-        self.console.print(prompt_panel)
+        self.console.print(Align.center(prompt_panel))
         self.console.print()
 
     def handle_message(self, event: MessageCompleteEvent) -> None:
@@ -221,19 +255,28 @@ class ChatDisplay:
         else:
             content_display = Text(content, style="default")
 
-        # Create panel with agent name as title
+        # Create panel with agent name as title and responsive width
         message_panel = Panel(
             content_display,
             title=name_text,
             title_align="left",
             border_style=color,
             padding=(1, 2),
-            width=80,
+            width=self.calculate_bubble_width(),
             expand=False,
         )
 
+        # Align based on agent: A left with margin, B right
         self.console.print()
-        self.console.print(message_panel)
+        if event.agent_id == "agent_b":
+            self.console.print(Align.right(message_panel))
+        else:
+            # Add left margin for Agent A
+            margin = self.calculate_margin()
+            if margin > 0:
+                self.console.print(Padding(message_panel, (0, 0, 0, margin)))
+            else:
+                self.console.print(message_panel)
 
     def handle_turn_complete(self, event: TurnCompleteEvent) -> None:
         """Display turn separator.
@@ -262,8 +305,8 @@ class ChatDisplay:
             else:
                 conv_color = self.COLORS["convergence_high"]
 
-            info.append(" • ", style=self.COLORS["dim"])
-            info.append(f"Convergence: {event.convergence_score:.2f}", style=conv_color)
+            info.append(" | ", style=self.COLORS["dim"])
+            info.append(f"{event.convergence_score:.2f}", style=conv_color)
 
             # Add trend indicator if we have history
             if hasattr(self, "_last_convergence"):
@@ -283,21 +326,12 @@ class ChatDisplay:
 
         # Add truncation indicator if truncation occurred
         if self.truncation_occurred:
-            info.append(" • ", style=self.COLORS["dim"])
-            info.append("✂", style="yellow")
+            info.append(" ✂", style="yellow")
             self.truncation_occurred = False  # Reset for next turn
 
-        # Create a turn panel
-        turn_panel = Panel(
-            info,
-            padding=(0, 1),
-            border_style=self.COLORS["dim"],
-            width=80,
-            expand=False,
-        )
-
+        # Use dotted Rule instead of Panel
         self.console.print()
-        self.console.print(turn_panel, justify="center")
+        self.console.print(Rule(info, style=self.COLORS["dim"], characters="·"))
         self.console.print()
 
     def handle_end(self, event: ConversationEndEvent) -> None:
@@ -323,21 +357,11 @@ class ChatDisplay:
                 conv_color = self.COLORS["convergence_mid"]
             else:
                 conv_color = self.COLORS["convergence_high"]
-            summary.append(
-                f" • Final convergence: {self._last_convergence:.2f}", style=conv_color
-            )
+            summary.append(f" • {self._last_convergence:.2f}", style=conv_color)
 
-        # Create end panel
-        end_panel = Panel(
-            summary,
-            padding=(1, 2),
-            border_style=self.COLORS["header"],
-            width=80,
-            expand=False,
-        )
-
+        # Simple centered text instead of panel
         self.console.print()
-        self.console.print(end_panel, justify="center")
+        self.console.print(summary, justify="center")
         self.console.print()
 
     def handle_truncation(self, event: ContextTruncationEvent) -> None:
@@ -364,10 +388,14 @@ class ChatDisplay:
             f" • {event.truncated_message_count} remain", style=self.COLORS["dim"]
         )
 
-        # Create truncation panel
+        # Create truncation panel with responsive width
         truncation_panel = Panel(
-            info, padding=(0, 1), border_style="yellow", width=80, expand=False
+            info,
+            padding=(0, 1),
+            border_style="yellow",
+            width=self.calculate_bubble_width(),
+            expand=False,
         )
 
         self.console.print()
-        self.console.print(truncation_panel, justify="center")
+        self.console.print(Align.center(truncation_panel))
