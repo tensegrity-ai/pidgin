@@ -84,12 +84,21 @@ Specialized event bus for experiment tracking:
 All providers implement the same interface:
 
 ```python
+@dataclass
+class ResponseChunk:
+    content: str
+    chunk_type: Literal["thinking", "response"] = "response"
+
 class Provider(ABC):
     async def stream_response(
         messages: List[Message],
-        temperature: Optional[float] = None
-    ) -> AsyncGenerator[str, None]
+        temperature: Optional[float] = None,
+        thinking_enabled: Optional[bool] = None,
+        thinking_budget: Optional[int] = None,
+    ) -> AsyncGenerator[ResponseChunk, None]
 ```
+
+The `ResponseChunk` dataclass distinguishes between reasoning traces (`chunk_type="thinking"`) and final output (`chunk_type="response"`).
 
 ### EventAwareProvider Wrapper
 All providers are wrapped with `EventAwareProvider` which:
@@ -136,6 +145,43 @@ Ollama installation flow:
 2. Offer to install if missing (with user consent)
 3. Start server automatically if not running
 4. Pull models on first use
+
+## Extended Thinking Support
+
+Pidgin supports extended thinking (reasoning traces) for models that expose their internal reasoning process:
+
+### CLI Options
+- `--think` - Enable extended thinking for both agents
+- `--think-a` / `--think-b` - Enable for specific agent
+- `--thinking-budget N` - Maximum tokens for reasoning (default: 10000)
+
+### How It Works
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Provider   │────▶│ResponseChunk │────▶│   Display    │
+│ (streaming)  │     │ type=thinking│     │  (collapsible│
+└──────────────┘     │ type=response│     │   panel)     │
+                     └──────────────┘     └──────────────┘
+                            │
+                     ┌──────▼──────┐
+                     │ Thinking    │
+                     │ Complete    │
+                     │ Event       │
+                     └──────┬──────┘
+                            │
+                     ┌──────▼──────┐
+                     │ Thinking    │
+                     │ Repository  │
+                     └─────────────┘
+```
+
+### Provider Support
+- **Anthropic**: Full support via `thinking` block in API
+- **Other providers**: Not currently supported (thinking params ignored)
+
+### Events
+- `ThinkingCompleteEvent` - Emitted when reasoning phase completes, captures full thinking trace
+- Stored in database via `ThinkingRepository` for later analysis
 
 ## Data Flow Architecture (JSONL-First)
 
@@ -232,15 +278,39 @@ Orchestrator for database operations:
 - Coordinates JSONL imports and data access
 - Used by analysis tools and notebook generation
 
-### Repository Layer (`database/repositories/`)
+### Repository Layer (`database/`)
 Specialized data access components:
 - `ExperimentRepository` - Experiment CRUD operations
 - `ConversationRepository` - Conversation data access
 - `MessageRepository` - Message operations
 - `MetricsRepository` - Metrics queries and calculations
+- `ThinkingRepository` - Thinking trace storage and retrieval
+- `EventRepository` - Event storage and querying
 - `BaseRepository` - Shared connection and query logic
 
 All database access flows through: External Component → EventStore → Repository → DuckDB
+
+### State Management (`experiments/state/`)
+Efficient state reconstruction from JSONL files:
+- `manifest_parser.py` - Parses manifest.json for experiment state
+- `conversation_parser.py` - Parses conversation events from JSONL
+- Used by monitor and analysis tools for efficient state access without database queries
+
+## IO Components (`io/`)
+
+Handles file I/O operations:
+- `event_deserializer.py` - Deserializes JSONL events to Event dataclasses
+- `jsonl_reader.py` - Efficient reading of experiment JSONL files
+- `paths.py` - Path resolution utilities
+- `directories.py` - Directory management and creation
+- `output_manager.py` - Manages experiment output directories
+
+## Analysis (`analysis/`)
+
+Post-experiment analysis tools:
+- `notebook_generator.py` - Auto-generates Jupyter notebooks for experiment analysis
+- `notebook_cells.py` - Cell definitions (setup, visualization, statistics, convergence)
+- `convergence.py` - Convergence analysis utilities
 
 ## Monitor System
 
@@ -279,30 +349,49 @@ This transformation is essential - without it, agents would see incorrect role a
 
 ### Custom Awareness
 - Configure what agents know about the conversation
-- Options: none, basic, full, custom
+- Options: none, basic, firm, research, backrooms, custom
 - Control meta-conversation awareness
 - Enable self-referential discussions
+- `backrooms` preset inspired by liminalbardo for liminal AI exploration
 
 ## Event Types
 
+All events inherit from the base `Event` class with `timestamp` and `event_id` fields.
+
 ### Core Events
-- `ConversationStartEvent` - Conversation begins
+- `ConversationStartEvent` - Conversation begins with agent config
+- `ConversationEndEvent` - Conversation ends with status
 - `TurnStartEvent` - Turn begins
-- `MessageRequestEvent` - Request to provider
-- `MessageCompleteEvent` - Response complete
 - `TurnCompleteEvent` - Turn ends with metrics
-- `ConversationEndEvent` - Conversation ends
+- `MessageRequestEvent` - Request to provider (includes thinking params)
+- `MessageChunkEvent` - Streaming chunk with timing
+- `MessageCompleteEvent` - Response complete with token counts
+- `SystemPromptEvent` - System prompt delivery to agent
+
+### Thinking Events
+- `ThinkingCompleteEvent` - Extended thinking trace captured
+
+### Control Flow Events
+- `InterruptRequestEvent` - User or system interrupt
+- `ConversationPausedEvent` - Conversation paused
+- `ConversationResumedEvent` - Conversation resumed
+- `ConversationBranchedEvent` - Branched from another conversation
 
 ### Tracking Events
 - `TokenUsageEvent` - Token usage per provider
-- `ConvergenceWarningEvent` - High convergence detected
-- `ContextLimitEvent` - Context window exceeded
+- `ContextTruncationEvent` - Messages truncated for context window
+- `ContextLimitEvent` - Context window limit reached
+- `RateLimitPaceEvent` - Rate limit pacing applied
 - `ExperimentCompleteEvent` - Experiment finished
 
+### Post-Processing Events
+- `PostProcessingStartEvent` - Processing pipeline begins
+- `PostProcessingCompleteEvent` - Processing pipeline ends
+
 ### Error Events
-- `APIErrorEvent` - Provider API errors
-- `RateLimitEvent` - Rate limit hit
 - `ErrorEvent` - General errors
+- `APIErrorEvent` - Provider API errors with retry info
+- `ProviderTimeoutEvent` - Provider timeout
 
 ## Module Design Philosophy
 
