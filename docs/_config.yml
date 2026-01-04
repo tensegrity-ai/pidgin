@@ -15,6 +15,10 @@ navigation:
     url: /quickstart
   - title: CLI Reference
     url: /cli-usage
+  - title: Extended Thinking
+    url: /extended-thinking
+  - title: Analysis
+    url: /analysis
   - title: API Documentation
     url: /api/
 
