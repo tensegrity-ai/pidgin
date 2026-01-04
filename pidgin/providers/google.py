@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
@@ -72,7 +72,7 @@ class GoogleProvider(Provider):
         for attempt in range(max_retries):
             try:
                 # Build config with optional temperature and thinking settings
-                config_kwargs = {}
+                config_kwargs: Dict[str, Any] = {}
                 if temperature is not None:
                     config_kwargs["temperature"] = temperature
 
