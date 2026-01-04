@@ -11,7 +11,7 @@ from .error_utils import create_google_error_handler
 logger = logging.getLogger(__name__)
 
 try:
-    import google.generativeai as genai
+    from google import genai
 
     GOOGLE_AVAILABLE = True
 except ImportError:
@@ -24,20 +24,12 @@ class GoogleProvider(Provider):
         super().__init__()
         if not GOOGLE_AVAILABLE:
             raise ImportError(
-                "Google Generative AI not available. Install with: "
-                "pip install google-generativeai"
+                "Google GenAI not available. Install with: pip install google-genai"
             )
 
         api_key = APIKeyManager.get_api_key("google")
-        genai.configure(api_key=api_key)
-        self.model_name = model  # Store the model name as string
-        self.model = genai.GenerativeModel(model)
-        # Extra safety: ensure model_name is always a string
-        if not isinstance(self.model_name, str):
-            logger.error(
-                f"GoogleProvider model_name is not a string: {type(self.model_name)}"
-            )
-            self.model_name = str(model)
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = model
         self._last_usage: Optional[Dict[str, int]] = None
         self.error_handler = create_google_error_handler()
 
@@ -55,7 +47,7 @@ class GoogleProvider(Provider):
         truncated_messages = apply_context_truncation(
             messages,
             provider="google",
-            model=self.model.model_name if hasattr(self.model, "model_name") else None,
+            model=self.model_name,
             logger_name=__name__,
             allow_truncation=self.allow_truncation,
         )
@@ -63,7 +55,7 @@ class GoogleProvider(Provider):
         # Convert to Google format
         # Google uses 'user' and 'model' roles instead of 'user' and 'assistant'
         # Google doesn't support system messages, so we skip them
-        google_messages = []
+        contents = []
         for m in truncated_messages:
             if m.role == "system":
                 # Skip system messages as Google doesn't support them
@@ -72,10 +64,7 @@ class GoogleProvider(Provider):
                 )
                 continue
             role = "model" if m.role == "assistant" else m.role
-            google_messages.append({"role": role, "parts": [m.content]})
-
-        # Initialize usage tracking
-        # (already initialized in __init__)
+            contents.append({"role": role, "parts": [{"text": m.content}]})
 
         # Retry logic for rate limits and transient errors
         max_retries = 3
@@ -83,19 +72,16 @@ class GoogleProvider(Provider):
 
         for attempt in range(max_retries):
             try:
-                # Create chat session
-                chat = self.model.start_chat(history=google_messages[:-1])  # type: ignore[arg-type]
-
-                # Build generation config if temperature is specified
-                generation_config = {}
+                # Build config if temperature is specified
+                config = None
                 if temperature is not None:
-                    generation_config["temperature"] = temperature
+                    config = genai.types.GenerateContentConfig(temperature=temperature)
 
-                # Stream the response
-                response = chat.send_message(
-                    google_messages[-1]["parts"][0],
-                    stream=True,
-                    generation_config=generation_config if generation_config else None,  # type: ignore[arg-type]
+                # Stream the response using new SDK API
+                response = self.client.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
                 )
 
                 last_chunk = None
