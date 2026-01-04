@@ -20,6 +20,7 @@ Pidgin records conversations between AI models to study how they communicate. We
 ### ◆ What Works
 - **Recording**: JSONL-based event capture for every interaction
 - **Models**: 20+ models across Anthropic, OpenAI, Google, xAI, and local (Ollama)
+- **Extended Thinking**: Capture Claude's reasoning traces with `--think` ([docs](docs/extended-thinking.md))
 - **Display**: Real-time observability with convergence tracking, chat mode, or raw event stream
 - **Output**: JSONL events, markdown transcripts, manifest tracking
 - **Experiments**: Run hundreds of conversations with smart parallelism

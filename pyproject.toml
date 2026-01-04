@@ -1,6 +1,6 @@
 [project]
 name = "pidgin-ai"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI conversation research tool for studying emergent communication patterns"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
