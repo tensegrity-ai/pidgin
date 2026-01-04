@@ -8,6 +8,7 @@ from ...core.events import (
     MessageCompleteEvent,
     MessageRequestEvent,
     SystemPromptEvent,
+    ThinkingCompleteEvent,
 )
 from ...core.types import Message
 from .base import BaseDeserializer
@@ -103,6 +104,22 @@ class MessageDeserializer(BaseDeserializer):
             agent_id=data["agent_id"],
             prompt=data["prompt"],
             agent_display_name=data.get("agent_display_name"),
+        )
+        event.timestamp = timestamp
+        return event
+
+    @classmethod
+    def build_thinking_complete(
+        cls, data: Dict[str, Any], timestamp: datetime
+    ) -> ThinkingCompleteEvent:
+        """Build ThinkingCompleteEvent from data."""
+        event = ThinkingCompleteEvent(
+            conversation_id=data["conversation_id"],
+            turn_number=data.get("turn_number", 0),
+            agent_id=data["agent_id"],
+            thinking_content=data.get("thinking_content", ""),
+            thinking_tokens=data.get("thinking_tokens"),
+            duration_ms=data.get("duration_ms"),
         )
         event.timestamp = timestamp
         return event

@@ -26,6 +26,7 @@ from ..core.events import (
     ProviderTimeoutEvent,
     RateLimitPaceEvent,
     SystemPromptEvent,
+    ThinkingCompleteEvent,
     TokenUsageEvent,
     TurnCompleteEvent,
     TurnStartEvent,
@@ -67,6 +68,7 @@ class EventDeserializer:
         "ExperimentCompleteEvent": ExperimentCompleteEvent,
         "PostProcessingStartEvent": PostProcessingStartEvent,
         "PostProcessingCompleteEvent": PostProcessingCompleteEvent,
+        "ThinkingCompleteEvent": ThinkingCompleteEvent,
         # Handle legacy names
         "ConversationCreated": ConversationStartEvent,
     }
@@ -136,6 +138,7 @@ class EventDeserializer:
                 "MessageChunkEvent",
                 "MessageCompleteEvent",
                 "SystemPromptEvent",
+                "ThinkingCompleteEvent",
             ]:
                 return cls._deserialize_message_event(event_type, event_data, timestamp)
             elif event_type in ["ErrorEvent", "APIErrorEvent", "ProviderTimeoutEvent"]:
@@ -195,6 +198,8 @@ class EventDeserializer:
             return cls.message.build_message_complete(data, timestamp)
         elif event_type == "SystemPromptEvent":
             return cls.message.build_system_prompt(data, timestamp)
+        elif event_type == "ThinkingCompleteEvent":
+            return cls.message.build_thinking_complete(data, timestamp)
         return None
 
     @classmethod
