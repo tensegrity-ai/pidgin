@@ -12,6 +12,8 @@ Comprehensive documentation for the Pidgin AI conversation research tool.
 
 - **[YAML Specifications](yaml-specs.md)** - Configure experiments with YAML
 - **[Custom Awareness](custom-awareness.md)** - Control agent awareness and context
+- **[Extended Thinking](extended-thinking.md)** - Claude reasoning traces and analysis
+- **[Analysis & Notebooks](analysis.md)** - Post-experiment analysis and Jupyter notebooks
 - **[Branching Workflow](branching_workflow.md)** - Explore alternate conversation paths
 
 ## Architecture & Design

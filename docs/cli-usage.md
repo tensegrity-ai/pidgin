@@ -51,6 +51,14 @@ pidgin run [OPTIONS]
 - `--prompt-tag TEXT` - Tag to prefix initial prompt (default: "[HUMAN]", use "" to disable)
 - `--allow-truncation` - Allow messages to be truncated to fit context windows
 
+#### Extended Thinking Options (Claude models only)
+- `--think` - Enable extended thinking for both agents
+- `--think-a` - Enable extended thinking for agent A only
+- `--think-b` - Enable extended thinking for agent B only
+- `--thinking-budget INTEGER` - Max thinking tokens (1000-100000, default: 10000)
+
+See [Extended Thinking](extended-thinking.md) for details.
+
 #### Examples
 
 ```bash
@@ -81,6 +89,13 @@ pidgin run -a claude -b gpt -r 10 --name my_experiment
 pidgin run -a claude-3-haiku -b gpt-4o-mini -t 100 \
   --allow-truncation \
   -p "Let's explore the nature of reality"
+
+# Enable extended thinking for complex reasoning
+pidgin run -a claude -b claude --think -t 15 \
+  -p "Solve this step by step"
+
+# Meditation mode: one agent faces silence
+pidgin run -a claude -b claude --meditation -t 20
 ```
 
 ### Running from YAML Specifications
@@ -144,19 +159,68 @@ pidgin branch experiment_abc123 25 \
 
 ### `pidgin monitor`
 
-System health monitor reading from JSONL files.
+Live system health monitor that reads directly from JSONL files.
 
 ```bash
 pidgin monitor
 ```
 
-Shows a live overview of:
-- Active experiments and their progress
-- System load (concurrent conversations)
-- Convergence warnings
-- Completion estimates
+#### Display Panels
 
-This reads directly from JSONL files to avoid database locks. Press Ctrl+C to exit.
+The monitor shows a multi-panel dashboard:
+
+**Header**
+- Rotating refresh indicator
+- Current timestamp
+- Active experiment count
+
+**Summary Panel**
+- Total experiments (active/completed/failed)
+- Aggregate token usage and costs
+- Overall progress percentage
+
+**Experiments Panel**
+- Each active experiment with:
+  - Name and ID
+  - Progress (conversations completed / total)
+  - Status (running, paused, completing)
+
+**Conversations Panel**
+- Active conversations with:
+  - Current turn number
+  - Agent models
+  - Latest convergence score
+  - Token usage
+
+**Errors Panel** (when errors occur)
+- Recent API errors
+- Rate limit events
+- Timeout events
+
+#### Behavior
+
+- **Refresh rate**: Updates every 1-2 seconds
+- **Lock-free**: Reads directly from JSONL files, no database locks
+- **Dynamic width**: Adjusts to terminal size (60-150 chars)
+- **Exit**: Press Ctrl+C to exit
+
+#### Example Output
+
+```
+╭─ Pidgin Monitor ─────────────────────────────────────╮
+│ ◐ 14:23:45                          2 experiments    │
+╰──────────────────────────────────────────────────────╯
+
+╭─ Active Experiments ─────────────────────────────────╮
+│ consciousness-study    ████████░░ 8/10 conversations │
+│ language-patterns      ██░░░░░░░░ 2/10 conversations │
+╰──────────────────────────────────────────────────────╯
+
+╭─ Conversations ──────────────────────────────────────╮
+│ conv_abc123  Turn 15/50  claude↔gpt  conv: 0.342     │
+│ conv_def456  Turn 8/50   claude↔gpt  conv: 0.187     │
+╰──────────────────────────────────────────────────────╯
+```
 
 ### `pidgin stop`
 
@@ -185,22 +249,96 @@ pidgin stop experiment_abc --force
 
 ### `pidgin models`
 
-List all available AI models with their providers and context windows.
+List available AI models grouped by provider.
 
 ```bash
-pidgin models
+pidgin models [OPTIONS]
 ```
+
+#### Options
+- `--all` - Show all stable production models (default shows only curated models)
+
+#### Output Format
+
+Models are grouped by provider and show:
+- Model name and aliases
+- Context window size
+- Cost per million tokens (input/output)
+
+#### Example Output
+
+```
+╭─ Anthropic ──────────────────────────────────────────╮
+│ claude-3-5-sonnet  (claude, sonnet)   200K  $3/$15   │
+│ claude-3-haiku     (haiku)            200K  $0.25/$1 │
+│ claude-3-opus      (opus)             200K  $15/$75  │
+╰──────────────────────────────────────────────────────╯
+
+╭─ OpenAI ─────────────────────────────────────────────╮
+│ gpt-4o             (gpt)              128K  $5/$15   │
+│ gpt-4o-mini        (mini)             128K  $0.15/$0 │
+╰──────────────────────────────────────────────────────╯
+
+╭─ Local ──────────────────────────────────────────────╮
+│ local:test         (test)             4K    free     │
+│ ollama:llama3.2    (llama)            128K  free     │
+╰──────────────────────────────────────────────────────╯
+```
+
+#### Ollama Integration
+
+If Ollama is installed, locally available models are automatically detected and listed under the "Local" section. Models can be referenced as `ollama:model-name`.
 
 ### `pidgin config`
 
 Create a configuration file with example settings.
 
 ```bash
-pidgin config [--force]
+pidgin config [OPTIONS]
 ```
 
-Options:
-- `--force` - Overwrite existing configuration file
+#### Options
+- `-f, --force` - Overwrite existing configuration file
+
+#### Configuration File Location
+
+Creates `~/.config/pidgin/pidgin.yaml` with default settings.
+
+#### Example Configuration
+
+```yaml
+# Default models
+default_agent_a: claude-3-5-sonnet
+default_agent_b: gpt-4o
+
+# Default parameters
+default_turns: 20
+default_temperature: 0.7
+
+# Output settings
+output_dir: ~/pidgin_output
+
+# Display preferences
+default_display_mode: progress
+show_costs: true
+
+# Rate limiting
+max_parallel: 1
+rate_limit_buffer: 0.1
+
+# Notifications
+notify_on_complete: true
+notify_on_error: true
+```
+
+#### Environment Variable Override
+
+Configuration values can be overridden with environment variables:
+
+```bash
+export PIDGIN_OUTPUT_DIR=/custom/path
+export PIDGIN_MAX_PARALLEL=4
+```
 
 ## Display Modes
 
@@ -323,6 +461,10 @@ export PIDGIN_OUTPUT_DIR=/path/to/output
 
 ## See Also
 
+- [Extended Thinking](extended-thinking.md) - Claude reasoning traces
+- [Analysis & Notebooks](analysis.md) - Post-experiment analysis
 - [YAML Specifications](yaml-specs.md) - Detailed YAML format
-- [Configuration](custom-awareness.md) - Awareness prompts
+- [Custom Awareness](custom-awareness.md) - Awareness prompts
+- [Database](database.md) - DuckDB schema and queries
+- [Metrics](metrics.md) - Available metrics
 - [API Reference](api/index.md) - Python API documentation
