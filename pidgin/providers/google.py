@@ -40,7 +40,6 @@ class GoogleProvider(Provider):
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
-        # Note: thinking_enabled and thinking_budget are not yet supported by Google
         # Apply context truncation
         from .context_utils import apply_context_truncation
 
@@ -72,10 +71,22 @@ class GoogleProvider(Provider):
 
         for attempt in range(max_retries):
             try:
-                # Build config if temperature is specified
-                config = None
+                # Build config with optional temperature and thinking settings
+                config_kwargs = {}
                 if temperature is not None:
-                    config = genai.types.GenerateContentConfig(temperature=temperature)
+                    config_kwargs["temperature"] = temperature
+
+                # Add thinking config if enabled
+                if thinking_enabled:
+                    config_kwargs["thinking_config"] = genai.types.ThinkingConfig(
+                        include_thoughts=True
+                    )
+
+                config = (
+                    genai.types.GenerateContentConfig(**config_kwargs)
+                    if config_kwargs
+                    else None
+                )
 
                 # Stream the response using new SDK API
                 response = self.client.models.generate_content_stream(
@@ -86,7 +97,23 @@ class GoogleProvider(Provider):
 
                 last_chunk = None
                 for chunk in response:
-                    if chunk.text:
+                    # Check for parts with thought flag (thinking mode)
+                    if (
+                        hasattr(chunk, "candidates")
+                        and chunk.candidates
+                        and hasattr(chunk.candidates[0], "content")
+                        and chunk.candidates[0].content
+                        and hasattr(chunk.candidates[0].content, "parts")
+                    ):
+                        for part in chunk.candidates[0].content.parts:
+                            if hasattr(part, "text") and part.text:
+                                # Check if this is a thinking part
+                                if hasattr(part, "thought") and part.thought:
+                                    yield ResponseChunk(part.text, "thinking")
+                                else:
+                                    yield ResponseChunk(part.text, "response")
+                    elif chunk.text:
+                        # Fallback for simple text response
                         yield ResponseChunk(chunk.text, "response")
                     last_chunk = chunk
 
