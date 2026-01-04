@@ -28,6 +28,9 @@ logs/
 # Environment
 .env
 .env.*
+
+# Internal planning
+PLANS/
 *.env
 
 # Backup files

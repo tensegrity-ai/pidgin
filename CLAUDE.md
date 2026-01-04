@@ -256,11 +256,3 @@ With JSONL-first architecture, database concurrency is no longer an issue:
 - DuckDB is only used for post-experiment analysis (auto-imported when experiments complete)
 - Batch import happens after experiments complete
 
-## Current State
-
-The core architecture is complete with JSONL-first data flow. We're now focused on:
-
-1. **Analysis infrastructure** - Auto-generated Jupyter notebooks
-2. **Performance optimization** - Token caching, metric calculation
-3. **Statistical validation** - Proper significance testing for observations
-
