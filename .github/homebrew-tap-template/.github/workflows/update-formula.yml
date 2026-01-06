@@ -1,0 +1,56 @@
+name: Update Formula
+
+on:
+  repository_dispatch:
+    types: [update-formula]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from payload
+        id: version
+        run: |
+          VERSION="${{ github.event.client_payload.version }}"
+          # Strip 'v' prefix if present
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download and get SHA256
+        id: sha
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          URL="https://files.pythonhosted.org/packages/source/p/pidgin-ai/pidgin_ai-${VERSION}.tar.gz"
+
+          # Wait for PyPI to have the package (can take a few seconds)
+          for i in {1..30}; do
+            if curl -sLf "$URL" -o package.tar.gz; then
+              break
+            fi
+            echo "Waiting for PyPI... attempt $i"
+            sleep 10
+          done
+
+          SHA256=$(sha256sum package.tar.gz | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+          URL="${{ steps.sha.outputs.url }}"
+
+          sed -i "s|url \".*\"|url \"$URL\"|" Formula/pidgin.rb
+          sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" Formula/pidgin.rb
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/pidgin.rb
+          git commit -m "Update pidgin to $VERSION"
+          git push
