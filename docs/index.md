@@ -58,6 +58,7 @@ Is this convergence meaningful or just a quirk? That's what we're trying to unde
 ### Architecture & Analysis
 - **[Database Schema](database.md)** - DuckDB schema and query examples
 - **[Metrics Reference](metrics.md)** - All 150+ metrics explained
+- **[Convergence](convergence.md)** - How convergence is calculated and configured
 - **[Conversation Architecture](conversation-architecture.md)** - System design and event flow
 
 ### API Documentation
