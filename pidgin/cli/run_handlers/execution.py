@@ -55,6 +55,18 @@ class ExecutionHandler:
         except (RuntimeError, OSError):
             # Error already displayed by daemon launcher
             return
+        except Exception as e:
+            from ..core.exceptions import ExperimentAlreadyExistsError
+
+            if isinstance(e, ExperimentAlreadyExistsError):
+                self.console.print(
+                    f"\n[bold red]Experiment '{e.name}' already exists.[/bold red]"
+                    f"\n  Use [cyan]pidgin status {e.name}[/cyan] to check its state,"
+                    f"\n  or pass [cyan]--name <new-name>[/cyan] to use a different name.\n"
+                )
+            else:
+                self.console.print(f"\n[bold red]Error:[/bold red] {e}\n")
+            return
 
         if quiet:
             # Quiet mode: just show commands and exit

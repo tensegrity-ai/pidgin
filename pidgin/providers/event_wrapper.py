@@ -314,7 +314,7 @@ class EventAwareProvider:
                 return  # Just return without sending a message
 
             # For other errors, create a fallback response
-            fallback_content = "[Unable to generate response due to API error]"
+            fallback_content = f"[API error: {error_str}]"
 
             # Create a valid message response
             message = Message(
