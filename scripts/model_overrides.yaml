@@ -152,6 +152,94 @@ local_models:
       size: "4.1GB"
     rate_limits: null
 
+  # xAI models (added manually since their API often requires special auth)
+  - key: "grok-3"
+    provider: "xai"
+    display_name: "Grok 3"
+    aliases: ["grok3"]
+    api:
+      model_id: "grok-3"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: true
+      system_messages: true
+      extended_thinking: false
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 131072
+      max_output_tokens: 16384
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.7}
+      top_p: {supported: true, range: [0.0, 1.0], default: null}
+      top_k: {supported: false, default: null}
+    cost: null
+    metadata:
+      status: "available"
+      curated: false
+      stable: true
+    rate_limits: null
+
+  - key: "grok-3-mini"
+    provider: "xai"
+    display_name: "Grok 3 Mini"
+    aliases: []
+    api:
+      model_id: "grok-3-mini"
+    capabilities:
+      streaming: true
+      vision: false
+      tool_calling: true
+      system_messages: true
+      extended_thinking: true
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 131072
+      max_output_tokens: 16384
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.7}
+      top_p: {supported: true, range: [0.0, 1.0], default: null}
+      top_k: {supported: false, default: null}
+    cost: null
+    metadata:
+      status: "available"
+      curated: false
+      stable: true
+    rate_limits: null
+
+  - key: "grok-4"
+    provider: "xai"
+    display_name: "Grok 4"
+    aliases: []
+    api:
+      model_id: "grok-4"
+    capabilities:
+      streaming: true
+      vision: true
+      tool_calling: true
+      system_messages: true
+      extended_thinking: true
+      json_mode: true
+      prompt_caching: false
+    limits:
+      max_context_tokens: 131072
+      max_output_tokens: 16384
+      max_thinking_tokens: null
+    parameters:
+      temperature: {supported: true, range: [0.0, 2.0], default: 0.7}
+      top_p: {supported: true, range: [0.0, 1.0], default: null}
+      top_k: {supported: false, default: null}
+    cost: null
+    metadata:
+      status: "available"
+      curated: true
+      stable: true
+    rate_limits: null
+
   - key: "silent:none"
     provider: "silent"
     display_name: "Silent"
@@ -190,25 +278,14 @@ local_models:
 model_overrides:
   # Anthropic models
   "claude-sonnet-4.5":
-    aliases: ["sonnet"]
     capabilities:
       vision: true
       extended_thinking: true
       prompt_caching: true
     metadata:
       curated: true
-      description: "Claude's most capable model"
 
   "claude-opus-4.1":
-    aliases: ["opus"]
-    capabilities:
-      vision: true
-      prompt_caching: true
-    metadata:
-      curated: true
-
-  "claude-3-opus":
-    aliases: ["opus3"]
     capabilities:
       vision: true
       prompt_caching: true
@@ -248,14 +325,12 @@ model_overrides:
 
   # Google models
   "gemini-2.5-pro":
-    aliases: ["gemini-2.5-pro"]
     capabilities:
       vision: true
     metadata:
       curated: true
 
-  "gemini-2.5-flash-preview-09-2025":
-    aliases: ["flash-2.5"]
+  "gemini-2.5-flash":
     capabilities:
       vision: true
     metadata:

@@ -1,6 +1,7 @@
 """Model configuration and metadata for Pidgin."""
 
 import logging
+import re
 from typing import Dict, List, Optional
 
 from .model_loader import load_models as _load_from_json
@@ -62,7 +63,13 @@ MODELS = ModelsDict()
 
 
 def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
-    """Get model configuration by ID or alias."""
+    """Get model configuration by ID, alias, or family name.
+
+    Resolution order:
+    1. Exact model ID match
+    2. Exact alias match
+    3. Family name match (e.g., "opus" matches latest claude-opus-*)
+    """
     models = _get_models()
 
     # Direct match
@@ -74,7 +81,75 @@ def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
         if model_or_alias in config.aliases:
             return config
 
+    # Family name match: find the latest model containing the search term
+    match = _resolve_family_name(model_or_alias, models)
+    if match:
+        return match
+
     return None
+
+
+def _extract_version_after(model_id: str, family_name: str) -> float:
+    """Extract a sortable version number from the part of model_id after the family name.
+
+    This avoids false positives like "16k" in "gpt-3.5-turbo-16k".
+
+    Examples:
+        claude-opus-4.1, "opus"   -> 4.1
+        gpt-4o, "gpt"             -> 4.0
+        gpt-3.5-turbo-16k, "gpt"  -> 3.5
+        o3-mini, "o"              -> 3.0
+    """
+    idx = model_id.lower().find(family_name.lower())
+    if idx < 0:
+        return 0.0
+    # Look at what comes after the family name
+    after = model_id[idx + len(family_name) :]
+    # Strip leading separator
+    after = after.lstrip("-.")
+    # Extract the first version-like number
+    m = re.match(r"(\d+(?:\.\d+)?)", after)
+    if m:
+        return float(m.group(1))
+    return 0.0
+
+
+def _resolve_family_name(
+    name: str, models: Dict[str, ModelConfig]
+) -> Optional[ModelConfig]:
+    """Resolve a family name like 'opus' or 'sonnet' to the latest model.
+
+    Matches model IDs that contain the name as a component (bounded by
+    hyphens, start/end). Picks the highest-versioned match, preferring
+    curated models and shorter IDs (base models over variants).
+    """
+    name_lower = name.lower()
+
+    candidates: list[tuple[float, bool, int, str, ModelConfig]] = []
+
+    for model_id, config in models.items():
+        mid_lower = model_id.lower()
+        # Check if name appears as a component (between hyphens or at boundaries)
+        if re.search(rf"(?:^|[-.]){re.escape(name_lower)}(?:$|[-.0-9])", mid_lower):
+            version = _extract_version_after(model_id, name_lower)
+            is_curated = config.metadata.curated
+            # Prefer: highest version, then shortest ID (base model over variant)
+            candidates.append(
+                (version, len(model_id), model_id, config)
+            )
+
+    if not candidates:
+        return None
+
+    # Sort: version desc, id length asc (shorter = base model)
+    candidates.sort(key=lambda x: (x[0], -x[1]), reverse=True)
+    best = candidates[0]
+    if len(candidates) > 1:
+        logger.debug(
+            f"Resolved '{name}' to '{best[2]}' "
+            f"(from {len(candidates)} candidates)"
+        )
+    return best[3]
 
 
 def get_all_aliases() -> Dict[str, str]:

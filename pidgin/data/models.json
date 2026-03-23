@@ -1,28 +1,30 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2025-12-23T09:33:42.330397",
+  "last_updated": "2026-03-22T23:17:19.732439+00:00",
+  "generator": "generate_models.py",
   "models": {
     "claude-3-haiku": {
       "provider": "anthropic",
-      "display_name": "Claude 3 Haiku",
+      "display_name": "Anthropic: Claude 3 Haiku",
       "aliases": [
         "haiku3"
       ],
       "api": {
-        "model_id": "claude-3-haiku"
+        "model_id": "claude-3-haiku-20240307"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": true
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -31,112 +33,65 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        },
-        "top_k": {
-          "supported": true,
-          "range": [
-            0,
-            500
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.25,
-        "output_per_1m_tokens": 1.25,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "claude-3-opus": {
-      "provider": "anthropic",
-      "display_name": "Claude 3 Opus",
-      "aliases": [
-        "opus3"
-      ],
-      "api": {
-        "model_id": "claude-3-opus"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": true
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
           "supported": true,
           "range": [
             0.0,
             1.0
           ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 15.0,
-        "output_per_1m_tokens": 75.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 2.5e-07,
+        "output_per_1m_tokens": 1.25e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-3.5-haiku": {
       "provider": "anthropic",
-      "display_name": "Claude 3.5 Haiku",
-      "aliases": [
-        "haiku35"
-      ],
+      "display_name": "Anthropic: Claude 3.5 Haiku",
+      "aliases": [],
       "api": {
-        "model_id": "claude-3-5-haiku-20241022"
+        "model_id": "claude-3.5-haiku"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -145,55 +100,67 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.7999999999999999,
-        "output_per_1m_tokens": 4.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 8e-07,
+        "output_per_1m_tokens": 4e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-3.5-sonnet": {
       "provider": "anthropic",
-      "display_name": "Claude 3.5 Sonnet",
+      "display_name": "Anthropic: Claude 3.5 Sonnet",
       "aliases": [
         "sonnet35"
       ],
       "api": {
-        "model_id": "claude-3-5-sonnet-20241022"
+        "model_id": "claude-3.5-sonnet"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -202,55 +169,67 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 6.0,
-        "output_per_1m_tokens": 30.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 6e-06,
+        "output_per_1m_tokens": 3e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-3.7-sonnet": {
       "provider": "anthropic",
-      "display_name": "Claude 3.7 Sonnet",
+      "display_name": "Anthropic: Claude 3.7 Sonnet",
       "aliases": [
         "sonnet37"
       ],
       "api": {
-        "model_id": "claude-3-7-sonnet-20250219"
+        "model_id": "claude-3.7-sonnet"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -259,37 +238,48 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 15.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-haiku-4.5": {
       "provider": "anthropic",
-      "display_name": "Claude Haiku 4.5",
+      "display_name": "Anthropic: Claude Haiku 4.5",
       "aliases": [
         "haiku"
       ],
@@ -298,16 +288,17 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -316,55 +307,65 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.0,
-        "output_per_1m_tokens": 5.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1e-06,
+        "output_per_1m_tokens": 5e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-opus-4": {
       "provider": "anthropic",
-      "display_name": "Claude Opus 4",
-      "aliases": [
-        "opus4"
-      ],
+      "display_name": "Anthropic: Claude Opus 4",
+      "aliases": [],
       "api": {
         "model_id": "claude-opus-4-20250514"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -373,40 +374,49 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 15.0,
-        "output_per_1m_tokens": 75.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.5e-05,
+        "output_per_1m_tokens": 7.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-opus-4.1": {
       "provider": "anthropic",
-      "display_name": "Claude Opus 4.1",
-      "aliases": [
-        "opus41"
-      ],
+      "display_name": "Anthropic: Claude Opus 4.1",
+      "aliases": [],
       "api": {
         "model_id": "claude-opus-4-1-20250805"
       },
@@ -415,13 +425,14 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
+        "extended_thinking": false,
         "json_mode": true,
         "prompt_caching": true
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -430,55 +441,65 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 15.0,
-        "output_per_1m_tokens": 75.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.5e-05,
+        "output_per_1m_tokens": 7.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-opus-4.5": {
       "provider": "anthropic",
-      "display_name": "Claude Opus 4.5",
-      "aliases": [
-        "opus"
-      ],
+      "display_name": "Anthropic: Claude Opus 4.5",
+      "aliases": [],
       "api": {
         "model_id": "claude-opus-4-5-20251101"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
+        "extended_thinking": false,
         "json_mode": true,
-        "prompt_caching": true
+        "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -487,55 +508,134 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 5.0,
-        "output_per_1m_tokens": 25.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 5e-06,
+        "output_per_1m_tokens": 2.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "claude-opus-4.6": {
+      "provider": "anthropic",
+      "display_name": "Anthropic: Claude Opus 4.6",
+      "aliases": [
+        "opus"
+      ],
+      "api": {
+        "model_id": "claude-opus-4-6"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 5e-06,
+        "output_per_1m_tokens": 2.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-sonnet-4": {
       "provider": "anthropic",
-      "display_name": "Claude Sonnet 4",
-      "aliases": [
-        "sonnet4"
-      ],
+      "display_name": "Anthropic: Claude Sonnet 4",
+      "aliases": [],
       "api": {
         "model_id": "claude-sonnet-4-20250514"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": false,
-        "prompt_caching": true
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 1000000,
-        "max_output_tokens": null
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -544,40 +644,49 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
-            0,
-            500
-          ]
+            1,
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 15.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "claude-sonnet-4.5": {
       "provider": "anthropic",
-      "display_name": "Claude Sonnet 4.5",
-      "aliases": [
-        "sonnet"
-      ],
+      "display_name": "Anthropic: Claude Sonnet 4.5",
+      "aliases": [],
       "api": {
         "model_id": "claude-sonnet-4-5-20250929"
       },
@@ -592,7 +701,8 @@
       },
       "limits": {
         "max_context_tokens": 1000000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -601,143 +711,182 @@
             0.0,
             1.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
-        },
-        "top_k": {
-          "supported": true,
-          "range": [
-            0,
-            500
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 15.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "codex-mini": {
-      "provider": "openai",
-      "display_name": "OpenAI: Codex Mini",
-      "aliases": [],
-      "api": {
-        "model_id": "codex-mini"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.5,
-        "output_per_1m_tokens": 6.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gemini-2.0-flash-001": {
-      "provider": "google",
-      "display_name": "Gemini 2.0 Flash",
-      "aliases": [
-        "flash2"
-      ],
-      "api": {
-        "model_id": "gemini-2.0-flash-001"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 1048576,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+          "default": null
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.09999999999999999,
-        "output_per_1m_tokens": 0.39999999999999997,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "claude-sonnet-4.6": {
+      "provider": "anthropic",
+      "display_name": "Anthropic: Claude Sonnet 4.6",
+      "aliases": [
+        "sonnet"
+      ],
+      "api": {
+        "model_id": "claude-sonnet-4-6"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "gemini-2.0-flash": {
+      "provider": "google",
+      "display_name": "gemini-2.0-flash",
+      "aliases": [
+        "flash2"
+      ],
+      "api": {
+        "model_id": "gemini-2.0-flash"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": null,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.95
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": 64
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemini-2.5-flash": {
       "provider": "google",
-      "display_name": "Gemini 2.5 Flash",
-      "aliases": [],
+      "display_name": "Google: Gemini 2.5 Flash",
+      "aliases": [
+        "flash"
+      ],
       "api": {
         "model_id": "gemini-2.5-flash"
       },
@@ -752,7 +901,8 @@
       },
       "limits": {
         "max_context_tokens": 1048576,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -768,87 +918,41 @@
           "range": [
             0.0,
             1.0
-          ]
-        },
-        "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            40
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.3,
-        "output_per_1m_tokens": 2.5,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "gemini-2.5-flash-image": {
-      "provider": "google",
-      "display_name": "Gemini 2.5 Flash Image (Nano Banana)",
-      "aliases": [
-        "flash"
-      ],
-      "api": {
-        "model_id": "gemini-2.5-flash-image"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 32768,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.3,
-        "output_per_1m_tokens": 2.5,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-07,
+        "output_per_1m_tokens": 2.5e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemini-2.5-pro": {
       "provider": "google",
-      "display_name": "Gemini 2.5 Pro",
+      "display_name": "Google: Gemini 2.5 Pro",
       "aliases": [
         "gemini"
       ],
@@ -866,7 +970,8 @@
       },
       "limits": {
         "max_context_tokens": 1048576,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -882,30 +987,41 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.25e-06,
+        "output_per_1m_tokens": 1e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-2-27b-it": {
       "provider": "google",
-      "display_name": "Gemma 2 27B",
+      "display_name": "Google: Gemma 2 27B",
       "aliases": [],
       "api": {
         "model_id": "gemma-2-27b-it"
@@ -913,7 +1029,7 @@
       "capabilities": {
         "streaming": true,
         "vision": false,
-        "tool_calling": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
         "json_mode": true,
@@ -921,7 +1037,8 @@
       },
       "limits": {
         "max_context_tokens": 8192,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -937,30 +1054,41 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.65,
-        "output_per_1m_tokens": 0.65,
-        "currency": "USD"
+        "input_per_1m_tokens": 6.5e-07,
+        "output_per_1m_tokens": 6.5e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-2-9b-it": {
       "provider": "google",
-      "display_name": "Gemma 2 9B",
+      "display_name": "Google: Gemma 2 9B",
       "aliases": [],
       "api": {
         "model_id": "gemma-2-9b-it"
@@ -968,15 +1096,16 @@
       "capabilities": {
         "streaming": true,
         "vision": false,
-        "tool_calling": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
-        "json_mode": false,
+        "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 8192,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -992,38 +1121,49 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.03,
-        "output_per_1m_tokens": 0.09,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-08,
+        "output_per_1m_tokens": 9e-08,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-3-12b-it": {
       "provider": "google",
-      "display_name": "Gemma 3 12B",
+      "display_name": "Google: Gemma 3 12B",
       "aliases": [],
       "api": {
         "model_id": "gemma-3-12b-it"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
-        "tool_calling": false,
+        "vision": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
         "json_mode": true,
@@ -1031,7 +1171,8 @@
       },
       "limits": {
         "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1047,46 +1188,58 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.03,
-        "output_per_1m_tokens": 0.09999999999999999,
-        "currency": "USD"
+        "input_per_1m_tokens": 4e-08,
+        "output_per_1m_tokens": 1.3e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gemma-3-12b-it:free": {
+    "gemma-3-1b-it": {
       "provider": "google",
-      "display_name": "Gemma 3 12B (free)",
+      "display_name": "gemma-3-1b-it",
       "aliases": [],
       "api": {
-        "model_id": "gemma-3-12b-it:free"
+        "model_id": "gemma-3-1b-it"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
-        "tool_calling": false,
+        "vision": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
-        "json_mode": false,
+        "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 32768,
-        "max_output_tokens": null
+        "max_context_tokens": null,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1102,88 +1255,41 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": null,
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-3-27b-it": {
       "provider": "google",
-      "display_name": "Gemma 3 27B",
+      "display_name": "Google: Gemma 3 27B",
       "aliases": [],
       "api": {
         "model_id": "gemma-3-27b-it"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 96000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        },
-        "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            40
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.04,
-        "output_per_1m_tokens": 0.15,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gemma-3-27b-it:free": {
-      "provider": "google",
-      "display_name": "Gemma 3 27B (free)",
-      "aliases": [],
-      "api": {
-        "model_id": "gemma-3-27b-it:free"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -1192,7 +1298,8 @@
       },
       "limits": {
         "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1208,42 +1315,58 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
-      "cost": null,
+      "cost": {
+        "input_per_1m_tokens": 8e-08,
+        "output_per_1m_tokens": 1.6e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-3-4b-it": {
       "provider": "google",
-      "display_name": "Gemma 3 4B",
+      "display_name": "Google: Gemma 3 4B",
       "aliases": [],
       "api": {
         "model_id": "gemma-3-4b-it"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
-        "tool_calling": false,
+        "vision": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
         "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 96000,
-        "max_output_tokens": null
+        "max_context_tokens": 131072,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1259,97 +1382,58 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.01703012,
-        "output_per_1m_tokens": 0.0681536,
-        "currency": "USD"
+        "input_per_1m_tokens": 4e-08,
+        "output_per_1m_tokens": 8e-08,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gemma-3-4b-it:free": {
+    "gemma-3n-e2b-it": {
       "provider": "google",
-      "display_name": "Gemma 3 4B (free)",
+      "display_name": "gemma-3n-e2b-it",
       "aliases": [],
       "api": {
-        "model_id": "gemma-3-4b-it:free"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 32768,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        },
-        "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            40
-          ]
-        }
-      },
-      "cost": null,
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gemma-3n-e2b-it:free": {
-      "provider": "google",
-      "display_name": "Gemma 3n 2B (free)",
-      "aliases": [],
-      "api": {
-        "model_id": "gemma-3n-e2b-it:free"
+        "model_id": "gemma-3n-e2b-it"
       },
       "capabilities": {
         "streaming": true,
         "vision": false,
-        "tool_calling": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
         "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 8192,
-        "max_output_tokens": null
+        "max_context_tokens": null,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1365,26 +1449,34 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": null,
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gemma-3n-e4b-it": {
       "provider": "google",
-      "display_name": "Gemma 3n 4B",
+      "display_name": "Google: Gemma 3n 4B",
       "aliases": [],
       "api": {
         "model_id": "gemma-3n-e4b-it"
@@ -1392,15 +1484,16 @@
       "capabilities": {
         "streaming": true,
         "vision": false,
-        "tool_calling": false,
+        "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
-        "json_mode": false,
+        "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 32768,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1416,33 +1509,97 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.95
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 64
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.02,
-        "output_per_1m_tokens": 0.04,
-        "currency": "USD"
+        "input_per_1m_tokens": 2e-08,
+        "output_per_1m_tokens": 4e-08,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gemma-3n-e4b-it:free": {
-      "provider": "google",
-      "display_name": "Gemma 3n 4B (free)",
-      "aliases": [],
+    "local:test": {
+      "provider": "local",
+      "display_name": "Local Test",
+      "aliases": [
+        "test"
+      ],
       "api": {
-        "model_id": "gemma-3n-e4b-it:free"
+        "model_id": "local:test"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": false,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 100000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": false,
+          "default": null
+        },
+        "top_p": {
+          "supported": false,
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "release_date": "2024-01-01",
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "Test model for development",
+        "notes": "Test model for development",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "local:mistral": {
+      "provider": "ollama",
+      "display_name": "Mistral 7B",
+      "aliases": [
+        "mistral"
+      ],
+      "api": {
+        "model_id": "local:mistral",
+        "ollama_model": "mistral:7b"
       },
       "capabilities": {
         "streaming": true,
@@ -1454,8 +1611,9 @@
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 8192,
-        "max_output_tokens": null
+        "max_context_tokens": 32768,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1464,29 +1622,163 @@
             0.0,
             2.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 0.9
         },
         "top_k": {
           "supported": true,
           "range": [
             1,
-            40
-          ]
+            100
+          ],
+          "default": 40
         }
       },
       "cost": null,
       "metadata": {
         "status": "available",
+        "release_date": "2023-09-01",
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": false
-      }
+        "description": "Popular open model",
+        "notes": "Popular open model, needs 8GB+ RAM",
+        "size": "4.1GB"
+      },
+      "rate_limits": null
+    },
+    "local:phi": {
+      "provider": "ollama",
+      "display_name": "Phi-3",
+      "aliases": [
+        "phi"
+      ],
+      "api": {
+        "model_id": "local:phi",
+        "ollama_model": "phi3:3.8b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 0.8
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.9
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": 40
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "release_date": "2024-06-01",
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "Balanced size/performance for local use",
+        "notes": "Balanced size/performance for local use",
+        "size": "2.8GB"
+      },
+      "rate_limits": null
+    },
+    "local:qwen": {
+      "provider": "ollama",
+      "display_name": "Qwen 0.5B",
+      "aliases": [
+        "qwen"
+      ],
+      "api": {
+        "model_id": "local:qwen",
+        "ollama_model": "qwen2.5:0.5b"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 32768,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 0.8
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.9
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": 40
+        }
+      },
+      "cost": null,
+      "metadata": {
+        "status": "available",
+        "release_date": "2024-11-01",
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "Smallest practical Ollama model",
+        "notes": "Smallest practical Ollama model, very fast",
+        "size": "500MB"
+      },
+      "rate_limits": null
     },
     "gpt-3.5-turbo": {
       "provider": "openai",
@@ -1506,7 +1798,8 @@
       },
       "limits": {
         "max_context_tokens": 16385,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1522,72 +1815,40 @@
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.5,
-        "output_per_1m_tokens": 1.5,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-3.5-turbo-0613": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-3.5 Turbo (older v0613)",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-3.5-turbo-0613"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 4095,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
           "default": 1.0
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.0,
-        "output_per_1m_tokens": 2.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 5e-07,
+        "output_per_1m_tokens": 1.5e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-3.5-turbo-16k": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-3.5 Turbo 16k",
-      "aliases": [],
+      "aliases": [
+        "3.5"
+      ],
       "api": {
         "model_id": "gpt-3.5-turbo-16k"
       },
@@ -1602,7 +1863,8 @@
       },
       "limits": {
         "max_context_tokens": 16385,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1618,72 +1880,40 @@
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 4.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-3.5-turbo-instruct": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-3.5 Turbo Instruct",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-3.5-turbo-instruct"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 4095,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
           "default": 1.0
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.5,
-        "output_per_1m_tokens": 2.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 4e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-4",
-      "aliases": [],
+      "aliases": [
+        "gpt4"
+      ],
       "api": {
         "model_id": "gpt-4"
       },
@@ -1698,7 +1928,8 @@
       },
       "limits": {
         "max_context_tokens": 8191,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1714,26 +1945,42 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 30.0,
-        "output_per_1m_tokens": 60.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 3e-05,
+        "output_per_1m_tokens": 6e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gpt-4-0314": {
+    "gpt-4-turbo": {
       "provider": "openai",
-      "display_name": "OpenAI: GPT-4 (older v0314)",
-      "aliases": [],
+      "display_name": "OpenAI: GPT-4 Turbo",
+      "aliases": [
+        "gpt4-turbo"
+      ],
       "api": {
-        "model_id": "gpt-4-0314"
+        "model_id": "gpt-4-turbo"
       },
       "capabilities": {
         "streaming": true,
@@ -1745,56 +1992,9 @@
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 8191,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 30.0,
-        "output_per_1m_tokens": 60.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-4-turbo": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-4 Turbo",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-4-turbo"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
         "max_context_tokens": 128000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1810,19 +2010,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 10.0,
-        "output_per_1m_tokens": 30.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1e-05,
+        "output_per_1m_tokens": 3e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4.1": {
       "provider": "openai",
@@ -1835,7 +2049,7 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -1844,7 +2058,8 @@
       },
       "limits": {
         "max_context_tokens": 1047576,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1860,30 +2075,46 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 2.0,
-        "output_per_1m_tokens": 8.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 2e-06,
+        "output_per_1m_tokens": 8e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4.1-mini": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-4.1 Mini",
-      "aliases": [],
+      "aliases": [
+        "gpt41-mini"
+      ],
       "api": {
         "model_id": "gpt-4.1-mini"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -1892,7 +2123,8 @@
       },
       "limits": {
         "max_context_tokens": 1047576,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1908,30 +2140,46 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.39999999999999997,
-        "output_per_1m_tokens": 1.5999999999999999,
-        "currency": "USD"
+        "input_per_1m_tokens": 4e-07,
+        "output_per_1m_tokens": 1.6e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4.1-nano": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-4.1 Nano",
-      "aliases": [],
+      "aliases": [
+        "gpt41-nano"
+      ],
       "api": {
         "model_id": "gpt-4.1-nano"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -1940,7 +2188,8 @@
       },
       "limits": {
         "max_context_tokens": 1047576,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -1956,19 +2205,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.09999999999999999,
-        "output_per_1m_tokens": 0.39999999999999997,
-        "currency": "USD"
+        "input_per_1m_tokens": 1e-07,
+        "output_per_1m_tokens": 4e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4o": {
       "provider": "openai",
@@ -1990,7 +2253,8 @@
       },
       "limits": {
         "max_context_tokens": 128000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2006,19 +2270,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 2.5,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 2.5e-06,
+        "output_per_1m_tokens": 1e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-4o-mini": {
       "provider": "openai",
@@ -2040,7 +2318,8 @@
       },
       "limits": {
         "max_context_tokens": 128000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2056,32 +2335,44 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.15,
-        "output_per_1m_tokens": 0.6,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.5e-07,
+        "output_per_1m_tokens": 6e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-5": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-5",
-      "aliases": [
-        "gpt5"
-      ],
+      "aliases": [],
       "api": {
         "model_id": "gpt-5"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2090,7 +2381,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2106,211 +2398,33 @@
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5-chat": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5 Chat",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5-chat"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 128000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
           "default": 1.0
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.25e-06,
+        "output_per_1m_tokens": 1e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5-codex": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5 Codex",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5-codex"
+        "description": "",
+        "notes": "",
+        "size": ""
       },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5-image": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5 Image",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5-image"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 10.0,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5-image-mini": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5 Image Mini",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5-image-mini"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 2.5,
-        "output_per_1m_tokens": 2.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
+      "rate_limits": null
     },
     "gpt-5-mini": {
       "provider": "openai",
@@ -2321,7 +2435,7 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2330,7 +2444,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2346,19 +2461,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.25,
-        "output_per_1m_tokens": 2.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 2.5e-07,
+        "output_per_1m_tokens": 2e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": true
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-5-nano": {
       "provider": "openai",
@@ -2369,7 +2498,7 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2378,7 +2507,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2394,19 +2524,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.049999999999999996,
-        "output_per_1m_tokens": 0.39999999999999997,
-        "currency": "USD"
+        "input_per_1m_tokens": 5e-08,
+        "output_per_1m_tokens": 4e-07,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-5-pro": {
       "provider": "openai",
@@ -2417,7 +2561,7 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2426,7 +2570,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2442,19 +2587,33 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 15.0,
-        "output_per_1m_tokens": 120.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.5e-05,
+        "output_per_1m_tokens": 0.00012,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-5.1": {
       "provider": "openai",
@@ -2465,7 +2624,7 @@
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2474,7 +2633,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2490,224 +2650,44 @@
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5.1-chat": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5.1 Chat",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5.1-chat"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 128000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
           "default": 1.0
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.25e-06,
+        "output_per_1m_tokens": 1e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5.1-codex": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5.1-Codex",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5.1-codex"
+        "description": "",
+        "notes": "",
+        "size": ""
       },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5.1-codex-max": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5.1-Codex-Max",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5.1-codex-max"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.25,
-        "output_per_1m_tokens": 10.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-5.1-codex-mini": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5.1-Codex-Mini",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5.1-codex-mini"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 400000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.25,
-        "output_per_1m_tokens": 2.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
+      "rate_limits": null
     },
     "gpt-5.2": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-5.2",
-      "aliases": [
-        "gpt"
-      ],
+      "aliases": [],
       "api": {
         "model_id": "gpt-5.2"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2716,7 +2696,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2732,80 +2713,44 @@
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.75,
-        "output_per_1m_tokens": 14.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "gpt-5.2-chat": {
-      "provider": "openai",
-      "display_name": "OpenAI: GPT-5.2 Chat",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-5.2-chat"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 128000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
           "default": 1.0
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.75,
-        "output_per_1m_tokens": 14.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 1.75e-06,
+        "output_per_1m_tokens": 1.4e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
     "gpt-5.2-pro": {
       "provider": "openai",
       "display_name": "OpenAI: GPT-5.2 Pro",
-      "aliases": [
-        "gpt-pro"
-      ],
+      "aliases": [],
       "api": {
         "model_id": "gpt-5.2-pro"
       },
       "capabilities": {
         "streaming": true,
-        "vision": true,
+        "vision": false,
         "tool_calling": true,
         "system_messages": true,
         "extended_thinking": false,
@@ -2814,7 +2759,8 @@
       },
       "limits": {
         "max_context_tokens": 400000,
-        "max_output_tokens": null
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2830,26 +2776,40 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 21.0,
-        "output_per_1m_tokens": 168.0,
-        "currency": "USD"
+        "input_per_1m_tokens": 2.1e-05,
+        "output_per_1m_tokens": 0.000168,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gpt-oss-120b": {
+    "gpt-5.4": {
       "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-120b",
+      "display_name": "OpenAI: GPT-5.4",
       "aliases": [],
       "api": {
-        "model_id": "gpt-oss-120b"
+        "model_id": "gpt-5.4"
       },
       "capabilities": {
         "streaming": true,
@@ -2861,8 +2821,9 @@
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_context_tokens": 1050000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2878,26 +2839,40 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.039,
-        "output_per_1m_tokens": 0.19,
-        "currency": "USD"
+        "input_per_1m_tokens": 2.5e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gpt-oss-120b:exacto": {
+    "gpt-5.4-mini": {
       "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-120b (exacto)",
+      "display_name": "OpenAI: GPT-5.4 Mini",
       "aliases": [],
       "api": {
-        "model_id": "gpt-oss-120b:exacto"
+        "model_id": "gpt-5.4-mini"
       },
       "capabilities": {
         "streaming": true,
@@ -2909,8 +2884,9 @@
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_context_tokens": 400000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -2926,207 +2902,597 @@
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": {
-        "input_per_1m_tokens": 0.039,
-        "output_per_1m_tokens": 0.19,
-        "currency": "USD"
+        "input_per_1m_tokens": 7.5e-07,
+        "output_per_1m_tokens": 4.5e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
       },
       "metadata": {
         "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
     },
-    "gpt-oss-120b:free": {
+    "gpt-5.4-nano": {
       "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-120b (free)",
+      "display_name": "OpenAI: GPT-5.4 Nano",
       "aliases": [],
       "api": {
-        "model_id": "gpt-oss-120b:free"
+        "model_id": "gpt-5.4-nano"
       },
       "capabilities": {
         "streaming": true,
         "vision": false,
         "tool_calling": true,
         "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 400000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2e-07,
+        "output_per_1m_tokens": 1.25e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "gpt-5.4-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: GPT-5.4 Pro",
+      "aliases": [],
+      "api": {
+        "model_id": "gpt-5.4-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1050000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3e-05,
+        "output_per_1m_tokens": 0.00018,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o1": {
+      "provider": "openai",
+      "display_name": "OpenAI: o1",
+      "aliases": [
+        "o1"
+      ],
+      "api": {
+        "model_id": "o1"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": true,
+        "extended_thinking": true,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.5e-05,
+        "output_per_1m_tokens": 6e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o1-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: o1-pro",
+      "aliases": [],
+      "api": {
+        "model_id": "o1-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 0.00015,
+        "output_per_1m_tokens": 0.0006,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o3": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3",
+      "aliases": [
+        "o3"
+      ],
+      "api": {
+        "model_id": "o3"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2e-06,
+        "output_per_1m_tokens": 8e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o3-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3 Mini",
+      "aliases": [
+        "o3-mini"
+      ],
+      "api": {
+        "model_id": "o3-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1e-06,
+        "output_per_1m_tokens": 4.4e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o3-pro": {
+      "provider": "openai",
+      "display_name": "OpenAI: o3 Pro",
+      "aliases": [],
+      "api": {
+        "model_id": "o3-pro"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 2e-05,
+        "output_per_1m_tokens": 8e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "o4-mini": {
+      "provider": "openai",
+      "display_name": "OpenAI: o4 Mini",
+      "aliases": [
+        "o4-mini"
+      ],
+      "api": {
+        "model_id": "o4-mini"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 1.0
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.1e-06,
+        "output_per_1m_tokens": 4.4e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "silent:none": {
+      "provider": "silent",
+      "display_name": "Silent",
+      "aliases": [],
+      "api": {
+        "model_id": "silent:none"
+      },
+      "capabilities": {
+        "streaming": false,
+        "vision": false,
+        "tool_calling": false,
+        "system_messages": false,
         "extended_thinking": false,
         "json_mode": false,
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_context_tokens": 100000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+          "supported": false,
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
       "cost": null,
       "metadata": {
         "status": "available",
+        "release_date": "2024-01-01",
+        "deprecation_date": null,
+        "curated": false,
         "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-oss-20b": {
-      "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-20b",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-oss-20b"
+        "description": "Silent model that returns empty responses",
+        "notes": "Silent model that returns empty responses",
+        "size": ""
       },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.03,
-        "output_per_1m_tokens": 0.14,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-oss-20b:free": {
-      "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-20b (free)",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-oss-20b:free"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": null,
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "gpt-oss-safeguard-20b": {
-      "provider": "openai",
-      "display_name": "OpenAI: gpt-oss-safeguard-20b",
-      "aliases": [],
-      "api": {
-        "model_id": "gpt-oss-safeguard-20b"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.075,
-        "output_per_1m_tokens": 0.3,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
+      "rate_limits": null
     },
     "grok-3": {
       "provider": "xai",
-      "display_name": "xAI: Grok 3",
+      "display_name": "Grok 3",
       "aliases": [
         "grok3"
       ],
@@ -3144,7 +3510,8 @@
       },
       "limits": {
         "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_output_tokens": 16384,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -3153,30 +3520,32 @@
             0.0,
             2.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
-      "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 15.0,
-        "currency": "USD"
-      },
+      "cost": null,
       "metadata": {
         "status": "available",
-        "stable": true,
-        "curated": false
-      }
+        "curated": false,
+        "stable": true
+      },
+      "rate_limits": null
     },
     "grok-3-mini": {
       "provider": "xai",
-      "display_name": "xAI: Grok 3 Mini",
+      "display_name": "Grok 3 Mini",
       "aliases": [],
       "api": {
         "model_id": "grok-3-mini"
@@ -3186,13 +3555,14 @@
         "vision": false,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
+        "extended_thinking": true,
         "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
         "max_context_tokens": 131072,
-        "max_output_tokens": null
+        "max_output_tokens": 16384,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -3201,30 +3571,32 @@
             0.0,
             2.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
-      "cost": {
-        "input_per_1m_tokens": 0.3,
-        "output_per_1m_tokens": 0.5,
-        "currency": "USD"
-      },
+      "cost": null,
       "metadata": {
         "status": "available",
-        "stable": true,
-        "curated": false
-      }
+        "curated": false,
+        "stable": true
+      },
+      "rate_limits": null
     },
     "grok-4": {
       "provider": "xai",
-      "display_name": "xAI: Grok 4",
+      "display_name": "Grok 4",
       "aliases": [
         "grok"
       ],
@@ -3236,387 +3608,14 @@
         "vision": true,
         "tool_calling": true,
         "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 256000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 3.0,
-        "output_per_1m_tokens": 15.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "grok-4-fast": {
-      "provider": "xai",
-      "display_name": "xAI: Grok 4 Fast",
-      "aliases": [],
-      "api": {
-        "model_id": "grok-4-fast"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 2000000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.19999999999999998,
-        "output_per_1m_tokens": 0.5,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "grok-4.1-fast": {
-      "provider": "xai",
-      "display_name": "xAI: Grok 4.1 Fast",
-      "aliases": [],
-      "api": {
-        "model_id": "grok-4-1-fast"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 2000000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.19999999999999998,
-        "output_per_1m_tokens": 0.5,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "grok-code-fast-1": {
-      "provider": "xai",
-      "display_name": "xAI: Grok Code Fast 1",
-      "aliases": [],
-      "api": {
-        "model_id": "grok-code-fast-1"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 256000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 0.19999999999999998,
-        "output_per_1m_tokens": 1.5,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "local:gpt-oss-120b": {
-      "provider": "ollama",
-      "display_name": "GPT-OSS 120B",
-      "aliases": [],
-      "api": {
-        "model_id": "local:gpt-oss-120b"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "\u26a0\ufe0f Experimental GPT-OSS model, needs 128GB+ RAM"
-      }
-    },
-    "local:gpt-oss-26b": {
-      "provider": "ollama",
-      "display_name": "GPT-OSS 26B",
-      "aliases": [],
-      "api": {
-        "model_id": "local:gpt-oss-26b"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Experimental GPT-OSS model, needs 32GB+ RAM"
-      }
-    },
-    "local:gpt-oss-9b": {
-      "provider": "ollama",
-      "display_name": "GPT-OSS 9B",
-      "aliases": [],
-      "api": {
-        "model_id": "local:gpt-oss-9b"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 131072
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Experimental GPT-OSS model, needs 16GB+ RAM"
-      }
-    },
-    "local:mistral": {
-      "provider": "ollama",
-      "display_name": "Mistral 7B",
-      "aliases": [],
-      "api": {
-        "model_id": "local:mistral"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 32768
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Popular open model, needs 8GB+ RAM"
-      }
-    },
-    "local:phi": {
-      "provider": "ollama",
-      "display_name": "Phi-3",
-      "aliases": [],
-      "api": {
-        "model_id": "local:phi"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 128000
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Balanced size/performance for local use"
-      }
-    },
-    "local:qwen": {
-      "provider": "ollama",
-      "display_name": "Qwen 0.5B",
-      "aliases": [],
-      "api": {
-        "model_id": "local:qwen"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 32768
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Smallest practical Ollama model, very fast"
-      }
-    },
-    "local:test": {
-      "provider": "local",
-      "display_name": "Local Test",
-      "aliases": [],
-      "api": {
-        "model_id": "local:test"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 100000
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Test model for development"
-      }
-    },
-    "o1": {
-      "provider": "openai",
-      "display_name": "OpenAI: o1",
-      "aliases": [],
-      "api": {
-        "model_id": "o1"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
         "extended_thinking": true,
         "json_mode": true,
         "prompt_caching": false
       },
       "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
+        "max_context_tokens": 131072,
+        "max_output_tokens": 16384,
+        "max_thinking_tokens": null
       },
       "parameters": {
         "temperature": {
@@ -3625,394 +3624,28 @@
             0.0,
             2.0
           ],
-          "default": 1.0
+          "default": 0.7
         },
         "top_p": {
           "supported": true,
           "range": [
             0.0,
             1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 15.0,
-        "output_per_1m_tokens": 60.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "o1-pro": {
-      "provider": "openai",
-      "display_name": "OpenAI: o1-pro",
-      "aliases": [],
-      "api": {
-        "model_id": "o1-pro"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
           ],
-          "default": 1.0
+          "default": null
         },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
+        "top_k": {
+          "supported": false,
+          "default": null
         }
       },
-      "cost": {
-        "input_per_1m_tokens": 150.0,
-        "output_per_1m_tokens": 600.0,
-        "currency": "USD"
-      },
+      "cost": null,
       "metadata": {
         "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "o3": {
-      "provider": "openai",
-      "display_name": "OpenAI: o3",
-      "aliases": [
-        "o3"
-      ],
-      "api": {
-        "model_id": "o3"
+        "curated": true,
+        "stable": true
       },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 2.0,
-        "output_per_1m_tokens": 8.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "o3-mini": {
-      "provider": "openai",
-      "display_name": "OpenAI: o3 Mini",
-      "aliases": [
-        "o3-mini"
-      ],
-      "api": {
-        "model_id": "o3-mini"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.1,
-        "output_per_1m_tokens": 4.4,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "o3-mini-high": {
-      "provider": "openai",
-      "display_name": "OpenAI: o3 Mini High",
-      "aliases": [],
-      "api": {
-        "model_id": "o3-mini-high"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": false,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.1,
-        "output_per_1m_tokens": 4.4,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "o3-pro": {
-      "provider": "openai",
-      "display_name": "OpenAI: o3 Pro",
-      "aliases": [],
-      "api": {
-        "model_id": "o3-pro"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 20.0,
-        "output_per_1m_tokens": 80.0,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "o4-mini": {
-      "provider": "openai",
-      "display_name": "OpenAI: o4 Mini",
-      "aliases": [
-        "o4-mini"
-      ],
-      "api": {
-        "model_id": "o4-mini"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.1,
-        "output_per_1m_tokens": 4.4,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": true
-      }
-    },
-    "o4-mini-high": {
-      "provider": "openai",
-      "display_name": "OpenAI: o4 Mini High",
-      "aliases": [],
-      "api": {
-        "model_id": "o4-mini-high"
-      },
-      "capabilities": {
-        "streaming": false,
-        "vision": true,
-        "tool_calling": true,
-        "system_messages": true,
-        "extended_thinking": true,
-        "json_mode": true,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 200000,
-        "max_output_tokens": null
-      },
-      "parameters": {
-        "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
-        },
-        "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ]
-        }
-      },
-      "cost": {
-        "input_per_1m_tokens": 1.1,
-        "output_per_1m_tokens": 4.4,
-        "currency": "USD"
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false
-      }
-    },
-    "silent:none": {
-      "provider": "silent",
-      "display_name": "Silent",
-      "aliases": [],
-      "api": {
-        "model_id": "silent:none"
-      },
-      "capabilities": {
-        "streaming": true,
-        "vision": false,
-        "tool_calling": false,
-        "system_messages": true,
-        "extended_thinking": false,
-        "json_mode": false,
-        "prompt_caching": false
-      },
-      "limits": {
-        "max_context_tokens": 100000
-      },
-      "metadata": {
-        "status": "available",
-        "stable": true,
-        "curated": false,
-        "notes": "Silent model that returns empty responses"
-      }
+      "rate_limits": null
     }
   }
 }
