@@ -56,7 +56,7 @@ class ExecutionHandler:
             # Error already displayed by daemon launcher
             return
         except Exception as e:
-            from ..core.exceptions import ExperimentAlreadyExistsError
+            from ...core.exceptions import ExperimentAlreadyExistsError
 
             if isinstance(e, ExperimentAlreadyExistsError):
                 self.console.print(
