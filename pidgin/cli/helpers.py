@@ -47,14 +47,10 @@ def validate_model_id(model_id: str) -> Tuple[str, str]:
     Raises:
         ValueError: If model ID is invalid
     """
-    # Handle silent model
-    if model_id == "silent":
-        return "silent", "Silent"
-
-    # Check if it's a known model
+    # Check if it's a known model (handles exact IDs, aliases, and family names)
     config = get_model_config(model_id)
     if config:
-        return model_id, config.display_name
+        return config.model_id, config.display_name
 
     # Try provider:model format
     if ":" in model_id:
