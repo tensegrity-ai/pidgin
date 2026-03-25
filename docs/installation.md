@@ -61,24 +61,63 @@ pip install -e .
 
 ## Setting Up API Keys
 
-Pidgin looks for API keys in environment variables:
+Pidgin reads API keys from environment variables. Set the ones you need:
+
+| Variable | Provider | Models |
+|----------|----------|--------|
+| `ANTHROPIC_API_KEY` | Anthropic | Claude (opus, sonnet, haiku) |
+| `OPENAI_API_KEY` | OpenAI | GPT, o-series |
+| `GOOGLE_API_KEY` | Google | Gemini, Gemma |
+| `XAI_API_KEY` | xAI | Grok |
+
+`GEMINI_API_KEY` and `GROK_API_KEY` are also accepted as aliases.
+
+Local models (Ollama, `local:test`) and the silent provider need no keys.
+
+### Shell profile (simplest)
 
 ```bash
-# Add to your ~/.bashrc, ~/.zshrc, or ~/.bash_profile
+# Add to ~/.bashrc, ~/.zshrc, or ~/.bash_profile
 export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
-export GOOGLE_API_KEY="..."
-export XAI_API_KEY="..."
 ```
 
-Or create a `.env` file in your project directory:
+### macOS Keychain
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-XAI_API_KEY=...
+# Store
+security add-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w "sk-ant-..."
+
+# Retrieve (add to shell profile)
+export ANTHROPIC_API_KEY=$(security find-generic-password -a "$USER" -s "ANTHROPIC_API_KEY" -w)
 ```
+
+### 1Password CLI
+
+```bash
+# Create .env.1password
+# ANTHROPIC_API_KEY="op://Personal/Anthropic API/credential"
+# OPENAI_API_KEY="op://Personal/OpenAI API/credential"
+
+op run --env-file=.env.1password -- pidgin run -a opus -b gpt-4o
+```
+
+### direnv (project-scoped)
+
+```bash
+# .envrc (add to .gitignore)
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+```
+
+Never commit API keys to git, even in private repositories.
+
+### Other environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `PIDGIN_DEBUG` | Enable debug logging |
+| `PIDGIN_OLLAMA_AUTO_START` | Auto-start Ollama when using local models (`true`/`1`/`yes`) |
 
 ## Optional: Local Models with Ollama
 
@@ -122,7 +161,7 @@ Run a test conversation:
 pidgin run -a local:test -b local:test -t 3
 
 # Using real models (requires API keys)
-pidgin run -a claude-3-haiku -b gpt-4o-mini -t 5
+pidgin run -a haiku -b gpt-4o-mini -t 5
 ```
 
 ## Platform-Specific Notes

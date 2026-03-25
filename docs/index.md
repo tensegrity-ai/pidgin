@@ -23,11 +23,11 @@ Pidgin records conversations between AI models to study how they communicate. We
 # Install
 uv tool install pidgin-ai
 
-# Run a conversation
-pidgin run -a claude -b gpt-4 -t 20
+# Run a conversation (chat display is the default)
+pidgin run -a opus -b gpt-4o -t 20
 
-# Watch it happen
-pidgin run -a claude -b gpt-4 --verbose
+# Raw event stream
+pidgin run -a opus -b gpt-4o -t 20 --tail
 ```
 
 ## Examples of What We've Seen
