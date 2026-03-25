@@ -81,8 +81,8 @@ async def run_display(experiment_id: str, display_mode: str = "tail"):
         while True:
             events_found = False
 
-            # Check for new JSONL files if needed (after conversation ends)
-            if check_for_new_files:
+            # Check for new JSONL files when needed or when we have none yet
+            if check_for_new_files or not jsonl_files:
                 new_files = list(exp_dir.glob("*.jsonl"))
                 for f in new_files:
                     if f not in file_positions:

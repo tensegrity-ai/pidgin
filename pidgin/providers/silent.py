@@ -38,5 +38,5 @@ class SilentProvider(Provider):
         Yields:
             Empty ResponseChunk representing silence
         """
-        # Return nothing - the sound of one hand clapping
-        yield ResponseChunk("", "response")
+        # The sound of one hand clapping
+        yield ResponseChunk("…", "response")

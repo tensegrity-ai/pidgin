@@ -3,6 +3,8 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
+from ..config.system_prompts import AWARENESS_LEVELS
+
 
 @dataclass
 class ExperimentConfig:
@@ -99,8 +101,8 @@ class ExperimentConfig:
         if self.max_turns < 1:
             errors.append("max_turns must be at least 1")
 
-        # Validate awareness levels (matching CLI choices)
-        valid_awareness = ("none", "basic", "firm", "research")
+        # Validate awareness levels from canonical source
+        valid_awareness = tuple(AWARENESS_LEVELS.keys())
 
         # Check if awareness is a valid level or a YAML file path
         if self.awareness and not (

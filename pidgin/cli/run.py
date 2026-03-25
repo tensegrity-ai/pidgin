@@ -80,7 +80,7 @@ console = Console()
     "-w",
     "--awareness",
     default="basic",
-    help="Awareness level (none/basic/firm/research) or custom YAML file",
+    help="Awareness level (none/basic/firm/research/backrooms) or custom YAML file",
 )
 @click.option(
     "--awareness-a", help="Override awareness for agent A (level or YAML file)"

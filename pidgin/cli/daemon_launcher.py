@@ -108,21 +108,37 @@ class DaemonLauncher:
         self.validate_before_start(config)
 
         # Always run via daemon
+        from ..core.exceptions import ExperimentAlreadyExistsError
+        from .name_generator import generate_experiment_name
+
         base_dir = get_experiments_dir()
         manager = ExperimentManager(base_dir=base_dir)
 
-        try:
-            # Always start via manager (creates daemon + PID file)
-            exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
+        max_retries = 5
+        for attempt in range(max_retries + 1):
+            try:
+                exp_id = manager.start_experiment(config, working_dir=ORIGINAL_CWD)
 
-            # Show start message
-            self.console.print(f"\n[#a3be8c]✓ Started: {exp_id}[/#a3be8c]")
+                # Show start message
+                self.console.print(f"\n[#a3be8c]✓ Started: {exp_id}[/#a3be8c]")
 
-            return exp_id
+                return exp_id
 
-        except (RuntimeError, OSError) as e:
-            self.display.error(f"Failed to start experiment: {e!s}", use_panel=True)
-            raise
+            except ExperimentAlreadyExistsError:
+                if attempt >= max_retries:
+                    raise
+                original = config.name
+                config.name = generate_experiment_name()
+                self.display.info(
+                    f"Name '{original}' already exists, using '{config.name}'",
+                    use_panel=False,
+                )
+
+            except (RuntimeError, OSError) as e:
+                self.display.error(f"Failed to start experiment: {e!s}", use_panel=True)
+                raise
+
+        raise RuntimeError("Could not start experiment")
 
     def show_quiet_mode_info(self, exp_id: str, name: str) -> None:
         """Show commands for quiet mode operation.
