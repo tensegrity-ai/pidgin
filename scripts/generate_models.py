@@ -87,7 +87,7 @@ def is_stable_model(model_id: str) -> bool:
     non_chat_suffixes = [
         "-chat",  # gpt-5-chat is a variant, not the main model
         "-high",  # o3-mini-high, o4-mini-high are variants
-        "-001",   # dated snapshot variants
+        "-001",  # dated snapshot variants
     ]
     if any(model_lower.endswith(m) for m in non_chat_suffixes):
         return False
@@ -129,9 +129,7 @@ def is_stable_model(model_id: str) -> bool:
     return not any(marker in model_lower for marker in unstable_markers)
 
 
-def generate_alias(
-    model_id: str, display_name: str, provider: str
-) -> Optional[str]:
+def generate_alias(model_id: str, display_name: str, provider: str) -> Optional[str]:
     """Generate a single best alias for a model."""
     if provider not in ["openai", "anthropic", "google", "xai", "ollama", "local"]:
         return None
@@ -574,7 +572,9 @@ def build_model_entry(
     params = build_parameters_support(provider_norm)
 
     limits = {
-        "max_context_tokens": int(context_len) if isinstance(context_len, int) else None,
+        "max_context_tokens": int(context_len)
+        if isinstance(context_len, int)
+        else None,
         "max_output_tokens": int(max_output) if isinstance(max_output, int) else None,
         "max_thinking_tokens": None,
     }
@@ -740,11 +740,13 @@ def interactive_curate(models_path: str) -> int:
     """Interactive checklist to select curated models using Rich."""
     try:
         from rich.console import Console
-        from rich.table import Table
         from rich.prompt import Confirm
+        from rich.table import Table
     except ImportError:
-        print("Rich is required for interactive curation. Install with: pip install rich",
-              file=sys.stderr)
+        print(
+            "Rich is required for interactive curation. Install with: pip install rich",
+            file=sys.stderr,
+        )
         return 1
 
     with open(models_path, "r", encoding="utf-8") as f:
@@ -760,7 +762,15 @@ def interactive_curate(models_path: str) -> int:
         by_provider.setdefault(provider, []).append((key, entry))
 
     # Provider display order
-    provider_order = ["anthropic", "openai", "google", "xai", "ollama", "local", "silent"]
+    provider_order = [
+        "anthropic",
+        "openai",
+        "google",
+        "xai",
+        "ollama",
+        "local",
+        "silent",
+    ]
     providers = [p for p in provider_order if p in by_provider]
     providers += [p for p in sorted(by_provider) if p not in providers]
 
@@ -769,7 +779,9 @@ def interactive_curate(models_path: str) -> int:
     }
 
     console.print("\n[bold]Model Curation Checklist[/bold]")
-    console.print("Select which models should be marked as [bold cyan]curated[/bold cyan] (essential tier).\n")
+    console.print(
+        "Select which models should be marked as [bold cyan]curated[/bold cyan] (essential tier).\n"
+    )
 
     new_curated: set[str] = set()
 
@@ -793,7 +805,9 @@ def interactive_curate(models_path: str) -> int:
         for i, (key, entry) in enumerate(provider_models, 1):
             is_curated = key in currently_curated
             aliases = ", ".join(entry.get("aliases", []))
-            curated_mark = "[bold green]\u2713[/bold green]" if is_curated else "[dim]\u00b7[/dim]"
+            curated_mark = (
+                "[bold green]\u2713[/bold green]" if is_curated else "[dim]\u00b7[/dim]"
+            )
             table.add_row(
                 str(i),
                 key,
@@ -805,8 +819,12 @@ def interactive_curate(models_path: str) -> int:
         console.print(table)
 
         # Ask for selections
-        console.print(f"\nEnter model numbers to toggle curation for [bold]{provider}[/bold]")
-        console.print("(comma-separated, or [dim]enter[/dim] to keep current, [dim]'all'[/dim] for all, [dim]'none'[/dim] for none):")
+        console.print(
+            f"\nEnter model numbers to toggle curation for [bold]{provider}[/bold]"
+        )
+        console.print(
+            "(comma-separated, or [dim]enter[/dim] to keep current, [dim]'all'[/dim] for all, [dim]'none'[/dim] for none):"
+        )
         response = input("> ").strip()
 
         if response.lower() == "all":
@@ -819,7 +837,9 @@ def interactive_curate(models_path: str) -> int:
             try:
                 indices = [int(x.strip()) for x in response.split(",") if x.strip()]
             except ValueError:
-                console.print("[yellow]Invalid input, keeping current selections[/yellow]")
+                console.print(
+                    "[yellow]Invalid input, keeping current selections[/yellow]"
+                )
                 for key, _ in provider_models:
                     if key in currently_curated:
                         new_curated.add(key)
@@ -874,7 +894,9 @@ def interactive_curate(models_path: str) -> int:
     with open(models_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    console.print(f"\n[bold green]Saved {len(new_curated)} curated models to {models_path}[/bold green]")
+    console.print(
+        f"\n[bold green]Saved {len(new_curated)} curated models to {models_path}[/bold green]"
+    )
     return 0
 
 
@@ -949,7 +971,9 @@ def main() -> int:
     if "anthropic" in args.include_providers:
         print("Fetching Anthropic models ...", file=sys.stderr)
         provider_lists["anthropic"] = fetch_anthropic_models(anth_key)
-        print(f"  Anthropic: {len(provider_lists['anthropic'])} models", file=sys.stderr)
+        print(
+            f"  Anthropic: {len(provider_lists['anthropic'])} models", file=sys.stderr
+        )
     if "google" in args.include_providers:
         print("Fetching Google models ...", file=sys.stderr)
         provider_lists["google"] = fetch_google_models(google_key)
@@ -968,13 +992,18 @@ def main() -> int:
     else:
         models_map = filter_stable(all_models)
         filtered = len(all_models) - len(models_map)
-        print(f"Stable filter: kept {len(models_map)}, filtered {filtered}", file=sys.stderr)
+        print(
+            f"Stable filter: kept {len(models_map)}, filtered {filtered}",
+            file=sys.stderr,
+        )
 
     # Assign aliases
     assign_aliases(models_map)
 
     # Sort by provider then model name
-    sorted_models = dict(sorted(models_map.items(), key=lambda x: (x[1].get("provider", ""), x[0])))
+    sorted_models = dict(
+        sorted(models_map.items(), key=lambda x: (x[1].get("provider", ""), x[0]))
+    )
 
     output_obj = {
         "schema_version": SCHEMA_VERSION,

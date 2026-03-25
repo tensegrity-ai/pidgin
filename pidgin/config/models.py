@@ -125,18 +125,15 @@ def _resolve_family_name(
     """
     name_lower = name.lower()
 
-    candidates: list[tuple[float, bool, int, str, ModelConfig]] = []
+    candidates: list[tuple[float, int, str, ModelConfig]] = []
 
     for model_id, config in models.items():
         mid_lower = model_id.lower()
         # Check if name appears as a component (between separators or at boundaries)
         if re.search(rf"(?:^|[-.:]){re.escape(name_lower)}(?:$|[-.:0-9])", mid_lower):
             version = _extract_version_after(model_id, name_lower)
-            is_curated = config.metadata.curated
             # Prefer: highest version, then shortest ID (base model over variant)
-            candidates.append(
-                (version, len(model_id), model_id, config)
-            )
+            candidates.append((version, len(model_id), model_id, config))
 
     if not candidates:
         return None
@@ -146,8 +143,7 @@ def _resolve_family_name(
     best = candidates[0]
     if len(candidates) > 1:
         logger.debug(
-            f"Resolved '{name}' to '{best[2]}' "
-            f"(from {len(candidates)} candidates)"
+            f"Resolved '{name}' to '{best[2]}' " f"(from {len(candidates)} candidates)"
         )
     return best[3]
 
