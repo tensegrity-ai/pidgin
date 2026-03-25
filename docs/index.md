@@ -12,7 +12,7 @@ An experimental tool for recording and analyzing AI-to-AI conversations. We've o
 Pidgin records conversations between AI models to study how they communicate. We've seen some intriguing behaviors:
 
 - Conversations often fall into repetitive patterns
-- Language sometimes compresses over many turns  
+- Language sometimes compresses over many turns
 - Different model pairs behave differently
 
 **Important**: These are preliminary observations. Nothing has been statistically validated yet.

@@ -62,36 +62,36 @@ CREATE TABLE conversations (
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
     status TEXT DEFAULT 'created',
-    
+
     -- Agent configuration
     agent_a_model TEXT,               -- e.g., 'claude-3-5-sonnet'
     agent_a_provider TEXT,            -- e.g., 'anthropic'
     agent_a_temperature DOUBLE,
     agent_a_chosen_name TEXT,         -- Name agent chose for itself
-    
+
     agent_b_model TEXT,
     agent_b_provider TEXT,
     agent_b_temperature DOUBLE,
     agent_b_chosen_name TEXT,
-    
+
     -- Conversation settings
     initial_prompt TEXT,
     max_turns INTEGER,
-    
+
     -- Results
     total_turns INTEGER DEFAULT 0,
     final_convergence_score DOUBLE,
     convergence_reason TEXT,          -- Why conversation ended
     duration_ms INTEGER,
-    
+
     -- Error information if failed
     error_message TEXT,
     error_type TEXT,
     error_timestamp TIMESTAMP,
-    
+
     -- Context truncation flag
     had_truncation BOOLEAN DEFAULT FALSE
-    
+
     -- DuckDB limitation: Removing foreign keys due to UPDATE issues
     -- See: https://github.com/duckdb/duckdb/issues/10574
     -- FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
@@ -108,7 +108,7 @@ CREATE TABLE conversation_turns (
     conversation_id VARCHAR NOT NULL,
     turn_number SMALLINT NOT NULL,
     timestamp TIMESTAMP NOT NULL,
-    
+
     -- Model context
     agent_a_model VARCHAR NOT NULL,
     agent_b_model VARCHAR NOT NULL,
@@ -116,23 +116,23 @@ CREATE TABLE conversation_turns (
     awareness_b VARCHAR,
     temperature_a DOUBLE,
     temperature_b DOUBLE,
-    
+
     -- Message content
     agent_a_message TEXT,
     agent_b_message TEXT,
-    
+
     -- 60+ metrics per agent (prefixed with a_ or b_)
     a_message_length INTEGER,
     a_word_count SMALLINT,
     a_vocabulary_size SMALLINT,
     -- ... many more
-    
+
     -- 30+ convergence metrics (no prefix)
     vocabulary_overlap DOUBLE,
     structural_similarity DOUBLE,
     overall_convergence DOUBLE,
     -- ... many more
-    
+
     PRIMARY KEY (conversation_id, turn_number)
 )
 ```
@@ -159,26 +159,26 @@ CREATE TABLE turn_metrics (
     conversation_id TEXT,
     turn_number INTEGER,
     timestamp TIMESTAMP,
-    
+
     -- Core convergence metrics
     convergence_score DOUBLE,         -- 0.0 to 1.0
     vocabulary_overlap DOUBLE,
     structural_similarity DOUBLE,
     topic_similarity DOUBLE,
     style_match DOUBLE,
-    
+
     -- Additional convergence metrics
     cumulative_overlap DOUBLE,
     cross_repetition DOUBLE,
     mimicry_a_to_b DOUBLE,
     mimicry_b_to_a DOUBLE,
     mutual_mimicry DOUBLE,
-    
+
     -- Word frequencies (stored as JSON)
     word_frequencies_a JSON,          -- {"hello": 2, "world": 1, ...}
     word_frequencies_b JSON,
     shared_vocabulary JSON,
-    
+
     -- Message metrics for agent A
     message_a_length INTEGER,
     message_a_word_count INTEGER,
@@ -203,7 +203,7 @@ CREATE TABLE turn_metrics (
     message_a_formality_score DOUBLE,
     message_a_starts_with_ack BOOLEAN,
     message_a_new_words INTEGER,
-    
+
     -- Linguistic markers for Agent A
     message_a_hedge_words INTEGER,
     message_a_agreement_markers INTEGER,
@@ -212,7 +212,7 @@ CREATE TABLE turn_metrics (
     message_a_first_person_singular INTEGER,
     message_a_first_person_plural INTEGER,
     message_a_second_person INTEGER,
-    
+
     -- Message metrics for agent B (same fields as Agent A)
     message_b_length INTEGER,
     message_b_word_count INTEGER,
@@ -237,7 +237,7 @@ CREATE TABLE turn_metrics (
     message_b_formality_score DOUBLE,
     message_b_starts_with_ack BOOLEAN,
     message_b_new_words INTEGER,
-    
+
     -- Linguistic markers for Agent B
     message_b_hedge_words INTEGER,
     message_b_agreement_markers INTEGER,
@@ -246,12 +246,12 @@ CREATE TABLE turn_metrics (
     message_b_first_person_singular INTEGER,
     message_b_first_person_plural INTEGER,
     message_b_second_person INTEGER,
-    
+
     -- Timing information
     turn_start_time TIMESTAMP,
     turn_end_time TIMESTAMP,
     duration_ms INTEGER,
-    
+
     PRIMARY KEY (conversation_id, turn_number)
     -- DuckDB limitation: Removing foreign keys due to UPDATE issues
     -- FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
@@ -270,7 +270,7 @@ CREATE TABLE messages (
     timestamp TIMESTAMP,
     token_count INTEGER,              -- Estimated tokens
     model_reported_tokens INTEGER,    -- Actual tokens from API
-    
+
     PRIMARY KEY (conversation_id, turn_number, agent_id)
 )
 ```
@@ -285,16 +285,16 @@ CREATE TABLE token_usage (
     conversation_id TEXT,
     provider TEXT,                    -- 'anthropic', 'openai', etc.
     model TEXT,
-    
+
     -- Token counts
     prompt_tokens INTEGER,
     completion_tokens INTEGER,
     total_tokens INTEGER,
-    
+
     -- Rate limit tracking
     tokens_per_minute INTEGER,
     current_tpm_usage DOUBLE,
-    
+
     -- Cost in cents
     prompt_cost DOUBLE,
     completion_cost DOUBLE,
@@ -309,7 +309,7 @@ Aggregated view for experiment monitoring.
 
 ```sql
 CREATE VIEW experiment_dashboard AS
-SELECT 
+SELECT
     e.*,
     COUNT(DISTINCT c.conversation_id) as actual_conversations,
     AVG(c.final_convergence_score) as avg_convergence,
@@ -317,7 +317,7 @@ SELECT
     SUM(tu.total_cost) / 100.0 as total_cost_usd
 FROM experiments e
 LEFT JOIN conversations c ON e.experiment_id = c.experiment_id
-LEFT JOIN (SELECT conversation_id, SUM(total_tokens) as total_tokens, 
+LEFT JOIN (SELECT conversation_id, SUM(total_tokens) as total_tokens,
            SUM(total_cost) as total_cost
            FROM token_usage GROUP BY conversation_id) tu
     ON c.conversation_id = tu.conversation_id
@@ -329,13 +329,13 @@ Time-series analysis of convergence patterns.
 
 ```sql
 CREATE VIEW convergence_trends AS
-SELECT 
+SELECT
     conversation_id,
     turn_number,
     convergence_score,
     AVG(convergence_score) OVER (
-        PARTITION BY conversation_id 
-        ORDER BY turn_number 
+        PARTITION BY conversation_id
+        ORDER BY turn_number
         ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
     ) as rolling_avg_5
 FROM turn_metrics;
@@ -345,7 +345,7 @@ FROM turn_metrics;
 
 ### Get experiment summary
 ```sql
-SELECT * FROM experiment_dashboard 
+SELECT * FROM experiment_dashboard
 WHERE experiment_id = 'exp_abc123';
 ```
 
@@ -359,7 +359,7 @@ ORDER BY convergence_score DESC;
 
 ### Analyze vocabulary compression
 ```sql
-SELECT 
+SELECT
     turn_number,
     AVG(message_a_word_count) as avg_words,
     AVG(message_a_unique_words) as avg_unique_words
@@ -370,14 +370,14 @@ ORDER BY turn_number;
 
 ### Calculate experiment costs
 ```sql
-SELECT 
+SELECT
     provider,
     model,
     SUM(total_tokens) as tokens,
     SUM(total_cost) / 100.0 as cost_usd
 FROM token_usage
 WHERE conversation_id IN (
-    SELECT conversation_id FROM conversations 
+    SELECT conversation_id FROM conversations
     WHERE experiment_id = 'exp_abc123'
 )
 GROUP BY provider, model;

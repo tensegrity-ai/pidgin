@@ -46,7 +46,7 @@ class ConversationImporter:
                 """
                 INSERT INTO experiments (
                     experiment_id, name, config, status,
-                    created_at, total_conversations, 
+                    created_at, total_conversations,
                     completed_conversations, failed_conversations
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -102,7 +102,7 @@ class ConversationImporter:
                     conversation_id, experiment_id, status,
                     agent_a_model, agent_b_model,
                     agent_a_temperature, agent_b_temperature,
-                    initial_prompt, total_turns, 
+                    initial_prompt, total_turns,
                     final_convergence_score,
                     started_at, completed_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -142,7 +142,7 @@ class ConversationImporter:
         self.db.execute(
             """
             INSERT INTO messages (
-                conversation_id, turn_number, agent_id, 
+                conversation_id, turn_number, agent_id,
                 content, timestamp, token_count
             ) VALUES (?, ?, ?, ?, ?, ?)
         """,

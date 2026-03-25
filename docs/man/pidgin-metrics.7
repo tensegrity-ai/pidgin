@@ -157,7 +157,7 @@ Measures adoption of partner's vocabulary:
 .RS
 .nf
 def calculate_mimicry(current_words, partner_history):
-    partner_vocab = set(word for turn in partner_history 
+    partner_vocab = set(word for turn in partner_history
                        for word in turn)
     current_vocab = set(current_words)
     shared = current_vocab & partner_vocab
@@ -207,7 +207,7 @@ ORDER BY peak DESC;
 .SS Vocabulary growth
 .RS
 .nf
-SELECT turn_number, 
+SELECT turn_number,
        AVG(cumulative_vocabulary_a) as avg_vocab_a,
        AVG(cumulative_vocabulary_b) as avg_vocab_b
 FROM conversation_turns

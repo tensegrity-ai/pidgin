@@ -12,28 +12,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-    
+
     - name: Set up Python
       run: uv python install 3.11
-    
+
     - name: Install dependencies
       run: uv sync --frozen
-    
+
     - name: Run ruff linting
       run: |
         uv run ruff check . --output-format=github
         echo "✓ All linting checks passed"
-    
+
     - name: Check ruff formatting
       run: |
         uv run ruff format --check .
         echo "✓ Code formatting verified"
-    
+
     - name: Run mypy type checking
       run: |
         uv run mypy pidgin
@@ -45,24 +45,24 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12']
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: uv sync --frozen
-    
+
     - name: Run tests with coverage
       run: uv run pytest --cov=pidgin --cov-report=xml --cov-report=term
-    
+
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11'
       uses: codecov/codecov-action@v4
@@ -78,28 +78,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-    
+
     - name: Set up Python
       run: uv python install 3.11
-    
+
     - name: Install dependencies
       run: uv sync --frozen
-    
+
     - name: Run bandit security check
       run: uv run bandit -r pidgin -f json -o bandit-report.json || true
-    
+
     - name: Display bandit results
       if: always()
       run: |
         if [ -f bandit-report.json ]; then
           uv run python -m json.tool bandit-report.json
         fi
-    
+
     - name: Check dependencies for vulnerabilities
       continue-on-error: true
       run: |

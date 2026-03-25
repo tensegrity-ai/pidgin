@@ -13,10 +13,10 @@ async def run_conversation():
     # Create agents
     agent_a = Agent(id="agent_a", model="claude-3-sonnet")
     agent_b = Agent(id="agent_b", model="gpt-4")
-    
+
     # Initialize conductor
     conductor = Conductor(output_manager=None)
-    
+
     # Run conversation
     conversation = await conductor.run_conversation(
         agent_a=agent_a,
@@ -24,7 +24,7 @@ async def run_conversation():
         initial_prompt="Let's discuss the nature of consciousness",
         max_turns=10
     )
-    
+
     # Access results
     for message in conversation.messages:
         print(f"{message.agent_id}: {message.content[:100]}...")
@@ -98,8 +98,8 @@ from pidgin.core.types import Message
 
 class MyCustomProvider(Provider):
     async def stream_response(
-        self, 
-        messages: List[Message], 
+        self,
+        messages: List[Message],
         temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Your implementation here

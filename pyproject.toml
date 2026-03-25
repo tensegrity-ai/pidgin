@@ -146,28 +146,28 @@ skip_empty = true
 exclude_lines = [
     # Standard pragma
     "pragma: no cover",
-    
+
     # Don't complain about missing debug-only code
     "def __repr__",
     "def __str__",
-    
+
     # Don't complain if tests don't hit defensive assertion code
     "raise AssertionError",
     "raise NotImplementedError",
-    
+
     # Don't complain if non-runnable code isn't run
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
-    
+
     # Don't complain about abstract methods
     "@abstractmethod",
     "@abc.abstractmethod",
-    
+
     # Defensive programming
     "except ImportError:",
     "except KeyError:",
     "except AttributeError:",
-    
+
     # Platform-specific code
     "if sys.platform",
 ]

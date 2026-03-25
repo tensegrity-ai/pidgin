@@ -87,7 +87,7 @@ if 'turn_metrics' in locals() and 'convergence_score' in turn_metrics.columns:
 The following analysis explores deeper patterns in the conversation dynamics:
 
 - **Vocabulary Convergence**: How agents adopt each other's word choices
-- **Structural Mimicry**: Alignment in sentence patterns and message structure  
+- **Structural Mimicry**: Alignment in sentence patterns and message structure
 - **Turn-by-turn Dynamics**: How convergence evolves throughout conversations
 - **Cross-conversation Patterns**: Systematic behaviors across multiple runs"""
 
@@ -108,7 +108,7 @@ if 'turn_metrics' in locals():
             mask = turn_metrics['conversation_id'] == conv_id
             turn_metrics.loc[mask, 'convergence_velocity'] = \\
                 turn_metrics.loc[mask, 'convergence_score'].diff()
-    
+
     # Statistical summary by conversation
     conv_summary = turn_metrics.groupby('conversation_id').agg({
         'convergence_score': ['mean', 'std', 'min', 'max', 'last'],
@@ -116,20 +116,20 @@ if 'turn_metrics' in locals():
         'message_length_a': ['mean', 'std'] if 'message_length_a' in turn_metrics.columns else [],
         'message_length_b': ['mean', 'std'] if 'message_length_b' in turn_metrics.columns else [],
     })
-    
+
     print("\\n=== Conversation-level Summary Statistics ===")
     print(conv_summary.describe())
-    
+
     # Identify high/low convergence conversations
     if 'convergence_score' in turn_metrics.columns:
         final_convergence = turn_metrics.groupby('conversation_id')['convergence_score'].last()
         high_conv = final_convergence.nlargest(3)
         low_conv = final_convergence.nsmallest(3)
-        
+
         print(f"\\n=== High Convergence Conversations ===")
         for conv_id, score in high_conv.items():
             print(f"  {conv_id}: {score:.3f}")
-        
+
         print(f"\\n=== Low Convergence Conversations ===")
         for conv_id, score in low_conv.items():
             print(f"  {conv_id}: {score:.3f}")"""

@@ -50,14 +50,14 @@ if 'turn_metrics' in locals():
         code = """# Message Length Analysis
 if 'turn_metrics' in locals() and 'message_length_a' in turn_metrics.columns:
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    
+
     # 1. Message lengths over time
     ax = axes[0]
-    ax.plot(turn_metrics['turn_number'], turn_metrics['message_length_a'], 
+    ax.plot(turn_metrics['turn_number'], turn_metrics['message_length_a'],
             'b-', alpha=0.3, label='Agent A')
     ax.plot(turn_metrics['turn_number'], turn_metrics['message_length_b'],
             'r-', alpha=0.3, label='Agent B')
-    
+
     # Add rolling averages
     window = min(10, len(turn_metrics) // 4)
     if window > 1:
@@ -67,13 +67,13 @@ if 'turn_metrics' in locals() and 'message_length_a' in turn_metrics.columns:
         ax.plot(turn_metrics['turn_number'],
                 turn_metrics['message_length_b'].rolling(window, center=True).mean(),
                 'r-', linewidth=2, label=f'Agent B (MA-{window})')
-    
+
     ax.set_xlabel('Turn Number')
     ax.set_ylabel('Message Length (characters)')
     ax.set_title('Message Length Over Time')
     ax.legend()
     ax.grid(True, alpha=0.3)
-    
+
     # 2. Length distribution
     ax = axes[1]
     ax.hist([turn_metrics['message_length_a'], turn_metrics['message_length_b']],
@@ -82,24 +82,24 @@ if 'turn_metrics' in locals() and 'message_length_a' in turn_metrics.columns:
     ax.set_ylabel('Frequency')
     ax.set_title('Message Length Distribution')
     ax.legend()
-    
+
     # 3. Length convergence
     ax = axes[2]
     length_diff = abs(turn_metrics['message_length_a'] - turn_metrics['message_length_b'])
     ax.plot(turn_metrics['turn_number'], length_diff, 'g-', alpha=0.5)
-    
+
     # Add trend line
     z = np.polyfit(turn_metrics['turn_number'], length_diff, 1)
     p = np.poly1d(z)
     ax.plot(turn_metrics['turn_number'], p(turn_metrics['turn_number']),
             "r--", linewidth=2, label=f'Trend: {z[0]:.2f}')
-    
+
     ax.set_xlabel('Turn Number')
     ax.set_ylabel('|Length A - Length B|')
     ax.set_title('Message Length Difference')
     ax.legend()
     ax.grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
     plt.show()"""
 

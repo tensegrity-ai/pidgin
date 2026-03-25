@@ -197,7 +197,7 @@ class Conversation(BaseModel):
 class Turn:
     agent_a_message: Message
     agent_b_message: Message
-    
+
     def as_messages(self) -> List[Message]:
         return [self.agent_a_message, self.agent_b_message]
 ```

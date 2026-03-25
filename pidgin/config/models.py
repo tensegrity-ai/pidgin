@@ -143,7 +143,7 @@ def _resolve_family_name(
     best = candidates[0]
     if len(candidates) > 1:
         logger.debug(
-            f"Resolved '{name}' to '{best[2]}' " f"(from {len(candidates)} candidates)"
+            f"Resolved '{name}' to '{best[2]}' (from {len(candidates)} candidates)"
         )
     return best[3]
 

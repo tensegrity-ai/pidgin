@@ -288,7 +288,7 @@ The following metrics are included in the schema but stored as placeholder value
 - **emotional_intensity**: Requires NRCLex or emotion lexicons
 - **formality_convergence**: Requires linguistic formality analysis
 
-### Advanced Convergence Metrics  
+### Advanced Convergence Metrics
 - **topic_consistency**: Requires LDA or BERT topic modeling
 - **rhythm_convergence**: Requires prosodic analysis
 - **convergence_velocity**: Rate of change calculation

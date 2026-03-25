@@ -13,15 +13,15 @@ from pidgin.core.types import Message
 
 class Provider(ABC):
     async def stream_response(
-        self, 
-        messages: List[Message], 
+        self,
+        messages: List[Message],
         temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         """Stream response chunks from the model."""
-        
+
     async def cleanup(self) -> None:
         """Clean up provider resources."""
-        
+
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         """Get token usage from the last API call."""
 ```
@@ -152,16 +152,16 @@ class MyCustomProvider(Provider):
         self.api_key = api_key
         self.session = None
         self._last_usage = None
-    
+
     async def stream_response(
-        self, 
-        messages: List[Message], 
+        self,
+        messages: List[Message],
         temperature: Optional[float] = None
     ) -> AsyncGenerator[str, None]:
         # Initialize session if needed
         if not self.session:
             self.session = aiohttp.ClientSession()
-        
+
         # Prepare request
         headers = {"Authorization": f"Bearer {self.api_key}"}
         data = {
@@ -170,7 +170,7 @@ class MyCustomProvider(Provider):
             "temperature": temperature or 0.7,
             "stream": True
         }
-        
+
         # Make streaming request
         async with self.session.post(
             "https://api.myservice.com/chat",
@@ -182,11 +182,11 @@ class MyCustomProvider(Provider):
                 chunk = self._parse_chunk(line)
                 if chunk:
                     yield chunk
-    
+
     async def cleanup(self) -> None:
         if self.session:
             await self.session.close()
-    
+
     def get_last_usage(self) -> Optional[Dict[str, int]]:
         return self._last_usage
 ```

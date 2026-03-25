@@ -21,7 +21,7 @@ between language models.
    cli-usage
    yaml-specs
    custom-awareness
-   
+
 .. toctree::
    :maxdepth: 2
    :caption: API Documentation

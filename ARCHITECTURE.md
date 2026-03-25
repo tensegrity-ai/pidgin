@@ -51,7 +51,7 @@ Pidgin is an event-driven system for conducting and recording AI-to-AI conversat
 ### Conductor (`core/conductor.py`)
 Orchestrates conversations between agents. Supporting modules:
 - `interrupt_handler.py` - Interrupt and pause management
-- `name_coordinator.py` - Agent naming and identity  
+- `name_coordinator.py` - Agent naming and identity
 - `turn_executor.py` - Turn execution logic
 - `message_handler.py` - Message processing
 - `conversation_lifecycle.py` - Start/end lifecycle events (split into 3 modules)
@@ -484,4 +484,3 @@ For complex functionality, we split into:
 - Token counting per provider
 - Cost tracking in real-time
 - Efficient batching strategies
-

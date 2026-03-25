@@ -50,11 +50,11 @@ prompts:
   # Turn number: prompts to inject
   5:
     both: "Same prompt for both agents"
-  
+
   10:
     agent_a: "Prompt just for agent A"
     agent_b: "Different prompt for agent B"
-  
+
   15:
     agent_b: "Can specify just one agent"
 ```

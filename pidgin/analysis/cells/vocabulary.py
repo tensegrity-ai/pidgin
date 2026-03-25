@@ -23,7 +23,7 @@ class VocabularyCells(CellBase):
         code = """# Vocabulary Analysis
 if 'turn_metrics' in locals() and 'vocabulary_overlap' in turn_metrics.columns:
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
+
     # 1. Vocabulary overlap over turns
     ax = axes[0, 0]
     for conv_id in turn_metrics['conversation_id'].unique()[:5]:
@@ -34,7 +34,7 @@ if 'turn_metrics' in locals() and 'vocabulary_overlap' in turn_metrics.columns:
     ax.set_ylabel('Vocabulary Overlap')
     ax.set_title('Vocabulary Overlap Trajectories (First 5 Conversations)')
     ax.grid(True, alpha=0.3)
-    
+
     # 2. Average vocabulary metrics
     ax = axes[0, 1]
     vocab_cols = [col for col in turn_metrics.columns if 'vocab' in col.lower()]
@@ -47,7 +47,7 @@ if 'turn_metrics' in locals() and 'vocabulary_overlap' in turn_metrics.columns:
         ax.set_title('Average Vocabulary Metrics Over Time')
         ax.legend()
         ax.grid(True, alpha=0.3)
-    
+
     # 3. Vocabulary overlap distribution
     ax = axes[1, 0]
     ax.hist(turn_metrics['vocabulary_overlap'], bins=30, alpha=0.7,
@@ -58,29 +58,29 @@ if 'turn_metrics' in locals() and 'vocabulary_overlap' in turn_metrics.columns:
     ax.set_ylabel('Frequency')
     ax.set_title('Distribution of Vocabulary Overlap Scores')
     ax.legend()
-    
+
     # 4. Correlation with convergence
     ax = axes[1, 1]
     if 'convergence_score' in turn_metrics.columns:
-        ax.scatter(turn_metrics['vocabulary_overlap'], 
+        ax.scatter(turn_metrics['vocabulary_overlap'],
                    turn_metrics['convergence_score'],
                    alpha=0.3, s=20)
-        
+
         # Add trend line
-        z = np.polyfit(turn_metrics['vocabulary_overlap'], 
+        z = np.polyfit(turn_metrics['vocabulary_overlap'],
                        turn_metrics['convergence_score'], 1)
         p = np.poly1d(z)
         x_line = np.linspace(turn_metrics['vocabulary_overlap'].min(),
                             turn_metrics['vocabulary_overlap'].max(), 100)
         ax.plot(x_line, p(x_line), "r-", linewidth=2,
                 label=f'Correlation: {np.corrcoef(turn_metrics["vocabulary_overlap"], turn_metrics["convergence_score"])[0,1]:.3f}')
-        
+
         ax.set_xlabel('Vocabulary Overlap')
         ax.set_ylabel('Convergence Score')
         ax.set_title('Vocabulary Overlap vs Convergence')
         ax.legend()
         ax.grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
     plt.show()"""
 

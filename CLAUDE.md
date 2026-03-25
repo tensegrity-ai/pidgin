@@ -6,7 +6,7 @@ These guidelines ensure consistent, grounded development of the Pidgin research 
 
 ### 1. Scientific Rigor Over Hype
 - **Observe**, don't interpret
-- **Record**, don't theorize  
+- **Record**, don't theorize
 - **Measure**, don't speculate
 - **Question**, don't assume
 
@@ -34,7 +34,7 @@ These guidelines ensure consistent, grounded development of the Pidgin research 
 
 **Use skeptical language:**
 - "observed" not "discovered"
-- "patterns" not "phenomena"  
+- "patterns" not "phenomena"
 - "might indicate" not "proves"
 - "in our tests" not "universally"
 
@@ -94,7 +94,7 @@ Clean boundaries. Easy to add providers. No model-specific logic in core.
 ```python
 # Small, focused modules with size guidelines:
 # - Ideal: <200 lines (strive for this)
-# - Acceptable: <300 lines 
+# - Acceptable: <300 lines
 # - Hard limit: <500 lines (must refactor if exceeded)
 # - Special cases: Central architectural components (like EventStore) may exceed if justified
 # Single responsibility
@@ -213,7 +213,7 @@ When implementing desktop notifications, use these platform-specific commands:
 # macOS
 osascript -e 'display notification "Experiment complete" with title "Pidgin"'
 
-# Linux  
+# Linux
 notify-send "Pidgin" "Experiment complete"
 
 # Terminal bell (cross-platform)
@@ -255,4 +255,3 @@ With JSONL-first architecture, database concurrency is no longer an issue:
 - Manifest.json uses atomic writes
 - DuckDB is only used for post-experiment analysis (auto-imported when experiments complete)
 - Batch import happens after experiments complete
-
