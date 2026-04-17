@@ -550,9 +550,7 @@
     "claude-opus-4.6": {
       "provider": "anthropic",
       "display_name": "Anthropic: Claude Opus 4.6",
-      "aliases": [
-        "opus"
-      ],
+      "aliases": [],
       "api": {
         "model_id": "claude-opus-4-6"
       },
@@ -603,6 +601,75 @@
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
         "last_updated": "2026-03-22"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": false,
+        "stable": true,
+        "description": "",
+        "notes": "",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "claude-opus-4.7": {
+      "provider": "anthropic",
+      "display_name": "Anthropic: Claude Opus 4.7",
+      "aliases": [
+        "opus"
+      ],
+      "api": {
+        "model_id": "claude-opus-4-7"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 5e-06,
+        "output_per_1m_tokens": 2.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-04-17"
       },
       "metadata": {
         "status": "available",
