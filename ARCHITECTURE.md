@@ -124,7 +124,7 @@ Pidgin supports local models through two mechanisms:
 ### Ollama Integration
 - External Ollama server handles model management
 - Pidgin communicates via HTTP API
-- Models: qwen2.5:0.5b, phi3, mistral, llama3.2
+- Models: qwen3:0.6b, phi3, mistral, llama3.2
 - Auto-downloads models on first use
 - Automatic installation support with user consent
 

@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 class OllamaProvider(Provider):
     """Provider that uses Ollama for local inference."""
 
-    def __init__(self, model_name: str = "qwen2.5:0.5b"):
+    def __init__(self, model_name: str = "qwen3:0.6b"):
         super().__init__()
         self.model_name = model_name
         self.base_url = "http://localhost:11434"
+        self._last_usage: Optional[dict] = None
 
         # Set up error handler for Ollama
         self.error_handler = ProviderErrorHandler(
@@ -38,9 +39,6 @@ class OllamaProvider(Provider):
             ],
         )
 
-        # Check if Ollama is running at initialization
-        self._check_ollama_available()
-
     def _check_ollama_available(self):
         """Check if Ollama server is running."""
         try:
@@ -52,6 +50,15 @@ class OllamaProvider(Provider):
         except Exception as e:
             raise RuntimeError(f"Cannot connect to Ollama: {e}")
 
+    def get_last_usage(self) -> Optional[dict]:
+        """Return token usage from the most recent response, if available.
+
+        Ollama's final streaming chunk includes `prompt_eval_count` and
+        `eval_count`; we translate those into the OpenAI-style keys the
+        EventAwareProvider expects.
+        """
+        return self._last_usage
+
     async def stream_response(
         self,
         messages: List[Message],
@@ -61,6 +68,14 @@ class OllamaProvider(Provider):
     ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response from Ollama model."""
         # Note: thinking_enabled and thinking_budget are not supported by Ollama
+
+        self._last_usage = None
+        try:
+            self._check_ollama_available()
+        except RuntimeError as e:
+            friendly_msg = self.error_handler.get_friendly_error(e)
+            yield ResponseChunk(f"Error: {friendly_msg}", "response")
+            return
 
         # Apply context truncation
         from .context_utils import apply_context_truncation
@@ -116,16 +131,24 @@ class OllamaProvider(Provider):
                         return
 
                     async for line in response.content:
-                        if line:
-                            try:
-                                chunk = json.loads(line)
-                                if "message" in chunk and "content" in chunk["message"]:
-                                    yield ResponseChunk(
-                                        chunk["message"]["content"], "response"
-                                    )
-                            except (json.JSONDecodeError, ValueError, TypeError):
-                                # Skip malformed JSON lines
-                                pass
+                        if not line:
+                            continue
+                        try:
+                            chunk = json.loads(line)
+                        except (json.JSONDecodeError, ValueError, TypeError):
+                            continue
+
+                        if "message" in chunk and "content" in chunk["message"]:
+                            yield ResponseChunk(chunk["message"]["content"], "response")
+
+                        if chunk.get("done"):
+                            prompt_tokens = chunk.get("prompt_eval_count", 0)
+                            completion_tokens = chunk.get("eval_count", 0)
+                            self._last_usage = {
+                                "prompt_tokens": prompt_tokens,
+                                "completion_tokens": completion_tokens,
+                                "total_tokens": prompt_tokens + completion_tokens,
+                            }
         except aiohttp.ClientConnectorError:
             # Connection error
             error = Exception("connection_error")

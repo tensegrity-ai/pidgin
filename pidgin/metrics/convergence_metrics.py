@@ -34,8 +34,8 @@ class ConvergenceCalculator:
 
         # Check for copied phrases of different lengths
         for n in range(2, min(6, len(words_a), len(words_b)) + 1):
-            ngrams_a = set(zip(*[words_a[i:] for i in range(n)]))
-            ngrams_b = set(zip(*[words_b[i:] for i in range(n)]))
+            ngrams_a = set(zip(*[words_a[i:] for i in range(n)], strict=False))
+            ngrams_b = set(zip(*[words_b[i:] for i in range(n)], strict=False))
 
             if ngrams_a:
                 overlap = len(ngrams_a & ngrams_b) / len(ngrams_a)
@@ -182,7 +182,7 @@ class ConvergenceCalculator:
             dist_b = [0.0] * len(dist_b_int)
 
         # Calculate cosine similarity
-        dot_product = sum(a * b for a, b in zip(dist_a, dist_b))
+        dot_product = sum(a * b for a, b in zip(dist_a, dist_b, strict=False))
         norm_a = math.sqrt(sum(a * a for a in dist_a))
         norm_b = math.sqrt(sum(b * b for b in dist_b))
 

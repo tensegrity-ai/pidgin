@@ -26,8 +26,6 @@ async def build_provider(model_id: str, temperature: Optional[float] = None):
     if not model_config:
         raise ValueError(f"Unknown model: {model_id}")
 
-    # Create appropriate provider (without temperature)
-    # Use api.model_id which is the actual API model identifier
     api_model_id = model_config.api.model_id
     if model_config.provider == "openai":
         return OpenAIProvider(model=api_model_id)
@@ -38,15 +36,15 @@ async def build_provider(model_id: str, temperature: Optional[float] = None):
     elif model_config.provider == "xai":
         return xAIProvider(model=api_model_id)
     elif model_config.provider == "local":
-        if model_config.model_id == "local:test":
-            return LocalProvider(model_name="test")
-        else:
-            # For other local models, use OllamaProvider
-            model_name = model_config.model_id.split(":", 1)[1]
-            # Map simple names to Ollama model names
-            model_map = {"qwen": "qwen2.5:0.5b", "phi": "phi3", "mistral": "mistral"}
-            ollama_model = model_map.get(model_name, model_name)
-            return OllamaProvider(ollama_model)
+        return LocalProvider(model_name="test")
+    elif model_config.provider == "ollama":
+        ollama_model = model_config.api.ollama_model
+        if not ollama_model:
+            raise ValueError(
+                f"Model {model_config.model_id} has provider 'ollama' "
+                f"but no api.ollama_model set in models.json"
+            )
+        return OllamaProvider(ollama_model)
     elif model_config.provider == "silent":
         return SilentProvider(model=model_config.model_id)
     else:

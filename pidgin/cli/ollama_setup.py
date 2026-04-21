@@ -35,7 +35,7 @@ async def normalize_local_model_names(
         # Show selection menu
         menu_lines = [
             "◆ Select local model:",
-            "  1. qwen - 500MB, fast",
+            "  1. qwen - 522MB, fast (Qwen 3 0.6B)",
             "  2. phi - 2.8GB, balanced",
             "  3. mistral - 4.1GB, best, 8GB+ RAM",
             "  4. test - no download, pattern-based",
@@ -68,17 +68,9 @@ async def ensure_ollama_models_ready(
     for model in [model_a, model_b]:
         if model.startswith("local:") and model != "local:test":
             config = get_model_config(model)
-            if config and config.provider == "ollama":
+            if config and config.provider == "ollama" and config.api.ollama_model:
                 using_ollama = True
-                # Map to actual Ollama model name
-                model_name = model.split(":", 1)[1]
-                model_map = {
-                    "qwen": "qwen2.5:0.5b",
-                    "phi": "phi3",
-                    "mistral": "mistral",
-                }
-                ollama_model = model_map.get(model_name, model_name)
-                models_to_check.add(ollama_model)
+                models_to_check.add(config.api.ollama_model)
 
     if not using_ollama:
         return True
@@ -106,33 +98,44 @@ async def ensure_ollama_models_ready(
 async def check_and_pull_model(model_name: str, console: Console) -> bool:
     """Check if model exists, download if needed."""
     display = DisplayUtils(console)
-    # Check if model exists - use array to avoid shell injection
     try:
-        # Get list of models safely
         result = subprocess.run(
             ["ollama", "list"], capture_output=True, text=True, check=False
         )
-
-        # Check if our model is in the output
         model_exists = model_name in result.stdout
     except (subprocess.CalledProcessError, OSError):
         model_exists = False
 
-    result_returncode = 0 if model_exists else 1
+    if model_exists:
+        return True
 
-    if result_returncode != 0:
-        # Model not found, need to download
-        console.print()
-        display.info(
-            f"Model Setup: {model_name}\n\n"
-            f"Model not found locally.\n"
-            f"This model needs to be downloaded first.",
-            title="◆ Model Setup",
-            use_panel=True,
+    console.print()
+    display.info(
+        f"Model Setup: {model_name}\n\n"
+        f"Model not found locally.\n"
+        f"This model needs to be downloaded first.",
+        title="◆ Model Setup",
+        use_panel=True,
+    )
+
+    if not click.confirm("Download model?", default=True):
+        display.dim("Download skipped")
+        return False
+
+    display.dim(f"Pulling {model_name} (this may take a while)...")
+    try:
+        pull_result = subprocess.run(["ollama", "pull", model_name], check=False)
+    except (subprocess.CalledProcessError, OSError) as e:
+        display.error(f"Failed to run ollama pull: {e}", use_panel=False)
+        return False
+
+    if pull_result.returncode != 0:
+        display.error(
+            f"Failed to pull {model_name}",
+            context=f"Try manually: ollama pull {model_name}",
+            use_panel=False,
         )
+        return False
 
-        if click.confirm("Download model?", default=True):
-            # ... download logic
-            pass
-
+    display.success(f"Downloaded {model_name}")
     return True

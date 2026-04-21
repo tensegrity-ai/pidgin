@@ -45,11 +45,11 @@ MODEL_GLYPHS = {
     "grok-2-vision": "◎",
     # Local/Ollama
     "llama3.1": "◐",
-    "qwen2.5": "◑",
+    "qwen3": "◑",
     "deepseek": "◒",
     "test": "◓",
     "local:llama3.1": "◐",
-    "local:qwen2.5": "◑",
+    "local:qwen3": "◑",
     "local:deepseek": "◒",
     "local:test": "◓",
     "local:mistral": "◔",

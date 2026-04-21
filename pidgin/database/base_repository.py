@@ -109,7 +109,7 @@ class BaseRepository:
             cursor = self.db
 
         cols = [desc[0] for desc in cursor.description]
-        return dict(zip(cols, row))
+        return dict(zip(cols, row, strict=False))
 
     def parse_json_field(self, value: Any) -> Any:
         """Parse a JSON field, returning original value if parsing fails.

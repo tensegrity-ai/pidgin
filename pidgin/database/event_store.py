@@ -408,7 +408,7 @@ class EventStore:
         ).fetchall()
 
         cols = [desc[0] for desc in self.db.description]
-        return [dict(zip(cols, row)) for row in results]
+        return [dict(zip(cols, row, strict=False)) for row in results]
 
     def get_experiment_turn_metrics(self, experiment_id: str) -> List[Dict[str, Any]]:
         """Get all turn metrics for an experiment.
@@ -430,7 +430,7 @@ class EventStore:
         ).fetchall()
 
         cols = [desc[0] for desc in self.db.description]
-        return [dict(zip(cols, row)) for row in results]
+        return [dict(zip(cols, row, strict=False)) for row in results]
 
     def get_experiment_messages(self, experiment_id: str) -> List[Dict[str, Any]]:
         """Get all messages for an experiment.
@@ -452,7 +452,7 @@ class EventStore:
         ).fetchall()
 
         cols = [desc[0] for desc in self.db.description]
-        return [dict(zip(cols, row)) for row in results]
+        return [dict(zip(cols, row, strict=False)) for row in results]
 
     def get_conversation_turn_metrics(
         self, conversation_id: str
@@ -475,7 +475,7 @@ class EventStore:
         ).fetchall()
 
         cols = [desc[0] for desc in self.db.description]
-        return [dict(zip(cols, row)) for row in results]
+        return [dict(zip(cols, row, strict=False)) for row in results]
 
     def get_conversation_messages(self, conversation_id: str) -> List[Dict[str, Any]]:
         """Get messages for a specific conversation.
@@ -496,7 +496,7 @@ class EventStore:
         ).fetchall()
 
         cols = [desc[0] for desc in self.db.description]
-        return [dict(zip(cols, row)) for row in results]
+        return [dict(zip(cols, row, strict=False)) for row in results]
 
     def get_conversation_token_usage(self, conversation_id: str) -> Dict[str, Any]:
         """Get token usage summary for a conversation.

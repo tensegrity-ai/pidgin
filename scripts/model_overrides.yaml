@@ -49,11 +49,11 @@ local_models:
 
   - key: "local:qwen"
     provider: "ollama"
-    display_name: "Qwen 0.5B"
+    display_name: "Qwen 3 0.6B"
     aliases: ["qwen"]
     api:
       model_id: "local:qwen"
-      ollama_model: "qwen2.5:0.5b"
+      ollama_model: "qwen3:0.6b"
     capabilities:
       streaming: true
       vision: false

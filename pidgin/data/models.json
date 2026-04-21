@@ -1786,13 +1786,13 @@
     },
     "local:qwen": {
       "provider": "ollama",
-      "display_name": "Qwen 0.5B",
+      "display_name": "Qwen 3 0.6B",
       "aliases": [
         "qwen"
       ],
       "api": {
         "model_id": "local:qwen",
-        "ollama_model": "qwen2.5:0.5b"
+        "ollama_model": "qwen3:0.6b"
       },
       "capabilities": {
         "streaming": true,
@@ -1837,13 +1837,13 @@
       "cost": null,
       "metadata": {
         "status": "available",
-        "release_date": "2024-11-01",
+        "release_date": "2025-04-29",
         "deprecation_date": null,
         "curated": true,
         "stable": true,
         "description": "Smallest practical Ollama model",
         "notes": "Smallest practical Ollama model, very fast",
-        "size": "500MB"
+        "size": "522MB"
       },
       "rate_limits": null
     },

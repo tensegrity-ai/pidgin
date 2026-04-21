@@ -26,7 +26,7 @@ class ProviderContextManager:
     # Model-specific limits (when known)
     MODEL_LIMITS = {
         # Local models via Ollama
-        "qwen2.5:3b": 32768,  # 32k context
+        "qwen3:0.6b": 40960,  # 40k context
         "phi3": 4096,  # 4k context
         "mistral": 8192,  # 8k context
         "llama3.2": 131072,  # 128k context
