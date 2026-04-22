@@ -64,20 +64,20 @@ async def test_full_experiment_pipeline():
             for conv in manifest["conversations"]:
                 assert conv["status"] == "completed"
 
-        # Step 5: Check post-processing outputs if they exist
-        # These might not always be created depending on configuration
-        transcript_file = exp_dir / "transcript.md"
-        summary_file = exp_dir / "summary.md"
-        notebook_file = exp_dir / "analysis.ipynb"
+        # Step 5: Verify post-processing produced the experiment transcript
+        # summary. Per-conversation transcripts and analysis.ipynb are also
+        # generated but require nbformat for the notebook, so only the summary
+        # is required here.
+        summary_file = exp_dir / "transcript_summary.md"
+        assert summary_file.exists(), "Experiment transcript summary not generated"
 
-        # At least one output should exist
-        (transcript_file.exists() or summary_file.exists() or notebook_file.exists())
+        conv_transcripts = list(exp_dir.glob("transcript_conv_*.md"))
+        assert len(conv_transcripts) == 2, (
+            f"Expected 2 per-conversation transcripts, found {len(conv_transcripts)}"
+        )
 
-        if transcript_file.exists():
-            with open(transcript_file) as f:
-                transcript = f.read()
-                assert len(transcript) > 100, "Transcript too short"
-                assert "e2e_test" in transcript or "Experiment" in transcript
+        summary_text = summary_file.read_text()
+        assert "e2e_test" in summary_text or "Experiment" in summary_text
 
         # Step 6: Test StateBuilder can read the state
         state_builder = StateBuilder()

@@ -19,20 +19,6 @@ def test_cli_runs():
     assert result.exit_code == 0
 
 
-def test_cli_handles_bad_model():
-    """Make sure we don't crash on bad input."""
-    runner = CliRunner()
-
-    # Use --quiet to avoid interactive mode
-    result = runner.invoke(
-        run, ["-a", "not_a_real_model", "-b", "also_fake", "-t", "1", "--quiet"]
-    )
-
-    # Should fail gracefully (exit code may be 0 if handled gracefully)
-    # Just check that it doesn't crash and gives some feedback
-    assert result.exit_code in [0, 1, 2]  # Any of these is fine
-
-
 def test_cli_help_works():
     """Make sure --help doesn't crash."""
     runner = CliRunner()

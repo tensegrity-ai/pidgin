@@ -1,6 +1,17 @@
 """Metrics formatting for transcripts."""
 
-from typing import Dict, List
+from typing import Any, Dict, List
+
+
+def _num(d: Dict[str, Any], key: str, default: float = 0) -> float:
+    """Return d[key] as a number, treating missing keys and NULL/None as default.
+
+    dict.get(key, default) only substitutes the default when the key is absent,
+    not when its value is None. Database rows routinely contain None for nullable
+    numeric columns, which then blows up f-string format specs like `{x:.3f}`.
+    """
+    value = d.get(key)
+    return default if value is None else value
 
 
 class MetricsFormatter:
@@ -19,20 +30,20 @@ class MetricsFormatter:
         Returns:
             Formatted summary metrics markdown
         """
-        total_cost = (token_data.get("total_cost_cents") or 0) / 100.0
-        final_convergence = conv_data.get("final_convergence_score")
-        if final_convergence is None:
-            final_convergence = 0
+        total_cost = _num(token_data, "total_cost_cents") / 100.0
+        final_convergence = _num(conv_data, "final_convergence_score")
+        total_turns = _num(conv_data, "total_turns", num_turns)
+        total_tokens = _num(token_data, "total_tokens")
 
         lines = [
             "## Summary Metrics",
             "",
             "| Metric | Value |",
             "|--------|-------|",
-            f"| Total Turns | {conv_data.get('total_turns', num_turns)} |",
+            f"| Total Turns | {total_turns} |",
             f"| Final Convergence | {final_convergence:.3f} |",
-            f"| Total Messages | {conv_data.get('total_turns', num_turns) * 2} |",
-            f"| Total Tokens | {token_data.get('total_tokens', 0):,} |",
+            f"| Total Messages | {total_turns * 2} |",
+            f"| Total Tokens | {total_tokens:,} |",
             f"| Total Cost | ${total_cost:.2f} |",
             f"| Ended Due To | {conv_data.get('convergence_reason') or 'max_turns'} |",
         ]
@@ -59,11 +70,11 @@ class MetricsFormatter:
         ]
 
         for tm in turn_metrics:
-            turn_num = tm.get("turn_number", 0)
-            vocab_overlap = tm.get("vocabulary_overlap", 0)
-            length_diff = tm.get("avg_message_length_difference", 0)
-            turn_score = tm.get("turn_convergence_score", 0)
-            cumulative = tm.get("cumulative_convergence_score", 0)
+            turn_num = _num(tm, "turn_number")
+            vocab_overlap = _num(tm, "vocabulary_overlap")
+            length_diff = _num(tm, "avg_message_length_difference")
+            turn_score = _num(tm, "turn_convergence_score")
+            cumulative = _num(tm, "cumulative_convergence_score")
 
             lines.append(
                 f"| {turn_num} | {vocab_overlap:.3f} | {length_diff:.1f} | "
@@ -80,9 +91,9 @@ class MetricsFormatter:
 
         for milestone in milestones:
             for tm in turn_metrics:
-                if tm.get("cumulative_convergence_score", 0) >= milestone:
+                if _num(tm, "cumulative_convergence_score") >= milestone:
                     reached.append(
-                        f"- **{milestone:.0%}**: Turn {tm.get('turn_number', 0)}"
+                        f"- **{milestone:.0%}**: Turn {_num(tm, 'turn_number')}"
                     )
                     break
 
@@ -113,11 +124,11 @@ class MetricsFormatter:
         ]
 
         for tm in turn_metrics:
-            turn_num = tm.get("turn_number", 0)
-            a_len = tm.get("agent_a_message_length", 0)
-            b_len = tm.get("agent_b_message_length", 0)
+            turn_num = _num(tm, "turn_number")
+            a_len = _num(tm, "agent_a_message_length")
+            b_len = _num(tm, "agent_b_message_length")
             diff = abs(a_len - b_len)
-            avg_diff = tm.get("avg_message_length_difference", 0)
+            avg_diff = _num(tm, "avg_message_length_difference")
 
             lines.append(
                 f"| {turn_num} | {a_len} | {b_len} | {diff} | {avg_diff:.1f} |"
@@ -125,8 +136,8 @@ class MetricsFormatter:
 
         # Add summary statistics
         if turn_metrics:
-            total_a = sum(tm.get("agent_a_message_length", 0) for tm in turn_metrics)
-            total_b = sum(tm.get("agent_b_message_length", 0) for tm in turn_metrics)
+            total_a = sum(_num(tm, "agent_a_message_length") for tm in turn_metrics)
+            total_b = sum(_num(tm, "agent_b_message_length") for tm in turn_metrics)
             avg_a = total_a / len(turn_metrics)
             avg_b = total_b / len(turn_metrics)
 
@@ -164,11 +175,11 @@ class MetricsFormatter:
         ]
 
         for tm in turn_metrics:
-            turn_num = tm.get("turn_number", 0)
-            unique_a = tm.get("unique_words_agent_a", 0)
-            unique_b = tm.get("unique_words_agent_b", 0)
-            shared = tm.get("shared_vocabulary_size", 0)
-            overlap = tm.get("vocabulary_overlap", 0)
+            turn_num = _num(tm, "turn_number")
+            unique_a = _num(tm, "unique_words_agent_a")
+            unique_b = _num(tm, "unique_words_agent_b")
+            shared = _num(tm, "shared_vocabulary_size")
+            overlap = _num(tm, "vocabulary_overlap")
 
             lines.append(
                 f"| {turn_num} | {unique_a} | {unique_b} | {shared} | {overlap:.1%} |"
@@ -176,9 +187,9 @@ class MetricsFormatter:
 
         # Add vocabulary growth analysis
         if turn_metrics:
-            first_overlap = turn_metrics[0].get("vocabulary_overlap", 0)
-            last_overlap = turn_metrics[-1].get("vocabulary_overlap", 0)
-            max_overlap = max(tm.get("vocabulary_overlap", 0) for tm in turn_metrics)
+            first_overlap = _num(turn_metrics[0], "vocabulary_overlap")
+            last_overlap = _num(turn_metrics[-1], "vocabulary_overlap")
+            max_overlap = max(_num(tm, "vocabulary_overlap") for tm in turn_metrics)
 
             lines.extend(
                 [
@@ -214,13 +225,13 @@ class MetricsFormatter:
             "|------|-------------|-------------|------------|",
         ]
 
-        total_a_time = 0
-        total_b_time = 0
+        total_a_time = 0.0
+        total_b_time = 0.0
 
         for tm in turn_metrics:
-            turn_num = tm.get("turn_number", 0)
-            a_time = tm.get("agent_a_response_time_ms", 0)
-            b_time = tm.get("agent_b_response_time_ms", 0)
+            turn_num = _num(tm, "turn_number")
+            a_time = _num(tm, "agent_a_response_time_ms")
+            b_time = _num(tm, "agent_b_response_time_ms")
             total_time = a_time + b_time
 
             total_a_time += a_time

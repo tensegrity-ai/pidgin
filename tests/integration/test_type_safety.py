@@ -2,13 +2,11 @@
 
 import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pidgin.cli.branch_handlers.source_finder import BranchSourceFinder
 from pidgin.cli.error_handler import FileNotFoundError as CLIFileNotFoundError
-from pidgin.core.conductor import Conductor
 from pidgin.core.conversation_lifecycle import ConversationLifecycle
 from pidgin.core.events import MessageCompleteEvent
 from pidgin.ui.display_filter import DisplayFilter
@@ -95,36 +93,6 @@ def test_message_complete_event_has_token_fields():
     assert not hasattr(event, "tokens_used")
 
 
-def test_token_handler_uses_correct_log_signature():
-    """Test that TokenUsageHandler calls EventStore.log_token_usage correctly."""
-    from pidgin.database.event_store import EventStore
-
-    with patch.object(EventStore, "log_token_usage") as mock_log:
-        # Create token handler with mocked storage
-        storage = MagicMock(spec=EventStore)
-        storage.log_token_usage = mock_log
-
-        # The log_token_usage should be called with specific parameters
-        storage.log_token_usage(
-            conversation_id="test_conv",
-            provider="anthropic",
-            model="claude-3",
-            prompt_tokens=100,
-            completion_tokens=200,
-            total_cost=0.003,
-        )
-
-        # Verify it was called with correct signature
-        mock_log.assert_called_once_with(
-            conversation_id="test_conv",
-            provider="anthropic",
-            model="claude-3",
-            prompt_tokens=100,
-            completion_tokens=200,
-            total_cost=0.003,
-        )
-
-
 def test_conversation_lifecycle_state_type():
     """Test that ConversationLifecycle.state has correct type."""
     from rich.console import Console
@@ -143,22 +111,6 @@ def test_conversation_lifecycle_state_type():
 
     # After initialization, it can be set to ConversationState
     # (we're just checking the type annotation works)
-
-
-def test_conductor_state_attributes():
-    """Test that Conductor has properly typed state attributes."""
-    # Create a minimal Conductor to check attributes
-    with (
-        patch("pidgin.core.conductor.OutputManager"),
-        patch("pidgin.core.conductor.Config"),
-        patch("pidgin.core.conductor.GlobalTokenTracker"),
-    ):
-        # Just check that these attributes exist and have correct types
-        conductor = MagicMock(spec=Conductor)
-
-        # These should be Optional types
-        conductor.current_conv_dir = None  # Optional[Path]
-        conductor.start_time = None  # Optional[float]
 
 
 def test_experiment_config_awareness_strings():

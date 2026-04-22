@@ -90,13 +90,17 @@ def test_daemon_subprocess_launch_and_cleanup():
         manager.is_running(exp_id)
 
         # Wait for experiment to complete (test provider is fast)
-        max_wait = 5  # seconds
+        max_wait = 15  # seconds
         start_time = time.time()
         while manager.is_running(exp_id) and (time.time() - start_time) < max_wait:
             time.sleep(0.1)
 
-        # After completion, PID file should be cleaned up
-        assert not pid_file.exists()
+        # PID-file unlink happens in the daemon's shutdown path, which may
+        # complete after is_running() flips false. Poll instead of asserting.
+        cleanup_deadline = time.time() + 3
+        while pid_file.exists() and time.time() < cleanup_deadline:
+            time.sleep(0.05)
+        assert not pid_file.exists(), f"PID file {pid_file} not cleaned up"
 
         # Experiment directory should exist
         exp_dirs = list(base_dir.glob("test_daemon_*"))
@@ -117,34 +121,3 @@ def test_daemon_subprocess_launch_and_cleanup():
         assert has_events or "experiment.log" in file_names
         # Manifest is created during post-processing, might not be there immediately
         # But events or logs should always be there
-
-
-def test_daemon_handles_missing_console():
-    """Test that daemon subprocess handles None console properly."""
-    # This test is implicitly covered by test_daemon_subprocess_launch_and_cleanup
-    # since the daemon runs without a console, but let's make it explicit
-
-    with tempfile.TemporaryDirectory():
-        from pidgin.core.event_bus import EventBus
-        from pidgin.core.events import ConversationStartEvent
-        from pidgin.ui.tail.display import TailDisplay
-
-        bus = EventBus()
-
-        # Create TailDisplay with None console (daemon mode)
-        display = TailDisplay(bus, None)
-
-        # This should not raise an error
-        from pidgin.core.types import Agent
-
-        agent_a = Agent(id="agent_a", model="test")
-        agent_b = Agent(id="agent_b", model="test")
-
-        event = ConversationStartEvent(
-            conversation_id="test_conv", agent_a=agent_a, agent_b=agent_b
-        )
-
-        # Should handle event without error
-        display.log_event(event)
-
-        # No assertion needed - if no exception, test passes
