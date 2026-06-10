@@ -23,7 +23,8 @@ logs/
 
 # IDE & OS
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
 
 # Environment
 .env
