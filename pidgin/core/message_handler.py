@@ -150,10 +150,10 @@ class MessageHandler:
                 conversation_id, agent, turn_number, timeout, future
             )
         except Exception as e:
-            # Check if this is a context limit error
-            from ..providers.error_utils import ContextLimitError
+            # Check if this is a clean conversation-ending condition
+            from ..providers.error_utils import ContextLimitError, EmptyResponseError
 
-            if isinstance(e, ContextLimitError):
+            if isinstance(e, (ContextLimitError, EmptyResponseError)):
                 # Return None to signal the conversation should end
                 return None
             else:
@@ -319,6 +319,25 @@ class MessageHandler:
                 from ..providers.error_utils import ContextLimitError
 
                 future.set_exception(ContextLimitError(event.error_message))
+
+    async def handle_empty_response(self, event):
+        """Handle empty response event by failing the pending message.
+
+        Args:
+            event: EmptyResponseEvent
+        """
+        # Set exception in the pending future for this agent
+        if event.agent_id in self.pending_messages:
+            future = self.pending_messages.pop(event.agent_id)
+            if not future.done():
+                from ..providers.error_utils import EmptyResponseError
+
+                future.set_exception(
+                    EmptyResponseError(
+                        f"Empty response from {event.provider} "
+                        f"(agent {event.agent_id}, turn {event.turn_number})"
+                    )
+                )
 
     def _estimate_payload_tokens(
         self, conversation_history: List[Message], model: str

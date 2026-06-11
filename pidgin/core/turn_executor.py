@@ -44,11 +44,12 @@ class TurnExecutor:
         # Custom awareness for turn-based prompt injection
         self.custom_awareness = {"agent_a": None, "agent_b": None}
 
-        # Subscribe to context limit events
+        # Subscribe to conversation-ending provider events
         if bus:
-            from .events import ContextLimitEvent
+            from .events import ContextLimitEvent, EmptyResponseEvent
 
             bus.subscribe(ContextLimitEvent, self.handle_context_limit)
+            bus.subscribe(EmptyResponseEvent, self.handle_empty_response)
 
     def set_convergence_overrides(self, threshold=None, action=None):
         """Set convergence threshold and action overrides.
@@ -238,3 +239,11 @@ class TurnExecutor:
         """
         self.context_limit_reached = True
         self.stop_reason = EndReason.CONTEXT_LIMIT_REACHED
+
+    async def handle_empty_response(self, event):
+        """Handle empty response event by recording the stop reason.
+
+        Args:
+            event: EmptyResponseEvent
+        """
+        self.stop_reason = EndReason.EMPTY_RESPONSE

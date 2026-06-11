@@ -9,6 +9,17 @@ class ContextLimitError(Exception):
     pass
 
 
+class EmptyResponseError(Exception):
+    """Raised when a provider returns an empty (or whitespace-only) response.
+
+    An empty assistant turn cannot be replayed as the other agent's user
+    message (APIs reject empty content), so it ends the conversation cleanly
+    rather than poisoning every subsequent turn.
+    """
+
+    pass
+
+
 class ErrorClassifier:
     """Classify different types of errors."""
 

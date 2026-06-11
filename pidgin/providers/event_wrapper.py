@@ -7,6 +7,7 @@ import time
 from ..core.event_bus import EventBus
 from ..core.events import (
     APIErrorEvent,
+    EmptyResponseEvent,
     MessageCompleteEvent,
     MessageRequestEvent,
     ThinkingCompleteEvent,
@@ -150,6 +151,30 @@ class EventAwareProvider:
 
             # Build complete message
             content = "".join(response_chunks)
+
+            # Guard against empty responses. An empty (or whitespace-only)
+            # assistant turn cannot be replayed as the other agent's user
+            # message — APIs reject empty content, which otherwise poisons every
+            # subsequent turn. End the conversation cleanly with a recorded
+            # reason instead of emitting an unusable message.
+            if not content.strip():
+                provider_name = self.provider.__class__.__name__.replace("Provider", "")
+                logger.warning(
+                    "Empty response from %s (agent %s, turn %s); ending conversation",
+                    provider_name,
+                    self.agent_id,
+                    event.turn_number,
+                )
+                await self.bus.emit(
+                    EmptyResponseEvent(
+                        conversation_id=event.conversation_id,
+                        agent_id=self.agent_id,
+                        turn_number=event.turn_number,
+                        provider=provider_name,
+                    )
+                )
+                return
+
             message = Message(
                 role="assistant",
                 content=content,

@@ -258,6 +258,20 @@ class ContextLimitEvent(Event):
 
 
 @dataclass
+class EmptyResponseEvent(Event):
+    """Emitted when a provider returns an empty response, ending the conversation.
+
+    An empty assistant turn cannot be replayed as the other agent's user
+    message, so the conversation ends here rather than poisoning later turns.
+    """
+
+    conversation_id: str
+    agent_id: str
+    turn_number: int
+    provider: str
+
+
+@dataclass
 class ConversationBranchedEvent(Event):
     """Emitted when a conversation is branched from another."""
 

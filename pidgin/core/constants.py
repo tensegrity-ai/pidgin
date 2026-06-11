@@ -13,6 +13,7 @@ class EndReason:
     HIGH_CONVERGENCE = "high_convergence"
     INTERRUPTED = "interrupted"
     CONTEXT_LIMIT_REACHED = "context_limit_reached"
+    EMPTY_RESPONSE = "empty_response"
     MAX_TURNS = "max_turns"
     ERROR = "error"
     MAX_TURNS_REACHED = "max_turns_reached"

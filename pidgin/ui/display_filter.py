@@ -10,6 +10,7 @@ from ..core.events import (
     ConversationEndEvent,
     ConversationResumedEvent,
     ConversationStartEvent,
+    EmptyResponseEvent,
     ErrorEvent,
     Event,
     MessageCompleteEvent,
@@ -121,6 +122,8 @@ class DisplayFilter:
                 self.error_handler.show_error(event)
             elif isinstance(event, ContextLimitEvent):
                 self.error_handler.show_context_limit(event)
+            elif isinstance(event, EmptyResponseEvent):
+                self.error_handler.show_empty_response(event)
             elif isinstance(event, ConversationEndEvent):
                 self.conversation_handler.show_conversation_end(event)
             elif isinstance(event, ConversationResumedEvent):

@@ -249,10 +249,13 @@ class Conductor:
             MessageCompleteEvent, self.message_handler.handle_message_complete
         )
 
-        # Subscribe to context limit events
-        from .events import ContextLimitEvent
+        # Subscribe to conversation-ending provider events
+        from .events import ContextLimitEvent, EmptyResponseEvent
 
         self.bus.subscribe(ContextLimitEvent, self.message_handler.handle_context_limit)
+        self.bus.subscribe(
+            EmptyResponseEvent, self.message_handler.handle_empty_response
+        )
 
     async def _initialize_conversation(
         self,
