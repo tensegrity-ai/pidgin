@@ -33,6 +33,9 @@ class ExperimentConfig:
     think_b: bool = False  # Override for agent B
     think_budget: Optional[int] = None  # Max thinking tokens (default: 10000)
 
+    # Response length cap (matching CLI)
+    max_tokens: Optional[int] = None  # Max response tokens (None -> provider default)
+
     # Awareness levels (matching CLI)
     awareness: str = "basic"  # Default for both agents
     awareness_a: Optional[str] = None  # Override for agent A

@@ -26,6 +26,7 @@ class SilentProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         """Return empty response - pure silence.
 

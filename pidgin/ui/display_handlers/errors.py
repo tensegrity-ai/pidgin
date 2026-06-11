@@ -5,6 +5,7 @@ from rich.panel import Panel
 from ...core.events import (
     APIErrorEvent,
     ContextLimitEvent,
+    EmptyResponseEvent,
     ErrorEvent,
     ProviderTimeoutEvent,
 )
@@ -169,6 +170,41 @@ class ErrorDisplayHandler(BaseDisplayHandler):
         )
 
         # Calculate appropriate width
+        width = self.calculate_panel_width(content, title)
+
+        self.console.print()
+        self.console.print(
+            Panel(
+                content,
+                title=title,
+                title_align="left",
+                border_style=border_style,
+                padding=(1, 2),
+                width=width,
+                expand=False,
+            )
+        )
+        self.console.print()
+
+    def show_empty_response(self, event: EmptyResponseEvent):
+        """Show that the conversation ended on an empty provider response."""
+        agent_name = None
+        if event.agent_id in self.agents:
+            agent_name = self.agents[event.agent_id].display_name or event.agent_id
+
+        title = "◆ Empty Response"
+        border_style = self.COLORS["nord13"]  # Yellow
+
+        content = (
+            f"[bold {self.COLORS['nord13']}]Conversation Ended[/bold {self.COLORS['nord13']}]\n\n"
+            f"◈ Agent: {agent_name or event.agent_id}\n"
+            f"◈ Provider: {event.provider}\n"
+            f"◈ Turn: {event.turn_number}\n\n"
+            f"[{self.COLORS['nord4']}]The model returned an empty response. An empty turn cannot\n"
+            f"be replayed as the other agent's message, so the conversation\n"
+            f"ends here rather than continuing with an invalid turn.[/{self.COLORS['nord4']}]"
+        )
+
         width = self.calculate_panel_width(content, title)
 
         self.console.print()

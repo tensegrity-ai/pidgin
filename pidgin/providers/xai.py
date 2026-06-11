@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider, ResponseChunk
+from .base import DEFAULT_MAX_TOKENS, Provider, ResponseChunk
 from .retry_utils import retry_with_exponential_backoff
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ class xAIProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         # Note: thinking_enabled and thinking_budget are not supported by xAI
         # Apply context truncation
@@ -67,7 +68,7 @@ class xAIProvider(Provider):
             params = {
                 "model": self.model,
                 "messages": openai_messages,
-                "max_tokens": 1000,
+                "max_tokens": max_tokens or DEFAULT_MAX_TOKENS,
                 "stream": True,
                 "stream_options": {
                     "include_usage": True

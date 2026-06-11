@@ -20,6 +20,7 @@ class AgentConfig:
     think_a: bool = False
     think_b: bool = False
     think_budget: Optional[int] = None
+    max_tokens: Optional[int] = None
 
 
 @dataclass
@@ -98,6 +99,7 @@ class RunConfig:
                 think_a=kwargs.get("think_a", False),
                 think_b=kwargs.get("think_b", False),
                 think_budget=kwargs.get("think_budget"),
+                max_tokens=kwargs.get("max_tokens"),
             ),
             conversation=ConversationConfig(
                 prompt=kwargs.get("prompt"),

@@ -125,6 +125,7 @@ class SpecLoader:
         display_mode = spec.get("display_mode", "chat")
         prompt_tag = spec.get("prompt_tag", "[HUMAN]")
         allow_truncation = spec.get("allow_truncation", False)
+        max_tokens = spec.get("max_tokens")
 
         return ExperimentConfig(
             name=name,
@@ -145,6 +146,7 @@ class SpecLoader:
             display_mode=display_mode,
             prompt_tag=prompt_tag,
             allow_truncation=allow_truncation,
+            max_tokens=max_tokens,
         )
 
     def show_spec_info(self, spec_file: Path, config: ExperimentConfig) -> None:

@@ -88,6 +88,7 @@ class CommandHandler:
             think_a=config.agents.think_a,
             think_b=config.agents.think_b,
             think_budget=config.agents.think_budget,
+            max_tokens=config.agents.max_tokens,
             prompt=config.conversation.prompt,
             name=config.execution.name,
             convergence_threshold=config.convergence.convergence_threshold,

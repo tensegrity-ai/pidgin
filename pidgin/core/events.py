@@ -56,6 +56,7 @@ class MessageRequestEvent(Event):
     allow_truncation: bool = False
     thinking_enabled: Optional[bool] = None
     thinking_budget: Optional[int] = None
+    max_tokens: Optional[int] = None
 
 
 @dataclass
@@ -253,6 +254,20 @@ class ContextLimitEvent(Event):
     agent_id: str
     turn_number: int
     error_message: str
+    provider: str
+
+
+@dataclass
+class EmptyResponseEvent(Event):
+    """Emitted when a provider returns an empty response, ending the conversation.
+
+    An empty assistant turn cannot be replayed as the other agent's user
+    message, so the conversation ends here rather than poisoning later turns.
+    """
+
+    conversation_id: str
+    agent_id: str
+    turn_number: int
     provider: str
 
 

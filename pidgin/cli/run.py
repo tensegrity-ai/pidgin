@@ -58,6 +58,12 @@ console = Console()
     default=None,
     help="Max thinking tokens (default: 10000)",
 )
+@click.option(
+    "--max-tokens",
+    type=click.IntRange(1, 100000),
+    default=None,
+    help="Max response tokens per turn (default: 8192)",
+)
 @click.option("--output", "-o", help="Custom output directory")
 @click.option(
     "--convergence-threshold",
@@ -137,6 +143,7 @@ def run(
     think_a: bool,
     think_b: bool,
     think_budget: Optional[int],
+    max_tokens: Optional[int],
     output: Optional[str],
     convergence_threshold: Optional[float],
     convergence_action: Optional[str],
@@ -182,6 +189,7 @@ def run(
         think_a=think_a,
         think_b=think_b,
         think_budget=think_budget,
+        max_tokens=max_tokens,
         output=output,
         convergence_threshold=convergence_threshold,
         convergence_action=convergence_action,

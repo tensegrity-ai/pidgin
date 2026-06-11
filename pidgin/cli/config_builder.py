@@ -49,6 +49,7 @@ class ConfigBuilder:
         think_a: bool = False,
         think_b: bool = False,
         think_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> Tuple[ExperimentConfig, str, str]:
         """Build experiment configuration from CLI arguments.
 
@@ -112,6 +113,7 @@ class ConfigBuilder:
             think_a=think_a,
             think_b=think_b,
             think_budget=think_budget,
+            max_tokens=max_tokens,
             custom_prompt=initial_prompt,
             max_parallel=max_parallel,
             convergence_threshold=final_convergence_threshold,

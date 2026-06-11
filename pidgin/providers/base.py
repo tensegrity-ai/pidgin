@@ -7,6 +7,12 @@ from typing import Dict, List, Literal, Optional
 
 from ..core.types import Message
 
+# Default ceiling on response (completion) tokens when an agent does not
+# specify one. Chosen to be large enough that normal conversational turns are
+# never truncated mid-sentence; providers may override for special modes
+# (e.g. Anthropic extended thinking needs more headroom).
+DEFAULT_MAX_TOKENS = 8192
+
 
 @dataclass
 class ResponseChunk:
@@ -47,6 +53,7 @@ class Provider(ABC):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response chunks from the model.
 
@@ -63,6 +70,9 @@ class Provider(ABC):
                             Only supported by some models (e.g., Claude 3.5+).
             thinking_budget: Optional maximum tokens for thinking (default: 10000).
                            Only applies when thinking_enabled is True.
+            max_tokens: Optional ceiling on response (completion) tokens. When
+                       None, providers fall back to DEFAULT_MAX_TOKENS. This
+                       bounds the visible reply, not the thinking budget.
 
         Yields:
             ResponseChunk: Chunks of the response with type annotation.

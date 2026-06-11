@@ -4,12 +4,12 @@ import json
 import logging
 import socket
 from collections.abc import AsyncGenerator
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
 from ..core.types import Message
-from .base import Provider, ResponseChunk
+from .base import DEFAULT_MAX_TOKENS, Provider, ResponseChunk
 from .error_utils import ProviderErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ class OllamaProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response from Ollama model."""
         # Note: thinking_enabled and thinking_budget are not supported by Ollama
@@ -100,8 +101,10 @@ class OllamaProvider(Provider):
             "stream": True,
         }
 
+        options: Dict[str, Any] = {"num_predict": max_tokens or DEFAULT_MAX_TOKENS}
         if temperature is not None:
-            request_data["options"] = {"temperature": temperature}
+            options["temperature"] = temperature
+        request_data["options"] = options
 
         # Configure timeouts for local model
         timeout = aiohttp.ClientTimeout(

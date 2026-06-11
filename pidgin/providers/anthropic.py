@@ -6,7 +6,7 @@ from anthropic import AsyncAnthropic
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider, ResponseChunk
+from .base import DEFAULT_MAX_TOKENS, Provider, ResponseChunk
 from .error_utils import create_anthropic_error_handler
 from .retry_utils import retry_with_exponential_backoff
 
@@ -29,6 +29,7 @@ class AnthropicProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         # Apply context truncation
         from .context_utils import (
@@ -53,7 +54,11 @@ class AnthropicProvider(Provider):
         api_params: Dict[str, Any] = {
             "model": self.model,
             "messages": conversation_messages,
-            "max_tokens": 16000 if thinking_enabled else 1000,
+            # Explicit max_tokens wins; otherwise extended thinking needs extra
+            # headroom for the reasoning trace, plain responses use the default.
+            "max_tokens": max_tokens
+            if max_tokens is not None
+            else (16000 if thinking_enabled else DEFAULT_MAX_TOKENS),
         }
 
         # Add temperature if specified (Anthropic caps at 1.0)
