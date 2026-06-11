@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider, ResponseChunk
+from .base import DEFAULT_MAX_TOKENS, Provider, ResponseChunk
 from .error_utils import create_google_error_handler
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ class GoogleProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         # Apply context truncation
         from .context_utils import apply_context_truncation
@@ -72,7 +73,9 @@ class GoogleProvider(Provider):
         for attempt in range(max_retries):
             try:
                 # Build config with optional temperature and thinking settings
-                config_kwargs: Dict[str, Any] = {}
+                config_kwargs: Dict[str, Any] = {
+                    "max_output_tokens": max_tokens or DEFAULT_MAX_TOKENS,
+                }
                 if temperature is not None:
                     config_kwargs["temperature"] = temperature
 

@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 
 from ..core.types import Message
 from .api_key_manager import APIKeyManager
-from .base import Provider, ResponseChunk
+from .base import DEFAULT_MAX_TOKENS, Provider, ResponseChunk
 from .error_utils import create_openai_error_handler
 from .retry_utils import retry_with_exponential_backoff
 
@@ -29,6 +29,7 @@ class OpenAIProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         # Note: OpenAI doesn't expose reasoning traces in their API
         # thinking_enabled and thinking_budget are accepted but ignored
@@ -54,7 +55,7 @@ class OpenAIProvider(Provider):
             params = {
                 "model": self.model,
                 "messages": openai_messages,
-                "max_completion_tokens": 1000,
+                "max_completion_tokens": max_tokens or DEFAULT_MAX_TOKENS,
                 "stream": True,
                 "stream_options": {"include_usage": True},  # Request usage data
             }

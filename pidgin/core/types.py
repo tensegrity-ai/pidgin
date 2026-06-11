@@ -116,6 +116,7 @@ class Agent(BaseModel):
     temperature: Optional[float] = None  # Temperature setting for this agent
     thinking_enabled: Optional[bool] = None  # Enable extended thinking for this agent
     thinking_budget: Optional[int] = None  # Max thinking tokens for this agent
+    max_tokens: Optional[int] = None  # Max response tokens (None -> provider default)
 
 
 class Conversation(BaseModel):

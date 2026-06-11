@@ -140,6 +140,7 @@ class ExperimentSetup:
             display_name=model_a_config.display_name,  # Use the model's display name
             thinking_enabled=thinking_a if thinking_a else None,
             thinking_budget=config.think_budget if thinking_a else None,
+            max_tokens=config.max_tokens,
         )
 
         agent_b = Agent(
@@ -150,6 +151,7 @@ class ExperimentSetup:
             display_name=model_b_config.display_name,  # Use the model's display name
             thinking_enabled=thinking_b if thinking_b else None,
             thinking_budget=config.think_budget if thinking_b else None,
+            max_tokens=config.max_tokens,
         )
 
         agents = {"agent_a": agent_a, "agent_b": agent_b}

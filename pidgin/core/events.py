@@ -56,6 +56,7 @@ class MessageRequestEvent(Event):
     allow_truncation: bool = False
     thinking_enabled: Optional[bool] = None
     thinking_budget: Optional[int] = None
+    max_tokens: Optional[int] = None
 
 
 @dataclass

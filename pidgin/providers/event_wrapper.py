@@ -98,6 +98,7 @@ class EventAwareProvider:
                         temperature=event.temperature,
                         thinking_enabled=event.thinking_enabled,
                         thinking_budget=event.thinking_budget,
+                        max_tokens=event.max_tokens,
                     ):
                         # Handle ResponseChunk objects
                         if isinstance(chunk, ResponseChunk):

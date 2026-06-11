@@ -177,6 +177,7 @@ class MessageHandler:
                 temperature=agent.temperature,
                 thinking_enabled=agent.thinking_enabled,
                 thinking_budget=agent.thinking_budget,
+                max_tokens=agent.max_tokens,
             )
         )
 

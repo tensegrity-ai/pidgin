@@ -21,9 +21,11 @@ class LocalProvider(Provider):
         temperature: Optional[float] = None,
         thinking_enabled: Optional[bool] = None,
         thinking_budget: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[ResponseChunk, None]:
         """Stream response from test model."""
-        # Note: thinking_enabled and thinking_budget are not supported by local
+        # Note: thinking_enabled, thinking_budget, and max_tokens are not
+        # supported by local
         if self.model_name != "test":
             yield ResponseChunk(
                 f"Error: LocalProvider only supports 'test' model. Got: {self.model_name}",
