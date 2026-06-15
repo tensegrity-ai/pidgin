@@ -465,11 +465,34 @@ class EventStore:
         Returns:
             List of turn metrics dictionaries
         """
+        # Read from the wide conversation_turns table, which is the complete,
+        # fully-populated per-turn metrics source. Columns are aliased to the
+        # names the transcript formatter expects. The shared-vocabulary count is
+        # the one field conversation_turns doesn't carry, so it is pulled from
+        # turn_metrics (a JSON array) via a left join.
         results = self.db.execute(
             """
-            SELECT * FROM turn_metrics
-            WHERE conversation_id = ?
-            ORDER BY turn_number
+            SELECT
+                ct.turn_number,
+                ct.vocabulary_overlap,
+                ABS(ct.a_message_length - ct.b_message_length)
+                    AS avg_message_length_difference,
+                ct.overall_convergence AS turn_convergence_score,
+                ct.cumulative_convergence AS cumulative_convergence_score,
+                ct.a_message_length AS agent_a_message_length,
+                ct.b_message_length AS agent_b_message_length,
+                ct.a_unique_words AS unique_words_agent_a,
+                ct.b_unique_words AS unique_words_agent_b,
+                COALESCE(json_array_length(tm.shared_vocabulary), 0)
+                    AS shared_vocabulary_size,
+                ct.response_time_a AS agent_a_response_time_ms,
+                ct.response_time_b AS agent_b_response_time_ms
+            FROM conversation_turns ct
+            LEFT JOIN turn_metrics tm
+                ON ct.conversation_id = tm.conversation_id
+                AND ct.turn_number = tm.turn_number
+            WHERE ct.conversation_id = ?
+            ORDER BY ct.turn_number
             """,
             [conversation_id],
         ).fetchall()
