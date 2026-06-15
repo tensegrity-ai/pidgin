@@ -35,7 +35,7 @@ class TestThinkingModeConfig:
         """Verify Agent type accepts thinking parameters."""
         agent = Agent(
             id="agent_a",
-            model="claude-3.7-sonnet",
+            model="claude-sonnet-4-6",
             thinking_enabled=True,
             thinking_budget=10000,
         )
