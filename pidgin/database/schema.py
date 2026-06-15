@@ -25,6 +25,7 @@ EXPERIMENTS_SCHEMA = _load_schema("experiments")
 CONVERSATIONS_SCHEMA = _load_schema("conversations")
 TURN_METRICS_SCHEMA = _load_schema("turn_metrics")
 MESSAGES_SCHEMA = _load_schema("messages")
+THINKING_TRACES_SCHEMA = _load_schema("thinking_traces")
 TOKEN_USAGE_SCHEMA = _load_schema("token_usage")
 CONTEXT_TRUNCATIONS_SCHEMA = _load_schema("context_truncations")
 MATERIALIZED_VIEWS = _load_schema("views")
@@ -39,6 +40,7 @@ def get_all_schemas():
         EVENT_SCHEMA,
         TURN_METRICS_SCHEMA,
         MESSAGES_SCHEMA,
+        THINKING_TRACES_SCHEMA,
         TOKEN_USAGE_SCHEMA,
         CONTEXT_TRUNCATIONS_SCHEMA,
         MATERIALIZED_VIEWS,
