@@ -96,11 +96,13 @@ class ExperimentRunner:
                         experiment_id, conversation_id, config, {}, exp_dir
                     )
 
-                    # Update counts
+                    # The conversation's terminal status was already recorded
+                    # from its ConversationEndEvent; pass None so we update only
+                    # the experiment counts and preserve that status.
                     self.completed_count += 1
                     manifest.update_conversation_status(
                         conversation_id,
-                        "completed",
+                        None,
                         self.completed_count,
                         self.failed_count,
                     )
@@ -159,6 +161,9 @@ class ExperimentRunner:
 
         async def run_with_semaphore(conv_id: str, conv_config: dict):
             async with semaphore:
+                # None preserves the status recorded from the ConversationEndEvent;
+                # only an unhandled exception (no end event) forces "failed".
+                forced_status = None
                 try:
                     await self._run_single_conversation(
                         experiment_id, conv_id, config, conv_config, exp_dir
@@ -167,12 +172,13 @@ class ExperimentRunner:
                 except Exception as e:
                     logging.error(f"Conversation {conv_id} failed: {e}")
                     self.failed_count += 1
+                    forced_status = "failed"
                 finally:
                     # Update manifest
                     manifest = ManifestManager(exp_dir)
                     manifest.update_conversation_status(
                         conv_id,
-                        "completed" if conv_id not in self.active_tasks else "failed",
+                        forced_status,
                         self.completed_count,
                         self.failed_count,
                     )

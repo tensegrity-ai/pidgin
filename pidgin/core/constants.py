@@ -25,6 +25,36 @@ class EndReason:
     EXCEPTION = "exception"
 
 
+def status_for_end_reason(reason):
+    """Map a conversation end reason to a terminal ConversationStatus.
+
+    Single source of truth for reason -> status so the conductor, the manifest
+    writer (TrackingEventBus), and the JSONL reader all agree.
+
+    - completed: the conversation ran its planned course (max turns reached or
+      convergence threshold hit).
+    - failed: an error terminated it.
+    - interrupted: anything that cut it short early (timeout, context limit,
+      empty response, user interrupt, rate limit) or an unrecognized/None reason.
+    """
+    completed = {
+        EndReason.MAX_TURNS,
+        EndReason.MAX_TURNS_REACHED,
+        EndReason.HIGH_CONVERGENCE,
+        EndReason.CONVERGENCE_THRESHOLD,
+    }
+    failed = {
+        EndReason.ERROR,
+        EndReason.API_ERROR,
+        EndReason.EXCEPTION,
+    }
+    if reason in completed:
+        return ConversationStatus.COMPLETED
+    if reason in failed:
+        return ConversationStatus.FAILED
+    return ConversationStatus.INTERRUPTED
+
+
 class RateLimits:
     DEFAULT_RESPONSE_TOKENS = 500  # Conservative estimate for response
     TOKEN_CHAR_RATIO = 4  # Roughly 4 chars per token
@@ -36,7 +66,8 @@ class RateLimits:
 
 class SystemDefaults:
     MAX_EVENT_HISTORY = 1000  # Maximum events to keep in memory
-    DEFAULT_TIMEOUT = 60.0  # Default message timeout in seconds
+    DEFAULT_TIMEOUT = 60.0  # Default message timeout (orchestration-level wait)
+    PROVIDER_HARD_TIMEOUT = 120.0  # Backstop cap on a single provider stream
     MAX_RETRIES = 10  # Maximum retry attempts
     DB_RETRY_ATTEMPTS = 3  # Database operation retry attempts
     DB_RETRY_ATTEMPTS_READONLY = 1  # Fewer retries for read-only operations

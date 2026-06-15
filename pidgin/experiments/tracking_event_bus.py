@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from ..core.constants import ConversationStatus
+from ..core.constants import ConversationStatus, status_for_end_reason
 from ..core.event_bus import EventBus
 from ..core.events import (
     ConversationEndEvent,
@@ -76,13 +76,8 @@ class TrackingEventBus(EventBus):
             )
 
         elif isinstance(event, ConversationEndEvent):
-            # Map reasons to completed status
-            completed_reasons = ["max_turns", "max_turns_reached", "high_convergence"]
-            status = (
-                ConversationStatus.COMPLETED
-                if event.reason in completed_reasons
-                else event.reason
-            )
+            # Map end reason to a terminal status (shared mapping; see constants)
+            status = status_for_end_reason(event.reason)
             self.manifest.update_conversation(
                 self.conversation_id,
                 status=status,

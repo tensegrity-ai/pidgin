@@ -7,7 +7,11 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..core.constants import ConversationStatus, ExperimentStatus
+from ..core.constants import (
+    ConversationStatus,
+    ExperimentStatus,
+    status_for_end_reason,
+)
 
 logger = logging.getLogger("jsonl_reader")
 
@@ -205,13 +209,7 @@ class JSONLExperimentReader:
                             conv_info["ended_at"] = event.get("timestamp")
                             conv_info["total_turns"] = event.get("total_turns", 0)
                             reason = event.get("reason", "")
-
-                            if reason == "max_turns" or reason == "high_convergence":
-                                conv_info["status"] = ConversationStatus.COMPLETED
-                            elif reason == "error":
-                                conv_info["status"] = ConversationStatus.FAILED
-                            else:
-                                conv_info["status"] = ConversationStatus.INTERRUPTED
+                            conv_info["status"] = status_for_end_reason(reason)
 
                         elif event_type == "TurnCompleteEvent":
                             conv_info["total_turns"] = max(

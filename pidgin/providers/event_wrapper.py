@@ -4,12 +4,14 @@ import asyncio
 import logging
 import time
 
+from ..core.constants import SystemDefaults
 from ..core.event_bus import EventBus
 from ..core.events import (
     APIErrorEvent,
     EmptyResponseEvent,
     MessageCompleteEvent,
     MessageRequestEvent,
+    ProviderTimeoutEvent,
     ThinkingCompleteEvent,
     TokenUsageEvent,
 )
@@ -85,10 +87,12 @@ class EventAwareProvider:
             response_chunks: list[str] = []
             thinking_start = None
 
-            # Add timeout to prevent hanging
+            # Add timeout to prevent hanging. This is the provider-level backstop;
+            # the orchestration-level wait in MessageHandler (DEFAULT_TIMEOUT) is
+            # normally shorter and fires first.
             import asyncio
 
-            timeout_seconds = 120  # 2 minute timeout (with retries this is sufficient)
+            timeout_seconds = SystemDefaults.PROVIDER_HARD_TIMEOUT
 
             try:
                 # asyncio.timeout is Python 3.11+, use wait_for for compatibility
@@ -117,6 +121,23 @@ class EventAwareProvider:
             except asyncio.TimeoutError:
                 logger.error(
                     f"Provider {self.provider.__class__.__name__} timed out after {timeout_seconds}s"
+                )
+                # Emit a ProviderTimeoutEvent so a hard-cap timeout is classified
+                # the same way as the orchestration-level timeout (and feeds the
+                # turn executor's stop reason) rather than as a generic error.
+                provider_name = self.provider.__class__.__name__.replace("Provider", "")
+                await self.bus.emit(
+                    ProviderTimeoutEvent(
+                        conversation_id=event.conversation_id,
+                        error_type="timeout",
+                        error_message=(
+                            f"Provider response timed out after {timeout_seconds} seconds"
+                        ),
+                        context=f"During message generation for turn {event.turn_number}",
+                        agent_id=self.agent_id,
+                        provider=provider_name,
+                        timeout_seconds=timeout_seconds,
+                    )
                 )
                 raise Exception(
                     f"Provider response timed out after {timeout_seconds} seconds"

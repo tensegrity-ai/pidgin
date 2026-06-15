@@ -202,20 +202,27 @@ class ManifestManager:
             self._write_atomic(manifest)
 
     def update_conversation_status(
-        self, conversation_id: str, status: str, completed_count: int, failed_count: int
+        self,
+        conversation_id: str,
+        status: str,
+        completed_count: int,
+        failed_count: int,
     ) -> None:
-        """Update the status of a conversation.
+        """Update experiment counts and, optionally, a conversation's status.
 
         Args:
             conversation_id: ID of the conversation
-            status: New status (completed, failed, etc)
+            status: New status, or None to leave the conversation's existing
+                status untouched. The terminal status is normally set from the
+                ConversationEndEvent by TrackingEventBus, so callers that only
+                know "the task returned" should pass None to avoid clobbering it.
             completed_count: Number of completed conversations
             failed_count: Number of failed conversations
         """
         manifest = self._read()
 
-        # Update conversation status
-        if conversation_id in manifest.get("conversations", {}):
+        # Update conversation status only when an explicit status is given
+        if status and conversation_id in manifest.get("conversations", {}):
             manifest["conversations"][conversation_id]["status"] = status
             manifest["conversations"][conversation_id]["last_updated"] = datetime.now(
                 timezone.utc

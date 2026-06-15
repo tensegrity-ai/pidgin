@@ -46,10 +46,15 @@ class TurnExecutor:
 
         # Subscribe to conversation-ending provider events
         if bus:
-            from .events import ContextLimitEvent, EmptyResponseEvent
+            from .events import (
+                ContextLimitEvent,
+                EmptyResponseEvent,
+                ProviderTimeoutEvent,
+            )
 
             bus.subscribe(ContextLimitEvent, self.handle_context_limit)
             bus.subscribe(EmptyResponseEvent, self.handle_empty_response)
+            bus.subscribe(ProviderTimeoutEvent, self.handle_provider_timeout)
 
     def set_convergence_overrides(self, threshold=None, action=None):
         """Set convergence threshold and action overrides.
@@ -247,3 +252,15 @@ class TurnExecutor:
             event: EmptyResponseEvent
         """
         self.stop_reason = EndReason.EMPTY_RESPONSE
+
+    async def handle_provider_timeout(self, event):
+        """Handle provider timeout event by recording the stop reason.
+
+        A timeout returns None from the message handler, which stops the turn
+        loop; without recording a reason the conversation would be mislabeled
+        as a generic interrupt.
+
+        Args:
+            event: ProviderTimeoutEvent
+        """
+        self.stop_reason = EndReason.TIMEOUT

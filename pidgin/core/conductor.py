@@ -17,6 +17,7 @@ from ..io.logger import get_logger
 from ..io.output_manager import OutputManager
 from ..providers.token_tracker import GlobalTokenTracker
 from ..ui.display_utils import DisplayUtils
+from .constants import EndReason, status_for_end_reason
 from .conversation_lifecycle import ConversationLifecycle
 from .event_bus import EventBus
 from .events import MessageCompleteEvent
@@ -356,7 +357,7 @@ class Conductor:
                 if self.interrupt_handler.interrupt_requested:
                     await self.interrupt_handler.handle_pause(conversation)
                     if not await self.interrupt_handler.should_continue(conversation):
-                        end_reason = "interrupted"
+                        end_reason = EndReason.USER_INTERRUPT
                         break
 
                 turn = await self.turn_executor.run_single_turn(
@@ -367,7 +368,7 @@ class Conductor:
                     final_turn = (
                         turn_num  # Use current turn_num since this turn was attempted
                     )
-                    end_reason = self.turn_executor.stop_reason or "interrupted"
+                    end_reason = self.turn_executor.stop_reason or EndReason.INTERRUPTED
                     if self.console:
                         display = DisplayUtils(self.console)
                         display.dim(
@@ -378,7 +379,7 @@ class Conductor:
 
             # If we completed all turns without interruption, set reason
             if end_reason is None and final_turn == max_turns - 1:
-                end_reason = "max_turns_reached"
+                end_reason = EndReason.MAX_TURNS
 
         finally:
             # Always restore original handler
@@ -396,13 +397,8 @@ class Conductor:
         end_reason: Optional[str],
         experiment_id: Optional[str] = None,
     ):
-        # Determine status based on reason
-        if end_reason == "interrupt":
-            status = "interrupted"
-        elif end_reason and "error" in end_reason.lower():
-            status = "failed"
-        else:
-            status = "completed"
+        # Determine status based on reason (shared mapping; see constants)
+        status = status_for_end_reason(end_reason)
 
         await self.lifecycle.emit_end_event_with_reason(
             conversation, status, end_reason, None, experiment_id
