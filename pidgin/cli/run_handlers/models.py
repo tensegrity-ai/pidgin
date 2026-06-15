@@ -17,8 +17,8 @@ class AgentConfig:
     awareness_a: Optional[str] = None
     awareness_b: Optional[str] = None
     think: bool = False
-    think_a: bool = False
-    think_b: bool = False
+    think_a: Optional[bool] = None
+    think_b: Optional[bool] = None
     think_budget: Optional[int] = None
     max_tokens: Optional[int] = None
 
@@ -96,8 +96,8 @@ class RunConfig:
                 awareness_a=kwargs.get("awareness_a"),
                 awareness_b=kwargs.get("awareness_b"),
                 think=kwargs.get("think", False),
-                think_a=kwargs.get("think_a", False),
-                think_b=kwargs.get("think_b", False),
+                think_a=kwargs.get("think_a"),
+                think_b=kwargs.get("think_b"),
                 think_budget=kwargs.get("think_budget"),
                 max_tokens=kwargs.get("max_tokens"),
             ),

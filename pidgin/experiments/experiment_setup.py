@@ -126,10 +126,12 @@ class ExperimentSetup:
 
         logging.info("Providers created successfully")
 
-        # Resolve thinking settings (think is global, think_a/think_b are overrides)
-        # If think_a is explicitly set (True or False), use it; otherwise fall back to think
-        thinking_a = config.think_a if config.think_a else config.think
-        thinking_b = config.think_b if config.think_b else config.think
+        # Resolve thinking settings (think is global, think_a/think_b are overrides).
+        # think_a/think_b are tri-state: None means "no override, use the global
+        # think"; an explicit True or False overrides it (so global-on + per-agent
+        # off is expressible).
+        thinking_a = config.think_a if config.think_a is not None else config.think
+        thinking_b = config.think_b if config.think_b is not None else config.think
 
         # Create agents with display names from model config
         agent_a = Agent(

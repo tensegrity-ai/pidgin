@@ -29,8 +29,8 @@ class ExperimentConfig:
 
     # Extended thinking settings (matching CLI)
     think: bool = False  # Enable thinking for both agents
-    think_a: bool = False  # Override for agent A
-    think_b: bool = False  # Override for agent B
+    think_a: Optional[bool] = None  # Per-agent override for A (None = use think)
+    think_b: Optional[bool] = None  # Per-agent override for B (None = use think)
     think_budget: Optional[int] = None  # Max thinking tokens (default: 10000)
 
     # Response length cap (matching CLI)

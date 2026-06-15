@@ -47,10 +47,16 @@ console = Console()
 )
 @click.option("--think", is_flag=True, help="Enable extended thinking for both agents")
 @click.option(
-    "--think-a", is_flag=True, help="Enable extended thinking for agent A only"
+    "--think-a/--no-think-a",
+    "think_a",
+    default=None,
+    help="Override extended thinking for agent A (overrides --think)",
 )
 @click.option(
-    "--think-b", is_flag=True, help="Enable extended thinking for agent B only"
+    "--think-b/--no-think-b",
+    "think_b",
+    default=None,
+    help="Override extended thinking for agent B (overrides --think)",
 )
 @click.option(
     "--think-budget",
@@ -140,8 +146,8 @@ def run(
     temp_a: Optional[float],
     temp_b: Optional[float],
     think: bool,
-    think_a: bool,
-    think_b: bool,
+    think_a: Optional[bool],
+    think_b: Optional[bool],
     think_budget: Optional[int],
     max_tokens: Optional[int],
     output: Optional[str],

@@ -46,8 +46,8 @@ class ConfigBuilder:
         prompt_tag: Optional[str] = None,
         allow_truncation: bool = False,
         think: bool = False,
-        think_a: bool = False,
-        think_b: bool = False,
+        think_a: Optional[bool] = None,
+        think_b: Optional[bool] = None,
         think_budget: Optional[int] = None,
         max_tokens: Optional[int] = None,
     ) -> Tuple[ExperimentConfig, str, str]:
