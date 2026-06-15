@@ -37,6 +37,11 @@ class FlatMetricsCalculator:
         # Track all messages for repetition calculation
         self.all_messages: List[str] = []
 
+        # Shared vocabulary (words used by both agents) from the most recent
+        # turn. Kept off the flat metrics dict because it's a list, not a
+        # conversation_turns column; the importer reads it for turn_metrics.
+        self.last_shared_vocabulary: List[str] = []
+
     def _tokenize_cached(self, text: str) -> List[str]:
         """Tokenize with caching to avoid redundant processing."""
         if text in self._token_cache:
@@ -252,6 +257,10 @@ class FlatMetricsCalculator:
         # Store turn vocabulary
         turn_vocab = {"agent_a": words_a, "agent_b": words_b}
         self.turn_vocabularies.append(turn_vocab)
+
+        # Record the words shared by both agents this turn (used for the
+        # turn_metrics shared-vocabulary count; see calculate_turn_metrics).
+        self.last_shared_vocabulary = sorted(words_a & words_b)
 
         # Current turn overlap
         current_overlap = self.convergence_calc.calculate_vocabulary_overlap(

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from ...core.events import (
+    ConversationEndEvent,
     ConversationStartEvent,
     MessageCompleteEvent,
     ThinkingCompleteEvent,
@@ -113,6 +114,11 @@ class EventProcessor:
                     agent_totals["prompt_tokens"] += event.prompt_tokens or 0
                     agent_totals["completion_tokens"] += event.completion_tokens or 0
 
+            elif isinstance(event, ConversationEndEvent):
+                # Capture how the conversation ended so the conversation record
+                # reflects the real reason/status instead of a hardcoded default.
+                conv["end_reason"] = event.reason
+
             elif isinstance(event, ThinkingCompleteEvent):
                 # Store thinking trace keyed by (turn_number, agent_id)
                 key = (event.turn_number, event.agent_id)
@@ -162,6 +168,13 @@ class EventProcessor:
 
                 # Insert into database
                 self.metrics_importer.insert_turn(turn_row)
+
+                # Attach the shared-vocabulary list for turn_metrics only (it is
+                # not a conversation_turns column, so it is added after the wide
+                # insert above to avoid breaking its dynamic column list).
+                flat_metrics["shared_vocabulary"] = (
+                    self.metrics_calculator.last_shared_vocabulary
+                )
 
                 # Also populate messages and turn_metrics tables for transcript generation
                 self.conversation_importer.insert_messages(

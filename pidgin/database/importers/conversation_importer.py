@@ -6,6 +6,7 @@ from typing import Dict
 
 import duckdb
 
+from ...core.constants import status_for_end_reason
 from ...io.logger import get_logger
 
 logger = get_logger("conversation_importer")
@@ -95,6 +96,12 @@ class ConversationImporter:
             total_turns = len(turn_nums)
             final_convergence = last_turn.get("convergence_score", 0)
 
+            # Derive status and reason from the ConversationEndEvent rather than
+            # assuming completed. Fall back to completed only when no end reason
+            # was recorded (a finished experiment without an end event).
+            end_reason = conv_data.get("end_reason")
+            status = status_for_end_reason(end_reason) if end_reason else "completed"
+
             # Insert conversation record
             self.db.execute(
                 """
@@ -103,14 +110,14 @@ class ConversationImporter:
                     agent_a_model, agent_b_model,
                     agent_a_temperature, agent_b_temperature,
                     initial_prompt, total_turns,
-                    final_convergence_score,
+                    final_convergence_score, convergence_reason,
                     started_at, completed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 [
                     conversation_id,
                     experiment_id,
-                    "completed",  # Status is completed since we're importing after completion
+                    status,
                     config.get("agent_a_model"),
                     config.get("agent_b_model"),
                     config.get("temperature_a"),
@@ -118,6 +125,7 @@ class ConversationImporter:
                     config.get("initial_prompt"),
                     total_turns,
                     final_convergence,
+                    end_reason,
                     first_turn.get("timestamp"),
                     last_turn.get("timestamp"),
                 ],
