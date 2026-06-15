@@ -160,3 +160,68 @@ class MetricsImporter:
                 metrics.get("response_time_b"),
             ],
         )
+
+    def insert_token_usage(
+        self, conversation_id: str, config: Dict, token_totals: Dict
+    ) -> None:
+        """Insert per-agent token usage and cost for a conversation.
+
+        Args:
+            conversation_id: Conversation ID
+            config: Conversation config (provides agent_a_model/agent_b_model)
+            token_totals: {"agent_a": {"prompt_tokens", "completion_tokens"}, ...}
+        """
+        agent_models = {
+            "agent_a": config.get("agent_a_model"),
+            "agent_b": config.get("agent_b_model"),
+        }
+
+        for agent_id, model in agent_models.items():
+            totals = token_totals.get(agent_id) or {}
+            prompt_tokens = totals.get("prompt_tokens", 0)
+            completion_tokens = totals.get("completion_tokens", 0)
+            if not model or (prompt_tokens == 0 and completion_tokens == 0):
+                continue
+
+            provider, total_cost_cents = self._cost_in_cents(
+                model, prompt_tokens, completion_tokens
+            )
+
+            self.db.execute(
+                """
+                INSERT INTO token_usage (
+                    conversation_id, provider, model,
+                    prompt_tokens, completion_tokens, total_tokens, total_cost
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    conversation_id,
+                    provider,
+                    model,
+                    prompt_tokens,
+                    completion_tokens,
+                    prompt_tokens + completion_tokens,
+                    total_cost_cents,
+                ],
+            )
+
+    @staticmethod
+    def _cost_in_cents(model: str, prompt_tokens: int, completion_tokens: int):
+        """Compute (provider, total_cost_in_cents) for a model's token usage.
+
+        models.json stores cost rates as USD per token (despite the
+        ``*_per_1m_tokens`` field name), so cost = tokens * rate. Returns a cost
+        of None when pricing is unavailable rather than guessing.
+        """
+        from ...config.models import get_model_config
+
+        cfg = get_model_config(model)
+        provider = (cfg.provider if cfg else None) or model.split(":")[0]
+
+        if not cfg or cfg.input_cost_per_million is None:
+            return provider, None
+
+        input_rate = cfg.input_cost_per_million or 0.0
+        output_rate = cfg.output_cost_per_million or 0.0
+        usd = prompt_tokens * input_rate + completion_tokens * output_rate
+        return provider, usd * 100.0

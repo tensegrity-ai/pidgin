@@ -69,6 +69,11 @@ class EventProcessor:
                     "config": {},
                     "messages": {},
                     "thinking": {},  # Track thinking traces
+                    # Per-agent token totals, accumulated across all messages.
+                    "token_totals": {
+                        "agent_a": {"prompt_tokens": 0, "completion_tokens": 0},
+                        "agent_b": {"prompt_tokens": 0, "completion_tokens": 0},
+                    },
                 }
 
             conv = conversations[conversation_id]
@@ -101,6 +106,12 @@ class EventProcessor:
                     "total_tokens": event.total_tokens,
                     "duration_ms": event.duration_ms,
                 }
+                # Accumulate per-agent token totals (the line above keeps only
+                # the last message; totals must sum across every message).
+                agent_totals = conv["token_totals"].get(event.agent_id)
+                if agent_totals is not None:
+                    agent_totals["prompt_tokens"] += event.prompt_tokens or 0
+                    agent_totals["completion_tokens"] += event.completion_tokens or 0
 
             elif isinstance(event, ThinkingCompleteEvent):
                 # Store thinking trace keyed by (turn_number, agent_id)
@@ -169,5 +180,12 @@ class EventProcessor:
                         )
 
                 turns_processed += 1
+
+            # Record per-agent token usage and cost for the conversation
+            self.metrics_importer.insert_token_usage(
+                conversation_id,
+                conv_data["config"],
+                conv_data["token_totals"],
+            )
 
         return turns_processed, conversations_created
