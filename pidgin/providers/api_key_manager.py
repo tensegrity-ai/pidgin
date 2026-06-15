@@ -19,6 +19,7 @@ class APIKeyManager:
         ProviderNames.OPENAI: EnvVars.OPENAI_API_KEY,
         ProviderNames.GOOGLE: EnvVars.GOOGLE_API_KEY,
         ProviderNames.XAI: EnvVars.XAI_API_KEY,
+        ProviderNames.VERCEL: EnvVars.AI_GATEWAY_API_KEY,
         # Aliases for backward compatibility
         "gemini": EnvVars.GEMINI_API_KEY,  # Alias for google
         "grok": EnvVars.GROK_API_KEY,  # Alias for xai

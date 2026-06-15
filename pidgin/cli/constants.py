@@ -64,6 +64,7 @@ PROVIDER_COLORS = {
     "anthropic": NORD_ORANGE,
     "google": NORD_BLUE,
     "xai": NORD_PURPLE,
+    "vercel": NORD_CYAN,
     "local": NORD_YELLOW,
 }
 

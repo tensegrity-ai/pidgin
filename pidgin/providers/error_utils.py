@@ -320,6 +320,13 @@ XAI_ERRORS = {
     "authentication_error": "xAI authentication failed.\n\nPlease verify:\n1. Your XAI_API_KEY is correct\n2. Your account is active\n3. You have access to Grok models",
 }
 
+VERCEL_ERRORS = {
+    "rate_limit": "Vercel AI Gateway rate limit reached.\n\nThe system will:\n1. Automatically retry with backoff\n2. Continue your conversation when ready",
+    "insufficient_quota": "Vercel AI Gateway credit balance is too low.\n\nPlease add credits or check your usage at vercel.com/dashboard.",
+    "authentication_error": "Vercel AI Gateway authentication failed.\n\nPlease verify:\n1. Your AI_GATEWAY_API_KEY is correct\n2. The key has access to the requested upstream model",
+    "model_not_found": "Model not found on the Vercel AI Gateway.\n\nPlease verify the model id uses 'provider/model' form (e.g. 'anthropic/claude-opus-4') and is available on the gateway.",
+}
+
 
 def create_anthropic_error_handler() -> ProviderErrorHandler:
     """Create error handler for Anthropic provider."""
@@ -360,5 +367,14 @@ def create_xai_error_handler() -> ProviderErrorHandler:
     return ProviderErrorHandler(
         provider_name="xAI",
         custom_errors=XAI_ERRORS,
+        custom_suppress=["rate_limit", "insufficient_quota"],
+    )
+
+
+def create_vercel_error_handler() -> ProviderErrorHandler:
+    """Create error handler for the Vercel AI Gateway provider."""
+    return ProviderErrorHandler(
+        provider_name="Vercel",
+        custom_errors=VERCEL_ERRORS,
         custom_suppress=["rate_limit", "insufficient_quota"],
     )

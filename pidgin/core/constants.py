@@ -89,6 +89,7 @@ class ProviderNames:
     OPENAI = "openai"
     GOOGLE = "google"
     XAI = "xai"
+    VERCEL = "vercel"
     OLLAMA = "ollama"
     LOCAL = "local"
     SILENT = "silent"
@@ -101,3 +102,4 @@ class EnvVars:
     GEMINI_API_KEY = "GEMINI_API_KEY"
     XAI_API_KEY = "XAI_API_KEY"
     GROK_API_KEY = "GROK_API_KEY"
+    AI_GATEWAY_API_KEY = "AI_GATEWAY_API_KEY"

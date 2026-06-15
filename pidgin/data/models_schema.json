@@ -34,7 +34,7 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["anthropic", "openai", "google", "xai", "ollama", "local", "silent"],
+          "enum": ["anthropic", "openai", "google", "xai", "vercel", "ollama", "local", "silent"],
           "description": "The provider that serves this model"
         },
         "display_name": {

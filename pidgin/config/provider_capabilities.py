@@ -50,6 +50,14 @@ PROVIDER_CAPABILITIES: Dict[str, ProviderCapabilities] = {
         supports_tool_use=False,
         supports_vision=False,
     ),
+    "vercel": ProviderCapabilities(
+        requests_per_minute=60,
+        tokens_per_minute=60000,
+        system_prompt_overhead=100,
+        supports_streaming=True,
+        supports_tool_use=False,
+        supports_vision=False,
+    ),
     "local": ProviderCapabilities(
         requests_per_minute=999999,  # No practical limits for local models
         tokens_per_minute=999999,
