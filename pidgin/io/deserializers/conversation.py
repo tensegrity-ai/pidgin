@@ -79,16 +79,27 @@ class ConversationDeserializer(BaseDeserializer):
         """Build TurnCompleteEvent from data."""
         from ...core.types import Message
 
+        # Messages are nested under the "turn" key when serialized, e.g.
+        # {"turn": {"agent_a_message": {"content": ...}, ...}}. Fall back to a
+        # flat field (string or dict) for resilience.
+        turn_data = data.get("turn", data)
+
+        def _content(field: str) -> str:
+            value = turn_data.get(field, "")
+            if isinstance(value, dict):
+                return value.get("content", "")
+            return value or ""
+
         # Build Message objects for the Turn
         agent_a_msg = Message(
             role="assistant",
-            content=data.get("agent_a_message", ""),
+            content=_content("agent_a_message"),
             agent_id="agent_a",
         )
 
         agent_b_msg = Message(
             role="assistant",
-            content=data.get("agent_b_message", ""),
+            content=_content("agent_b_message"),
             agent_id="agent_b",
         )
 
