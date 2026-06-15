@@ -45,7 +45,6 @@ class SchemaLoader:
             "messages",
             "thinking_traces",  # Extended thinking/reasoning traces
             "token_usage",
-            "context_truncations",
             # Views are optional and created separately
         ]
 
@@ -69,7 +68,6 @@ class SchemaLoader:
         DROP VIEW IF EXISTS vocabulary_analysis CASCADE;
         DROP VIEW IF EXISTS convergence_trends CASCADE;
         DROP VIEW IF EXISTS experiment_dashboard CASCADE;
-        DROP TABLE IF EXISTS context_truncations CASCADE;
         DROP TABLE IF EXISTS token_usage CASCADE;
         DROP TABLE IF EXISTS thinking_traces CASCADE;
         DROP TABLE IF EXISTS messages CASCADE;

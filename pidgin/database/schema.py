@@ -27,7 +27,6 @@ TURN_METRICS_SCHEMA = _load_schema("turn_metrics")
 MESSAGES_SCHEMA = _load_schema("messages")
 THINKING_TRACES_SCHEMA = _load_schema("thinking_traces")
 TOKEN_USAGE_SCHEMA = _load_schema("token_usage")
-CONTEXT_TRUNCATIONS_SCHEMA = _load_schema("context_truncations")
 MATERIALIZED_VIEWS = _load_schema("views")
 
 
@@ -42,6 +41,5 @@ def get_all_schemas():
         MESSAGES_SCHEMA,
         THINKING_TRACES_SCHEMA,
         TOKEN_USAGE_SCHEMA,
-        CONTEXT_TRUNCATIONS_SCHEMA,
         MATERIALIZED_VIEWS,
     ]
