@@ -141,6 +141,68 @@ class ImportService:
                 duration_seconds=(datetime.now() - start_time).total_seconds(),
             )
 
+    def clear_experiment(self, experiment_id: str) -> None:
+        """Delete all imported rows for an experiment so it can be re-imported.
+
+        Imports use plain INSERTs, so re-importing without clearing would create
+        duplicate rows. This removes the experiment from every import-written
+        table (JSONL files remain the source of truth and are untouched).
+
+        Args:
+            experiment_id: Experiment ID to clear
+        """
+        self.db.begin()
+        try:
+            conv_ids = [
+                r[0]
+                for r in self.db.execute(
+                    "SELECT conversation_id FROM conversations WHERE experiment_id = ?",
+                    [experiment_id],
+                ).fetchall()
+            ]
+            for cid in conv_ids:
+                for table in (
+                    "turn_metrics",
+                    "messages",
+                    "thinking_traces",
+                    "token_usage",
+                ):
+                    self.db.execute(
+                        f"DELETE FROM {table} WHERE conversation_id = ?", [cid]
+                    )
+            self.db.execute(
+                "DELETE FROM conversation_turns WHERE experiment_id = ?",
+                [experiment_id],
+            )
+            self.db.execute(
+                "DELETE FROM conversations WHERE experiment_id = ?", [experiment_id]
+            )
+            self.db.execute(
+                "DELETE FROM experiments WHERE experiment_id = ?", [experiment_id]
+            )
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def reimport_experiment(self, exp_dir: Path) -> ImportResult:
+        """Clear and re-import a single experiment from its JSONL files.
+
+        Args:
+            exp_dir: Experiment directory containing manifest.json and JSONL files
+
+        Returns:
+            ImportResult for the re-import
+        """
+        experiment_id = exp_dir.name
+        manifest_path = exp_dir / "manifest.json"
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                experiment_id = json.load(f).get("experiment_id", exp_dir.name)
+
+        self.clear_experiment(experiment_id)
+        return self.import_experiment_from_jsonl(exp_dir)
+
     def import_all_pending(self, experiments_dir: Path) -> List[ImportResult]:
         """Import all experiments that have JSONL files but haven't been imported.
 

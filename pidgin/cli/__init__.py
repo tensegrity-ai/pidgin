@@ -59,6 +59,7 @@ from ..ui.display_utils import DisplayUtils
 from .branch import branch
 from .config import config
 from .constants import BANNER
+from .import_data import import_data
 from .models import models
 from .monitor import monitor
 from .run import run
@@ -205,6 +206,7 @@ cli.add_command(monitor)
 cli.add_command(models)
 cli.add_command(config)
 cli.add_command(branch)
+cli.add_command(import_data)
 
 
 def main() -> None:

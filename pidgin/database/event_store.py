@@ -377,6 +377,17 @@ class EventStore:
         """
         return self.importer.import_experiment_from_jsonl(experiment_dir)
 
+    def reimport_experiment(self, experiment_dir: Path) -> ImportResult:
+        """Clear and re-import a single experiment from its JSONL files.
+
+        Args:
+            experiment_dir: Directory containing manifest.json and JSONL files
+
+        Returns:
+            ImportResult with success status and counts
+        """
+        return self.importer.reimport_experiment(experiment_dir)
+
     def import_all_pending(self, experiments_dir: Path) -> List[ImportResult]:
         """Import all experiments that have JSONL files but haven't been imported.
 
