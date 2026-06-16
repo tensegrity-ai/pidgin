@@ -65,21 +65,11 @@ class AnthropicProvider(Provider):
         # may not send it: (1) adaptive thinking manages its own sampling, and
         # Claude 4.6+ reject an explicit temperature alongside thinking; (2) the
         # newest models (Opus 4.7/4.8, Fable 5) removed sampling parameters
-        # entirely and 400 on any temperature, thinking or not. The registry's
-        # parameters.temperature.supported flag is authoritative for case (2).
-        if temperature is not None and not thinking_enabled:
-            from ..config.models import get_model_config
-
-            config = get_model_config(self.model)
-            if config is None or config.parameters.temperature.supported:
-                api_params["temperature"] = min(temperature, 1.0)
-            else:
-                logger.warning(
-                    "Model %s does not support temperature; ignoring the "
-                    "requested value of %s.",
-                    self.model,
-                    temperature,
-                )
+        # entirely and 400 on any temperature, thinking or not. _resolve_temperature
+        # handles case (2) via the registry; the thinking guard handles case (1).
+        resolved_temperature = self._resolve_temperature(temperature, self.model)
+        if resolved_temperature is not None and not thinking_enabled:
+            api_params["temperature"] = min(resolved_temperature, 1.0)
 
         # Add system parameter if we have system messages
         if system_messages:

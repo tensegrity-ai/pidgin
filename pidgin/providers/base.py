@@ -1,11 +1,14 @@
 """Base provider interface for AI model integrations."""
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional
 
 from ..core.types import Message
+
+logger = logging.getLogger(__name__)
 
 # Default ceiling on response (completion) tokens when an agent does not
 # specify one. Chosen to be large enough that normal conversational turns are
@@ -88,6 +91,36 @@ class Provider(ABC):
             internally when appropriate.
         """
         yield  # type: ignore[misc]
+
+    def _resolve_temperature(
+        self, temperature: Optional[float], model_id: str
+    ) -> Optional[float]:
+        """Return the temperature to send, or None to omit it.
+
+        Some models reject sampling parameters outright and return HTTP 400 on
+        any temperature (e.g. Claude Opus 4.7/4.8 and Fable 5, OpenAI o-series).
+        The registry's parameters.temperature.supported flag is authoritative;
+        when it is false we drop the value (with a warning) rather than 400.
+        Unknown models (no registry entry) are passed through unchanged.
+
+        Note: this does not enforce provider-specific caps (e.g. Anthropic's
+        1.0 ceiling) — callers apply those to the returned value.
+        """
+        if temperature is None:
+            return None
+
+        from ..config.models import get_model_config
+
+        config = get_model_config(model_id)
+        if config is not None and not config.parameters.temperature.supported:
+            logger.warning(
+                "Model %s does not support temperature; ignoring the requested "
+                "value of %s.",
+                model_id,
+                temperature,
+            )
+            return None
+        return temperature
 
     async def cleanup(self) -> None:
         """Clean up provider resources.

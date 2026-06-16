@@ -76,8 +76,11 @@ class GoogleProvider(Provider):
                 config_kwargs: Dict[str, Any] = {
                     "max_output_tokens": max_tokens or DEFAULT_MAX_TOKENS,
                 }
-                if temperature is not None:
-                    config_kwargs["temperature"] = temperature
+                resolved_temperature = self._resolve_temperature(
+                    temperature, self.model_name
+                )
+                if resolved_temperature is not None:
+                    config_kwargs["temperature"] = resolved_temperature
 
                 # Add thinking config if enabled
                 if thinking_enabled:

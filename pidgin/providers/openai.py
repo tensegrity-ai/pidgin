@@ -60,9 +60,11 @@ class OpenAIProvider(Provider):
                 "stream_options": {"include_usage": True},  # Request usage data
             }
 
-            # Add temperature if specified (OpenAI allows 0-2)
-            if temperature is not None:
-                params["temperature"] = temperature
+            # Add temperature if specified and supported (OpenAI allows 0-2;
+            # o-series reasoning models reject it — drop it via the registry).
+            resolved_temperature = self._resolve_temperature(temperature, self.model)
+            if resolved_temperature is not None:
+                params["temperature"] = resolved_temperature
 
             stream = await self.client.chat.completions.create(**params)
 

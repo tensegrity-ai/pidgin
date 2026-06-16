@@ -1900,24 +1900,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -1963,24 +1958,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2026,24 +2016,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2089,24 +2074,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2152,24 +2132,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2215,24 +2190,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2278,24 +2248,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2341,24 +2306,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2404,24 +2364,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2467,24 +2422,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2530,24 +2480,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2595,24 +2540,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2658,24 +2598,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2723,24 +2658,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2788,24 +2718,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2851,24 +2776,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -2916,24 +2836,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -3486,24 +3401,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {
@@ -3549,24 +3459,19 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            2.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 1.0
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_k": {
           "supported": false,
-          "default": null
+          "default": null,
+          "range": null
         }
       },
       "cost": {

@@ -81,9 +81,11 @@ class VercelProvider(Provider):
                 },  # Request usage data like OpenAI
             }
 
-            # Add temperature if specified
-            if temperature is not None:
-                params["temperature"] = temperature
+            # Add temperature if specified and supported by the model
+            # (unsupported models reject it — drop it via the registry).
+            resolved_temperature = self._resolve_temperature(temperature, self.model)
+            if resolved_temperature is not None:
+                params["temperature"] = resolved_temperature
 
             stream = await self.client.chat.completions.create(**params)
 

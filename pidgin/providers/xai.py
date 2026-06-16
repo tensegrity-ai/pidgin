@@ -75,9 +75,11 @@ class xAIProvider(Provider):
                 },  # Request usage data like OpenAI
             }
 
-            # Add temperature if specified (xAI/OpenAI allows 0-2)
-            if temperature is not None:
-                params["temperature"] = temperature
+            # Add temperature if specified and supported by the model (xAI
+            # follows the OpenAI 0-2 range; unsupported models drop it).
+            resolved_temperature = self._resolve_temperature(temperature, self.model)
+            if resolved_temperature is not None:
+                params["temperature"] = resolved_temperature
 
             stream = await self.client.chat.completions.create(**params)
 
