@@ -1,6 +1,6 @@
 """Central event distribution system."""
 
-import asyncio
+import inspect
 import json
 import threading
 from collections import defaultdict
@@ -232,7 +232,7 @@ class EventBus:
         # Notify all subscribers
         for handler in handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(event)
                 else:
                     handler(event)

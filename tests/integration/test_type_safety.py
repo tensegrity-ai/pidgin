@@ -1,6 +1,6 @@
 """Tests for type safety to ensure proper type annotations and signatures."""
 
-import asyncio
+import inspect
 from pathlib import Path
 
 import pytest
@@ -149,5 +149,5 @@ async def test_post_processor_sync_wrapper():
     assert hasattr(processor, "_sync_handle_experiment_complete")
 
     # It should be a sync method that creates an async task
-    assert not asyncio.iscoroutinefunction(processor._sync_handle_experiment_complete)
-    assert asyncio.iscoroutinefunction(processor.handle_experiment_complete)
+    assert not inspect.iscoroutinefunction(processor._sync_handle_experiment_complete)
+    assert inspect.iscoroutinefunction(processor.handle_experiment_complete)
