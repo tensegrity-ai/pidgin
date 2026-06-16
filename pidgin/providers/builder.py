@@ -9,6 +9,7 @@ from .local import LocalProvider
 from .ollama import OllamaProvider
 from .openai import OpenAIProvider
 from .silent import SilentProvider
+from .vercel import VercelProvider
 from .xai import xAIProvider
 
 
@@ -35,6 +36,8 @@ async def build_provider(model_id: str, temperature: Optional[float] = None):
         return GoogleProvider(model=api_model_id)
     elif model_config.provider == "xai":
         return xAIProvider(model=api_model_id)
+    elif model_config.provider == "vercel":
+        return VercelProvider(model=api_model_id)
     elif model_config.provider == "local":
         return LocalProvider(model_name="test")
     elif model_config.provider == "ollama":

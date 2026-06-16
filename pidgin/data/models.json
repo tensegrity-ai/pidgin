@@ -614,6 +614,278 @@
       },
       "rate_limits": null
     },
+    "vercel-claude-opus-4": {
+      "provider": "vercel",
+      "display_name": "Vercel: Claude Opus 4",
+      "aliases": [
+        "v-opus-4"
+      ],
+      "api": {
+        "model_id": "anthropic/claude-opus-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": 32000,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 1.5e-05,
+        "output_per_1m_tokens": 7.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": "2025-05-22",
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "",
+        "notes": "Routed via the Vercel AI Gateway (anthropic/claude-opus-4). Retired on Anthropic's native API.",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "vercel-claude-sonnet-4": {
+      "provider": "vercel",
+      "display_name": "Vercel: Claude Sonnet 4",
+      "aliases": [
+        "v-sonnet-4"
+      ],
+      "api": {
+        "model_id": "anthropic/claude-sonnet-4"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": true,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": 64000,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": true,
+          "range": [
+            1,
+            100
+          ],
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 3e-06,
+        "output_per_1m_tokens": 1.5e-05,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": "2025-05-22",
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "",
+        "notes": "Routed via the Vercel AI Gateway (anthropic/claude-sonnet-4). Retired on Anthropic's native API.",
+        "size": ""
+      },
+      "rate_limits": null
+    },
+    "vercel-kimi-k2": {
+      "provider": "vercel",
+      "display_name": "Vercel: Kimi K2 (Moonshot)",
+      "aliases": [
+        "kimi-k2",
+        "kimi"
+      ],
+      "api": {
+        "model_id": "moonshotai/kimi-k2"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 128000,
+        "max_output_tokens": null,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "range": null,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 5.7e-07,
+        "output_per_1m_tokens": 2.3e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": null,
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "",
+        "notes": "Open-weight MoE model routed via the Vercel AI Gateway (moonshotai/kimi-k2).",
+        "size": "1T total / 32B active"
+      },
+      "rate_limits": null
+    },
+    "vercel-glm-4.6": {
+      "provider": "vercel",
+      "display_name": "Vercel: GLM 4.6 (Z.ai)",
+      "aliases": [
+        "glm-4.6",
+        "glm"
+      ],
+      "api": {
+        "model_id": "zai/glm-4.6"
+      },
+      "capabilities": {
+        "streaming": true,
+        "vision": false,
+        "tool_calling": true,
+        "system_messages": true,
+        "extended_thinking": false,
+        "json_mode": true,
+        "prompt_caching": false
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": 128000,
+        "max_thinking_tokens": null
+      },
+      "parameters": {
+        "temperature": {
+          "supported": true,
+          "range": [
+            0.0,
+            2.0
+          ],
+          "default": 0.7
+        },
+        "top_p": {
+          "supported": true,
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": null
+        },
+        "top_k": {
+          "supported": false,
+          "range": null,
+          "default": null
+        }
+      },
+      "cost": {
+        "input_per_1m_tokens": 6e-07,
+        "output_per_1m_tokens": 2.2e-06,
+        "cache_read_per_1m_tokens": null,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
+      "metadata": {
+        "status": "available",
+        "release_date": "2025-09-30",
+        "deprecation_date": null,
+        "curated": true,
+        "stable": true,
+        "description": "",
+        "notes": "Open-weight coding model routed via the Vercel AI Gateway (zai/glm-4.6).",
+        "size": ""
+      },
+      "rate_limits": null
+    },
     "gemini-2.0-flash": {
       "provider": "google",
       "display_name": "gemini-2.0-flash",

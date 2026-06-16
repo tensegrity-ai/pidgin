@@ -94,7 +94,7 @@ class RateLimits:
 
 
 ProviderType = Literal[
-    "anthropic", "openai", "google", "xai", "ollama", "local", "silent"
+    "anthropic", "openai", "google", "xai", "vercel", "ollama", "local", "silent"
 ]
 
 

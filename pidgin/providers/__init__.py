@@ -13,6 +13,7 @@ from .openai import OpenAIProvider
 from .silent import SilentProvider
 from .test_model import LocalTestModel
 from .token_tracker import GlobalTokenTracker
+from .vercel import VercelProvider
 from .xai import xAIProvider
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "Provider",
     "ProviderContextManager",
     "SilentProvider",
+    "VercelProvider",
     "check_ollama_running",
     "ensure_ollama_ready",
     "start_ollama_server",
