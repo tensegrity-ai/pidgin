@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-16T01:35:26.024046+00:00",
+  "last_updated": "2026-06-16T02:40:14.456805+00:00",
   "generator": "generate_models.py",
   "models": {
     "claude-fable-5": {
@@ -3076,7 +3076,14 @@
           "default": null
         }
       },
-      "cost": null,
+      "cost": {
+        "input_per_1m_tokens": 1.25e-06,
+        "output_per_1m_tokens": 2.5e-06,
+        "cache_read_per_1m_tokens": 2e-07,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
       "metadata": {
         "status": "available",
         "curated": true,
@@ -3127,7 +3134,14 @@
           "default": null
         }
       },
-      "cost": null,
+      "cost": {
+        "input_per_1m_tokens": 1.25e-06,
+        "output_per_1m_tokens": 2.5e-06,
+        "cache_read_per_1m_tokens": 2e-07,
+        "cache_write_per_1m_tokens": null,
+        "currency": "USD",
+        "last_updated": "2026-06-15"
+      },
       "metadata": {
         "status": "available",
         "curated": true,
@@ -3185,10 +3199,10 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 1.25e-06,
-        "output_per_1m_tokens": 1e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "input_per_1m_tokens": 2e-06,
+        "output_per_1m_tokens": 1.2e-05,
+        "cache_read_per_1m_tokens": 2e-07,
+        "cache_write_per_1m_tokens": 3.75e-07,
         "currency": "USD",
         "last_updated": "2026-06-15"
       },
@@ -3254,10 +3268,10 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 3e-07,
-        "output_per_1m_tokens": 2.5e-06,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "input_per_1m_tokens": 1.5e-06,
+        "output_per_1m_tokens": 9e-06,
+        "cache_read_per_1m_tokens": 1.5e-07,
+        "cache_write_per_1m_tokens": 8.333333333333334e-08,
         "currency": "USD",
         "last_updated": "2026-06-15"
       },
@@ -3321,10 +3335,10 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 3e-07,
-        "output_per_1m_tokens": 2.5e-06,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "input_per_1m_tokens": 5e-07,
+        "output_per_1m_tokens": 3e-06,
+        "cache_read_per_1m_tokens": 5e-08,
+        "cache_write_per_1m_tokens": 8.333333333333334e-08,
         "currency": "USD",
         "last_updated": "2026-06-15"
       },
@@ -3388,8 +3402,8 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 8e-08,
-        "output_per_1m_tokens": 1.6e-07,
+        "input_per_1m_tokens": 6e-08,
+        "output_per_1m_tokens": 3.3e-07,
         "cache_read_per_1m_tokens": null,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
@@ -3455,9 +3469,9 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 8e-08,
-        "output_per_1m_tokens": 1.6e-07,
-        "cache_read_per_1m_tokens": null,
+        "input_per_1m_tokens": 1.2e-07,
+        "output_per_1m_tokens": 3.5e-07,
+        "cache_read_per_1m_tokens": 9e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
         "last_updated": "2026-06-15"
@@ -3520,9 +3534,9 @@
         }
       },
       "cost": {
-        "input_per_1m_tokens": 2.5e-06,
-        "output_per_1m_tokens": 1.5e-05,
-        "cache_read_per_1m_tokens": null,
+        "input_per_1m_tokens": 5e-06,
+        "output_per_1m_tokens": 3e-05,
+        "cache_read_per_1m_tokens": 5e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
         "last_updated": "2026-06-15"
