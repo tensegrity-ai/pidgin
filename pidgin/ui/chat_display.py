@@ -38,6 +38,12 @@ class ChatDisplay:
         "dim": "#4c566a",  # Nord3 gray
     }
 
+    # Virtual stage the conversation is laid out within on wide terminals.
+    # Bubbles cap below the stage width so Agent A (left) and Agent B (right)
+    # stagger and overlap horizontally rather than stacking in one column.
+    STAGE_WIDTH = 120
+    BUBBLE_MAX_WIDTH = 84
+
     def __init__(self, bus: EventBus, console: Console, agents: Dict[str, Agent]):
         """Initialize chat display.
 
@@ -70,12 +76,12 @@ class ChatDisplay:
     def calculate_bubble_width(self) -> int:
         """Calculate responsive bubble width based on terminal size.
 
-        Bubbles are 70% of terminal width so they overlap horizontally.
-        Capped at 70 chars to maintain readability on wide terminals.
+        Bubbles are ~72% of terminal width so they overlap horizontally,
+        capped at BUBBLE_MAX_WIDTH to maintain readability on wide terminals.
         """
         terminal_width = self.console.size.width
         if terminal_width >= 100:
-            return min(int(terminal_width * 0.70), 70)
+            return min(int(terminal_width * 0.72), self.BUBBLE_MAX_WIDTH)
         elif terminal_width >= 80:
             return int(terminal_width * 0.75)
         else:
@@ -86,13 +92,13 @@ class ChatDisplay:
 
         Returns:
             Tuple of (left_margin, right_margin) for Agent A and B respectively.
-            On wide terminals, includes centering offset to keep content in a
-            virtual 100-char stage.
+            On wide terminals, includes centering offset to keep content in the
+            virtual stage (STAGE_WIDTH chars wide).
         """
         terminal_width = self.console.size.width
-        if terminal_width > 100:
-            # Center a virtual 100-char stage
-            center_offset = (terminal_width - 100) // 2
+        if terminal_width > self.STAGE_WIDTH:
+            # Center the virtual stage
+            center_offset = (terminal_width - self.STAGE_WIDTH) // 2
             return (center_offset + 3, center_offset + 3)
         elif terminal_width >= 100:
             return (3, 3)
