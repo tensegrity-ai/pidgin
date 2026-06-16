@@ -30,9 +30,6 @@ sudo make install
 make install PREFIX=$HOME/.local
 ```
 
-### macOS with Homebrew
-If Pidgin is installed via Homebrew, man pages will be installed automatically.
-
 ## Viewing Man Pages
 
 After installation:
