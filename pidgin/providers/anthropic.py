@@ -61,23 +61,46 @@ class AnthropicProvider(Provider):
             else (16000 if thinking_enabled else DEFAULT_MAX_TOKENS),
         }
 
-        # Add temperature if specified (Anthropic caps at 1.0)
-        # Note: temperature must be 1.0 when extended thinking is enabled
-        if thinking_enabled:
-            api_params["temperature"] = 1.0
-        elif temperature is not None:
-            api_params["temperature"] = min(temperature, 1.0)
+        # Add temperature if specified (Anthropic caps at 1.0). Two reasons we
+        # may not send it: (1) adaptive thinking manages its own sampling, and
+        # Claude 4.6+ reject an explicit temperature alongside thinking; (2) the
+        # newest models (Opus 4.7/4.8, Fable 5) removed sampling parameters
+        # entirely and 400 on any temperature, thinking or not. The registry's
+        # parameters.temperature.supported flag is authoritative for case (2).
+        if temperature is not None and not thinking_enabled:
+            from ..config.models import get_model_config
+
+            config = get_model_config(self.model)
+            if config is None or config.parameters.temperature.supported:
+                api_params["temperature"] = min(temperature, 1.0)
+            else:
+                logger.warning(
+                    "Model %s does not support temperature; ignoring the "
+                    "requested value of %s.",
+                    self.model,
+                    temperature,
+                )
 
         # Add system parameter if we have system messages
         if system_messages:
             api_params["system"] = "\n\n".join(system_messages)
 
-        # Enable extended thinking for supported models
+        # Enable prompt caching. Top-level cache_control auto-caches the longest
+        # stable prefix (system prompt + prior turns); each turn resends the full
+        # growing history, so the cached prefix is reused on every subsequent
+        # request. Caching is transparent to model output — it only changes
+        # cost/latency, not the conversation — so it does not affect experiment
+        # validity. Conversations below the model's minimum cacheable prefix
+        # (~1024-4096 tokens) silently won't cache, which is fine.
+        api_params["cache_control"] = {"type": "ephemeral"}
+
+        # Enable extended thinking via adaptive mode. The older
+        # {"type": "enabled", "budget_tokens": N} form is rejected (HTTP 400) by
+        # current Claude models (4.6+); adaptive lets the model decide how much
+        # to think. thinking_budget no longer maps to a hard token cap here and
+        # is accepted only for interface compatibility with other providers.
         if thinking_enabled:
-            api_params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": thinking_budget or 10000,
-            }
+            api_params["thinking"] = {"type": "adaptive"}
 
         # Validate we have at least one conversation message
         if not conversation_messages:
@@ -113,24 +136,25 @@ class AnthropicProvider(Provider):
                 final_message = await stream.get_final_message()
                 if hasattr(final_message, "usage"):
                     usage = final_message.usage
+                    # Anthropic reports input_tokens as the *uncached* remainder;
+                    # cache reads/writes are separate, additive fields. Normalize
+                    # input_tokens to the full input total (uncached + cache read
+                    # + cache write) so prompt_tokens is consistent with
+                    # OpenAI/Google (whose prompt counts already include cache),
+                    # and so the importer can subtract the cache portions to bill
+                    # them at their own rates without double-counting.
+                    uncached_input = getattr(usage, "input_tokens", 0) or 0
+                    cache_write = getattr(usage, "cache_creation_input_tokens", 0) or 0
+                    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+                    output_tokens = getattr(usage, "output_tokens", 0) or 0
+                    total_input = uncached_input + cache_write + cache_read
                     self._last_usage = {
-                        "input_tokens": getattr(usage, "input_tokens", 0),
-                        "output_tokens": getattr(usage, "output_tokens", 0),
-                        "total_tokens": 0,
+                        "input_tokens": total_input,
+                        "output_tokens": output_tokens,
+                        "cache_read_tokens": cache_read,
+                        "cache_write_tokens": cache_write,
+                        "total_tokens": total_input + output_tokens,
                     }
-                    # Include cache tokens if present
-                    if hasattr(usage, "cache_creation_input_tokens"):
-                        self._last_usage["cache_creation_input_tokens"] = getattr(
-                            usage, "cache_creation_input_tokens", 0
-                        )
-                    if hasattr(usage, "cache_read_input_tokens"):
-                        self._last_usage["cache_read_input_tokens"] = getattr(
-                            usage, "cache_read_input_tokens", 0
-                        )
-                    self._last_usage["total_tokens"] = (
-                        self._last_usage["input_tokens"]
-                        + self._last_usage["output_tokens"]
-                    )
 
         # Initialize usage tracking
         self._last_usage = None

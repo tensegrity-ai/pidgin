@@ -28,27 +28,18 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 0.7
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         },
         "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            100
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         }
       },
@@ -365,27 +356,18 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 0.7
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         },
         "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            100
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         }
       },
@@ -434,27 +416,18 @@
       },
       "parameters": {
         "temperature": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
-          "default": 0.7
+          "supported": false,
+          "range": null,
+          "default": null
         },
         "top_p": {
-          "supported": true,
-          "range": [
-            0.0,
-            1.0
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         },
         "top_k": {
-          "supported": true,
-          "range": [
-            1,
-            100
-          ],
+          "supported": false,
+          "range": null,
           "default": null
         }
       },

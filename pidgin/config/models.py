@@ -66,15 +66,21 @@ def get_model_config(model_or_alias: str) -> Optional[ModelConfig]:
     """Get model configuration by ID, alias, or family name.
 
     Resolution order:
-    1. Exact model ID match
-    2. Exact alias match
-    3. Family name match (e.g., "opus" matches latest claude-opus-*)
+    1. Exact registry key match (e.g., "claude-opus-4.8")
+    2. Exact API model ID match (e.g., "claude-opus-4-8")
+    3. Exact alias match
+    4. Family name match (e.g., "opus" matches latest claude-opus-*)
     """
     models = _get_models()
 
-    # Direct match
+    # Direct match on registry key
     if model_or_alias in models:
         return models[model_or_alias]
+
+    # Match on the provider-facing API model ID (what providers actually hold)
+    for config in models.values():
+        if config.api.model_id == model_or_alias:
+            return config
 
     # Search by alias
     for model_id, config in models.items():
