@@ -79,12 +79,23 @@ class OpenAIProvider(Provider):
 
                 # Check for usage data in the final chunk
                 if hasattr(chunk, "usage") and chunk.usage:
+                    # OpenAI auto-caches server-side; prompt_tokens already
+                    # includes the cached portion, reported as a subset under
+                    # prompt_tokens_details.cached_tokens. There is no separate
+                    # cache-write charge — cached input is simply discounted, so
+                    # cache_write_tokens is always 0.
+                    details = getattr(chunk.usage, "prompt_tokens_details", None)
+                    cache_read = (
+                        getattr(details, "cached_tokens", 0) or 0 if details else 0
+                    )
                     self._last_usage = {
                         "prompt_tokens": getattr(chunk.usage, "prompt_tokens", 0),
                         "completion_tokens": getattr(
                             chunk.usage, "completion_tokens", 0
                         ),
                         "total_tokens": getattr(chunk.usage, "total_tokens", 0),
+                        "cache_read_tokens": cache_read,
+                        "cache_write_tokens": 0,
                     }
                     logger.debug(f"OpenAI usage data captured: {self._last_usage}")
 

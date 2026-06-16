@@ -127,12 +127,22 @@ class GoogleProvider(Provider):
                 if last_chunk and hasattr(last_chunk, "usage_metadata"):
                     metadata = last_chunk.usage_metadata
                     if metadata:
+                        # Google implicit caching (2.5+/3.x) is on by default;
+                        # prompt_token_count already includes the cached portion,
+                        # reported as a subset via cached_content_token_count.
+                        # Implicit caching has no separate write charge, so
+                        # cache_write_tokens is 0.
+                        cache_read = (
+                            getattr(metadata, "cached_content_token_count", 0) or 0
+                        )
                         self._last_usage = {
                             "prompt_tokens": getattr(metadata, "prompt_token_count", 0),
                             "completion_tokens": getattr(
                                 metadata, "candidates_token_count", 0
                             ),
                             "total_tokens": getattr(metadata, "total_token_count", 0),
+                            "cache_read_tokens": cache_read,
+                            "cache_write_tokens": 0,
                         }
                         logger.debug(f"Google usage data captured: {self._last_usage}")
 

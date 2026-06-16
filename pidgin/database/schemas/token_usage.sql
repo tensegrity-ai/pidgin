@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS token_usage (
     completion_tokens INTEGER,
     total_tokens INTEGER,
 
+    -- Cached-prefix tokens (subset of prompt_tokens)
+    cache_read_tokens INTEGER,
+    cache_write_tokens INTEGER,
+
     -- Rate limit info
     requests_per_minute INTEGER,
     tokens_per_minute INTEGER,

@@ -57,6 +57,8 @@ class SystemDeserializer(BaseDeserializer):
             model=data.get("model"),
             prompt_tokens=data.get("prompt_tokens"),
             completion_tokens=data.get("completion_tokens"),
+            cache_read_tokens=data.get("cache_read_tokens"),
+            cache_write_tokens=data.get("cache_write_tokens"),
         )
         event.timestamp = timestamp
         return event

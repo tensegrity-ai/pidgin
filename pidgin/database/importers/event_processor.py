@@ -72,8 +72,18 @@ class EventProcessor:
                     "thinking": {},  # Track thinking traces
                     # Per-agent token totals, accumulated across all messages.
                     "token_totals": {
-                        "agent_a": {"prompt_tokens": 0, "completion_tokens": 0},
-                        "agent_b": {"prompt_tokens": 0, "completion_tokens": 0},
+                        "agent_a": {
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "cache_read_tokens": 0,
+                            "cache_write_tokens": 0,
+                        },
+                        "agent_b": {
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "cache_read_tokens": 0,
+                            "cache_write_tokens": 0,
+                        },
                     },
                 }
 
@@ -113,6 +123,12 @@ class EventProcessor:
                 if agent_totals is not None:
                     agent_totals["prompt_tokens"] += event.prompt_tokens or 0
                     agent_totals["completion_tokens"] += event.completion_tokens or 0
+                    agent_totals["cache_read_tokens"] += (
+                        getattr(event, "cache_read_tokens", 0) or 0
+                    )
+                    agent_totals["cache_write_tokens"] += (
+                        getattr(event, "cache_write_tokens", 0) or 0
+                    )
 
             elif isinstance(event, ConversationEndEvent):
                 # Capture how the conversation ended so the conversation record

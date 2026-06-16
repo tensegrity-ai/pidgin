@@ -215,12 +215,23 @@ class EventAwareProvider:
 
             prompt_tokens = 0
             completion_tokens = 0
+            # Cached-prefix tokens (subset of prompt_tokens). Providers that
+            # support caching report these in a normalized form; everything else
+            # leaves them at 0.
+            cache_read_tokens = 0
+            cache_write_tokens = 0
 
             if hasattr(self.provider, "get_last_usage"):
                 usage_data = self.provider.get_last_usage()
                 if usage_data:
-                    prompt_tokens = usage_data.get("prompt_tokens", 0)
-                    completion_tokens = usage_data.get("completion_tokens", 0)
+                    prompt_tokens = usage_data.get(
+                        "prompt_tokens", 0
+                    ) or usage_data.get("input_tokens", 0)
+                    completion_tokens = usage_data.get(
+                        "completion_tokens", 0
+                    ) or usage_data.get("output_tokens", 0)
+                    cache_read_tokens = usage_data.get("cache_read_tokens", 0) or 0
+                    cache_write_tokens = usage_data.get("cache_write_tokens", 0) or 0
 
                 if not completion_tokens:
                     completion_tokens = estimate_tokens(content, model_name)
@@ -243,6 +254,8 @@ class EventAwareProvider:
                     completion_tokens=completion_tokens,
                     total_tokens=total_tokens,
                     duration_ms=duration_ms,
+                    cache_read_tokens=cache_read_tokens,
+                    cache_write_tokens=cache_write_tokens,
                 )
             )
 
@@ -299,6 +312,8 @@ class EventAwareProvider:
                         model=model_name if isinstance(model_name, str) else "unknown",
                         prompt_tokens=prompt_tokens,
                         completion_tokens=completion_tokens,
+                        cache_read_tokens=usage_data.get("cache_read_tokens", 0) or 0,
+                        cache_write_tokens=usage_data.get("cache_write_tokens", 0) or 0,
                     )
 
                     await self.bus.emit(token_event)

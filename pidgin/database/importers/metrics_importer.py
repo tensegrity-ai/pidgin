@@ -180,19 +180,26 @@ class MetricsImporter:
             totals = token_totals.get(agent_id) or {}
             prompt_tokens = totals.get("prompt_tokens", 0)
             completion_tokens = totals.get("completion_tokens", 0)
+            cache_read_tokens = totals.get("cache_read_tokens", 0)
+            cache_write_tokens = totals.get("cache_write_tokens", 0)
             if not model or (prompt_tokens == 0 and completion_tokens == 0):
                 continue
 
             provider, total_cost_cents = self._cost_in_cents(
-                model, prompt_tokens, completion_tokens
+                model,
+                prompt_tokens,
+                completion_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
             )
 
             self.db.execute(
                 """
                 INSERT INTO token_usage (
                     conversation_id, provider, model,
-                    prompt_tokens, completion_tokens, total_tokens, total_cost
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    prompt_tokens, completion_tokens, total_tokens,
+                    cache_read_tokens, cache_write_tokens, total_cost
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     conversation_id,
@@ -201,17 +208,31 @@ class MetricsImporter:
                     prompt_tokens,
                     completion_tokens,
                     prompt_tokens + completion_tokens,
+                    cache_read_tokens,
+                    cache_write_tokens,
                     total_cost_cents,
                 ],
             )
 
     @staticmethod
-    def _cost_in_cents(model: str, prompt_tokens: int, completion_tokens: int):
+    def _cost_in_cents(
+        model: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        cache_read_tokens: int = 0,
+        cache_write_tokens: int = 0,
+    ):
         """Compute (provider, total_cost_in_cents) for a model's token usage.
 
         models.json stores cost rates as USD per token (despite the
         ``*_per_1m_tokens`` field name), so cost = tokens * rate. Returns a cost
         of None when pricing is unavailable rather than guessing.
+
+        ``prompt_tokens`` is the *total* input (cached + uncached); the cache
+        read/write counts are subsets of it. Cached tokens are billed at their
+        own (cheaper) rates and subtracted from the full-price portion so they
+        aren't double-billed. When a cache rate is unavailable we fall back to
+        the full input rate, so a cached token is never billed as free.
         """
         from ...config.models import get_model_config
 
@@ -223,5 +244,16 @@ class MetricsImporter:
 
         input_rate = cfg.input_cost_per_million or 0.0
         output_rate = cfg.output_cost_per_million or 0.0
-        usd = prompt_tokens * input_rate + completion_tokens * output_rate
+        cache_read_rate = cfg.cache_read_cost_per_million
+        cache_read_rate = input_rate if cache_read_rate is None else cache_read_rate
+        cache_write_rate = cfg.cache_write_cost_per_million
+        cache_write_rate = input_rate if cache_write_rate is None else cache_write_rate
+
+        uncached_prompt = max(prompt_tokens - cache_read_tokens - cache_write_tokens, 0)
+        usd = (
+            uncached_prompt * input_rate
+            + completion_tokens * output_rate
+            + cache_read_tokens * cache_read_rate
+            + cache_write_tokens * cache_write_rate
+        )
         return provider, usd * 100.0

@@ -90,6 +90,8 @@ class MessageDeserializer(BaseDeserializer):
             completion_tokens=data.get("completion_tokens", 0),
             total_tokens=data.get("total_tokens", 0),
             duration_ms=data.get("duration_ms", 0),
+            cache_read_tokens=data.get("cache_read_tokens"),
+            cache_write_tokens=data.get("cache_write_tokens"),
         )
         event.timestamp = timestamp
         return event

@@ -46,10 +46,10 @@
       "cost": {
         "input_per_1m_tokens": 1e-05,
         "output_per_1m_tokens": 5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1e-06,
+        "cache_write_per_1m_tokens": 1.25e-05,
         "currency": "USD",
-        "last_updated": "2026-06-10"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -115,10 +115,10 @@
       "cost": {
         "input_per_1m_tokens": 1e-06,
         "output_per_1m_tokens": 5e-06,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1e-07,
+        "cache_write_per_1m_tokens": 1.25e-06,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -182,10 +182,10 @@
       "cost": {
         "input_per_1m_tokens": 1.5e-05,
         "output_per_1m_tokens": 7.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.5e-06,
+        "cache_write_per_1m_tokens": 1.875e-05,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -249,10 +249,10 @@
       "cost": {
         "input_per_1m_tokens": 5e-06,
         "output_per_1m_tokens": 2.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
+        "cache_write_per_1m_tokens": 6.25e-06,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -316,10 +316,10 @@
       "cost": {
         "input_per_1m_tokens": 5e-06,
         "output_per_1m_tokens": 2.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
+        "cache_write_per_1m_tokens": 6.25e-06,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -374,10 +374,10 @@
       "cost": {
         "input_per_1m_tokens": 5e-06,
         "output_per_1m_tokens": 2.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
+        "cache_write_per_1m_tokens": 6.25e-06,
         "currency": "USD",
-        "last_updated": "2026-04-17"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -434,10 +434,10 @@
       "cost": {
         "input_per_1m_tokens": 5e-06,
         "output_per_1m_tokens": 2.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
+        "cache_write_per_1m_tokens": 6.25e-06,
         "currency": "USD",
-        "last_updated": "2026-06-05"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -501,10 +501,10 @@
       "cost": {
         "input_per_1m_tokens": 3e-06,
         "output_per_1m_tokens": 1.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 3e-07,
+        "cache_write_per_1m_tokens": 3.75e-06,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -570,10 +570,10 @@
       "cost": {
         "input_per_1m_tokens": 3e-06,
         "output_per_1m_tokens": 1.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 3e-07,
+        "cache_write_per_1m_tokens": 3.75e-06,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -639,8 +639,8 @@
       "cost": {
         "input_per_1m_tokens": 1.5e-05,
         "output_per_1m_tokens": 7.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.5e-06,
+        "cache_write_per_1m_tokens": 1.875e-05,
         "currency": "USD",
         "last_updated": "2026-06-15"
       },
@@ -708,8 +708,8 @@
       "cost": {
         "input_per_1m_tokens": 3e-06,
         "output_per_1m_tokens": 1.5e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 3e-07,
+        "cache_write_per_1m_tokens": 3.75e-06,
         "currency": "USD",
         "last_updated": "2026-06-15"
       },
@@ -971,10 +971,10 @@
       "cost": {
         "input_per_1m_tokens": 3e-07,
         "output_per_1m_tokens": 2.5e-06,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 3e-08,
+        "cache_write_per_1m_tokens": 8.333333333333334e-08,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1038,10 +1038,10 @@
       "cost": {
         "input_per_1m_tokens": 1.25e-06,
         "output_per_1m_tokens": 1e-05,
-        "cache_read_per_1m_tokens": null,
-        "cache_write_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.25e-07,
+        "cache_write_per_1m_tokens": 3.75e-07,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1600,10 +1600,10 @@
       "cost": {
         "input_per_1m_tokens": 2e-06,
         "output_per_1m_tokens": 8e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1665,10 +1665,10 @@
       "cost": {
         "input_per_1m_tokens": 4e-07,
         "output_per_1m_tokens": 1.6e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1730,10 +1730,10 @@
       "cost": {
         "input_per_1m_tokens": 1e-07,
         "output_per_1m_tokens": 4e-07,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 2.5e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1860,10 +1860,10 @@
       "cost": {
         "input_per_1m_tokens": 1.5e-07,
         "output_per_1m_tokens": 6e-07,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 7.5e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1918,10 +1918,10 @@
       "cost": {
         "input_per_1m_tokens": 1.25e-06,
         "output_per_1m_tokens": 1e-05,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.25e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -1976,10 +1976,10 @@
       "cost": {
         "input_per_1m_tokens": 2.5e-07,
         "output_per_1m_tokens": 2e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 2.5e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2034,10 +2034,10 @@
       "cost": {
         "input_per_1m_tokens": 5e-08,
         "output_per_1m_tokens": 4e-07,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2150,10 +2150,10 @@
       "cost": {
         "input_per_1m_tokens": 1.25e-06,
         "output_per_1m_tokens": 1e-05,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.3e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2208,10 +2208,10 @@
       "cost": {
         "input_per_1m_tokens": 1.75e-06,
         "output_per_1m_tokens": 1.4e-05,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 1.75e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2324,10 +2324,10 @@
       "cost": {
         "input_per_1m_tokens": 2.5e-06,
         "output_per_1m_tokens": 1.5e-05,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 2.5e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2382,10 +2382,10 @@
       "cost": {
         "input_per_1m_tokens": 7.5e-07,
         "output_per_1m_tokens": 4.5e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 7.5e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2440,10 +2440,10 @@
       "cost": {
         "input_per_1m_tokens": 2e-07,
         "output_per_1m_tokens": 1.25e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 2e-08,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2558,10 +2558,10 @@
       "cost": {
         "input_per_1m_tokens": 1.5e-05,
         "output_per_1m_tokens": 6e-05,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 7.5e-06,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2676,10 +2676,10 @@
       "cost": {
         "input_per_1m_tokens": 2e-06,
         "output_per_1m_tokens": 8e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2736,10 +2736,10 @@
       "cost": {
         "input_per_1m_tokens": 1.1e-06,
         "output_per_1m_tokens": 4.4e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 5.5e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",
@@ -2854,10 +2854,10 @@
       "cost": {
         "input_per_1m_tokens": 1.1e-06,
         "output_per_1m_tokens": 4.4e-06,
-        "cache_read_per_1m_tokens": null,
+        "cache_read_per_1m_tokens": 2.75e-07,
         "cache_write_per_1m_tokens": null,
         "currency": "USD",
-        "last_updated": "2026-03-22"
+        "last_updated": "2026-06-15"
       },
       "metadata": {
         "status": "available",

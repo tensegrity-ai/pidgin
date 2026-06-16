@@ -91,6 +91,10 @@ class MessageCompleteEvent(Event):
     completion_tokens: int
     total_tokens: int
     duration_ms: int
+    # Cached-prefix tokens (subset of prompt_tokens). None on older JSONLs and
+    # providers that don't report caching.
+    cache_read_tokens: Optional[int] = None
+    cache_write_tokens: Optional[int] = None
 
 
 @dataclass
@@ -230,6 +234,9 @@ class TokenUsageEvent(Event):
     model: Optional[str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
+    # Cached-prefix tokens (subset of prompt_tokens)
+    cache_read_tokens: Optional[int] = None
+    cache_write_tokens: Optional[int] = None
 
 
 @dataclass
